@@ -1,0 +1,14 @@
+﻿
+> la30-front@0.0.0 build
+> vite build
+
+[36mvite v8.0.0 [32mbuilding client environment for production...[36m[39m
+[2K
+transforming...Ô£ô 3140 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.46 kB Ôöé gzip:   0.29 kB
+dist/assets/index-96MfqmLG.css   52.40 kB Ôöé gzip:   9.84 kB
+dist/assets/index-ByeoHXFr.js   918.21 kB Ôöé gzip: 259.93 kB
+
+[32mÔ£ô built in 5.16s[39m
