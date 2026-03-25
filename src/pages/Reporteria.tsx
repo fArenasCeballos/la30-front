@@ -1,145 +1,71 @@
-import { useMemo, useState } from "react";
-import { useOrders } from "@/context/OrderContext";
-import { formatPrice, MOCK_USERS } from "@/data/mock";
+import { useMemo, useState } from 'react';
+import { useOrders } from '@/context/OrderContext';
+import { formatPrice, MOCK_USERS } from '@/data/mock';
+import { FileText, Download, Filter, CalendarIcon, DollarSign, TrendingUp, ShoppingCart, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { StatusBadge } from '@/components/StatusBadge';
 import {
-  FileText,
-  Download,
-  Filter,
-  CalendarIcon,
-  DollarSign,
-  TrendingUp,
-  ShoppingCart,
-  Clock,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/StatusBadge";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '@/components/ui/select';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from "recharts";
-// import { OrderStatus } from "@/types";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import {
-  format,
-  startOfDay,
-  endOfDay,
-  subDays,
-  startOfMonth,
-  endOfMonth,
-  isWithinInterval,
-} from "date-fns";
-import { es } from "date-fns/locale";
-import type { DateRange } from "react-day-picker";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
+} from 'recharts';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { es } from 'date-fns/locale';
+import type { DateRange } from 'react-day-picker';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const QUICK_RANGES = [
-  {
-    label: "Hoy",
-    getValue: () => ({
-      from: startOfDay(new Date()),
-      to: endOfDay(new Date()),
-    }),
-  },
-  {
-    label: "Ayer",
-    getValue: () => ({
-      from: startOfDay(subDays(new Date(), 1)),
-      to: endOfDay(subDays(new Date(), 1)),
-    }),
-  },
-  {
-    label: "Últimos 7 días",
-    getValue: () => ({
-      from: startOfDay(subDays(new Date(), 6)),
-      to: endOfDay(new Date()),
-    }),
-  },
-  {
-    label: "Este mes",
-    getValue: () => ({
-      from: startOfMonth(new Date()),
-      to: endOfMonth(new Date()),
-    }),
-  },
-  {
-    label: "Mes pasado",
-    getValue: () => {
-      const d = subDays(startOfMonth(new Date()), 1);
-      return { from: startOfMonth(d), to: endOfMonth(d) };
-    },
-  },
+  { label: 'Hoy', getValue: () => ({ from: startOfDay(new Date()), to: endOfDay(new Date()) }) },
+  { label: 'Ayer', getValue: () => ({ from: startOfDay(subDays(new Date(), 1)), to: endOfDay(subDays(new Date(), 1)) }) },
+  { label: 'Últimos 7 días', getValue: () => ({ from: startOfDay(subDays(new Date(), 6)), to: endOfDay(new Date()) }) },
+  { label: 'Este mes', getValue: () => ({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) }) },
+  { label: 'Mes pasado', getValue: () => {
+    const d = subDays(startOfMonth(new Date()), 1);
+    return { from: startOfMonth(d), to: endOfMonth(d) };
+  }},
 ];
 
 export default function Reporteria() {
   const { orders } = useOrders();
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfDay(new Date()),
     to: endOfDay(new Date()),
   });
-  const [activeQuick, setActiveQuick] = useState("Hoy");
+  const [activeQuick, setActiveQuick] = useState('Hoy');
 
   const dateFiltered = useMemo(() => {
     if (!dateRange?.from) return orders;
     const from = startOfDay(dateRange.from);
     const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
-    return orders.filter((o) =>
-      isWithinInterval(o.createdAt, { start: from, end: to }),
-    );
+    return orders.filter(o => isWithinInterval(o.createdAt, { start: from, end: to }));
   }, [orders, dateRange]);
 
   const filteredOrders = useMemo(() => {
-    if (statusFilter === "all") return dateFiltered;
-    return dateFiltered.filter((o) => o.status === statusFilter);
+    if (statusFilter === 'all') return dateFiltered;
+    return dateFiltered.filter(o => o.status === statusFilter);
   }, [dateFiltered, statusFilter]);
 
   const summary = useMemo(() => {
     const total = filteredOrders.reduce((sum, o) => sum + o.total, 0);
-    const avgTicket =
-      filteredOrders.length > 0 ? total / filteredOrders.length : 0;
-    const itemsSold = filteredOrders.reduce(
-      (sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0),
-      0,
+    const avgTicket = filteredOrders.length > 0 ? total / filteredOrders.length : 0;
+    const itemsSold = filteredOrders.reduce((sum, o) =>
+      sum + o.items.reduce((s, i) => s + i.quantity, 0), 0
     );
-    const delivered = filteredOrders.filter((o) => o.status === "entregado");
-    const cancelled = filteredOrders.filter((o) => o.status === "cancelado");
-    return {
-      total,
-      avgTicket,
-      count: filteredOrders.length,
-      itemsSold,
-      delivered: delivered.length,
-      cancelled: cancelled.length,
-    };
+    const delivered = filteredOrders.filter(o => o.status === 'entregado');
+    const cancelled = filteredOrders.filter(o => o.status === 'cancelado');
+    return { total, avgTicket, count: filteredOrders.length, itemsSold, delivered: delivered.length, cancelled: cancelled.length };
   }, [filteredOrders]);
 
   // Cash open/close summary
   const cashSummary = useMemo(() => {
-    const delivered = dateFiltered.filter((o) => o.status === "entregado");
-    const pending = dateFiltered.filter(
-      (o) => !["entregado", "cancelado"].includes(o.status),
-    );
-    const cancelled = dateFiltered.filter((o) => o.status === "cancelado");
+    const delivered = dateFiltered.filter(o => o.status === 'entregado');
+    const pending = dateFiltered.filter(o => !['entregado', 'cancelado'].includes(o.status));
+    const cancelled = dateFiltered.filter(o => o.status === 'cancelado');
     return {
       totalSales: delivered.reduce((s, o) => s + o.total, 0),
       deliveredCount: delivered.length,
@@ -153,24 +79,23 @@ export default function Reporteria() {
 
   const hourlyData = useMemo(() => {
     const hours: Record<number, number> = {};
-    dateFiltered.forEach((o) => {
+    dateFiltered.forEach(o => {
       const h = o.createdAt.getHours();
       hours[h] = (hours[h] || 0) + o.total;
     });
     return Array.from({ length: 24 }, (_, i) => ({
       hora: `${i}:00`,
       ventas: hours[i] || 0,
-    })).filter((d) => d.ventas > 0);
+    })).filter(d => d.ventas > 0);
   }, [dateFiltered]);
 
   // Per-waiter stats
   const waiterData = useMemo(() => {
-    const map: Record<string, { name: string; orders: number; total: number }> =
-      {};
-    dateFiltered.forEach((o) => {
+    const map: Record<string, { name: string; orders: number; total: number }> = {};
+    dateFiltered.forEach(o => {
       const key = o.createdBy;
       if (!map[key]) {
-        const user = MOCK_USERS.find((u) => u.role === key || u.name === key);
+        const user = MOCK_USERS.find(u => u.role === key || u.name === key);
         map[key] = { name: user?.name || key, orders: 0, total: 0 };
       }
       map[key].orders++;
@@ -180,7 +105,7 @@ export default function Reporteria() {
   }, [dateFiltered]);
 
   const handleQuickRange = (label: string) => {
-    const range = QUICK_RANGES.find((r) => r.label === label);
+    const range = QUICK_RANGES.find(r => r.label === label);
     if (range) {
       setDateRange(range.getValue());
       setActiveQuick(label);
@@ -188,18 +113,15 @@ export default function Reporteria() {
   };
 
   const exportCSV = () => {
-    const header = "Localizador,Estado,Items,Total,Fecha,Creado Por\n";
-    const rows = filteredOrders
-      .map(
-        (o) =>
-          `${o.locator},${o.status},${o.items.length},${o.total},${o.createdAt.toLocaleString("es-CO")},${o.createdBy}`,
-      )
-      .join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv" });
+    const header = 'Localizador,Estado,Items,Total,Fecha,Creado Por\n';
+    const rows = filteredOrders.map(o =>
+      `${o.locator},${o.status},${o.items.length},${o.total},${o.createdAt.toLocaleString('es-CO')},${o.createdBy}`
+    ).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
-    a.download = `reporte_la30_${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `reporte_la30_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -219,10 +141,10 @@ export default function Reporteria() {
 
       {/* Date range quick filters */}
       <div className="flex flex-wrap items-center gap-2">
-        {QUICK_RANGES.map((r) => (
+        {QUICK_RANGES.map(r => (
           <Button
             key={r.label}
-            variant={activeQuick === r.label ? "default" : "outline"}
+            variant={activeQuick === r.label ? 'default' : 'outline'}
             size="sm"
             onClick={() => handleQuickRange(r.label)}
           >
@@ -231,27 +153,20 @@ export default function Reporteria() {
         ))}
         <Popover>
           <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(!dateRange && "text-muted-foreground")}
-            >
+            <Button variant="outline" size="sm" className={cn(!dateRange && 'text-muted-foreground')}>
               <CalendarIcon className="h-4 w-4 mr-2" />
-              {dateRange?.from
-                ? dateRange.to
-                  ? `${format(dateRange.from, "dd MMM", { locale: es })} - ${format(dateRange.to, "dd MMM", { locale: es })}`
-                  : format(dateRange.from, "dd MMM yyyy", { locale: es })
-                : "Rango personalizado"}
+              {dateRange?.from ? (
+                dateRange.to ? (
+                  `${format(dateRange.from, 'dd MMM', { locale: es })} - ${format(dateRange.to, 'dd MMM', { locale: es })}`
+                ) : format(dateRange.from, 'dd MMM yyyy', { locale: es })
+              ) : 'Rango personalizado'}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="range"
               selected={dateRange}
-              onSelect={(range) => {
-                setDateRange(range);
-                setActiveQuick("");
-              }}
+              onSelect={(range) => { setDateRange(range); setActiveQuick(''); }}
               numberOfMonths={2}
               locale={es}
               className="p-3 pointer-events-auto"
@@ -291,9 +206,7 @@ export default function Reporteria() {
                 <DollarSign className="h-4 w-4 text-primary" />
                 <p className="text-xs text-muted-foreground">Total ventas</p>
               </div>
-              <p className="font-display text-xl font-bold">
-                {formatPrice(summary.total)}
-              </p>
+              <p className="font-display text-xl font-bold">{formatPrice(summary.total)}</p>
             </div>
             <div className="pos-card">
               <div className="flex items-center gap-2 mb-1">
@@ -307,18 +220,14 @@ export default function Reporteria() {
                 <TrendingUp className="h-4 w-4 text-primary" />
                 <p className="text-xs text-muted-foreground">Ticket promedio</p>
               </div>
-              <p className="font-display text-xl font-bold">
-                {formatPrice(summary.avgTicket)}
-              </p>
+              <p className="font-display text-xl font-bold">{formatPrice(summary.avgTicket)}</p>
             </div>
             <div className="pos-card">
               <div className="flex items-center gap-2 mb-1">
                 <Clock className="h-4 w-4 text-primary" />
                 <p className="text-xs text-muted-foreground">Items vendidos</p>
               </div>
-              <p className="font-display text-xl font-bold">
-                {summary.itemsSold}
-              </p>
+              <p className="font-display text-xl font-bold">{summary.itemsSold}</p>
             </div>
           </div>
 
@@ -327,38 +236,14 @@ export default function Reporteria() {
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={hourlyData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                  />
-                  <XAxis
-                    dataKey="hora"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <YAxis
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickFormatter={(v) => formatPrice(v)}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="hora" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={v => formatPrice(v)} />
                   <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                    formatter={(value: number) => [
-                      formatPrice(value),
-                      "Ventas",
-                    ]}
+                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
+                    formatter={(value: number) => [formatPrice(value), 'Ventas']}
                   />
-                  <Line
-                    type="monotone"
-                    dataKey="ventas"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    dot={{ fill: "hsl(var(--primary))" }}
-                  />
+                  <Line type="monotone" dataKey="ventas" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))' }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -369,59 +254,32 @@ export default function Reporteria() {
         <TabsContent value="caja" className="space-y-4">
           <div className="pos-card">
             <h3 className="font-display font-bold text-lg mb-1">
-              Cierre de Caja —{" "}
-              {dateRange?.from
-                ? format(dateRange.from, "dd MMMM yyyy", { locale: es })
-                : "Hoy"}
-              {dateRange?.to &&
-                dateRange.from?.getTime() !== dateRange.to?.getTime() &&
-                ` al ${format(dateRange.to, "dd MMMM yyyy", { locale: es })}`}
+              Cierre de Caja — {dateRange?.from ? format(dateRange.from, 'dd MMMM yyyy', { locale: es }) : 'Hoy'}
+              {dateRange?.to && dateRange.from?.getTime() !== dateRange.to?.getTime() && ` al ${format(dateRange.to, 'dd MMMM yyyy', { locale: es })}`}
             </h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Resumen de operaciones del período seleccionado
-            </p>
+            <p className="text-sm text-muted-foreground mb-6">Resumen de operaciones del período seleccionado</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <div className="rounded-xl border-2 border-green-500/30 bg-green-500/5 p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-1">
-                  Ventas completadas
-                </p>
-                <p className="font-display text-2xl font-bold text-green-600">
-                  {formatPrice(cashSummary.totalSales)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {cashSummary.deliveredCount} pedidos entregados
-                </p>
+                <p className="text-sm text-muted-foreground mb-1">Ventas completadas</p>
+                <p className="font-display text-2xl font-bold text-green-600">{formatPrice(cashSummary.totalSales)}</p>
+                <p className="text-xs text-muted-foreground mt-1">{cashSummary.deliveredCount} pedidos entregados</p>
               </div>
               <div className="rounded-xl border-2 border-amber-500/30 bg-amber-500/5 p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-1">
-                  Pedidos en proceso
-                </p>
-                <p className="font-display text-2xl font-bold text-amber-600">
-                  {formatPrice(cashSummary.pendingTotal)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {cashSummary.pendingCount} pedidos pendientes
-                </p>
+                <p className="text-sm text-muted-foreground mb-1">Pedidos en proceso</p>
+                <p className="font-display text-2xl font-bold text-amber-600">{formatPrice(cashSummary.pendingTotal)}</p>
+                <p className="text-xs text-muted-foreground mt-1">{cashSummary.pendingCount} pedidos pendientes</p>
               </div>
               <div className="rounded-xl border-2 border-red-500/30 bg-red-500/5 p-4 text-center">
                 <p className="text-sm text-muted-foreground mb-1">Cancelados</p>
-                <p className="font-display text-2xl font-bold text-red-600">
-                  {formatPrice(cashSummary.cancelledTotal)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {cashSummary.cancelledCount} pedidos cancelados
-                </p>
+                <p className="font-display text-2xl font-bold text-red-600">{formatPrice(cashSummary.cancelledTotal)}</p>
+                <p className="text-xs text-muted-foreground mt-1">{cashSummary.cancelledCount} pedidos cancelados</p>
               </div>
             </div>
 
             <div className="border-t pt-4 flex items-center justify-between">
-              <span className="font-display font-bold text-lg">
-                Total de órdenes del período
-              </span>
-              <span className="font-display font-bold text-2xl text-primary">
-                {cashSummary.totalOrders}
-              </span>
+              <span className="font-display font-bold text-lg">Total de órdenes del período</span>
+              <span className="font-display font-bold text-2xl text-primary">{cashSummary.totalOrders}</span>
             </div>
           </div>
         </TabsContent>
@@ -429,7 +287,7 @@ export default function Reporteria() {
         {/* ===== POR MESERO ===== */}
         <TabsContent value="meseros" className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {waiterData.map((w) => (
+            {waiterData.map(w => (
               <div key={w.name} className="pos-card">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
@@ -437,61 +295,31 @@ export default function Reporteria() {
                   </div>
                   <div>
                     <p className="font-display font-bold">{w.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {w.orders} pedidos
-                    </p>
+                    <p className="text-xs text-muted-foreground">{w.orders} pedidos</p>
                   </div>
                 </div>
-                <p className="font-display text-xl font-bold text-primary">
-                  {formatPrice(w.total)}
-                </p>
+                <p className="font-display text-xl font-bold text-primary">{formatPrice(w.total)}</p>
               </div>
             ))}
             {waiterData.length === 0 && (
-              <p className="text-muted-foreground col-span-full text-center py-8">
-                Sin datos en el rango seleccionado
-              </p>
+              <p className="text-muted-foreground col-span-full text-center py-8">Sin datos en el rango seleccionado</p>
             )}
           </div>
 
           {waiterData.length > 0 && (
             <div className="pos-card">
-              <h3 className="font-display font-bold mb-4">
-                Ventas por operario
-              </h3>
+              <h3 className="font-display font-bold mb-4">Ventas por operario</h3>
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={waiterData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
-                    />
-                    <XAxis
-                      dataKey="name"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <YAxis
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickFormatter={(v) => formatPrice(v)}
-                    />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={v => formatPrice(v)} />
                     <Tooltip
-                      contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                      formatter={(value: number) => [
-                        formatPrice(value),
-                        "Ventas",
-                      ]}
+                      contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
+                      formatter={(value: number) => [formatPrice(value), 'Ventas']}
                     />
-                    <Bar
-                      dataKey="total"
-                      fill="hsl(var(--primary))"
-                      radius={[6, 6, 0, 0]}
-                    />
+                    <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -515,39 +343,19 @@ export default function Reporteria() {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((order) => (
+                {filteredOrders.map(order => (
                   <tr key={order.id} className="border-b last:border-0">
-                    <td className="py-3 font-display font-bold text-primary">
-                      {order.locator}
-                    </td>
-                    <td className="py-3">
-                      <StatusBadge status={order.status} />
-                    </td>
-                    <td className="py-3">
-                      {order.items.reduce((s, i) => s + i.quantity, 0)}
-                    </td>
-                    <td className="py-3 text-right font-semibold">
-                      {formatPrice(order.total)}
-                    </td>
-                    <td className="py-3 text-muted-foreground">
-                      {order.createdBy}
-                    </td>
-                    <td className="py-3 text-muted-foreground">
-                      {order.createdAt.toLocaleTimeString("es-CO", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
+                    <td className="py-3 font-display font-bold text-primary">{order.locator}</td>
+                    <td className="py-3"><StatusBadge status={order.status} /></td>
+                    <td className="py-3">{order.items.reduce((s, i) => s + i.quantity, 0)}</td>
+                    <td className="py-3 text-right font-semibold">{formatPrice(order.total)}</td>
+                    <td className="py-3 text-muted-foreground">{order.createdBy}</td>
+                    <td className="py-3 text-muted-foreground">{order.createdAt.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</td>
                   </tr>
                 ))}
                 {filteredOrders.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="py-8 text-center text-muted-foreground"
-                    >
-                      Sin pedidos en el rango seleccionado
-                    </td>
+                    <td colSpan={6} className="py-8 text-center text-muted-foreground">Sin pedidos en el rango seleccionado</td>
                   </tr>
                 )}
               </tbody>
