@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Product } from "@/types";
-import { formatPrice } from "@/data/mock";
+import { formatPrice } from "@/lib/formatPrice";
 import { Button } from "@/components/ui/button";
 
 import {
@@ -108,14 +108,14 @@ const HAMBURGUESAS_EXTRAS: ExtraOption[] = [
   },
 ];
 
-function getOptionsForProduct(product: Product): {
+function getOptionsForProduct(categoryName: string): {
   options: CustomOption[];
   extras: ExtraOption[];
 } {
-  if (product.category === "perros") {
+  if (categoryName === "perros") {
     return { options: PERROS_OPTIONS, extras: PERROS_EXTRAS };
   }
-  if (product.category === "hamburguesas") {
+  if (categoryName === "hamburguesas") {
     return { options: HAMBURGUESAS_OPTIONS, extras: HAMBURGUESAS_EXTRAS };
   }
   return { options: [], extras: [] };
@@ -123,6 +123,7 @@ function getOptionsForProduct(product: Product): {
 
 interface ProductCustomizerProps {
   product: Product | null;
+  categoryName?: string;
   open: boolean;
   onClose: () => void;
   onConfirm: (product: Product, notes: string, extraCost: number) => void;
@@ -130,6 +131,7 @@ interface ProductCustomizerProps {
 
 export function ProductCustomizer({
   product,
+  categoryName = "",
   open,
   onClose,
   onConfirm,
@@ -139,7 +141,7 @@ export function ProductCustomizer({
 
   if (!product) return null;
 
-  const { options, extras } = getOptionsForProduct(product);
+  const { options, extras } = getOptionsForProduct(categoryName);
   const hasCustomization = options.length > 0 || extras.length > 0;
 
   const totalExtraCost = extras.reduce(
@@ -192,7 +194,7 @@ export function ProductCustomizer({
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-sm text-center p-6 space-y-4">
           <div className="text-5xl">
-            {product.category === "bebidas" ? "🥤" : "🍟"}
+            {categoryName === "bebidas" ? "🥤" : "🍟"}
           </div>
           <h2 className="font-display text-xl font-bold">{product.name}</h2>
           <p className="text-2xl font-display font-bold text-primary">
@@ -220,7 +222,7 @@ export function ProductCustomizer({
         <DialogHeader className="p-4 pb-3 border-b">
           <DialogTitle className="font-display text-xl flex items-center gap-2">
             <span className="text-2xl">
-              {product.category === "perros" ? "🌭" : "🍔"}
+              {categoryName === "perros" ? "🌭" : "🍔"}
             </span>
             {product.name}
           </DialogTitle>

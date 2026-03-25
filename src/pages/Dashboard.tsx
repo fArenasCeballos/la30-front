@@ -1,123 +1,69 @@
-import { useMemo } from "react";
-import { useOrders } from "@/context/OrderContext";
-import { formatPrice } from "@/data/mock";
+import { useMemo } from 'react';
+import { useOrders } from '@/context/OrderContext';
+import { formatPrice } from '@/lib/formatPrice';
 import {
-  DollarSign,
-  Clock,
-  CheckCircle,
-  TrendingUp,
-  BarChart3,
-} from "lucide-react";
+  DollarSign, Clock, CheckCircle, TrendingUp,
+  BarChart3
+} from 'lucide-react';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell
+} from 'recharts';
 
-const COLORS = [
-  "hsl(24, 90%, 50%)",
-  "hsl(142, 72%, 40%)",
-  "hsl(200, 80%, 50%)",
-  "hsl(45, 93%, 47%)",
-  "hsl(0, 72%, 51%)",
-  "hsl(270, 60%, 50%)",
-];
+const COLORS = ['hsl(24, 90%, 50%)', 'hsl(142, 72%, 40%)', 'hsl(200, 80%, 50%)', 'hsl(45, 93%, 47%)', 'hsl(0, 72%, 51%)', 'hsl(270, 60%, 50%)'];
 
 export default function Dashboard() {
   const { orders } = useOrders();
 
   const stats = useMemo(() => {
     const totalRevenue = orders
-      .filter((o) => o.status === "entregado")
+      .filter(o => o.status === 'entregado')
       .reduce((sum, o) => sum + o.total, 0);
-    const activeOrders = orders.filter((o) =>
-      ["pendiente", "confirmado", "en_preparacion", "listo"].includes(o.status),
+    const activeOrders = orders.filter(o =>
+      ['pendiente', 'confirmado', 'en_preparacion', 'listo'].includes(o.status)
     ).length;
-    const completedToday = orders.filter(
-      (o) => o.status === "entregado",
-    ).length;
-    const cancelledToday = orders.filter(
-      (o) => o.status === "cancelado",
-    ).length;
-    const avgOrderValue =
-      completedToday > 0 ? totalRevenue / completedToday : 0;
-    return {
-      totalRevenue,
-      activeOrders,
-      completedToday,
-      cancelledToday,
-      avgOrderValue,
-    };
+    const completedToday = orders.filter(o => o.status === 'entregado').length;
+    const cancelledToday = orders.filter(o => o.status === 'cancelado').length;
+    const avgOrderValue = completedToday > 0 ? totalRevenue / completedToday : 0;
+    return { totalRevenue, activeOrders, completedToday, cancelledToday, avgOrderValue };
   }, [orders]);
 
   const productStats = useMemo(() => {
-    const map = new Map<
-      string,
-      { name: string; quantity: number; revenue: number }
-    >();
-    orders.forEach((order) => {
-      order.items.forEach((item) => {
-        const existing = map.get(item.product.id);
+    const map = new Map<string, { name: string; quantity: number; revenue: number }>();
+    orders.forEach(order => {
+      order.order_items?.forEach(item => {
+        const existing = map.get(item.products.id);
         if (existing) {
           existing.quantity += item.quantity;
-          existing.revenue += item.product.price * item.quantity;
+          existing.revenue += item.unit_price * item.quantity;
         } else {
-          map.set(item.product.id, {
-            name: item.product.name,
+          map.set(item.products.id, {
+            name: item.products.name,
             quantity: item.quantity,
-            revenue: item.product.price * item.quantity,
+            revenue: item.unit_price * item.quantity,
           });
         }
       });
     });
-    return Array.from(map.values())
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 6);
+    return Array.from(map.values()).sort((a, b) => b.quantity - a.quantity).slice(0, 6);
   }, [orders]);
 
   const statusDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
-    orders.forEach((o) => {
+    orders.forEach(o => {
       counts[o.status] = (counts[o.status] || 0) + 1;
     });
     return Object.entries(counts).map(([status, count]) => ({
-      name: status.replace("_", " "),
+      name: status.replace('_', ' '),
       value: count,
     }));
   }, [orders]);
 
   const statCards = [
-    {
-      label: "Ventas del día",
-      value: formatPrice(stats.totalRevenue),
-      icon: DollarSign,
-      color: "text-success",
-    },
-    {
-      label: "Pedidos activos",
-      value: stats.activeOrders,
-      icon: Clock,
-      color: "text-primary",
-    },
-    {
-      label: "Completados",
-      value: stats.completedToday,
-      icon: CheckCircle,
-      color: "text-success",
-    },
-    {
-      label: "Ticket promedio",
-      value: formatPrice(stats.avgOrderValue),
-      icon: TrendingUp,
-      color: "text-preparing",
-    },
+    { label: 'Ventas del día', value: formatPrice(stats.totalRevenue), icon: DollarSign, color: 'text-success' },
+    { label: 'Pedidos activos', value: stats.activeOrders, icon: Clock, color: 'text-primary' },
+    { label: 'Completados', value: stats.completedToday, icon: CheckCircle, color: 'text-success' },
+    { label: 'Ticket promedio', value: formatPrice(stats.avgOrderValue), icon: TrendingUp, color: 'text-preparing' },
   ];
 
   return (
@@ -129,13 +75,11 @@ export default function Dashboard() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((card) => (
+        {statCards.map(card => (
           <div key={card.label} className="pos-card">
             <div className="flex items-center gap-2 mb-2">
               <card.icon className={`h-5 w-5 ${card.color}`} />
-              <span className="text-xs text-muted-foreground font-medium">
-                {card.label}
-              </span>
+              <span className="text-xs text-muted-foreground font-medium">{card.label}</span>
             </div>
             <p className="font-display text-2xl font-bold">{card.value}</p>
           </div>
@@ -145,41 +89,18 @@ export default function Dashboard() {
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Top products chart */}
         <div className="pos-card">
-          <h3 className="font-display font-bold mb-4">
-            Productos más vendidos
-          </h3>
+          <h3 className="font-display font-bold mb-4">Productos más vendidos</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={productStats} layout="vertical">
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="hsl(var(--border))"
-                />
-                <XAxis
-                  type="number"
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={120}
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={11}
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis type="category" dataKey="name" width={120} stroke="hsl(var(--muted-foreground))" fontSize={11} />
                 <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
+                  contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
                   formatter={(value: number) => [`${value} unidades`]}
                 />
-                <Bar
-                  dataKey="quantity"
-                  fill="hsl(var(--primary))"
-                  radius={[0, 4, 4, 0]}
-                />
+                <Bar dataKey="quantity" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -216,26 +137,15 @@ export default function Dashboard() {
       <div className="pos-card">
         <h3 className="font-display font-bold mb-4">Actividad reciente</h3>
         <div className="space-y-3">
-          {orders.slice(0, 8).map((order) => (
-            <div
-              key={order.id}
-              className="flex items-center justify-between py-2 border-b last:border-0"
-            >
+          {orders.slice(0, 8).map(order => (
+            <div key={order.id} className="flex items-center justify-between py-2 border-b last:border-0">
               <div className="flex items-center gap-3">
-                <span className="font-display font-bold text-primary">
-                  {order.locator}
-                </span>
-                <span className="text-xs text-muted-foreground capitalize">
-                  {order.status.replace("_", " ")}
-                </span>
+                <span className="font-display font-bold text-primary">{order.locator}</span>
+                <span className="text-xs text-muted-foreground capitalize">{order.status.replace('_', ' ')}</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">
-                  {order.items.length} items
-                </span>
-                <span className="font-semibold">
-                  {formatPrice(order.total)}
-                </span>
+                <span className="text-sm text-muted-foreground">{order.order_items?.length || 0} items</span>
+                <span className="font-semibold">{formatPrice(order.total)}</span>
               </div>
             </div>
           ))}

@@ -1,10 +1,10 @@
 import type { Order } from "@/types";
 import { StatusBadge } from "./StatusBadge";
-import { formatPrice } from "@/data/mock";
+import { formatPrice } from "@/lib/formatPrice";
 import { Clock, MapPin } from "lucide-react";
 
-function timeAgo(date: Date): string {
-  const mins = Math.floor((Date.now() - date.getTime()) / 60000);
+function timeAgo(dateStr: string): string {
+  const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
   if (mins < 1) return "Ahora";
   if (mins < 60) return `${mins} min`;
   return `${Math.floor(mins / 60)}h ${mins % 60}m`;
@@ -29,13 +29,13 @@ export function OrderCard({ order, actions, compact }: OrderCardProps) {
         <StatusBadge status={order.status} />
       </div>
 
-      {!compact && (
+      {!compact && order.order_items && (
         <div className="space-y-1.5 mb-3">
-          {order.items.map((item) => (
+          {order.order_items.map((item) => (
             <div key={item.id} className="flex justify-between text-sm">
               <span>
                 <span className="font-medium">{item.quantity}x</span>{" "}
-                {item.product.name}
+                {item.products.name}
                 {item.notes && (
                   <span className="text-muted-foreground ml-1">
                     ({item.notes})
@@ -43,7 +43,7 @@ export function OrderCard({ order, actions, compact }: OrderCardProps) {
                 )}
               </span>
               <span className="text-muted-foreground">
-                {formatPrice(item.product.price * item.quantity)}
+                {formatPrice(item.unit_price * item.quantity)}
               </span>
             </div>
           ))}
@@ -53,7 +53,7 @@ export function OrderCard({ order, actions, compact }: OrderCardProps) {
       <div className="flex items-center justify-between pt-2 border-t">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
-          {timeAgo(order.createdAt)}
+          {timeAgo(order.created_at)}
         </div>
         <span className="font-display font-bold text-lg">
           {formatPrice(order.total)}
