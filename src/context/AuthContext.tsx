@@ -1,44 +1,109 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import type { User, UserRole } from "@/types";
-import { MOCK_USERS } from "@/data/mock";
+import { supabase } from "@/lib/supabase";
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const stored = sessionStorage.getItem("la30_user");
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch profile from DB given auth user id
+  const fetchProfile = useCallback(async (userId: string) => {
+    console.log("Fetching profile for:", userId);
+    
+    // Safety timeout to prevent infinite hang
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Timeout fetching profile")), 10000)
+    );
+
+    try {
+      const fetchPromise = supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
+      if (error) {
+        console.error("Profile fetch error:", error);
+        setUser(null);
+        return;
+      }
+      
+      if (!data) {
+        console.warn("No profile data found for user:", userId);
+        setUser(null);
+        return;
+      }
+
+      console.log("Profile loaded successfully:", data.role);
+      setUser(data);
+    } catch (err) {
+      console.error("Profile fetch exception:", err);
+      setUser(null);
+    }
+  }, []);
+
+  // Listen for auth state changes (session restore, login, logout)
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      }
+      setLoading(false);
+    });
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [fetchProfile]);
 
   const login = useCallback(
-    async (email: string, _password: string): Promise<boolean> => {
-      // Mock: find user by email, any password works
-      const found = MOCK_USERS.find((u) => u.email === email);
-      if (found) {
-        setUser(found);
-        sessionStorage.setItem("la30_user", JSON.stringify(found));
-        return true;
+    async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error || !data.user) {
+        return { success: false, error: error?.message || "Credenciales inválidas" };
       }
-      return false;
+
+      await fetchProfile(data.user.id);
+      return { success: true };
     },
-    [],
+    [fetchProfile],
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    sessionStorage.removeItem("la30_user");
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ user, login, logout, isAuthenticated: !!user }}
+      value={{ user, login, logout, isAuthenticated: !!user, loading }}
     >
       {children}
     </AuthContext.Provider>

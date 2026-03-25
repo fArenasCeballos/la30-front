@@ -17,84 +17,71 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const success = await login(email, password);
-    setLoading(false);
-    if (success) {
-      navigate("/");
-    } else {
-      toast.error("Credenciales inválidas");
+    try {
+      const { success, error } = await login(email, password);
+      if (success) {
+        navigate("/");
+      } else {
+        toast.error(error || "Credenciales inválidas");
+      }
+    } catch (err) {
+      toast.error("Error al iniciar sesión");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm space-y-8">
+      <div className="w-full max-w-sm space-y-8 animate-in fade-in zoom-in duration-300">
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-2">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-2 shadow-lg shadow-primary/20">
             <Flame className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="font-display text-3xl font-bold">La 30</h1>
-          <p className="text-muted-foreground">Perros y Hamburguesas</p>
+          <h1 className="font-display text-4xl font-bold tracking-tight">La 30</h1>
+          <p className="text-muted-foreground text-sm uppercase tracking-widest">Perros y Hamburguesas</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Correo electrónico</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="caja@la30.com"
-              className="h-12"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Cualquier contraseña"
-              className="h-12"
-              required
-            />
-          </div>
-          <Button
-            type="submit"
-            size="touch"
-            className="w-full"
-            disabled={loading}
-          >
-            {loading ? "Ingresando..." : "Ingresar"}
-          </Button>
-        </form>
-
-        <div className="pos-card">
-          <p className="text-xs text-muted-foreground mb-2 font-medium">
-            Cuentas de prueba:
-          </p>
-          <div className="space-y-1 text-xs text-muted-foreground">
-            <p>
-              <span className="font-medium text-foreground">Admin:</span>{" "}
-              admin@la30.com
-            </p>
-            <p>
-              <span className="font-medium text-foreground">Caja:</span>{" "}
-              caja@la30.com
-            </p>
-            <p>
-              <span className="font-medium text-foreground">Mesero:</span>{" "}
-              mesero@la30.com
-            </p>
-            <p>
-              <span className="font-medium text-foreground">Cocina:</span>{" "}
-              cocina@la30.com
-            </p>
-          </div>
+        <div className="pos-card border-t-4 border-t-primary p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Correo electrónico</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="usuario@la30.com"
+                className="h-12"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Contraseña</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="h-12"
+                required
+              />
+            </div>
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full h-12 font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+              disabled={loading}
+            >
+              {loading ? "Verificando..." : "Ingresar"}
+            </Button>
+          </form>
         </div>
+
+        <p className="text-center text-xs text-muted-foreground">
+          © {new Date().getFullYear()} La 30 - Sistema de Gestión
+        </p>
       </div>
     </div>
   );
