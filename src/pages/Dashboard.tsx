@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useOrders } from '@/context/OrderContext';
-import { formatPrice } from '@/data/mock';
+import { formatPrice } from '@/lib/formatPrice';
 import {
   DollarSign, Clock, CheckCircle, TrendingUp,
   BarChart3
@@ -31,16 +31,16 @@ export default function Dashboard() {
   const productStats = useMemo(() => {
     const map = new Map<string, { name: string; quantity: number; revenue: number }>();
     orders.forEach(order => {
-      order.items.forEach(item => {
-        const existing = map.get(item.product.id);
+      order.order_items?.forEach(item => {
+        const existing = map.get(item.products.id);
         if (existing) {
           existing.quantity += item.quantity;
-          existing.revenue += item.product.price * item.quantity;
+          existing.revenue += item.unit_price * item.quantity;
         } else {
-          map.set(item.product.id, {
-            name: item.product.name,
+          map.set(item.products.id, {
+            name: item.products.name,
             quantity: item.quantity,
-            revenue: item.product.price * item.quantity,
+            revenue: item.unit_price * item.quantity,
           });
         }
       });
@@ -144,7 +144,7 @@ export default function Dashboard() {
                 <span className="text-xs text-muted-foreground capitalize">{order.status.replace('_', ' ')}</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">{order.items.length} items</span>
+                <span className="text-sm text-muted-foreground">{order.order_items?.length || 0} items</span>
                 <span className="font-semibold">{formatPrice(order.total)}</span>
               </div>
             </div>

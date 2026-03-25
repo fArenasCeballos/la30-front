@@ -17,7 +17,7 @@ interface ReceiptState {
 }
 
 export default function Caja() {
-  const { updateOrderStatus, getOrdersByStatus } = useOrders();
+  const { updateOrderStatus, getOrdersByStatus, processPayment } = useOrders();
   const [payingOrder, setPayingOrder] = useState<Order | null>(null);
   const [receipt, setReceipt] = useState<ReceiptState | null>(null);
 
@@ -26,10 +26,10 @@ export default function Caja() {
   const enCocina = getOrdersByStatus("en_preparacion");
   const listos = getOrdersByStatus("listo");
 
-  const handlePaymentComplete = (method: string, received: number) => {
+  const handlePaymentComplete = async (method: string, received: number) => {
     if (!payingOrder) return;
     const change = Math.max(0, received - payingOrder.total);
-    updateOrderStatus(payingOrder.id, 'en_preparacion');
+    await processPayment(payingOrder.id, method, received);
 
      // Show customer receipt first
     setReceipt({

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { Order } from '@/types';
-import { formatPrice } from '@/data/mock';
+import { formatPrice } from '@/lib/formatPrice';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -119,12 +119,12 @@ export function PaymentCalculator({ order, open, onClose, onPaymentComplete }: P
             <div className="p-4 space-y-4">
               {/* Order summary */}
               <div className="rounded-xl bg-muted/50 p-3 space-y-1.5">
-                {order.items.map(item => (
+                {order.order_items?.map((item) => (
                   <div key={item.id} className="flex justify-between text-sm">
                     <span>
-                      <span className="font-medium">{item.quantity}x</span> {item.product.name}
+                      <span className="font-medium">{item.quantity}x</span> {item.products.name}
                     </span>
-                    <span className="text-muted-foreground">{formatPrice(item.product.price * item.quantity)}</span>
+                    <span className="text-muted-foreground">{formatPrice(item.unit_price * item.quantity)}</span>
                   </div>
                 ))}
                 <div className="border-t pt-2 mt-2 flex justify-between items-center">

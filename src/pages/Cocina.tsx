@@ -40,10 +40,10 @@ export default function Cocina() {
               <StatusBadge status={order.status} />
             </div>
             <div className="space-y-2 mb-4">
-              {order.items.map(item => (
+              {order.order_items?.map((item) => (
                 <div key={item.id} className="flex gap-2 text-sm">
                   <span className="font-bold text-primary">{item.quantity}x</span>
-                  <span>{item.product.name}</span>
+                  <span>{item.products.name}</span>
                   {item.notes && <span className="text-muted-foreground">• {item.notes}</span>}
                 </div>
               ))}
@@ -69,10 +69,10 @@ export default function Cocina() {
               <StatusBadge status={order.status} />
             </div>
             <div className="space-y-2 mb-4">
-              {order.items.map(item => (
+              {order.order_items?.map((item) => (
                 <div key={item.id} className="flex gap-2 text-sm">
                   <span className="font-bold text-preparing">{item.quantity}x</span>
-                  <span>{item.product.name}</span>
+                  <span>{item.products.name}</span>
                   {item.notes && <span className="text-muted-foreground">• {item.notes}</span>}
                 </div>
               ))}

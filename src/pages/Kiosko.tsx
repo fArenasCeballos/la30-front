@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
-import { MOCK_PRODUCTS, formatPrice } from '@/data/mock';
-import type { OrderItem, Product } from '@/types';
+import { useEffect, useState, useMemo } from 'react';
+import { formatPrice } from '@/lib/formatPrice';
+import type { Product, Category, ProductWithCategory } from '@/types';
 import { useOrders } from '@/context/OrderContext';
 import { ProductCustomizer } from '@/components/ProductCustomizer';
 import { Button } from '@/components/ui/button';
@@ -10,13 +10,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Plus, Minus, Trash2, ShoppingCart, ArrowLeft, ArrowRight, CheckCircle, Edit3 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
-const CATEGORIES = [
-  { key: 'perros', label: '🌭 Perros' },
-  { key: 'hamburguesas', label: '🍔 Hamburguesas' },
-  { key: 'bebidas', label: '🥤 Bebidas' },
-  { key: 'extras', label: '🍟 Extras' },
-] as const;
+interface CartItem {
+  id: string;
+  product: ProductWithCategory;
+  quantity: number;
+  notes?: string;
+  unit_price: number;
+}
 
 const categoryEmoji: Record<string, string> = {
   perros: '🌭',
@@ -28,20 +30,39 @@ const categoryEmoji: Record<string, string> = {
 export default function Kiosko() {
   const { addOrder } = useOrders();
   const [locator, setLocator] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('perros');
-  const [cart, setCart] = useState<OrderItem[]>([]);
+  const [products, setProducts] = useState<ProductWithCategory[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>('');
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [step, setStep] = useState<'locator' | 'menu' | 'confirm'>('locator');
   const [orderNotes, setOrderNotes] = useState('');
-  const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null);
+  const [customizingProduct, setCustomizingProduct] = useState<ProductWithCategory | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
 
+  useEffect(() => {
+    const loadData = async () => {
+      const { data: catData } = await supabase.from('categories').select('*').eq('is_active', true).order('sort_order');
+      const { data: prodData } = await supabase.from('products').select('*, categories(*)').eq('available', true).order('sort_order');
+      
+      if (catData && catData.length > 0) {
+        setCategories(catData as any[]);
+        setActiveCategory((catData[0] as any).name);
+      }
+      
+      if (prodData) {
+        setProducts(prodData as any);
+      }
+    };
+    loadData();
+  }, []);
+
   const filteredProducts = useMemo(
-    () => MOCK_PRODUCTS.filter(p => p.category === activeCategory && p.available),
-    [activeCategory]
+    () => products.filter(p => p.categories?.name === activeCategory),
+    [products, activeCategory]
   );
 
   const total = useMemo(
-    () => cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+    () => cart.reduce((sum, item) => sum + item.unit_price * item.quantity, 0),
     [cart]
   );
 
@@ -50,22 +71,26 @@ export default function Kiosko() {
     [cart]
   );
 
-  const handleProductClick = (product: Product) => {
+  const handleProductClick = (product: ProductWithCategory) => {
     setCustomizingProduct(product);
   };
 
   const handleCustomizationConfirm = (product: Product, notes: string, extraCost: number) => {
-    const adjustedProduct = extraCost > 0
-      ? { ...product, price: product.price + extraCost }
-      : product;
-
+    const unitPrice = product.price + extraCost;
     const cartKey = `${product.id}-${notes}`;
+    
     setCart(prev => {
       const existing = prev.find(i => i.id === cartKey);
       if (existing) {
         return prev.map(i => i.id === cartKey ? { ...i, quantity: i.quantity + 1 } : i);
       }
-      return [...prev, { id: cartKey, product: adjustedProduct, quantity: 1, notes: notes || undefined }];
+      return [...prev, { 
+        id: cartKey, 
+        product: product as ProductWithCategory, 
+        quantity: 1, 
+        notes: notes || undefined,
+        unit_price: unitPrice 
+      }];
     });
     toast.success(`${product.name} agregado`, { duration: 1000 });
     setCustomizingProduct(null);
@@ -79,12 +104,20 @@ export default function Kiosko() {
     );
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (cart.length === 0) {
       toast.error('Agrega productos al pedido');
       return;
     }
-    addOrder(locator, cart, 'mesero');
+    
+    const itemsForDb = cart.map(item => ({
+      product_id: item.product.id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      notes: item.notes || undefined
+    }));
+
+    await addOrder(locator, itemsForDb, orderNotes);
     setCart([]);
     setLocator('');
     setOrderNotes('');
@@ -106,13 +139,13 @@ export default function Kiosko() {
             <div className="flex items-center gap-2">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate">{item.product.name}</p>
-                <p className="text-xs text-muted-foreground">{formatPrice(item.product.price)} c/u</p>
+                <p className="text-xs text-muted-foreground">{formatPrice(item.unit_price)} c/u</p>
                 {item.notes && (
                   <p className="text-xs text-primary/80 mt-0.5">📝 {item.notes}</p>
                 )}
               </div>
               <span className="font-display font-bold text-sm text-primary">
-                {formatPrice(item.product.price * item.quantity)}
+                {formatPrice(item.unit_price * item.quantity)}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -214,7 +247,7 @@ export default function Kiosko() {
                     <p className="text-xs text-muted-foreground mt-1 ml-8">📝 {item.notes}</p>
                   )}
                 </div>
-                <span className="text-sm font-semibold shrink-0">{formatPrice(item.product.price * item.quantity)}</span>
+                <span className="text-sm font-semibold shrink-0">{formatPrice(item.unit_price * item.quantity)}</span>
               </div>
             ))}
           </div>
@@ -293,15 +326,15 @@ export default function Kiosko() {
               <Badge variant="default" className="hidden lg:flex">{itemCount} items</Badge>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              {CATEGORIES.map(cat => (
+              {categories.map(cat => (
                 <Button
-                  key={cat.key}
-                  variant={activeCategory === cat.key ? 'default' : 'secondary'}
+                  key={cat.id}
+                  variant={activeCategory === cat.name ? 'default' : 'secondary'}
                   size="touch"
-                  onClick={() => setActiveCategory(cat.key)}
+                  onClick={() => setActiveCategory(cat.name)}
                   className="whitespace-nowrap text-xs sm:text-sm"
                 >
-                  {cat.label}
+                  {cat.icon} {cat.label}
                 </Button>
               ))}
             </div>
@@ -321,10 +354,10 @@ export default function Kiosko() {
                   >
                     {/* Product image */}
                     <div className="aspect-square rounded-lg bg-muted/50 mb-2 overflow-hidden flex items-center justify-center">
-                      {product.image ? (
-                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                      {product.image_url ? (
+                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-3xl sm:text-4xl">{categoryEmoji[product.category]}</span>
+                        <span className="text-3xl sm:text-4xl">{categoryEmoji[product.categories?.name || ''] || '🍔'}</span>
                       )}
                     </div>
                     <h3 className="font-semibold text-xs sm:text-sm mb-1 truncate">{product.name}</h3>
@@ -369,6 +402,7 @@ export default function Kiosko() {
 
       <ProductCustomizer
         product={customizingProduct}
+        categoryName={customizingProduct?.categories?.name}
         open={!!customizingProduct}
         onClose={() => setCustomizingProduct(null)}
         onConfirm={handleCustomizationConfirm}

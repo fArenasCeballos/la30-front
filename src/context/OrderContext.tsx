@@ -1,26 +1,20 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
-import type { Order, OrderItem, OrderStatus } from "@/types";
-import { MOCK_ORDERS } from "@/data/mock";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import type { Order, OrderStatus, Notification } from "@/types";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-
-interface Notification {
-  id: string;
-  message: string;
-  type: "info" | "success" | "warning";
-  timestamp: Date;
-  read: boolean;
-  orderId?: string;
-}
 
 interface OrderContextType {
   orders: Order[];
-  addOrder: (locator: string, items: OrderItem[], createdBy: string) => void;
-  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  loading: boolean;
+  addOrder: (locator: string, items: { product_id: string; quantity: number; unit_price: number; notes?: string }[], notes?: string) => Promise<void>;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
+  processPayment: (orderId: string, method: string, amountReceived: number) => Promise<void>;
   getOrdersByStatus: (...statuses: OrderStatus[]) => Order[];
+  refreshOrders: () => Promise<void>;
   notifications: Notification[];
   unreadCount: number;
-  markAllRead: () => void;
-  clearNotifications: () => void;
+  markAllRead: () => Promise<void>;
+  clearNotifications: () => Promise<void>;
 }
 
 const OrderContext = createContext<OrderContextType | null>(null);
@@ -53,89 +47,168 @@ function playNotificationSound() {
 }
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
-  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const addNotification = useCallback(
-    (
-      message: string,
-      type: Notification["type"] = "info",
-      orderId?: string,
-    ) => {
-      const notif: Notification = {
-        id: `notif-${Date.now()}-${Math.random()}`,
-        message,
-        type,
-        timestamp: new Date(),
-        read: false,
-        orderId,
-      };
-      setNotifications((prev) => [notif, ...prev].slice(0, 50));
-      playNotificationSound();
-    },
-    [],
-  );
+  // Fetch all active orders with their items and products
+  const fetchOrders = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        order_items (
+          *,
+          products (
+            *,
+            categories (*)
+          )
+        )
+      `)
+      .order("created_at", { ascending: false });
 
+    if (error) {
+      console.error("Error fetching orders:", error);
+      return;
+    }
+
+    setOrders((data as unknown as Order[]) || []);
+    setLoading(false);
+  }, []);
+
+  // Fetch notifications for current user
+  const fetchNotifications = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (!error && data) {
+      setNotifications(data);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchOrders();
+    fetchNotifications();
+  }, [fetchOrders, fetchNotifications]);
+
+  // Realtime: listen for order changes
+  useEffect(() => {
+    const ordersChannel = supabase
+      .channel("orders-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        () => {
+          fetchOrders();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "order_items" },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ordersChannel);
+    };
+  }, [fetchOrders]);
+
+  // Realtime: listen for new notifications
+  useEffect(() => {
+    const notifChannel = supabase
+      .channel("notifications-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications" },
+        (payload) => {
+          const newNotif = payload.new as Notification;
+          setNotifications((prev) => [newNotif, ...prev].slice(0, 50));
+          playNotificationSound();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notifChannel);
+    };
+  }, []);
+
+  // Create order via RPC
   const addOrder = useCallback(
-    (locator: string, items: OrderItem[], createdBy: string) => {
-      const total = items.reduce(
-        (sum, item) => sum + item.product.price * item.quantity,
-        0,
-      );
-      const newOrder: Order = {
-        id: `ord-${Date.now()}`,
-        locator,
-        items,
-        status: "pendiente",
-        total,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        createdBy,
-      };
-      setOrders((prev) => [newOrder, ...prev]);
-      toast.success(`Pedido ${locator} enviado a caja`);
-      addNotification(
-        `🆕 Nuevo pedido ${locator} recibido en caja`,
-        "info",
-        newOrder.id,
-      );
+    async (
+      locator: string,
+      items: { product_id: string; quantity: number; unit_price: number; notes?: string }[],
+      notes?: string
+    ) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)("create_order", {
+        p_locator: locator,
+        p_items: items,
+        p_notes: notes || null,
+      });
+
+      if (error) {
+        toast.error(`Error al crear pedido: ${error.message}`);
+        return;
+      }
+
+      const result = data as { locator: string } | null;
+      toast.success(`Pedido ${result?.locator || locator} enviado a caja`);
+      await fetchOrders();
     },
-    [addNotification],
+    [fetchOrders],
   );
 
+  // Update order status via RPC
   const updateOrderStatus = useCallback(
-    (orderId: string, status: OrderStatus) => {
-      let locator = "";
-      setOrders((prev) =>
-        prev.map((o) => {
-          if (o.id === orderId) {
-            locator = o.locator;
-            return { ...o, status, updatedAt: new Date() };
-          }
-          return o;
-        }),
-      );
-      toast.success(`Pedido actualizado: ${STATUS_LABELS[status]}`);
+    async (orderId: string, status: OrderStatus) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.rpc as any)("update_order_status", {
+        p_order_id: orderId,
+        p_status: status,
+      });
 
-      const messages: Partial<Record<OrderStatus, string>> = {
-        confirmado: `✅ Pedido ${locator} confirmado por caja`,
-        en_preparacion: `👨‍🍳 Pedido ${locator} en preparación`,
-        listo: `🔔 Pedido ${locator} ¡LISTO! Llamar cliente`,
-        entregado: `💰 Pedido ${locator} entregado y cobrado`,
-        cancelado: `❌ Pedido ${locator} cancelado`,
-      };
-      const msg = messages[status];
-      if (msg) {
-        const type =
-          status === "cancelado"
-            ? "warning"
-            : status === "listo"
-              ? "success"
-              : "info";
-        addNotification(msg, type, orderId);
+      if (error) {
+        toast.error(`Error: ${error.message}`);
+        return;
       }
+
+      toast.success(`Pedido actualizado: ${STATUS_LABELS[status]}`);
+      await fetchOrders();
     },
-    [addNotification],
+    [fetchOrders],
+  );
+
+  // Process payment via RPC
+  const processPayment = useCallback(
+    async (orderId: string, method: string, amountReceived: number) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.rpc as any)("process_payment", {
+        p_order_id: orderId,
+        p_method: method,
+        p_amount_received: amountReceived,
+      });
+
+      if (error) {
+        toast.error(`Error al procesar pago: ${error.message}`);
+        return;
+      }
+
+      toast.success("Pago procesado, pedido enviado a cocina");
+      await fetchOrders();
+    },
+    [fetchOrders],
   );
 
   const getOrdersByStatus = useCallback(
@@ -147,21 +220,30 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAllRead = useCallback(() => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const markAllRead = useCallback(async () => {
+    const { error } = await supabase.rpc("mark_notifications_read");
+    if (!error) {
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    }
   }, []);
 
-  const clearNotifications = useCallback(() => {
-    setNotifications([]);
+  const clearNotifications = useCallback(async () => {
+    const { error } = await supabase.rpc("clear_my_notifications");
+    if (!error) {
+      setNotifications([]);
+    }
   }, []);
 
   return (
     <OrderContext.Provider
       value={{
         orders,
+        loading,
         addOrder,
         updateOrderStatus,
+        processPayment,
         getOrdersByStatus,
+        refreshOrders: fetchOrders,
         notifications,
         unreadCount,
         markAllRead,

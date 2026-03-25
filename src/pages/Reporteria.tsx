@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
-import { useOrders } from '@/context/OrderContext';
-import { formatPrice, MOCK_USERS } from '@/data/mock';
+import { useMemo, useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { formatPrice } from '@/lib/formatPrice';
 import { FileText, Download, Filter, CalendarIcon, DollarSign, TrendingUp, ShoppingCart, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -13,7 +13,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,7 +30,7 @@ const QUICK_RANGES = [
 ];
 
 export default function Reporteria() {
-  const { orders } = useOrders();
+  const [reportOrders, setReportOrders] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfDay(new Date()),
@@ -38,34 +38,50 @@ export default function Reporteria() {
   });
   const [activeQuick, setActiveQuick] = useState('Hoy');
 
-  const dateFiltered = useMemo(() => {
-    if (!dateRange?.from) return orders;
-    const from = startOfDay(dateRange.from);
-    const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
-    return orders.filter(o => isWithinInterval(o.createdAt, { start: from, end: to }));
-  }, [orders, dateRange]);
+  const fetchReportData = async () => {
+    if (!dateRange?.from) return;
+    const from = startOfDay(dateRange.from).toISOString();
+    const to = dateRange.to ? endOfDay(dateRange.to).toISOString() : endOfDay(dateRange.from).toISOString();
+
+    // Fetch orders with nested profile and items
+    const { data, error } = await (supabase
+      .from('orders') as any)
+      .select('*, profiles!orders_created_by_fkey(name), order_items(*, products(*))')
+      .gte('created_at', from)
+      .lte('created_at', to)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching report:', error);
+    } else {
+      setReportOrders(data || []);
+    }
+  };
+
+  useEffect(() => {
+    fetchReportData();
+  }, [dateRange]);
 
   const filteredOrders = useMemo(() => {
-    if (statusFilter === 'all') return dateFiltered;
-    return dateFiltered.filter(o => o.status === statusFilter);
-  }, [dateFiltered, statusFilter]);
+    if (statusFilter === 'all') return reportOrders;
+    return reportOrders.filter(o => o.status === statusFilter);
+  }, [reportOrders, statusFilter]);
 
   const summary = useMemo(() => {
     const total = filteredOrders.reduce((sum, o) => sum + o.total, 0);
     const avgTicket = filteredOrders.length > 0 ? total / filteredOrders.length : 0;
     const itemsSold = filteredOrders.reduce((sum, o) =>
-      sum + o.items.reduce((s, i) => s + i.quantity, 0), 0
+      sum + (o.order_items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0), 0
     );
     const delivered = filteredOrders.filter(o => o.status === 'entregado');
     const cancelled = filteredOrders.filter(o => o.status === 'cancelado');
     return { total, avgTicket, count: filteredOrders.length, itemsSold, delivered: delivered.length, cancelled: cancelled.length };
   }, [filteredOrders]);
 
-  // Cash open/close summary
   const cashSummary = useMemo(() => {
-    const delivered = dateFiltered.filter(o => o.status === 'entregado');
-    const pending = dateFiltered.filter(o => !['entregado', 'cancelado'].includes(o.status));
-    const cancelled = dateFiltered.filter(o => o.status === 'cancelado');
+    const delivered = reportOrders.filter(o => o.status === 'entregado');
+    const pending = reportOrders.filter(o => !['entregado', 'cancelado'].includes(o.status));
+    const cancelled = reportOrders.filter(o => o.status === 'cancelado');
     return {
       totalSales: delivered.reduce((s, o) => s + o.total, 0),
       deliveredCount: delivered.length,
@@ -73,36 +89,35 @@ export default function Reporteria() {
       pendingTotal: pending.reduce((s, o) => s + o.total, 0),
       cancelledCount: cancelled.length,
       cancelledTotal: cancelled.reduce((s, o) => s + o.total, 0),
-      totalOrders: dateFiltered.length,
+      totalOrders: reportOrders.length,
     };
-  }, [dateFiltered]);
+  }, [reportOrders]);
 
   const hourlyData = useMemo(() => {
     const hours: Record<number, number> = {};
-    dateFiltered.forEach(o => {
-      const h = o.createdAt.getHours();
+    reportOrders.forEach(o => {
+      const h = new Date(o.created_at).getHours();
       hours[h] = (hours[h] || 0) + o.total;
     });
     return Array.from({ length: 24 }, (_, i) => ({
       hora: `${i}:00`,
       ventas: hours[i] || 0,
     })).filter(d => d.ventas > 0);
-  }, [dateFiltered]);
+  }, [reportOrders]);
 
-  // Per-waiter stats
   const waiterData = useMemo(() => {
     const map: Record<string, { name: string; orders: number; total: number }> = {};
-    dateFiltered.forEach(o => {
-      const key = o.createdBy;
+    reportOrders.forEach(o => {
+      const key = o.created_by;
+      const name = o.profiles?.name || 'Sistema';
       if (!map[key]) {
-        const user = MOCK_USERS.find(u => u.role === key || u.name === key);
-        map[key] = { name: user?.name || key, orders: 0, total: 0 };
+        map[key] = { name, orders: 0, total: 0 };
       }
       map[key].orders++;
       map[key].total += o.total;
     });
     return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [dateFiltered]);
+  }, [reportOrders]);
 
   const handleQuickRange = (label: string) => {
     const range = QUICK_RANGES.find(r => r.label === label);
@@ -115,7 +130,7 @@ export default function Reporteria() {
   const exportCSV = () => {
     const header = 'Localizador,Estado,Items,Total,Fecha,Creado Por\n';
     const rows = filteredOrders.map(o =>
-      `${o.locator},${o.status},${o.items.length},${o.total},${o.createdAt.toLocaleString('es-CO')},${o.createdBy}`
+      `${o.locator},${o.status},${o.order_items?.length || 0},${o.total},${new Date(o.created_at).toLocaleString('es-CO')},${o.profiles?.name || 'Sistema'}`
     ).join('\n');
     const blob = new Blob([header + rows], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -347,10 +362,10 @@ export default function Reporteria() {
                   <tr key={order.id} className="border-b last:border-0">
                     <td className="py-3 font-display font-bold text-primary">{order.locator}</td>
                     <td className="py-3"><StatusBadge status={order.status} /></td>
-                    <td className="py-3">{order.items.reduce((s, i) => s + i.quantity, 0)}</td>
+                    <td className="py-3">{order.order_items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0}</td>
                     <td className="py-3 text-right font-semibold">{formatPrice(order.total)}</td>
-                    <td className="py-3 text-muted-foreground">{order.createdBy}</td>
-                    <td className="py-3 text-muted-foreground">{order.createdAt.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td className="py-3 text-muted-foreground">{order.profiles?.name || 'Sistema'}</td>
+                    <td className="py-3 text-muted-foreground">{new Date(order.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</td>
                   </tr>
                 ))}
                 {filteredOrders.length === 0 && (

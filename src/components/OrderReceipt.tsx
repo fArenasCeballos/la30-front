@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import type { Order } from '@/types';
-import { formatPrice } from '@/data/mock';
+import { formatPrice } from '@/lib/formatPrice';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Printer, X } from 'lucide-react';
@@ -56,7 +56,7 @@ export function OrderReceipt({ order, open, onClose, type, paymentMethod, paymen
   const dateStr = new Intl.DateTimeFormat('es-CO', {
     dateStyle: 'short',
     timeStyle: 'short',
-  }).format(order.createdAt);
+  }).format(new Date(order.created_at));
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -85,11 +85,11 @@ export function OrderReceipt({ order, open, onClose, type, paymentMethod, paymen
                   <span className="bold">{order.locator}</span>
                 </div>
                 <div className="divider" />
-                {order.items.map(item => (
+                {order.order_items?.map((item) => (
                   <div key={item.id}>
                     <div className="row">
-                      <span>{item.quantity}x {item.product.name}</span>
-                      <span>{formatPrice(item.product.price * item.quantity)}</span>
+                      <span>{item.quantity}x {item.products.name}</span>
+                      <span>{formatPrice(item.unit_price * item.quantity)}</span>
                     </div>
                     {item.notes && <p className="item-notes">↳ {item.notes}</p>}
                   </div>
@@ -135,17 +135,17 @@ export function OrderReceipt({ order, open, onClose, type, paymentMethod, paymen
                   <p className="locator">{order.locator}</p>
                 </div>
                 <div className="divider" />
-                {order.items.map(item => (
+                {order.order_items?.map((item) => (
                   <div key={item.id}>
                     <p className="kitchen-item">
-                      {item.quantity}x {item.product.name}
+                      {item.quantity}x {item.products.name}
                     </p>
                     {item.notes && <p className="kitchen-notes">⚠️ {item.notes}</p>}
                   </div>
                 ))}
                 <div className="divider" />
                 <div className="center">
-                  <p className="bold">Items: {order.items.reduce((s, i) => s + i.quantity, 0)}</p>
+                  <p className="bold">Items: {order.order_items?.reduce((s: number, i) => s + i.quantity, 0) || 0}</p>
                 </div>
                 {order.notes && (
                   <>
