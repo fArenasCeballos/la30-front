@@ -57,9 +57,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Listen for auth state changes (session restore, login, logout)
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        fetchProfile(session.user.id);
+        await fetchProfile(session.user.id);
       }
       setLoading(false);
     });

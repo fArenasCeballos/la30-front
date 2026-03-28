@@ -37,7 +37,16 @@ const NAV_ITEMS: {
 ];
 
 export function AppLayout() {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    // Mientras Supabase verifica la sesión, no redirige
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="text-muted-foreground text-sm">Cargando...</span>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
