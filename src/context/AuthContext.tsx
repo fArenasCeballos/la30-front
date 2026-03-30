@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import type { User, UserRole } from "@/types";
 import { supabase } from "@/lib/supabase";
@@ -6,6 +7,7 @@ export interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  forceReset: () => void;
   isAuthenticated: boolean;
   loading: boolean;
 }
@@ -18,22 +20,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch profile from DB given auth user id
   const fetchProfile = useCallback(async (userId: string) => {
-    console.log("Fetching profile for:", userId);
-    
-    // Safety timeout to prevent infinite hang
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Timeout fetching profile")), 10000)
-    );
-
     try {
-      const fetchPromise = supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
         .single();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
       if (error) {
         console.error("Profile fetch error:", error);
@@ -47,7 +39,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.log("Profile loaded successfully:", data.role);
       setUser(data);
     } catch (err) {
       console.error("Profile fetch exception:", err);
@@ -55,37 +46,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const lastFetchedId = React.useRef<string | null>(null);
+
   // Listen for auth state changes (session restore, login, logout)
   useEffect(() => {
-  let initialized = false;
+    let mounted = true;
 
-  const init = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const handleSession = async (session: import("@supabase/supabase-js").Session | null) => {
+      if (!mounted) return;
+      const userId = session?.user?.id;
 
-    if (session?.user) {
-      await fetchProfile(session.user.id);
-    }
-
-    setLoading(false);
-    initialized = true;
-  };
-
-  init();
-
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
-      if (!initialized) return;
-
-      if (session?.user) {
-        await fetchProfile(session.user.id);
+      if (userId) {
+        if (lastFetchedId.current !== userId) {
+          lastFetchedId.current = userId;
+          await fetchProfile(userId);
+        }
       } else {
+        lastFetchedId.current = null;
         setUser(null);
       }
-    }
-  );
+      setLoading(false);
+    };
 
-  return () => subscription.unsubscribe();
-}, [fetchProfile]);
+    // 1. Obtener sesión inicial
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleSession(session);
+    });
+
+    // 2. Escuchar cambios futuros
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        handleSession(session);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchProfile]);
 
   const login = useCallback(
     async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
@@ -105,13 +104,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    try {
+      // Limpiamos la sesión en Supabase (con timeout de seguridad)
+      const signOutPromise = supabase.auth.signOut();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("TIMEOUT")), 2000)
+      );
+      await Promise.race([signOutPromise, timeoutPromise]);
+    } catch (err) {
+      console.warn("SignOut de Supabase falló o tardó demasiado:", err);
+    } finally {
+      // Siempre limpiamos el estado local pase lo que pase
+      setUser(null);
+    }
+  }, []);
+
+  const forceReset = useCallback(() => {
+    // Importamos dinámicamente o usamos la utilidad
+    import("@/lib/systemUtils").then(m => m.forceSystemReset());
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ user, login, logout, isAuthenticated: !!user, loading }}
+      value={{ user, login, logout, forceReset, isAuthenticated: !!user, loading }}
     >
       {children}
     </AuthContext.Provider>

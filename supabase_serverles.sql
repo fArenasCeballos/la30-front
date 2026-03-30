@@ -593,7 +593,8 @@ $$;
 
 -- ── 4.3 Procesar pago ────────────────────────────────────────
 -- Usado en OrderContext.tsx → processPayment()
--- Registra el pago y avanza el pedido a en_preparacion automáticamente.
+-- Registra el pago. El pedido queda en 'confirmado' hasta que cocina
+-- haga clic en "Preparar" para moverlo a 'en_preparacion'.
 CREATE OR REPLACE FUNCTION process_payment(
   p_order_id        UUID,
   p_method          payment_method,
@@ -628,8 +629,7 @@ BEGIN
   VALUES (p_order_id, p_method, v_order.total, p_amount_received, v_change, auth.uid())
   RETURNING id INTO v_payment_id;
 
-  -- Avanzar automáticamente a en_preparacion
-  UPDATE orders SET status = 'en_preparacion' WHERE id = p_order_id;
+  -- NO avanzar automáticamente. Cocina decidirá cuándo empezar a preparar.
 
   RETURN jsonb_build_object(
     'payment_id', v_payment_id,
@@ -639,7 +639,7 @@ BEGIN
     'total',      v_order.total,
     'received',   p_amount_received,
     'change',     v_change,
-    'new_status', 'en_preparacion'
+    'new_status', 'confirmado'
   );
 END;
 $$;
@@ -1078,110 +1078,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE products;
 
 
 -- ============================================================
--- 8. SEED DATA
+-- 8. SEED DATA (LIMPIO - AÑADE TUS DATOS DESDE EL APLICATIVO)
 -- ============================================================
-
--- ── Categorías ───────────────────────────────────────────────
-INSERT INTO categories (name, label, icon, sort_order) VALUES
-  ('perros',        'Perros',        '🌭', 1),
-  ('hamburguesas',  'Hamburguesas',  '🍔', 2),
-  ('bebidas',       'Bebidas',       '🥤', 3),
-  ('extras',        'Extras',        '🍟', 4);
-
--- ── Productos ────────────────────────────────────────────────
-INSERT INTO products (name, category_id, price, available, sort_order) VALUES
-  ('Perro Clásico',           (SELECT id FROM categories WHERE name='perros'),       8000, TRUE, 1),
-  ('Perro Especial La 30',    (SELECT id FROM categories WHERE name='perros'),      12000, TRUE, 2),
-  ('Perro Hawaiano',          (SELECT id FROM categories WHERE name='perros'),      10000, TRUE, 3),
-  ('Perro Ranchero',          (SELECT id FROM categories WHERE name='perros'),      11000, TRUE, 4),
-  ('Hamburguesa Clásica',     (SELECT id FROM categories WHERE name='hamburguesas'),15000, TRUE, 5),
-  ('Hamburguesa Doble',       (SELECT id FROM categories WHERE name='hamburguesas'),20000, TRUE, 6),
-  ('Hamburguesa BBQ',         (SELECT id FROM categories WHERE name='hamburguesas'),18000, TRUE, 7),
-  ('Hamburguesa La 30',       (SELECT id FROM categories WHERE name='hamburguesas'),22000, TRUE, 8),
-  ('Gaseosa',                 (SELECT id FROM categories WHERE name='bebidas'),      3000, TRUE, 9),
-  ('Jugo Natural',            (SELECT id FROM categories WHERE name='bebidas'),      5000, TRUE,10),
-  ('Agua',                    (SELECT id FROM categories WHERE name='bebidas'),      2000, TRUE,11),
-  ('Papas Fritas',            (SELECT id FROM categories WHERE name='extras'),       6000, TRUE,12),
-  ('Aros de Cebolla',         (SELECT id FROM categories WHERE name='extras'),       7000, TRUE,13),
-  ('Salchipapa',              (SELECT id FROM categories WHERE name='extras'),       9000, TRUE,14);
-
--- ── Opciones de personalización ──────────────────────────────
--- Opciones para perros
-INSERT INTO product_custom_options (category_id, option_key, label, icon, sort_order) VALUES
-  ((SELECT id FROM categories WHERE name='perros'), 'cebolla', 'Cebolla',       '🧅', 1),
-  ((SELECT id FROM categories WHERE name='perros'), 'salsas',  'Salsas',        '🫙', 2),
-  ((SELECT id FROM categories WHERE name='perros'), 'ripio',   'Ripio (papita)','🥔', 3);
-
--- Opciones para hamburguesas
-INSERT INTO product_custom_options (category_id, option_key, label, icon, sort_order) VALUES
-  ((SELECT id FROM categories WHERE name='hamburguesas'), 'verdura', 'Verduras','🥗', 1),
-  ((SELECT id FROM categories WHERE name='hamburguesas'), 'salsas',  'Salsas',  '🫙', 2);
-
--- Choices: perros → cebolla
-INSERT INTO product_custom_choices (option_id, value, label, icon, sort_order)
-SELECT o.id, v.value, v.label, v.icon, v.sort_order
-FROM product_custom_options o
-CROSS JOIN (VALUES
-  ('sin',    'Sin cebolla', '🚫', 1),
-  ('cruda',  'Cruda',       '🥬', 2),
-  ('sofrita','Sofrita',     '🍳', 3)
-) AS v(value, label, icon, sort_order)
-WHERE o.option_key = 'cebolla'
-  AND o.category_id = (SELECT id FROM categories WHERE name='perros');
-
--- Choices: perros → salsas
-INSERT INTO product_custom_choices (option_id, value, label, icon, sort_order)
-SELECT o.id, v.value, v.label, v.icon, v.sort_order
-FROM product_custom_options o
-CROSS JOIN (VALUES
-  ('con', 'Con salsas', '✅', 1),
-  ('sin', 'Sin salsas', '🚫', 2)
-) AS v(value, label, icon, sort_order)
-WHERE o.option_key = 'salsas'
-  AND o.category_id = (SELECT id FROM categories WHERE name='perros');
-
--- Choices: perros → ripio
-INSERT INTO product_custom_choices (option_id, value, label, icon, sort_order)
-SELECT o.id, v.value, v.label, v.icon, v.sort_order
-FROM product_custom_options o
-CROSS JOIN (VALUES
-  ('con', 'Con ripio', '✅', 1),
-  ('sin', 'Sin ripio', '🚫', 2)
-) AS v(value, label, icon, sort_order)
-WHERE o.option_key = 'ripio'
-  AND o.category_id = (SELECT id FROM categories WHERE name='perros');
-
--- Choices: hamburguesas → verdura
-INSERT INTO product_custom_choices (option_id, value, label, icon, sort_order)
-SELECT o.id, v.value, v.label, v.icon, v.sort_order
-FROM product_custom_options o
-CROSS JOIN (VALUES
-  ('completa',    'Completa',      '✅',    1),
-  ('sin_tomate',  'Sin tomate',    '🍅🚫', 2),
-  ('sin_lechuga', 'Sin lechuga',   '🥬🚫', 3),
-  ('sin_verdura', 'Sin verduras',  '🚫',   4)
-) AS v(value, label, icon, sort_order)
-WHERE o.option_key = 'verdura'
-  AND o.category_id = (SELECT id FROM categories WHERE name='hamburguesas');
-
--- Choices: hamburguesas → salsas
-INSERT INTO product_custom_choices (option_id, value, label, icon, sort_order)
-SELECT o.id, v.value, v.label, v.icon, v.sort_order
-FROM product_custom_options o
-CROSS JOIN (VALUES
-  ('con', 'Con salsas', '✅', 1),
-  ('sin', 'Sin salsas', '🚫', 2)
-) AS v(value, label, icon, sort_order)
-WHERE o.option_key = 'salsas'
-  AND o.category_id = (SELECT id FROM categories WHERE name='hamburguesas');
-
--- ── Extras con precio ────────────────────────────────────────
-INSERT INTO product_extras (category_id, extra_key, label, icon, price_per_unit, max_qty, sort_order) VALUES
-  ((SELECT id FROM categories WHERE name='perros'),       'salchicha_extra', 'Salchicha adicional', '🌭', 3000, 4, 1),
-  ((SELECT id FROM categories WHERE name='hamburguesas'), 'queso_extra',     'Queso extra',         '🧀', 2000, 3, 1),
-  ((SELECT id FROM categories WHERE name='hamburguesas'), 'tocineta',        'Tocineta',            '🥓', 3000, 2, 2);
-
-
+-- Se han eliminado las inserciones manuales para permitir 
+-- un inicio limpio desde el módulo de Inventario y Usuarios.
 -- ============================================================
 -- 9. PRIMER USUARIO ADMIN
 -- ============================================================

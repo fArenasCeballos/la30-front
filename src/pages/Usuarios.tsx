@@ -88,7 +88,7 @@ export default function Usuarios() {
     setShowForm(true);
   };
 
-  const handleSave = async () => {
+const handleSave = async () => {
     if (!formName.trim()) {
       toast.error('Nombre es requerido');
       return;
@@ -119,24 +119,43 @@ export default function Usuarios() {
         return;
       }
 
-      const { error } = await supabase.auth.signUp({
-        email: formEmail,
-        password: formPassword,
-        options: {
-          data: {
-            full_name: formName,
-            role: formRole
+      try {
+        // Fix: Use a secondary, non-persisting client to prevent session replacement
+        const { createClient } = await import('@supabase/supabase-js');
+        const tempSupabase = createClient(
+          import.meta.env.VITE_SUPABASE_URL,
+          import.meta.env.VITE_SUPABASE_ANON_KEY,
+          {
+            auth: {
+              persistSession: false,
+              autoRefreshToken: false,
+              detectSessionInUrl: false
+            }
           }
-        }
-      });
+        );
 
-      if (error) {
-        toast.error(`Error al crear usuario: ${error.message}`);
-      } else {
-        toast.success('Usuario creado. Los perfiles se sincronizan automáticamente.');
-        // If it was a success but no session (needs confirmation), we might not see the profile immediately
-        setTimeout(fetchProfiles, 1500); 
-        setShowForm(false);
+        const { error } = await tempSupabase.auth.signUp({
+          email: formEmail,
+          password: formPassword,
+          options: {
+            data: {
+              full_name: formName,
+              role: formRole
+            }
+          }
+        });
+
+        if (error) {
+          toast.error(`Error al crear usuario: ${error.message}`);
+        } else {
+          toast.success('Usuario creado exitosamente. Tu sesión se mantiene activa.');
+          // Refresh profiles to show the new one
+          setTimeout(fetchProfiles, 1500); 
+          setShowForm(false);
+        }
+      } catch (err) {
+        console.error("Critical error creating user:", err);
+        toast.error("Error al inicializar cliente de creación");
       }
     }
     setIsSubmitting(false);

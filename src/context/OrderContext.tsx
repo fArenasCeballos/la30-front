@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import type { Order, OrderStatus, Notification } from "@/types";
 import { supabase } from "@/lib/supabase";
@@ -241,19 +242,33 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
   const processPayment = useCallback(
     async (orderId: string, method: string, amountReceived: number) => {
+      // 1. Registrar el pago
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.rpc as any)("process_payment", {
+      const { error: paymentError } = await (supabase.rpc as any)("process_payment", {
         p_order_id: orderId,
         p_method: method,
         p_amount_received: amountReceived,
       });
 
-      if (error) {
-        toast.error(`Error al procesar pago: ${error.message}`);
+      if (paymentError) {
+        toast.error(`Error al procesar pago: ${paymentError.message}`);
         return;
       }
 
-      toast.success("Pago procesado, pedido enviado a cocina");
+      // 2. Cambiar estado a Cocina automáticamente
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: statusError } = await (supabase.rpc as any)("update_order_status", {
+        p_order_id: orderId,
+        p_status: "en_preparacion",
+      });
+
+      if (statusError) {
+        console.warn("Pago registrado pero falló cambio de estado:", statusError);
+        toast.warning("Pago registrado, pero por favor mueve el pedido a Cocina manualmente");
+      } else {
+        toast.success("Pago procesado y pedido enviado a Cocina");
+      }
+
       await fetchOrders();
     },
     [fetchOrders],

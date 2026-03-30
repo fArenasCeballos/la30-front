@@ -11,6 +11,7 @@ import {
   FileText,
   Package,
   Users,
+  Wrench,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import type { UserRole } from "@/types";
@@ -37,7 +38,7 @@ const NAV_ITEMS: {
 ];
 
 export function AppLayout() {
-  const { user, logout, isAuthenticated, loading } = useAuth();
+  const { user, logout, forceReset, isAuthenticated, loading } = useAuth();
 
   if (loading) {
     // Mientras Supabase verifica la sesión, no redirige
@@ -90,7 +91,19 @@ export function AppLayout() {
               ({user?.role})
             </span>
           </span>
-          <Button variant="ghost" size="icon" onClick={logout}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => {
+              if (confirm("¿Deseas reparar la conexión? Esto cerrará tu sesión y limpiará la caché para solucionar problemas de carga.")) {
+                forceReset();
+              }
+            }}
+            title="Reparar conexión"
+          >
+            <Wrench className="h-4 w-4 text-muted-foreground" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={logout} title="Cerrar sesión">
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
