@@ -154,7 +154,7 @@ export default function Kiosko() {
           <Input
             value={locator}
             onChange={e => setLocator(e.target.value.toUpperCase())}
-            placeholder="Ej: A-12"
+            placeholder="Ej: 12"
             className="h-14 sm:h-16 text-center text-xl sm:text-2xl font-display font-bold"
             autoFocus
           />
