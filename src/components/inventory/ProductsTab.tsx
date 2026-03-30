@@ -343,6 +343,11 @@ export function ProductsTab() {
             <div className="space-y-2">
               <Label>Precio (COP)</Label>
               <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="15000" />
+              {form.price && (
+                <p className="text-sm font-medium text-primary text-right animate-in fade-in slide-in-from-top-1">
+                  {formatPrice(Number(form.price))}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">

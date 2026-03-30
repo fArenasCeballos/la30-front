@@ -293,14 +293,12 @@ export function OrderReceipt({
             </span>
           </div>
           <div style={{ fontSize: '11px', padding: '4px 0 0' }}>
-            1 {paymentMethod === 'efectivo'
+            {paymentMethod === 'efectivo'
               ? 'Efectivo'
               : paymentMethod === 'tarjeta'
                 ? 'Tarjeta'
                 : 'Nequi'}{' '}
-            {new Intl.NumberFormat('es-CO', {
-              minimumFractionDigits: 0,
-            }).format(paymentReceived ?? order.total ?? 0)}
+            {formatPrice(paymentReceived ?? order.total ?? 0)}
           </div>
           <div className="divider" />
         </>
