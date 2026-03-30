@@ -57,28 +57,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Listen for auth state changes (session restore, login, logout)
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+  let initialized = false;
+
+  const init = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (session?.user) {
+      await fetchProfile(session.user.id);
+    }
+
+    setLoading(false);
+    initialized = true;
+  };
+
+  init();
+
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (_event, session) => {
+      if (!initialized) return;
+
       if (session?.user) {
         await fetchProfile(session.user.id);
+      } else {
+        setUser(null);
       }
-      setLoading(false);
-    });
+    }
+  );
 
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
-          setUser(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [fetchProfile]);
+  return () => subscription.unsubscribe();
+}, [fetchProfile]);
 
   const login = useCallback(
     async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
