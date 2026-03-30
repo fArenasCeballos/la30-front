@@ -177,6 +177,12 @@
   h3 {
     font-family: "Space Grotesk", sans-serif;
   }
+
+  button, 
+  [role="button"],
+  a {
+    cursor: pointer;
+  }
 }
 
 @layer components {
@@ -186,6 +192,19 @@
 
   .pos-card {
     @apply bg-card rounded-xl border shadow-sm p-4 transition-all;
+  }
+
+  /* Ensure clickable cards show pointer and have feedback */
+  button.pos-card,
+  a.pos-card,
+  .pos-card[onClick],
+  .pos-card:has(button),
+  .pos-card:hover {
+    cursor: pointer;
+  }
+
+  button.pos-card:hover {
+    @apply border-primary/40 shadow-md transform -translate-y-0.5;
   }
 
   .status-badge {
