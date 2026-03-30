@@ -65,10 +65,8 @@ export function CategoriesTab() {
   };
 
   const handleSave = async () => {
-    console.log("1. handleSave - Inicio", { form, editCategory });
     try {
       if (!form.name.trim() || !form.label.trim()) {
-        console.warn("2. Validación fallida: campos obligatorios");
         toast.error('El nombre clave y la etiqueta son obligatorios');
         return;
       }
@@ -80,10 +78,7 @@ export function CategoriesTab() {
         sort_order: Number(form.sort_order) || 0,
       };
 
-      console.log("3. Datos preparados:", catData);
-
       if (editCategory) {
-        console.log("4. Ejecutando UPDATE...");
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await (supabase.from('categories') as any)
           .update(catData)
@@ -97,7 +92,6 @@ export function CategoriesTab() {
         }
         toast.success('Categoría actualizada');
       } else {
-        console.log("4. Ejecutando INSERT...");
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error, data } = await (supabase.from('categories') as any)
           .insert(catData)
