@@ -2,7 +2,6 @@ import { useAuth } from "@/context/AuthContext";
 import { Navigate, Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Flame,
   LogOut,
   ShoppingCart,
   Monitor,
@@ -27,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { Logo } from "./ui/logo";
 
 const NAV_ITEMS: {
   to: string;
@@ -73,8 +73,8 @@ export function AppLayout() {
     <div className="min-h-screen flex flex-col">
       <header className="h-16 border-b bg-card flex items-center px-4 gap-3 sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-            <Flame className="h-5 w-5 text-primary-foreground" />
+          <div className="w-10 h-10 rounded-xl bg-card border shadow-sm flex items-center justify-center overflow-hidden">
+            <Logo className="h-7 w-7" />
           </div>
           <span className="font-display font-bold text-lg hidden sm:block">
             La 30

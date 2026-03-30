@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Flame } from "lucide-react";
 import { toast } from "sonner";
+import { Logo } from "@/components/ui/logo";
 
 export default function Login() {
   const { login } = useAuth();
@@ -35,8 +35,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm space-y-8 animate-in fade-in zoom-in duration-300">
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-2 shadow-lg shadow-primary/20">
-            <Flame className="h-8 w-8 text-primary-foreground" />
+          <div className="inline-flex items-center justify-center w-28 h-28 rounded-3xl bg-card shadow-xl border mb-2 mx-auto overflow-hidden">
+            <Logo className="h-24 w-24" />
           </div>
           <h1 className="font-display text-4xl font-bold tracking-tight">La 30</h1>
           <p className="text-muted-foreground text-sm uppercase tracking-widest">Perros y Hamburguesas</p>
