@@ -45,12 +45,12 @@ export default function Kiosko() {
       const { data: prodData } = await supabase.from('products').select('*, categories(*)').eq('available', true).order('sort_order');
       
       if (catData && catData.length > 0) {
-        setCategories(catData as any[]);
-        setActiveCategory((catData[0] as any).name);
+        setCategories(catData as Category[]);
+        setActiveCategory((catData[0] as Category).name);
       }
       
       if (prodData) {
-        setProducts(prodData as any);
+        setProducts(prodData as unknown as ProductWithCategory[]);
       }
     };
     loadData();
@@ -123,69 +123,6 @@ export default function Kiosko() {
     setOrderNotes('');
     setStep('locator');
   };
-
-  // Cart content (reusable for both sidebar and sheet)
-  const CartContent = () => (
-    <>
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {cart.length === 0 && (
-          <div className="text-center py-12 space-y-2">
-            <ShoppingCart className="h-10 w-10 mx-auto text-muted-foreground/30" />
-            <p className="text-muted-foreground text-sm">Toca un producto para agregarlo</p>
-          </div>
-        )}
-        {cart.map(item => (
-          <div key={item.id} className="rounded-xl bg-background p-3 space-y-2 animate-slide-in">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{item.product.name}</p>
-                <p className="text-xs text-muted-foreground">{formatPrice(item.unit_price)} c/u</p>
-                {item.notes && (
-                  <p className="text-xs text-primary/80 mt-0.5">📝 {item.notes}</p>
-                )}
-              </div>
-              <span className="font-display font-bold text-sm text-primary">
-                {formatPrice(item.unit_price * item.quantity)}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => updateQuantity(item.id, -1)}>
-                  {item.quantity === 1 ? <Trash2 className="h-3.5 w-3.5 text-destructive" /> : <Minus className="h-3.5 w-3.5" />}
-                </Button>
-                <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => updateQuantity(item.id, 1)}>
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="p-4 border-t space-y-3 bg-card">
-        <div className="space-y-1">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Subtotal ({itemCount} items)</span>
-            <span>{formatPrice(total)}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="font-semibold">Total</span>
-            <span className="font-display text-2xl sm:text-3xl font-bold text-primary">{formatPrice(total)}</span>
-          </div>
-        </div>
-        <Button
-          size="touch"
-          className="w-full"
-          onClick={() => { setStep('confirm'); setCartOpen(false); }}
-          disabled={cart.length === 0}
-        >
-          <ArrowRight className="h-5 w-5 mr-2" />
-          Revisar Pedido
-        </Button>
-      </div>
-    </>
-  );
 
   // Step 1: Locator
   if (step === 'locator') {
@@ -277,7 +214,7 @@ export default function Kiosko() {
             <Edit3 className="h-4 w-4 mr-2" />
             Editar
           </Button>
-          <Button size="touch" className="flex-[2]" onClick={handleSend}>
+          <Button size="touch" className="flex-2" onClick={handleSend}>
             <CheckCircle className="h-5 w-5 mr-2" />
             Enviar a Caja
           </Button>
@@ -319,7 +256,14 @@ export default function Kiosko() {
                       Carrito
                     </SheetTitle>
                   </SheetHeader>
-                  <CartContent />
+                  <CartContent 
+                    cart={cart} 
+                    updateQuantity={updateQuantity} 
+                    total={total} 
+                    itemCount={itemCount} 
+                    setStep={setStep} 
+                    setCartOpen={setCartOpen} 
+                  />
                 </SheetContent>
               </Sheet>
 
@@ -396,7 +340,14 @@ export default function Kiosko() {
             <h3 className="font-display font-bold">Carrito</h3>
             <span className="text-xs text-muted-foreground ml-auto">{itemCount} productos</span>
           </div>
-          <CartContent />
+          <CartContent 
+            cart={cart} 
+            updateQuantity={updateQuantity} 
+            total={total} 
+            itemCount={itemCount} 
+            setStep={setStep} 
+            setCartOpen={setCartOpen} 
+          />
         </div>
       </div>
 
@@ -407,6 +358,78 @@ export default function Kiosko() {
         onClose={() => setCustomizingProduct(null)}
         onConfirm={handleCustomizationConfirm}
       />
+    </>
+  );
+}
+interface CartContentProps {
+  cart: CartItem[];
+  updateQuantity: (itemId: string, delta: number) => void;
+  total: number;
+  itemCount: number;
+  setStep: (step: 'locator' | 'menu' | 'confirm') => void;
+  setCartOpen: (open: boolean) => void;
+}
+
+function CartContent({ cart, updateQuantity, total, itemCount, setStep, setCartOpen }: CartContentProps) {
+  return (
+    <>
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        {cart.length === 0 && (
+          <div className="text-center py-12 space-y-2">
+            <ShoppingCart className="h-10 w-10 mx-auto text-muted-foreground/30" />
+            <p className="text-muted-foreground text-sm">Toca un producto para agregarlo</p>
+          </div>
+        )}
+        {cart.map(item => (
+          <div key={item.id} className="rounded-xl bg-background p-3 space-y-2 animate-slide-in">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">{item.product.name}</p>
+                <p className="text-xs text-muted-foreground">{formatPrice(item.unit_price)} c/u</p>
+                {item.notes && (
+                  <p className="text-xs text-primary/80 mt-0.5">📝 {item.notes}</p>
+                )}
+              </div>
+              <span className="font-display font-bold text-sm text-primary">
+                {formatPrice(item.unit_price * item.quantity)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => updateQuantity(item.id, -1)}>
+                  {item.quantity === 1 ? <Trash2 className="h-3.5 w-3.5 text-destructive" /> : <Minus className="h-3.5 w-3.5" />}
+                </Button>
+                <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => updateQuantity(item.id, 1)}>
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="p-4 border-t space-y-3 bg-card">
+        <div className="space-y-1">
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>Subtotal ({itemCount} items)</span>
+            <span>{formatPrice(total)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-semibold">Total</span>
+            <span className="font-display text-2xl sm:text-3xl font-bold text-primary">{formatPrice(total)}</span>
+          </div>
+        </div>
+        <Button
+          size="touch"
+          className="w-full"
+          onClick={() => { setStep('confirm'); setCartOpen(false); }}
+          disabled={cart.length === 0}
+        >
+          <ArrowRight className="h-5 w-5 mr-2" />
+          Revisar Pedido
+        </Button>
+      </div>
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { formatPrice } from '@/lib/formatPrice';
 import type { Category, ProductWithCategory } from '@/types';
@@ -27,27 +27,30 @@ export default function Inventario() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchProducts = async () => {
-    const { data: prodData } = await (supabase
-      .from('products') as any)
+  const fetchProducts = useCallback(async () => {
+    const { data: prodData } = await supabase
+      .from('products')
       .select('*, categories(*)')
       .order('sort_order');
-    if (prodData) setProducts(prodData as any);
+    if (prodData) setProducts(prodData as unknown as ProductWithCategory[]);
     setLoading(false);
-  };
+  }, []);
 
-  const fetchCategories = async () => {
-    const { data: catData } = await (supabase
-      .from('categories') as any)
+  const fetchCategories = useCallback(async () => {
+    const { data: catData } = await supabase
+      .from('categories')
       .select('*')
       .order('sort_order');
-    if (catData) setCategories(catData);
-  };
+    if (catData) setCategories(catData as Category[]);
+  }, []);
 
   useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-  }, []);
+    const load = async () => {
+      await fetchProducts();
+      await fetchCategories();
+    };
+    load();
+  }, [fetchProducts, fetchCategories]);
 
   const filtered = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
@@ -103,8 +106,8 @@ export default function Inventario() {
     };
 
     if (editProduct) {
-      const { error } = await (supabase
-        .from('products') as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('products') as any)
         .update(productData)
         .eq('id', editProduct.id);
       
@@ -114,8 +117,8 @@ export default function Inventario() {
       }
       toast.success('Producto actualizado');
     } else {
-      const { error } = await (supabase
-        .from('products') as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('products') as any)
         .insert([productData]);
       
       if (error) {
@@ -130,8 +133,8 @@ export default function Inventario() {
   };
 
   const toggleAvailability = async (id: string, currentStatus: boolean) => {
-    const { error } = await (supabase
-      .from('products') as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from('products') as any)
       .update({ available: !currentStatus })
       .eq('id', id);
     
@@ -148,8 +151,8 @@ export default function Inventario() {
   const handleDelete = async (id: string) => {
     if (!confirm('¿Seguro que deseas eliminar este producto?')) return;
     
-    const { error } = await (supabase
-      .from('products') as any)
+    const { error } = await supabase
+      .from('products')
       .delete()
       .eq('id', id);
     

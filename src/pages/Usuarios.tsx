@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useOrders } from '@/context/OrderContext';
 import { useAuth } from '@/context/AuthContext';
 import { formatPrice } from '@/lib/formatPrice';
@@ -51,15 +51,18 @@ export default function Usuarios() {
   const [formRole, setFormRole] = useState<UserRole>('mesero');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchProfiles = async () => {
-    const { data } = await (supabase.from('profiles') as any).select('*').order('name');
-    if (data) setProfiles(data as any);
+  const fetchProfiles = useCallback(async () => {
+    const { data } = await supabase.from('profiles').select('*').order('name');
+    if (data) setProfiles(data as Profile[]);
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
-    fetchProfiles();
-  }, []);
+    const load = async () => {
+      await fetchProfiles();
+    };
+    load();
+  }, [fetchProfiles]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -93,8 +96,8 @@ export default function Usuarios() {
     
     setIsSubmitting(true);
     if (editingProfile) {
-      const { error } = await (supabase
-        .from('profiles') as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('profiles') as any)
         .update({ 
           name: formName, 
           role: formRole 

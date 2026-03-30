@@ -47,7 +47,7 @@ export function OrderReceipt({ order, open, onClose, type, paymentMethod, paymen
         </style>
       </head>
       <body>${printRef.current.innerHTML}</body>
-      <script>window.onload = () => { window.print(); window.close(); }<\/script>
+      <script>window.onload = () => { window.print(); window.close(); }</script>
       </html>
     `);
     printWindow.document.close();
@@ -162,7 +162,7 @@ export function OrderReceipt({ order, open, onClose, type, paymentMethod, paymen
           <Button variant="outline" size="touch" className="flex-1" onClick={onClose}>
             <X className="h-4 w-4 mr-2" /> Cerrar
           </Button>
-          <Button size="touch" className="flex-[2]" onClick={handlePrint}>
+          <Button size="touch" className="flex-2" onClick={handlePrint}>
             <Printer className="h-5 w-5 mr-2" /> Imprimir
           </Button>
         </div>

@@ -1,14 +1,28 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import type { Order, OrderStatus, Notification } from "@/types";
 import { supabase } from "@/lib/supabase";
+import type { Json } from "@/types/database.types";
 import { toast } from "sonner";
 
-interface OrderContextType {
+export interface OrderContextType {
   orders: Order[];
   loading: boolean;
-  addOrder: (locator: string, items: { product_id: string; quantity: number; unit_price: number; notes?: string }[], notes?: string) => Promise<void>;
+  addOrder: (
+    locator: string,
+    items: {
+      product_id: string;
+      quantity: number;
+      unit_price: number;
+      notes?: string;
+    }[],
+    notes?: string
+  ) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
-  processPayment: (orderId: string, method: string, amountReceived: number) => Promise<void>;
+  processPayment: (
+    orderId: string,
+    method: string,
+    amountReceived: number
+  ) => Promise<void>;
   getOrdersByStatus: (...statuses: OrderStatus[]) => Order[];
   refreshOrders: () => Promise<void>;
   notifications: Notification[];
@@ -17,7 +31,9 @@ interface OrderContextType {
   clearNotifications: () => Promise<void>;
 }
 
-const OrderContext = createContext<OrderContextType | null>(null);
+export const OrderContext = createContext<OrderContextType | undefined>(
+  undefined
+);
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pendiente: "Pendiente",
@@ -46,12 +62,41 @@ function playNotificationSound() {
   }
 }
 
+/**
+ * Sanitiza los datos crudos de Supabase antes de meterlos al estado.
+ * Garantiza que:
+ *  - order.created_at siempre existe
+ *  - order.order_items siempre es un array
+ *  - cada item tiene products válido (filtra los que llegaron incompletos
+ *    por race condition entre INSERT y el refetch de Realtime)
+ */
+function sanitizeOrders(raw: unknown[]): Order[] {
+  return (raw ?? [])
+    .filter((o): o is Record<string, unknown> => o != null && typeof o === "object")
+    .map((o) => ({
+      ...o,
+      created_at: o.created_at ?? new Date().toISOString(),
+      total: o.total ?? 0,
+      order_items: ((o.order_items as unknown[]) ?? [])
+        .filter(
+          (item): item is Record<string, unknown> =>
+            item != null &&
+            typeof item === "object" &&
+            (item as Record<string, unknown>).products != null
+        )
+        .map((item) => ({
+          ...item,
+          quantity: (item.quantity as number) ?? 1,
+          unit_price: (item.unit_price as number) ?? 0,
+        })),
+    })) as Order[];
+}
+
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch all active orders with their items and products
   const fetchOrders = useCallback(async () => {
     const { data, error } = await supabase
       .from("orders")
@@ -72,11 +117,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    setOrders((data as unknown as Order[]) || []);
+    // Sanitizar antes de guardar en estado
+    setOrders(sanitizeOrders((data as unknown[]) ?? []));
     setLoading(false);
   }, []);
 
-  // Fetch notifications for current user
   const fetchNotifications = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -93,38 +138,44 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Initial load
   useEffect(() => {
     fetchOrders();
     fetchNotifications();
-  }, [fetchOrders, fetchNotifications]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Realtime: listen for order changes
+  // Realtime: órdenes — pequeño debounce para evitar refetches mientras
+  // Supabase aún está insertando los order_items del mismo pedido
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout>;
+
     const ordersChannel = supabase
       .channel("orders-realtime")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders" },
         () => {
-          fetchOrders();
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(fetchOrders, 300);
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "order_items" },
         () => {
-          fetchOrders();
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(fetchOrders, 300);
         }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(ordersChannel);
     };
   }, [fetchOrders]);
 
-  // Realtime: listen for new notifications
+  // Realtime: notificaciones
   useEffect(() => {
     const notifChannel = supabase
       .channel("notifications-realtime")
@@ -144,7 +195,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Create order via RPC
   const addOrder = useCallback(
     async (
       locator: string,
@@ -154,7 +204,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.rpc as any)("create_order", {
         p_locator: locator,
-        p_items: items,
+        p_items: items as unknown as Json,
         p_notes: notes || null,
       });
 
@@ -170,13 +220,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     [fetchOrders],
   );
 
-  // Update order status via RPC
   const updateOrderStatus = useCallback(
     async (orderId: string, status: OrderStatus) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase.rpc as any)("update_order_status", {
         p_order_id: orderId,
-        p_status: status,
+        p_status: status as string,
       });
 
       if (error) {
@@ -190,7 +239,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     [fetchOrders],
   );
 
-  // Process payment via RPC
   const processPayment = useCallback(
     async (orderId: string, method: string, amountReceived: number) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -212,9 +260,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   );
 
   const getOrdersByStatus = useCallback(
-    (...statuses: OrderStatus[]) => {
-      return orders.filter((o) => statuses.includes(o.status));
-    },
+    (...statuses: OrderStatus[]) =>
+      orders.filter((o) => statuses.includes(o.status)),
     [orders],
   );
 

@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import type { OrderStatus } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { formatPrice } from '@/lib/formatPrice';
 import { FileText, Download, Filter, CalendarIcon, DollarSign, TrendingUp, ShoppingCart, Clock } from 'lucide-react';
@@ -29,8 +30,25 @@ const QUICK_RANGES = [
   }},
 ];
 
+interface ReportOrder {
+  id: string;
+  locator: string;
+  status: OrderStatus;
+  total: number;
+  created_at: string;
+  created_by: string;
+  profiles?: { name: string };
+  order_items?: {
+    id: string;
+    quantity: number;
+    products: {
+      name: string;
+    }
+  }[];
+}
+
 export default function Reporteria() {
-  const [reportOrders, setReportOrders] = useState<any[]>([]);
+  const [reportOrders, setReportOrders] = useState<ReportOrder[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfDay(new Date()),
@@ -38,15 +56,15 @@ export default function Reporteria() {
   });
   const [activeQuick, setActiveQuick] = useState('Hoy');
 
-  const fetchReportData = async () => {
+  const fetchReportData = useCallback(async () => {
     if (!dateRange?.from) return;
     const from = startOfDay(dateRange.from).toISOString();
     const to = dateRange.to ? endOfDay(dateRange.to).toISOString() : endOfDay(dateRange.from).toISOString();
 
     // Fetch orders with nested profile and items
-    const { data, error } = await (supabase
-      .from('orders') as any)
-      .select('*, profiles!orders_created_by_fkey(name), order_items(*, products(*))')
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*))')
       .gte('created_at', from)
       .lte('created_at', to)
       .order('created_at', { ascending: false });
@@ -54,13 +72,16 @@ export default function Reporteria() {
     if (error) {
       console.error('Error fetching report:', error);
     } else {
-      setReportOrders(data || []);
+      setReportOrders((data as unknown as ReportOrder[]) || []);
     }
-  };
+  }, [dateRange]);
 
   useEffect(() => {
-    fetchReportData();
-  }, [dateRange]);
+    const load = async () => {
+      await fetchReportData();
+    };
+    load();
+  }, [fetchReportData]);
 
   const filteredOrders = useMemo(() => {
     if (statusFilter === 'all') return reportOrders;
@@ -71,7 +92,7 @@ export default function Reporteria() {
     const total = filteredOrders.reduce((sum, o) => sum + o.total, 0);
     const avgTicket = filteredOrders.length > 0 ? total / filteredOrders.length : 0;
     const itemsSold = filteredOrders.reduce((sum, o) =>
-      sum + (o.order_items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0), 0
+      sum + (o.order_items?.reduce((s: number, i) => s + i.quantity, 0) || 0), 0
     );
     const delivered = filteredOrders.filter(o => o.status === 'entregado');
     const cancelled = filteredOrders.filter(o => o.status === 'cancelado');
@@ -362,7 +383,7 @@ export default function Reporteria() {
                   <tr key={order.id} className="border-b last:border-0">
                     <td className="py-3 font-display font-bold text-primary">{order.locator}</td>
                     <td className="py-3"><StatusBadge status={order.status} /></td>
-                    <td className="py-3">{order.order_items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0}</td>
+                    <td className="py-3">{order.order_items?.reduce((s: number, i) => s + i.quantity, 0) || 0}</td>
                     <td className="py-3 text-right font-semibold">{formatPrice(order.total)}</td>
                     <td className="py-3 text-muted-foreground">{order.profiles?.name || 'Sistema'}</td>
                     <td className="py-3 text-muted-foreground">{new Date(order.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</td>
