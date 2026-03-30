@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { formatPrice } from '@/lib/formatPrice';
 import type { Product, Category, ProductWithCategory } from '@/types';
 import { useOrders } from '@/context/OrderContext';
@@ -8,10 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Plus, Minus, Trash2, ShoppingCart, ArrowLeft, ArrowRight, CheckCircle, Edit3 } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingCart, ArrowLeft, ArrowRight, CheckCircle, Edit3, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { getOptimizedImageUrl } from '@/lib/imageUtils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface CartItem {
   id: string;
@@ -31,8 +33,6 @@ const categoryEmoji: Record<string, string> = {
 export default function Kiosko() {
   const { addOrder } = useOrders();
   const [locator, setLocator] = useState('');
-  const [products, setProducts] = useState<ProductWithCategory[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [step, setStep] = useState<'locator' | 'menu' | 'confirm'>('locator');
@@ -40,26 +40,36 @@ export default function Kiosko() {
   const [customizingProduct, setCustomizingProduct] = useState<ProductWithCategory | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
 
+  // Queries con React Query
+  const { data: categories = [], isLoading: loadingCats } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data } = await supabase.from('categories').select('*').eq('is_active', true).order('sort_order');
+      return (data || []) as Category[];
+    }
+  });
+
+  const { data: products = [], isLoading: loadingProds } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const { data } = await supabase.from('products').select('*, categories(*)').eq('available', true).order('sort_order');
+      return (data || []) as unknown as ProductWithCategory[];
+    }
+  });
+
+  // Set default active category when data loads
   useEffect(() => {
-    const loadData = async () => {
-      const { data: catData } = await supabase.from('categories').select('*').eq('is_active', true).order('sort_order');
-      const { data: prodData } = await supabase.from('products').select('*, categories(*)').eq('available', true).order('sort_order');
-      
-      if (catData && catData.length > 0) {
-        setCategories(catData as Category[]);
-        setActiveCategory((catData[0] as Category).name);
-      }
-      
-      if (prodData) {
-        setProducts(prodData as unknown as ProductWithCategory[]);
-      }
-    };
-    loadData();
-  }, []);
+    if (categories.length > 0 && !activeCategory) {
+      setActiveCategory(categories[0].name);
+    }
+  }, [categories, activeCategory]);
+
+  // Derivación de la categoría activa para evitar efectos innecesarios
+  const currentCategory = activeCategory || (categories.length > 0 ? categories[0].name : '');
 
   const filteredProducts = useMemo(
-    () => products.filter(p => p.categories?.name === activeCategory),
-    [products, activeCategory]
+    () => products.filter(p => p.categories?.name === currentCategory),
+    [products, currentCategory]
   );
 
   const total = useMemo(
@@ -105,24 +115,30 @@ export default function Kiosko() {
     );
   };
 
+  const [isSending, setIsSending] = useState(false);
   const handleSend = async () => {
     if (cart.length === 0) {
       toast.error('Agrega productos al pedido');
       return;
     }
     
-    const itemsForDb = cart.map(item => ({
-      product_id: item.product.id,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      notes: item.notes || undefined
-    }));
+    setIsSending(true);
+    try {
+      const itemsForDb = cart.map(item => ({
+        product_id: item.product.id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        notes: item.notes || undefined
+      }));
 
-    await addOrder(locator, itemsForDb, orderNotes);
-    setCart([]);
-    setLocator('');
-    setOrderNotes('');
-    setStep('locator');
+      await addOrder(locator, itemsForDb, orderNotes);
+      setCart([]);
+      setLocator('');
+      setOrderNotes('');
+      setStep('locator');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   // Step 1: Locator
@@ -220,12 +236,12 @@ export default function Kiosko() {
         </div>
 
         <div className="flex gap-3">
-          <Button variant="outline" size="touch" className="flex-1" onClick={() => setStep('menu')}>
+          <Button variant="outline" size="touch" className="flex-1" onClick={() => setStep('menu')} disabled={isSending}>
             <Edit3 className="h-4 w-4 mr-2" />
             Editar
           </Button>
-          <Button size="touch" className="flex-2" onClick={handleSend}>
-            <CheckCircle className="h-5 w-5 mr-2" />
+          <Button size="touch" className="flex-2" onClick={handleSend} disabled={isSending}>
+            {isSending ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <CheckCircle className="h-5 w-5 mr-2" />}
             Enviar a Caja
           </Button>
         </div>
@@ -280,51 +296,64 @@ export default function Kiosko() {
               <Badge variant="default" className="hidden lg:flex">{itemCount} items</Badge>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              {categories.map(cat => (
-                <Button
-                  key={cat.id}
-                  variant={activeCategory === cat.name ? 'default' : 'secondary'}
-                  size="touch"
-                  onClick={() => setActiveCategory(cat.name)}
-                  className="whitespace-nowrap text-xs sm:text-sm"
-                >
-                  {cat.icon} {cat.label}
-                </Button>
-              ))}
+              {loadingCats ? (
+                [1,2,3,4].map(i => <Skeleton key={i} className="h-10 w-24 rounded-lg shrink-0" />)
+              ) : (
+                categories.map(cat => (
+                  <Button
+                    key={cat.id}
+                    variant={currentCategory === cat.name ? 'default' : 'secondary'}
+                    size="touch"
+                    onClick={() => setActiveCategory(cat.name)}
+                    className="whitespace-nowrap text-xs sm:text-sm"
+                  >
+                    {cat.icon} {cat.label}
+                  </Button>
+                ))
+              )}
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 sm:p-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-              {filteredProducts.map(product => {
-                const inCartCount = cart
-                  .filter(i => i.product.id === product.id)
-                  .reduce((sum, i) => sum + i.quantity, 0);
-                return (
-                  <button
-                    key={product.id}
-                    onClick={() => handleProductClick(product)}
-                    className={`pos-card text-left hover:border-primary/50 active:scale-[0.98] transition-all touch-target ${inCartCount > 0 ? 'border-primary/30 bg-accent/50' : ''}`}
-                  >
-                    {/* Product image */}
-                    <div className="aspect-square rounded-lg bg-muted/50 mb-2 overflow-hidden flex items-center justify-center">
-                      {product.image_url ? (
-                        <img src={getOptimizedImageUrl(product.image_url, 400)} alt={product.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-3xl sm:text-4xl">{categoryEmoji[product.categories?.name || ''] || '🍔'}</span>
-                      )}
-                    </div>
-                    <h3 className="font-semibold text-xs sm:text-sm mb-1 truncate">{product.name}</h3>
-                    <p className="font-display font-bold text-primary text-sm sm:text-base">{formatPrice(product.price)}</p>
-                    {inCartCount > 0 && (
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <Badge variant="default" className="text-xs">{inCartCount}</Badge>
-                        <span className="text-xs text-muted-foreground">en pedido</span>
+              {loadingProds ? (
+                [1,2,3,4,5,6].map(i => <Skeleton key={i} className="aspect-square rounded-xl" />)
+              ) : (
+                filteredProducts.map(product => {
+                  const inCartCount = cart
+                    .filter(i => i.product.id === product.id)
+                    .reduce((sum, i) => sum + i.quantity, 0);
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => handleProductClick(product)}
+                      className={`pos-card text-left hover:border-primary/50 active:scale-[0.98] transition-all touch-target ${inCartCount > 0 ? 'border-primary/30 bg-accent/50' : ''}`}
+                    >
+                      {/* Product image */}
+                      <div className="aspect-square rounded-lg bg-muted/50 mb-2 overflow-hidden flex items-center justify-center">
+                        {product.image_url ? (
+                          <img 
+                            src={getOptimizedImageUrl(product.image_url, 400)} 
+                            alt={product.name} 
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span className="text-3xl sm:text-4xl">{categoryEmoji[product.categories?.name || ''] || '🍔'}</span>
+                        )}
                       </div>
-                    )}
-                  </button>
-                );
-              })}
+                      <h3 className="font-semibold text-xs sm:text-sm mb-1 truncate">{product.name}</h3>
+                      <p className="font-display font-bold text-primary text-sm sm:text-base">{formatPrice(product.price)}</p>
+                      {inCartCount > 0 && (
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <Badge variant="default" className="text-xs">{inCartCount}</Badge>
+                          <span className="text-xs text-muted-foreground">en pedido</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
 

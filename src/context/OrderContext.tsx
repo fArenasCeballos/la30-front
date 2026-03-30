@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useCallback, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Order, OrderStatus, Notification } from "@/types";
 import { supabase } from "@/lib/supabase";
 import type { Json } from "@/types/database.types";
@@ -63,14 +64,6 @@ function playNotificationSound() {
   }
 }
 
-/**
- * Sanitiza los datos crudos de Supabase antes de meterlos al estado.
- * Garantiza que:
- *  - order.created_at siempre existe
- *  - order.order_items siempre es un array
- *  - cada item tiene products válido (filtra los que llegaron incompletos
- *    por race condition entre INSERT y el refetch de Realtime)
- */
 function sanitizeOrders(raw: unknown[]): Order[] {
   return (raw ?? [])
     .filter((o): o is Record<string, unknown> => o != null && typeof o === "object")
@@ -94,59 +87,53 @@ function sanitizeOrders(raw: unknown[]): Order[] {
 }
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const fetchOrders = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`
-        *,
-        order_items (
+  // Query de Órdenes
+  const { data: orders = [], isLoading: loadingOrders, refetch: refreshOrders } = useQuery({
+    queryKey: ['orders'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select(`
           *,
-          products (
+          order_items (
             *,
-            categories (*)
+            products (
+              *,
+              categories (*)
+            )
           )
-        )
-      `)
-      .order("created_at", { ascending: false });
+        `)
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching orders:", error);
-      return;
-    }
+      if (error) throw error;
+      return sanitizeOrders((data as unknown[]) ?? []);
+    },
+    staleTime: 1000 * 30, // 30 segundos de gracia
+  });
 
-    // Sanitizar antes de guardar en estado
-    setOrders(sanitizeOrders((data as unknown[]) ?? []));
-    setLoading(false);
-  }, []);
+  // Query de Notificaciones
+  const { data: notifications = [], refetch: refreshNotifications } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
 
-  const fetchNotifications = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(50);
+      if (error) throw error;
+      return (data || []) as Notification[];
+    },
+    enabled: true, // Se habilita solo si hay un usuario (se maneja dentro con el if)
+  });
 
-    if (!error && data) {
-      setNotifications(data);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchOrders();
-    fetchNotifications();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Realtime: órdenes — pequeño debounce para evitar refetches mientras
-  // Supabase aún está insertando los order_items del mismo pedido
+  // Realtime optimizado
   useEffect(() => {
     let debounceTimer: ReturnType<typeof setTimeout>;
 
@@ -155,17 +142,27 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders" },
-        () => {
-          clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(fetchOrders, 300);
+        (payload) => {
+          // Actualización incremental de la caché para cambios en la tabla 'orders'
+          if (payload.eventType === 'UPDATE') {
+            queryClient.setQueryData(['orders'], (oldOrders: Order[] | undefined) => {
+              if (!oldOrders) return oldOrders;
+              return oldOrders.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o);
+            });
+          } else {
+            // Para INSERT o DELETE, invalidamos para traer los items relacionados correctamente
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => queryClient.invalidateQueries({ queryKey: ['orders'] }), 300);
+          }
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "order_items" },
         () => {
+          // Cambios en items requieren refetch total para mantener consistencia de relaciones
           clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(fetchOrders, 300);
+          debounceTimer = setTimeout(() => queryClient.invalidateQueries({ queryKey: ['orders'] }), 500);
         }
       )
       .subscribe();
@@ -174,9 +171,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(debounceTimer);
       supabase.removeChannel(ordersChannel);
     };
-  }, [fetchOrders]);
+  }, [queryClient]);
 
-  // Realtime: notificaciones
+  // Realtime de notificaciones
   useEffect(() => {
     const notifChannel = supabase
       .channel("notifications-realtime")
@@ -185,7 +182,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         { event: "INSERT", schema: "public", table: "notifications" },
         (payload) => {
           const newNotif = payload.new as Notification;
-          setNotifications((prev) => [newNotif, ...prev].slice(0, 50));
+          queryClient.setQueryData(['notifications'], (old: Notification[] | undefined) => {
+            const list = old || [];
+            return [newNotif, ...list].slice(0, 50);
+          });
           playNotificationSound();
         }
       )
@@ -194,7 +194,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     return () => {
       supabase.removeChannel(notifChannel);
     };
-  }, []);
+  }, [queryClient]);
 
   const addOrder = useCallback(
     async (
@@ -216,13 +216,20 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       const result = data as { locator: string } | null;
       toast.success(`Pedido ${result?.locator || locator} enviado a caja`);
-      await fetchOrders();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
-    [fetchOrders],
+    [queryClient],
   );
 
   const updateOrderStatus = useCallback(
     async (orderId: string, status: OrderStatus) => {
+      // Optmistic Update
+      const previousOrders = queryClient.getQueryData(['orders']);
+      queryClient.setQueryData(['orders'], (old: Order[] | undefined) => {
+        if (!old) return old;
+        return old.map(o => o.id === orderId ? { ...o, status } : o);
+      });
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase.rpc as any)("update_order_status", {
         p_order_id: orderId,
@@ -231,18 +238,18 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         toast.error(`Error: ${error.message}`);
+        queryClient.setQueryData(['orders'], previousOrders); // Rollback
         return;
       }
 
       toast.success(`Pedido actualizado: ${STATUS_LABELS[status]}`);
-      await fetchOrders();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
-    [fetchOrders],
+    [queryClient],
   );
 
   const processPayment = useCallback(
     async (orderId: string, method: string, amountReceived: number) => {
-      // 1. Registrar el pago
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: paymentError } = await (supabase.rpc as any)("process_payment", {
         p_order_id: orderId,
@@ -255,7 +262,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // 2. Cambiar estado a Cocina automáticamente
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: statusError } = await (supabase.rpc as any)("update_order_status", {
         p_order_id: orderId,
@@ -263,15 +269,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (statusError) {
-        console.warn("Pago registrado pero falló cambio de estado:", statusError);
-        toast.warning("Pago registrado, pero por favor mueve el pedido a Cocina manualmente");
+        toast.warning("Pago registrado, pero mueve el pedido manualmente");
       } else {
-        toast.success("Pago procesado y pedido enviado a Cocina");
+        toast.success("Pago procesado y enviado a Cocina");
       }
 
-      await fetchOrders();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
-    [fetchOrders],
+    [queryClient],
   );
 
   const getOrdersByStatus = useCallback(
@@ -285,27 +290,30 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const markAllRead = useCallback(async () => {
     const { error } = await supabase.rpc("mark_notifications_read");
     if (!error) {
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      queryClient.setQueryData(['notifications'], (old: Notification[] | undefined) => {
+        if (!old) return old;
+        return old.map(n => ({ ...n, read: true }));
+      });
     }
-  }, []);
+  }, [queryClient]);
 
   const clearNotifications = useCallback(async () => {
     const { error } = await supabase.rpc("clear_my_notifications");
     if (!error) {
-      setNotifications([]);
+      queryClient.setQueryData(['notifications'], []);
     }
-  }, []);
+  }, [queryClient]);
 
   return (
     <OrderContext.Provider
       value={{
         orders,
-        loading,
+        loading: loadingOrders,
         addOrder,
         updateOrderStatus,
         processPayment,
         getOrdersByStatus,
-        refreshOrders: fetchOrders,
+        refreshOrders: async () => { refreshOrders(); refreshNotifications(); },
         notifications,
         unreadCount,
         markAllRead,
