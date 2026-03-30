@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Plus, Minus, Trash2, ShoppingCart, ArrowLeft, ArrowRight, CheckCircle, Edit3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { getOptimizedImageUrl } from '@/lib/imageUtils';
 
 interface CartItem {
   id: string;
@@ -184,7 +185,16 @@ export default function Kiosko() {
                     <p className="text-xs text-muted-foreground mt-1 ml-8">📝 {item.notes}</p>
                   )}
                 </div>
-                <span className="text-sm font-semibold shrink-0">{formatPrice(item.unit_price * item.quantity)}</span>
+                <div className="flex items-center gap-3">
+                  {item.product.image_url && (
+                    <img 
+                      src={getOptimizedImageUrl(item.product.image_url, 80)} 
+                      alt={item.product.name} 
+                      className="w-10 h-10 rounded-md object-cover border" 
+                    />
+                  )}
+                  <span className="text-sm font-semibold shrink-0">{formatPrice(item.unit_price * item.quantity)}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -299,7 +309,7 @@ export default function Kiosko() {
                     {/* Product image */}
                     <div className="aspect-square rounded-lg bg-muted/50 mb-2 overflow-hidden flex items-center justify-center">
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        <img src={getOptimizedImageUrl(product.image_url, 400)} alt={product.name} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-3xl sm:text-4xl">{categoryEmoji[product.categories?.name || ''] || '🍔'}</span>
                       )}
