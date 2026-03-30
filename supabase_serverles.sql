@@ -141,24 +141,28 @@ COMMENT ON TABLE product_extras IS 'Adicionales con precio extra por categoría 
 
 -- ── 2.7 PEDIDOS ──────────────────────────────────────────────
 -- locator: identificador visual para el cliente ("A-12", "B-05").
+-- ticket_number: consecutivo numérico global, asignado automáticamente.
 -- total: recalculado automáticamente por trigger al insertar/editar items.
+CREATE SEQUENCE IF NOT EXISTS orders_ticket_seq START WITH 1;
 CREATE TABLE orders (
-  id         UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
-  locator    TEXT         NOT NULL,
-  status     order_status NOT NULL DEFAULT 'pendiente',
-  total      INTEGER      NOT NULL DEFAULT 0 CHECK (total >= 0),
-  notes      TEXT,
-  created_by UUID         NOT NULL REFERENCES profiles(id),
-  created_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ  NOT NULL DEFAULT now()
+  id            UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  locator       TEXT         NOT NULL,
+  ticket_number INTEGER      NOT NULL DEFAULT nextval('orders_ticket_seq') UNIQUE,
+  status        order_status NOT NULL DEFAULT 'pendiente',
+  total         INTEGER      NOT NULL DEFAULT 0 CHECK (total >= 0),
+  notes         TEXT,
+  created_by    UUID         NOT NULL REFERENCES profiles(id),
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
-CREATE INDEX idx_orders_status     ON orders(status);
-CREATE INDEX idx_orders_created_at ON orders(created_at DESC);
-CREATE INDEX idx_orders_locator    ON orders(locator);
-CREATE INDEX idx_orders_created_by ON orders(created_by);
+CREATE INDEX idx_orders_status        ON orders(status);
+CREATE INDEX idx_orders_created_at    ON orders(created_at DESC);
+CREATE INDEX idx_orders_locator       ON orders(locator);
+CREATE INDEX idx_orders_created_by    ON orders(created_by);
+CREATE INDEX idx_orders_ticket_number ON orders(ticket_number);
 
-COMMENT ON COLUMN orders.locator IS 'ID visual del cliente: A-12, B-05, etc.';
-COMMENT ON COLUMN orders.total   IS 'Calculado automáticamente por trigger tras insertar/modificar order_items.';
+COMMENT ON COLUMN orders.locator       IS 'ID visual del cliente: A-12, B-05, etc.';
+COMMENT ON COLUMN orders.ticket_number IS 'Consecutivo numérico global para recibos y comandas.';
 
 
 -- ── 2.8 ITEMS DEL PEDIDO ─────────────────────────────────────
@@ -455,10 +459,11 @@ CREATE OR REPLACE FUNCTION create_order(
 )
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  v_order_id UUID;
-  v_total    INTEGER := 0;
-  v_item     JSONB;
-  v_product  RECORD;
+  v_order_id      UUID;
+  v_ticket_number INTEGER;
+  v_total         INTEGER := 0;
+  v_item          JSONB;
+  v_product       RECORD;
 BEGIN
   -- Validar rol
   IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin','mesero','caja') AND is_active = TRUE) THEN
@@ -490,10 +495,10 @@ BEGIN
     v_total := v_total + (v_item->>'unit_price')::INTEGER * (v_item->>'quantity')::INTEGER;
   END LOOP;
 
-  -- Crear orden
+  -- Crear orden (ticket_number se asigna automáticamente via DEFAULT nextval)
   INSERT INTO orders (locator, status, total, notes, created_by)
   VALUES (trim(p_locator), 'pendiente', v_total, p_notes, auth.uid())
-  RETURNING id INTO v_order_id;
+  RETURNING id, ticket_number INTO v_order_id, v_ticket_number;
 
   -- Insertar items
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
@@ -508,10 +513,11 @@ BEGIN
   END LOOP;
 
   RETURN jsonb_build_object(
-    'order_id', v_order_id,
-    'locator',  trim(p_locator),
-    'total',    v_total,
-    'status',   'pendiente'
+    'order_id',      v_order_id,
+    'locator',       trim(p_locator),
+    'total',         v_total,
+    'status',        'pendiente',
+    'ticket_number', v_ticket_number
   );
 END;
 $$;

@@ -181,6 +181,7 @@ export type Database = {
         Row: {
           id: string
           locator: string
+          ticket_number: number
           status: 'pendiente' | 'confirmado' | 'en_preparacion' | 'listo' | 'entregado' | 'cancelado'
           total: number
           notes: string | null
@@ -191,6 +192,7 @@ export type Database = {
         Insert: {
           id?: string
           locator: string
+          ticket_number?: number
           status?: 'pendiente' | 'confirmado' | 'en_preparacion' | 'listo' | 'entregado' | 'cancelado'
           total?: number
           notes?: string | null
@@ -198,6 +200,7 @@ export type Database = {
         }
         Update: {
           locator?: string
+          ticket_number?: number
           status?: 'pendiente' | 'confirmado' | 'en_preparacion' | 'listo' | 'entregado' | 'cancelado'
           total?: number
           notes?: string | null
