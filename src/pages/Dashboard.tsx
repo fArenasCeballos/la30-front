@@ -18,7 +18,7 @@ export default function Dashboard() {
   const stats = useMemo(() => {
     const totalRevenue = orders
       .filter(o => o.status === 'entregado')
-      .reduce((sum, o) => sum + o.total, 0);
+      .reduce((sum, o) => sum + (o.total ?? 0), 0);
     const activeOrders = orders.filter(o =>
       ['pendiente', 'confirmado', 'en_preparacion', 'listo'].includes(o.status)
     ).length;
@@ -32,15 +32,17 @@ export default function Dashboard() {
     const map = new Map<string, { name: string; quantity: number; revenue: number }>();
     orders.forEach(order => {
       order.order_items?.forEach(item => {
+        // Guard: ignorar items sin producto válido (join incompleto)
+        if (!item?.products) return;
         const existing = map.get(item.products.id);
         if (existing) {
-          existing.quantity += item.quantity;
-          existing.revenue += item.unit_price * item.quantity;
+          existing.quantity += item.quantity ?? 0;
+          existing.revenue += (item.unit_price ?? 0) * (item.quantity ?? 0);
         } else {
           map.set(item.products.id, {
-            name: item.products.name,
-            quantity: item.quantity,
-            revenue: item.unit_price * item.quantity,
+            name: item.products.name ?? 'Producto',
+            quantity: item.quantity ?? 0,
+            revenue: (item.unit_price ?? 0) * (item.quantity ?? 0),
           });
         }
       });
@@ -51,6 +53,7 @@ export default function Dashboard() {
   const statusDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
     orders.forEach(o => {
+      if (!o.status) return;
       counts[o.status] = (counts[o.status] || 0) + 1;
     });
     return Object.entries(counts).map(([status, count]) => ({
@@ -91,18 +94,24 @@ export default function Dashboard() {
         <div className="pos-card">
           <h3 className="font-display font-bold mb-4">Productos más vendidos</h3>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={productStats} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis type="category" dataKey="name" width={120} stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                <Tooltip
-                  contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
-                  formatter={(value: number) => [`${value} unidades`]}
-                />
-                <Bar dataKey="quantity" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {productStats.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={productStats} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis type="category" dataKey="name" width={120} stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <Tooltip
+                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
+                    formatter={(value: number) => [`${value} unidades`]}
+                  />
+                  <Bar dataKey="quantity" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                Sin datos aún
+              </div>
+            )}
           </div>
         </div>
 
@@ -110,25 +119,31 @@ export default function Dashboard() {
         <div className="pos-card">
           <h3 className="font-display font-bold mb-4">Estado de pedidos</h3>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={statusDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={90}
-                  paddingAngle={4}
-                  dataKey="value"
-                  label={({ name, value }) => `${name} (${value})`}
-                >
-                  {statusDistribution.map((_, index) => (
-                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            {statusDistribution.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={90}
+                    paddingAngle={4}
+                    dataKey="value"
+                    label={({ name, value }) => `${name} (${value})`}
+                  >
+                    {statusDistribution.map((_, index) => (
+                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                Sin datos aún
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -137,15 +152,22 @@ export default function Dashboard() {
       <div className="pos-card">
         <h3 className="font-display font-bold mb-4">Actividad reciente</h3>
         <div className="space-y-3">
+          {orders.length === 0 && (
+            <p className="text-muted-foreground text-sm text-center py-4">Sin pedidos aún</p>
+          )}
           {orders.slice(0, 8).map(order => (
             <div key={order.id} className="flex items-center justify-between py-2 border-b last:border-0">
               <div className="flex items-center gap-3">
                 <span className="font-display font-bold text-primary">{order.locator}</span>
-                <span className="text-xs text-muted-foreground capitalize">{order.status.replace('_', ' ')}</span>
+                <span className="text-xs text-muted-foreground capitalize">
+                  {(order.status ?? '').replace('_', ' ')}
+                </span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">{order.order_items?.length || 0} items</span>
-                <span className="font-semibold">{formatPrice(order.total)}</span>
+                <span className="text-sm text-muted-foreground">
+                  {order.order_items?.length || 0} items
+                </span>
+                <span className="font-semibold">{formatPrice(order.total ?? 0)}</span>
               </div>
             </div>
           ))}

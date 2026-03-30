@@ -7,6 +7,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+function formatNotifTime(dateStr: string | undefined | null): string {
+  if (!dateStr) return "--";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "--";
+  return date.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+}
+
 export function NotificationBell() {
   const { notifications, unreadCount, markAllRead, clearNotifications } =
     useOrders();
@@ -64,10 +71,7 @@ export function NotificationBell() {
               <p className="leading-snug">{n.message}</p>
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {n.timestamp.toLocaleTimeString("es-CO", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                {formatNotifTime(n.created_at)}
               </p>
             </div>
           ))}

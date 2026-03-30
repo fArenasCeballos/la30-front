@@ -53,10 +53,16 @@ export function OrderReceipt({ order, open, onClose, type, paymentMethod, paymen
     printWindow.document.close();
   };
 
-  const dateStr = new Intl.DateTimeFormat('es-CO', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(order.created_at));
+  // Guard: created_at puede llegar vacío en el instante post-creación
+  const dateStr = order.created_at
+    ? new Intl.DateTimeFormat('es-CO', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      }).format(new Date(order.created_at))
+    : '--';
+
+  // Solo items con producto válido
+  const validItems = (order.order_items ?? []).filter(item => item?.products != null);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -68,7 +74,6 @@ export function OrderReceipt({ order, open, onClose, type, paymentMethod, paymen
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-4">
-          {/* Printable content */}
           <div ref={printRef} className="font-mono text-xs space-y-2 bg-white text-black p-3 rounded-lg border">
             {type === 'customer' ? (
               <>
@@ -85,11 +90,11 @@ export function OrderReceipt({ order, open, onClose, type, paymentMethod, paymen
                   <span className="bold">{order.locator}</span>
                 </div>
                 <div className="divider" />
-                {order.order_items?.map((item) => (
+                {validItems.map((item) => (
                   <div key={item.id}>
                     <div className="row">
-                      <span>{item.quantity}x {item.products.name}</span>
-                      <span>{formatPrice(item.unit_price * item.quantity)}</span>
+                      <span>{item.quantity}x {item.products?.name ?? 'Producto'}</span>
+                      <span>{formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}</span>
                     </div>
                     {item.notes && <p className="item-notes">↳ {item.notes}</p>}
                   </div>
@@ -97,14 +102,16 @@ export function OrderReceipt({ order, open, onClose, type, paymentMethod, paymen
                 <div className="divider" />
                 <div className="row bold" style={{ fontSize: '14px' }}>
                   <span>TOTAL</span>
-                  <span>{formatPrice(order.total)}</span>
+                  <span>{formatPrice(order.total ?? 0)}</span>
                 </div>
                 {paymentMethod && (
                   <>
                     <div className="divider" />
                     <div className="row">
                       <span>Método:</span>
-                      <span className="bold">{paymentMethod === 'efectivo' ? 'Efectivo' : paymentMethod === 'tarjeta' ? 'Tarjeta' : 'Nequi'}</span>
+                      <span className="bold">
+                        {paymentMethod === 'efectivo' ? 'Efectivo' : paymentMethod === 'tarjeta' ? 'Tarjeta' : 'Nequi'}
+                      </span>
                     </div>
                     {paymentMethod === 'efectivo' && paymentReceived && (
                       <>
@@ -135,17 +142,19 @@ export function OrderReceipt({ order, open, onClose, type, paymentMethod, paymen
                   <p className="locator">{order.locator}</p>
                 </div>
                 <div className="divider" />
-                {order.order_items?.map((item) => (
+                {validItems.map((item) => (
                   <div key={item.id}>
                     <p className="kitchen-item">
-                      {item.quantity}x {item.products.name}
+                      {item.quantity}x {item.products?.name ?? 'Producto'}
                     </p>
                     {item.notes && <p className="kitchen-notes">⚠️ {item.notes}</p>}
                   </div>
                 ))}
                 <div className="divider" />
                 <div className="center">
-                  <p className="bold">Items: {order.order_items?.reduce((s: number, i) => s + i.quantity, 0) || 0}</p>
+                  <p className="bold">
+                    Items: {validItems.reduce((s, i) => s + (i.quantity ?? 0), 0)}
+                  </p>
                 </div>
                 {order.notes && (
                   <>
