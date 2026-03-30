@@ -16,6 +16,17 @@ import {
 import { NavLink } from "@/components/NavLink";
 import type { UserRole } from "@/types";
 import { NotificationBell } from "./NotificationBell";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 const NAV_ITEMS: {
   to: string;
@@ -39,6 +50,7 @@ const NAV_ITEMS: {
 
 export function AppLayout() {
   const { user, logout, forceReset, isAuthenticated, loading } = useAuth();
+  const [showResetDialog, setShowResetDialog] = useState(false);
 
   if (loading) {
     // Mientras Supabase verifica la sesión, no redirige
@@ -94,11 +106,7 @@ export function AppLayout() {
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => {
-              if (confirm("¿Deseas reparar la conexión? Esto cerrará tu sesión y limpiará la caché para solucionar problemas de carga.")) {
-                forceReset();
-              }
-            }}
+            onClick={() => setShowResetDialog(true)}
             title="Reparar conexión"
           >
             <Wrench className="h-4 w-4 text-muted-foreground" />
@@ -112,6 +120,28 @@ export function AppLayout() {
       <main className="flex-1">
         <Outlet />
       </main>
+
+      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Reparar conexión?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción cerrará tu sesión actual, borrará los datos de caché del navegador y recargará la aplicación. 
+              <br /><br />
+              Úsala solo si experimentas problemas persistentes con el inicio de sesión o la carga de datos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={forceReset}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Confirmar Reparación
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -10,12 +10,23 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Plus, Edit, Trash2, GripVertical } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
 
 export function CategoriesTab() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [editCategory, setEditCategory] = useState<Category | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [form, setForm] = useState({ name: '', label: '', icon: '', sort_order: '0' });
 
@@ -129,12 +140,25 @@ export function CategoriesTab() {
   );
 };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Seguro que deseas eliminar esta categoría? Los productos asociados perderán su categoría.')) return;
+  const handleDelete = async () => {
+    if (!categoryToDelete) return;
+    
+    const id = categoryToDelete.id;
     const { error } = await supabase.from('categories').delete().eq('id', id);
-    if (error) { toast.error(`Error: ${error.message}`); return; }
+    
+    if (error) {
+      if (error.code === '23503') {
+        toast.error('No se puede eliminar: Esta categoría tiene productos asociados.');
+      } else {
+        toast.error(`Error: ${error.message}`);
+      }
+      setCategoryToDelete(null);
+      return;
+    }
+
     setCategories(prev => prev.filter(c => c.id !== id));
     toast.success('Categoría eliminada');
+    setCategoryToDelete(null);
   };
 
   if (loading) {
@@ -179,7 +203,7 @@ export function CategoriesTab() {
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(cat)}>
                   <Edit className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDelete(cat.id)}>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setCategoryToDelete(cat)}>
                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
                 </Button>
               </div>
@@ -242,6 +266,30 @@ export function CategoriesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlertDialog 
+        open={!!categoryToDelete} 
+        onOpenChange={(open) => !open && setCategoryToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará la categoría <strong>{categoryToDelete?.label}</strong> permanentemente. 
+              <br /><br />
+              <span className="text-destructive font-medium">Nota:</span> Si la categoría tiene productos asociados, no podrá ser eliminada por seguridad.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar Categoría
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
