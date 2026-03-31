@@ -71,9 +71,9 @@ export function AppLayout() {
     (item) => user && item.roles.includes(user.role),
   );
 
+  // TODO: Eliminar
   return (
     <div className="min-h-screen flex flex-col">
-// TODO: Eliminar
       <BirthdayModal />
       <header className="h-16 border-b bg-card flex items-center px-4 gap-3 sticky top-0 z-50">
         <div className="flex items-center gap-2">

@@ -6,7 +6,7 @@ import { PaymentCalculator } from "@/components/PaymentCalculator";
 import { OrderReceipt } from '@/components/OrderReceipt';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle, DollarSign, Printer, Edit } from "lucide-react";
+import { CheckCircle, DollarSign, Printer, Edit, Plus } from "lucide-react";
 import type { Order } from "@/types";
 
 interface ReceiptState {
@@ -50,7 +50,18 @@ export default function Caja() {
 
   return (
     <div className="p-3 sm:p-4 lg:p-6 space-y-4">
-      <h1 className="font-display text-xl sm:text-2xl font-bold">Caja</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="font-display text-xl sm:text-2xl font-bold">Caja</h1>
+        <Button 
+          size="touch" 
+          variant="default" 
+          className="shadow-sm" 
+          onClick={() => navigate("/kiosko")}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Nuevo Pedido
+        </Button>
+      </div>
 
       <Tabs defaultValue="pendientes" className="w-full">
         <TabsList className="w-full justify-start gap-1 h-auto flex-wrap">
