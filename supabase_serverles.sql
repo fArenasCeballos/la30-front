@@ -523,6 +523,93 @@ END;
 $$;
 
 
+-- ── 4.1.2 Actualizar pedido (Editar) ─────────────────────────
+-- Usado en OrderContext.tsx → updateOrder()
+-- Permite modificar productos, localizador y notas de un pedido PENDIENTE.
+CREATE OR REPLACE FUNCTION update_order(
+  p_order_id UUID,
+  p_locator  TEXT,
+  p_items    JSONB,    -- [{"product_id":"uuid","quantity":2,"unit_price":12000,"notes":"Sin cebolla"}]
+  p_notes    TEXT DEFAULT NULL
+)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_order_status  order_status;
+  v_total         INTEGER := 0;
+  v_item          JSONB;
+  v_product       RECORD;
+BEGIN
+  -- Validar rol
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin','caja') AND is_active = TRUE) THEN
+    RAISE EXCEPTION 'Sin permisos para editar pedidos';
+  END IF;
+
+  -- Validar estado actual (solo pendientes)
+  SELECT status INTO v_order_status FROM orders WHERE id = p_order_id;
+  IF v_order_status IS NULL THEN
+    RAISE EXCEPTION 'Pedido no encontrado';
+  END IF;
+  IF v_order_status != 'pendiente' THEN
+    RAISE EXCEPTION 'Solo se pueden editar pedidos en estado pendiente (estado actual: %)', v_order_status;
+  END IF;
+
+  IF p_locator IS NULL OR trim(p_locator) = '' THEN
+    RAISE EXCEPTION 'El localizador es obligatorio';
+  END IF;
+
+  IF p_items IS NULL OR jsonb_array_length(p_items) = 0 THEN
+    RAISE EXCEPTION 'El pedido debe tener al menos un producto';
+  END IF;
+
+  -- Validar productos y calcular total
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
+    SELECT * INTO v_product FROM products WHERE id = (v_item->>'product_id')::UUID;
+
+    IF v_product IS NULL THEN
+      RAISE EXCEPTION 'Producto no encontrado: %', v_item->>'product_id';
+    END IF;
+    IF NOT v_product.available THEN
+      RAISE EXCEPTION 'Producto no disponible: %', v_product.name;
+    END IF;
+    IF (v_item->>'quantity')::INTEGER < 1 THEN
+      RAISE EXCEPTION 'Cantidad inválida para: %', v_product.name;
+    END IF;
+
+    v_total := v_total + (v_item->>'unit_price')::INTEGER * (v_item->>'quantity')::INTEGER;
+  END LOOP;
+
+  -- 1. Actualizar cabecera de la orden
+  UPDATE orders
+  SET locator = trim(p_locator),
+      notes = p_notes,
+      total = v_total
+  WHERE id = p_order_id;
+
+  -- 2. Eliminar items actuales
+  DELETE FROM order_items WHERE order_id = p_order_id;
+
+  -- 3. Insertar nuevos items
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
+    INSERT INTO order_items (order_id, product_id, quantity, unit_price, notes)
+    VALUES (
+      p_order_id,
+      (v_item->>'product_id')::UUID,
+      (v_item->>'quantity')::INTEGER,
+      (v_item->>'unit_price')::INTEGER,
+      v_item->>'notes'
+    );
+  END LOOP;
+
+  RETURN jsonb_build_object(
+    'order_id', p_order_id,
+    'locator',  trim(p_locator),
+    'total',    v_total,
+    'status',   v_order_status
+  );
+END;
+$$;
+
+
 -- ── 4.2 Actualizar estado del pedido ─────────────────────────
 -- Usado en OrderContext.tsx → updateOrderStatus()
 -- Valida la transición de estado según el rol del usuario.

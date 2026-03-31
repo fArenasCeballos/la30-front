@@ -41,7 +41,7 @@ const NAV_ITEMS: {
     to: "/kiosko",
     label: "Kiosko",
     icon: ShoppingCart,
-    roles: ["mesero", "admin"],
+    roles: ["mesero", "admin", "caja"],
   },
   { to: "/caja", label: "Caja", icon: Monitor, roles: ["caja", "admin"] },
   { to: "/cocina", label: "Cocina", icon: ChefHat, roles: ["cocina", "admin"] },

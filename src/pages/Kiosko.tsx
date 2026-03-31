@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { formatPrice } from '@/lib/formatPrice';
 import type { Product, Category, ProductWithCategory } from '@/types';
@@ -31,7 +32,9 @@ const categoryEmoji: Record<string, string> = {
 };
 
 export default function Kiosko() {
-  const { addOrder } = useOrders();
+  const [searchParams] = useSearchParams();
+  const editOrderId = searchParams.get('edit');
+  const { addOrder, updateOrder, orders } = useOrders();
   const [locator, setLocator] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -63,6 +66,37 @@ export default function Kiosko() {
       setActiveCategory(categories[0].name);
     }
   }, [categories, activeCategory]);
+
+  // Cargar pedido para editar si existe editOrderId
+  useEffect(() => {
+    if (editOrderId && orders.length > 0) {
+      const orderToEdit = orders.find(o => o.id === editOrderId);
+      if (orderToEdit) {
+        if (orderToEdit.status !== 'pendiente') {
+          toast.error('Solo se pueden editar pedidos pendientes');
+          window.history.replaceState({}, '', '/kiosko');
+          return;
+        }
+        setLocator(orderToEdit.locator);
+        setOrderNotes(orderToEdit.notes || '');
+        
+        // Transformar order_items a CartItem
+        const initialCart = orderToEdit.order_items.map(item => {
+          const product = item.products;
+          const cartKey = `${product.id}-${item.notes || ''}`;
+          return {
+            id: cartKey,
+            product: product as ProductWithCategory,
+            quantity: item.quantity,
+            notes: item.notes || undefined,
+            unit_price: item.unit_price
+          };
+        });
+        setCart(initialCart);
+        setStep('menu'); // Ir directo al menú al editar
+      }
+    }
+  }, [editOrderId, orders]);
 
   // Derivación de la categoría activa para evitar efectos innecesarios
   const currentCategory = activeCategory || (categories.length > 0 ? categories[0].name : '');
@@ -131,7 +165,12 @@ export default function Kiosko() {
         notes: item.notes || undefined
       }));
 
-      await addOrder(locator, itemsForDb, orderNotes);
+      if (editOrderId) {
+        await updateOrder(editOrderId, locator, itemsForDb, orderNotes);
+        window.history.replaceState({}, '', '/kiosko');
+      } else {
+        await addOrder(locator, itemsForDb, orderNotes);
+      }
       setCart([]);
       setLocator('');
       setOrderNotes('');
@@ -180,7 +219,9 @@ export default function Kiosko() {
           <Button variant="ghost" size="icon" onClick={() => setStep('menu')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="font-display text-xl sm:text-2xl font-bold">Confirmar Pedido</h1>
+          <h1 className="font-display text-xl sm:text-2xl font-bold">
+            {editOrderId ? 'Editar Pedido' : 'Confirmar Pedido'}
+          </h1>
         </div>
 
         <div className="pos-card">
@@ -242,7 +283,7 @@ export default function Kiosko() {
           </Button>
           <Button size="touch" className="flex-2" onClick={handleSend} disabled={isSending}>
             {isSending ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <CheckCircle className="h-5 w-5 mr-2" />}
-            Enviar a Caja
+            {editOrderId ? 'Guardar Cambios' : 'Enviar a Caja'}
           </Button>
         </div>
       </div>

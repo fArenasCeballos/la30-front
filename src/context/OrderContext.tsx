@@ -19,6 +19,17 @@ export interface OrderContextType {
     }[],
     notes?: string
   ) => Promise<void>;
+  updateOrder: (
+    orderId: string,
+    locator: string,
+    items: {
+      product_id: string;
+      quantity: number;
+      unit_price: number;
+      notes?: string;
+    }[],
+    notes?: string
+  ) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
   processPayment: (
     orderId: string,
@@ -221,6 +232,33 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     [queryClient],
   );
 
+  const updateOrder = useCallback(
+    async (
+      orderId: string,
+      locator: string,
+      items: { product_id: string; quantity: number; unit_price: number; notes?: string }[],
+      notes?: string
+    ) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)("update_order", {
+        p_order_id: orderId,
+        p_locator: locator,
+        p_items: items as unknown as Json,
+        p_notes: notes || null,
+      });
+
+      if (error) {
+        toast.error(`Error al actualizar pedido: ${error.message}`);
+        return;
+      }
+
+      const result = data as { locator: string } | null;
+      toast.success(`Pedido ${result?.locator || locator} actualizado correctamente`);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+    [queryClient],
+  );
+
   const updateOrderStatus = useCallback(
     async (orderId: string, status: OrderStatus) => {
       // Optmistic Update
@@ -310,6 +348,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         orders,
         loading: loadingOrders,
         addOrder,
+        updateOrder,
         updateOrderStatus,
         processPayment,
         getOrdersByStatus,

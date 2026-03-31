@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useOrders } from "@/context/OrderContext";
 import { OrderCard } from "@/components/OrderCard";
 import { PaymentCalculator } from "@/components/PaymentCalculator";
 import { OrderReceipt } from '@/components/OrderReceipt';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle, DollarSign, Printer } from "lucide-react";
+import { CheckCircle, DollarSign, Printer, Edit } from "lucide-react";
 import type { Order } from "@/types";
 
 interface ReceiptState {
@@ -17,6 +18,7 @@ interface ReceiptState {
 }
 
 export default function Caja() {
+  const navigate = useNavigate();
   const { updateOrderStatus, getOrdersByStatus, processPayment } = useOrders();
   const [payingOrder, setPayingOrder] = useState<Order | null>(null);
   const [receipt, setReceipt] = useState<ReceiptState | null>(null);
@@ -71,9 +73,12 @@ export default function Caja() {
             {pendientes.length === 0 && <p className="text-muted-foreground col-span-full py-12 text-center">No hay pedidos pendientes</p>}
             {pendientes.map(order => (
               <OrderCard key={order.id} order={order} actions={
-                <div className="flex gap-2 w-full">
+                <div className="flex gap-2 w-full flex-wrap sm:flex-nowrap">
                   <Button size="touch" className="flex-1 text-xs sm:text-sm" onClick={() => updateOrderStatus(order.id, 'confirmado')}>
                     <CheckCircle className="h-4 w-4 mr-1" /> Confirmar
+                  </Button>
+                  <Button size="touch" variant="outline" className="flex-1 text-xs sm:text-sm" onClick={() => navigate(`/kiosko?edit=${order.id}`)}>
+                    <Edit className="h-4 w-4 mr-1" /> Editar
                   </Button>
                   <Button size="touch" variant="destructive" className="text-xs sm:text-sm" onClick={() => updateOrderStatus(order.id, 'cancelado')}>
                     Cancelar
