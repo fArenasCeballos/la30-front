@@ -58,11 +58,9 @@ export default function Usuarios() {
   }, []);
 
   useEffect(() => {
-    const load = async () => {
-      await fetchProfiles();
-    };
-    load();
-  }, [fetchProfiles]);
+    if (!currentUser) return;
+    fetchProfiles();
+  }, [fetchProfiles, currentUser]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();

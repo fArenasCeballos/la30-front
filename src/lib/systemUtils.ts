@@ -17,12 +17,25 @@ export const forceSystemReset = () => {
     // 2. Limpiar SessionStorage
     window.sessionStorage.clear();
 
-    // 3. Intentar limpiar cookies (opcional, solo del dominio actual)
+    // 3. Limpiar cookies
     document.cookie.split(";").forEach((c) => {
       document.cookie = c
         .replace(/^ +/, "")
         .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
+
+    // 4. Limpiar indexedDB (para Supabase/QueryClient)
+    try {
+      if (window.indexedDB && window.indexedDB.databases) {
+        window.indexedDB.databases().then((dbs) => {
+          dbs.forEach((db) => {
+            if (db.name) window.indexedDB.deleteDatabase(db.name);
+          });
+        });
+      }
+    } catch (e) {
+      console.error("Error cleaning indexedDB:", e);
+    }
   } catch (err) {
     console.error("Error al limpiar datos locales:", err);
   }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { Category } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ import {
 import { toast } from 'sonner';
 
 export function CategoriesTab() {
+  const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [editCategory, setEditCategory] = useState<Category | null>(null);
@@ -41,11 +43,12 @@ export function CategoriesTab() {
   }, []);
 
   useEffect(() => {
+    if (!user) return;
     const load = async () => {
       await fetchCategories();
     };
     load();
-  }, [fetchCategories]);
+  }, [fetchCategories, user]);
 
   const openNew = () => {
     setEditCategory(null);

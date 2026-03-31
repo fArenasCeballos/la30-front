@@ -1,4 +1,6 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/context/AuthContext';
 import type { OrderStatus } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { formatPrice } from '@/lib/formatPrice';
@@ -48,7 +50,7 @@ interface ReportOrder {
 }
 
 export default function Reporteria() {
-  const [reportOrders, setReportOrders] = useState<ReportOrder[]>([]);
+  const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfDay(new Date()),
@@ -56,32 +58,26 @@ export default function Reporteria() {
   });
   const [activeQuick, setActiveQuick] = useState('Hoy');
 
-  const fetchReportData = useCallback(async () => {
-    if (!dateRange?.from) return;
-    const from = startOfDay(dateRange.from).toISOString();
-    const to = dateRange.to ? endOfDay(dateRange.to).toISOString() : endOfDay(dateRange.from).toISOString();
+  const { data: reportOrders = [], isLoading } = useQuery({
+    queryKey: ['report-orders', user?.id, dateRange],
+    queryFn: async () => {
+      if (!dateRange?.from) return [];
+      const from = startOfDay(dateRange.from).toISOString();
+      const to = dateRange.to ? endOfDay(dateRange.to).toISOString() : endOfDay(dateRange.from).toISOString();
 
-    // Fetch orders with nested profile and items
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*))')
-      .gte('created_at', from)
-      .lte('created_at', to)
-      .order('created_at', { ascending: false });
+      // Fetch orders with nested profile and items
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*))')
+        .gte('created_at', from)
+        .lte('created_at', to)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching report:', error);
-    } else {
-      setReportOrders((data as unknown as ReportOrder[]) || []);
-    }
-  }, [dateRange]);
-
-  useEffect(() => {
-    const load = async () => {
-      await fetchReportData();
-    };
-    load();
-  }, [fetchReportData]);
+      if (error) throw error;
+      return (data as unknown as ReportOrder[]) || [];
+    },
+    enabled: !!user && !!dateRange?.from,
+  });
 
   const filteredOrders = useMemo(() => {
     if (statusFilter === 'all') return reportOrders;
@@ -170,7 +166,7 @@ export default function Reporteria() {
           <FileText className="h-7 w-7 text-primary" />
           <h1 className="font-display text-2xl font-bold">Reportería</h1>
         </div>
-        <Button variant="outline" onClick={exportCSV}>
+        <Button variant="outline" onClick={exportCSV} disabled={isLoading || reportOrders.length === 0}>
           <Download className="h-4 w-4 mr-2" /> Exportar CSV
         </Button>
       </div>

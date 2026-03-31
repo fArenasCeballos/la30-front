@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useCallback, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext";
 import type { Order, OrderStatus, Notification } from "@/types";
 import { supabase } from "@/lib/supabase";
 import type { Json } from "@/types/database.types";
@@ -98,11 +99,12 @@ function sanitizeOrders(raw: unknown[]): Order[] {
 }
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   // Query de Órdenes
   const { data: orders = [], isLoading: loadingOrders, refetch: refreshOrders } = useQuery({
-    queryKey: ['orders'],
+    queryKey: ['orders', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
@@ -122,11 +124,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       return sanitizeOrders((data as unknown[]) ?? []);
     },
     staleTime: 1000 * 30, // 30 segundos de gracia
+    enabled: !!user,
   });
 
   // Query de Notificaciones
   const { data: notifications = [], refetch: refreshNotifications } = useQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', user?.id],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
@@ -141,7 +144,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       return (data || []) as Notification[];
     },
-    enabled: true, // Se habilita solo si hay un usuario (se maneja dentro con el if)
+    enabled: !!user,
   });
 
   // Realtime optimizado
@@ -156,14 +159,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         (payload) => {
           // Actualización incremental de la caché para cambios en la tabla 'orders'
           if (payload.eventType === 'UPDATE') {
-            queryClient.setQueryData(['orders'], (oldOrders: Order[] | undefined) => {
+            queryClient.setQueryData(['orders', user?.id], (oldOrders: Order[] | undefined) => {
               if (!oldOrders) return oldOrders;
               return oldOrders.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o);
             });
           } else {
             // Para INSERT o DELETE, invalidamos para traer los items relacionados correctamente
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => queryClient.invalidateQueries({ queryKey: ['orders'] }), 300);
+            debounceTimer = setTimeout(() => queryClient.invalidateQueries({ queryKey: ['orders', user?.id] }), 300);
           }
         }
       )
@@ -173,7 +176,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         () => {
           // Cambios en items requieren refetch total para mantener consistencia de relaciones
           clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => queryClient.invalidateQueries({ queryKey: ['orders'] }), 500);
+          debounceTimer = setTimeout(() => queryClient.invalidateQueries({ queryKey: ['orders', user?.id] }), 500);
         }
       )
       .subscribe();
@@ -182,10 +185,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(debounceTimer);
       supabase.removeChannel(ordersChannel);
     };
-  }, [queryClient]);
+  }, [queryClient, user?.id]);
 
   // Realtime de notificaciones
   useEffect(() => {
+    if (!user?.id) return;
     const notifChannel = supabase
       .channel("notifications-realtime")
       .on(
@@ -193,7 +197,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         { event: "INSERT", schema: "public", table: "notifications" },
         (payload) => {
           const newNotif = payload.new as Notification;
-          queryClient.setQueryData(['notifications'], (old: Notification[] | undefined) => {
+          queryClient.setQueryData(['notifications', user.id], (old: Notification[] | undefined) => {
             const list = old || [];
             return [newNotif, ...list].slice(0, 50);
           });
@@ -205,7 +209,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     return () => {
       supabase.removeChannel(notifChannel);
     };
-  }, [queryClient]);
+  }, [queryClient, user?.id]);
 
   const addOrder = useCallback(
     async (
@@ -227,9 +231,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       const result = data as { locator: string } | null;
       toast.success(`Pedido ${result?.locator || locator} enviado a caja`);
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
     },
-    [queryClient],
+    [queryClient, user?.id],
   );
 
   const updateOrder = useCallback(
@@ -254,9 +258,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       const result = data as { locator: string } | null;
       toast.success(`Pedido ${result?.locator || locator} actualizado correctamente`);
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
     },
-    [queryClient],
+    [queryClient, user?.id],
   );
 
   const updateOrderStatus = useCallback(
@@ -281,9 +285,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       }
 
       toast.success(`Pedido actualizado: ${STATUS_LABELS[status]}`);
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
     },
-    [queryClient],
+    [queryClient, user?.id],
   );
 
   const processPayment = useCallback(
@@ -312,9 +316,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         toast.success("Pago procesado y enviado a Cocina");
       }
 
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
     },
-    [queryClient],
+    [queryClient, user?.id],
   );
 
   const getOrdersByStatus = useCallback(
@@ -328,19 +332,19 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const markAllRead = useCallback(async () => {
     const { error } = await supabase.rpc("mark_notifications_read");
     if (!error) {
-      queryClient.setQueryData(['notifications'], (old: Notification[] | undefined) => {
+      queryClient.setQueryData(['notifications', user?.id], (old: Notification[] | undefined) => {
         if (!old) return old;
         return old.map(n => ({ ...n, read: true }));
       });
     }
-  }, [queryClient]);
+  }, [queryClient, user?.id]);
 
   const clearNotifications = useCallback(async () => {
     const { error } = await supabase.rpc("clear_my_notifications");
     if (!error) {
-      queryClient.setQueryData(['notifications'], []);
+      queryClient.setQueryData(['notifications', user?.id], []);
     }
-  }, [queryClient]);
+  }, [queryClient, user?.id]);
 
   return (
     <OrderContext.Provider

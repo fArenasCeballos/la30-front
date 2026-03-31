@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { formatPrice } from '@/lib/formatPrice';
 import type { Category, ProductWithCategory } from '@/types';
@@ -18,6 +19,7 @@ import { toast } from 'sonner';
 import { resizeImage, uploadProductImage, getOptimizedImageUrl, deleteProductImage } from '@/lib/imageUtils';
 
 export function ProductsTab() {
+  const { user } = useAuth();
   const [products, setProducts] = useState<ProductWithCategory[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,12 +51,13 @@ export function ProductsTab() {
   }, []);
 
   useEffect(() => {
+    if (!user) return;
     const load = async () => {
       await fetchProducts();
       await fetchCategories();
     };
     load();
-  }, [fetchProducts, fetchCategories]);
+  }, [fetchProducts, fetchCategories, user]);
 
   const filtered = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
