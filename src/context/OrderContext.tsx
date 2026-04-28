@@ -125,6 +125,30 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  // ─── Limpieza automática de registros antiguos ─────────────
+  // Se ejecuta una vez al día cuando un admin inicia sesión.
+  // Limpia notificaciones y logs de estado de turnos anteriores.
+  useEffect(() => {
+    if (!user || user.role !== "admin") return;
+
+    const CLEANUP_KEY = "la30-last-cleanup";
+    const today = new Date().toDateString();
+    const lastCleanup = localStorage.getItem(CLEANUP_KEY);
+
+    if (lastCleanup === today) return; // Ya se limpió hoy
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.rpc as any)("cleanup_old_records")
+      .then(({ data, error }: { data: unknown; error: unknown }) => {
+        if (error) {
+          console.warn("Cleanup failed:", error);
+          return;
+        }
+        localStorage.setItem(CLEANUP_KEY, today);
+        console.log("Cleanup completed:", data);
+      });
+  }, [user]);
+
   // Query de Órdenes — filtradas por turno operativo actual
   const { data: orders = [], isLoading: loadingOrders, refetch: refreshOrders } = useQuery({
     queryKey: ['orders', user?.id],
