@@ -7,6 +7,29 @@ import { supabase } from "@/lib/supabase";
 import type { Json } from "@/types/database.types";
 import { toast } from "sonner";
 
+/**
+ * Calcula el inicio del turno operativo actual.
+ * El turno comienza a las 4:00 PM (16:00) y se extiende hasta
+ * la madrugada del día siguiente (~2-3 AM).
+ *
+ * - Si la hora actual es >= 16:00, el turno inició HOY a las 16:00.
+ * - Si la hora actual es < 16:00, el turno inició AYER a las 16:00
+ *   (estamos en la cola del turno de la noche anterior).
+ */
+function getShiftStart(): string {
+  const SHIFT_START_HOUR = 12; // 12 del medio día para dar margen de preparación
+  const now = new Date();
+  const shiftStart = new Date(now);
+  shiftStart.setHours(SHIFT_START_HOUR, 0, 0, 0);
+
+  if (now.getHours() < SHIFT_START_HOUR) {
+    // Aún estamos en el turno de ayer (madrugada)
+    shiftStart.setDate(shiftStart.getDate() - 1);
+  }
+
+  return shiftStart.toISOString();
+}
+
 export interface OrderContextType {
   orders: Order[];
   loading: boolean;
@@ -102,10 +125,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Query de Órdenes
+  // Query de Órdenes — filtradas por turno operativo actual
   const { data: orders = [], isLoading: loadingOrders, refetch: refreshOrders } = useQuery({
     queryKey: ['orders', user?.id],
     queryFn: async () => {
+      const shiftStart = getShiftStart();
       const { data, error } = await supabase
         .from("orders")
         .select(`
@@ -118,6 +142,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             )
           )
         `)
+        .gte("created_at", shiftStart)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

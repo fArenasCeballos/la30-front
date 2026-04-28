@@ -4,4 +4,11 @@ import type { Database } from '../types/database.types'
 const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient<Database>(url, key)
+export const supabase = createClient<Database>(url, key, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    storageKey: 'la30-auth',
+    storage: window.localStorage,
+  },
+})
