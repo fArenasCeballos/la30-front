@@ -27,8 +27,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { Logo } from "./ui/logo";
-// TODO: Eliminar
-import { BirthdayModal } from "./BirthdayModal";
 
 const NAV_ITEMS: {
   to: string;
@@ -71,10 +69,8 @@ export function AppLayout() {
     (item) => user && item.roles.includes(user.role),
   );
 
-  // TODO: Eliminar
   return (
     <div className="min-h-screen flex flex-col">
-      <BirthdayModal />
       <header className="h-16 border-b bg-card flex items-center px-4 gap-3 sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 rounded-xl bg-card border shadow-sm flex items-center justify-center overflow-hidden">
