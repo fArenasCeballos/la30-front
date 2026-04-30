@@ -15,7 +15,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.svg", "icons.svg", "apple-touch-icon.png"],
+      includeAssets: ["favicon.svg", "logo.svg", "icons.svg", "apple-touch-icon.png"],
       manifest: {
         name: "La 30 Perros y Hamburguesas",
         short_name: "La 30",
@@ -26,19 +26,14 @@ export default defineConfig({
         start_url: "/",
         icons: [
           {
-            src: "icon-192.png",
-            sizes: "192x192",
-            type: "image/png",
+            src: "logo.svg",
+            sizes: "any",
+            type: "image/svg+xml",
           },
           {
-            src: "icon-512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
-          {
-            src: "icon-512.png",
-            sizes: "512x512",
-            type: "image/png",
+            src: "logo.svg",
+            sizes: "any",
+            type: "image/svg+xml",
             purpose: "any maskable",
           },
         ],
