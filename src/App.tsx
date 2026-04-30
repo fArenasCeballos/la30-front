@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from 'sonner';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/AuthContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 import { OrderProvider } from "@/context/OrderContext";
 import { AppLayout } from "@/components/AppLayout";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,26 +46,28 @@ const App = () => (
     <TooltipProvider>
       <Toaster position="top-center" richColors/>
       <AuthProvider>
-        <OrderProvider>
-          <BrowserRouter>
-            <Suspense fallback={<PageLoading />}>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route element={<AppLayout />}>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/kiosko" element={<Kiosko />} />
-                  <Route path="/caja" element={<Caja />} />
-                  <Route path="/cocina" element={<Cocina />} />
-                  <Route path="/reporteria" element={<Reporteria />} />
-                  <Route path="/inventario" element={<Inventario />} />
-                  <Route path="/usuarios" element={<Usuarios />} />
-                </Route>
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </OrderProvider>
+        <NotificationProvider>
+          <OrderProvider>
+            <BrowserRouter>
+              <Suspense fallback={<PageLoading />}>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route element={<AppLayout />}>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/kiosko" element={<Kiosko />} />
+                    <Route path="/caja" element={<Caja />} />
+                    <Route path="/cocina" element={<Cocina />} />
+                    <Route path="/reporteria" element={<Reporteria />} />
+                    <Route path="/inventario" element={<Inventario />} />
+                    <Route path="/usuarios" element={<Usuarios />} />
+                  </Route>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </OrderProvider>
+        </NotificationProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

@@ -13,7 +13,6 @@ export type Database = {
         Row: {
           id: string;
           name: string;
-          // TODO: Eliminar
           email: string;
           role: "admin" | "caja" | "mesero" | "cocina";
           avatar_url: string | null;
@@ -24,7 +23,6 @@ export type Database = {
         Insert: {
           id: string;
           name: string;
-          // TODO: Eliminar
           email: string;
           role?: "admin" | "caja" | "mesero" | "cocina";
           avatar_url?: string | null;
@@ -35,157 +33,195 @@ export type Database = {
         Update: {
           id?: string;
           name?: string;
+          email?: string;
           role?: "admin" | "caja" | "mesero" | "cocina";
           avatar_url?: string | null;
           is_active?: boolean;
+          created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey";
+            columns: ["id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       categories: {
         Row: {
           id: string;
           name: string;
-          label: string;
-          icon: string | null;
-          sort_order: number;
+          description: string | null;
           is_active: boolean;
           created_at: string;
-          updated_at: string;
         };
         Insert: {
           id?: string;
           name: string;
-          label: string;
-          icon?: string | null;
-          sort_order?: number;
+          description?: string | null;
           is_active?: boolean;
+          created_at?: string;
         };
         Update: {
+          id?: string;
           name?: string;
-          label?: string;
-          icon?: string | null;
-          sort_order?: number;
+          description?: string | null;
           is_active?: boolean;
+          created_at?: string;
         };
+        Relationships: [];
       };
       products: {
         Row: {
           id: string;
+          category_id: string | null;
           name: string;
-          category_id: string;
+          description: string | null;
           price: number;
           image_url: string | null;
-          available: boolean;
-          sort_order: number;
+          is_active: boolean;
+          is_available: boolean;
           created_at: string;
-          updated_at: string;
         };
         Insert: {
           id?: string;
+          category_id?: string | null;
           name: string;
-          category_id: string;
+          description?: string | null;
           price: number;
           image_url?: string | null;
-          available?: boolean;
-          sort_order?: number;
+          is_active?: boolean;
+          is_available?: boolean;
+          created_at?: string;
         };
         Update: {
+          id?: string;
+          category_id?: string | null;
           name?: string;
-          category_id?: string;
+          description?: string | null;
           price?: number;
           image_url?: string | null;
-          available?: boolean;
-          sort_order?: number;
+          is_active?: boolean;
+          is_available?: boolean;
+          created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey";
+            columns: ["category_id"];
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       product_custom_options: {
         Row: {
           id: string;
-          category_id: string;
-          option_key: string;
-          label: string;
-          icon: string | null;
-          sort_order: number;
+          product_id: string | null;
+          name: string;
+          is_required: boolean;
+          max_selections: number;
           created_at: string;
         };
         Insert: {
           id?: string;
-          category_id: string;
-          option_key: string;
-          label: string;
-          icon?: string | null;
-          sort_order?: number;
+          product_id?: string | null;
+          name: string;
+          is_required?: boolean;
+          max_selections?: number;
+          created_at?: string;
         };
         Update: {
-          category_id?: string;
-          option_key?: string;
-          label?: string;
-          icon?: string | null;
-          sort_order?: number;
+          id?: string;
+          product_id?: string | null;
+          name?: string;
+          is_required?: boolean;
+          max_selections?: number;
+          created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "product_custom_options_product_id_fkey";
+            columns: ["product_id"];
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       product_custom_choices: {
         Row: {
           id: string;
-          option_id: string;
-          value: string;
-          label: string;
-          icon: string | null;
-          sort_order: number;
-        };
-        Insert: {
-          id?: string;
-          option_id: string;
-          value: string;
-          label: string;
-          icon?: string | null;
-          sort_order?: number;
-        };
-        Update: {
-          option_id?: string;
-          value?: string;
-          label?: string;
-          icon?: string | null;
-          sort_order?: number;
-        };
-      };
-      product_extras: {
-        Row: {
-          id: string;
-          category_id: string;
-          extra_key: string;
-          label: string;
-          icon: string | null;
-          price_per_unit: number;
-          max_qty: number;
-          sort_order: number;
+          option_id: string | null;
+          name: string;
+          price_adjustment: number;
+          is_active: boolean;
           created_at: string;
         };
         Insert: {
           id?: string;
-          category_id: string;
-          extra_key: string;
-          label: string;
-          icon?: string | null;
-          price_per_unit: number;
-          max_qty?: number;
-          sort_order?: number;
+          option_id?: string | null;
+          name: string;
+          price_adjustment?: number;
+          is_active?: boolean;
+          created_at?: string;
         };
         Update: {
-          category_id?: string;
-          extra_key?: string;
-          label?: string;
-          icon?: string | null;
-          price_per_unit?: number;
-          max_qty?: number;
-          sort_order?: number;
+          id?: string;
+          option_id?: string | null;
+          name?: string;
+          price_adjustment?: number;
+          is_active?: boolean;
+          created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "product_custom_choices_option_id_fkey";
+            columns: ["option_id"];
+            referencedRelation: "product_custom_options";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      product_extras: {
+        Row: {
+          id: string;
+          product_id: string | null;
+          name: string;
+          price: number;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id?: string | null;
+          name: string;
+          price: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          product_id?: string | null;
+          name?: string;
+          price?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_extras_product_id_fkey";
+            columns: ["product_id"];
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       orders: {
         Row: {
           id: string;
-          locator: string;
-          ticket_number: number;
+          user_id: string | null;
           status:
             | "pendiente"
             | "confirmado"
@@ -193,16 +229,15 @@ export type Database = {
             | "listo"
             | "entregado"
             | "cancelado";
-          total: number;
+          total_amount: number;
           notes: string | null;
-          created_by: string;
+          locator: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          locator: string;
-          ticket_number?: number;
+          user_id?: string | null;
           status?:
             | "pendiente"
             | "confirmado"
@@ -210,13 +245,15 @@ export type Database = {
             | "listo"
             | "entregado"
             | "cancelado";
-          total?: number;
+          total_amount: number;
           notes?: string | null;
-          created_by: string;
+          locator?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Update: {
-          locator?: string;
-          ticket_number?: number;
+          id?: string;
+          user_id?: string | null;
           status?:
             | "pendiente"
             | "confirmado"
@@ -224,208 +261,151 @@ export type Database = {
             | "listo"
             | "entregado"
             | "cancelado";
-          total?: number;
+          total_amount?: number;
           notes?: string | null;
+          locator?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "orders_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       order_items: {
         Row: {
           id: string;
-          order_id: string;
-          product_id: string;
+          order_id: string | null;
+          product_id: string | null;
           quantity: number;
           unit_price: number;
+          subtotal: number;
           notes: string | null;
+          customizations: Json | null;
+          extras: Json | null;
           created_at: string;
         };
         Insert: {
           id?: string;
-          order_id: string;
-          product_id: string;
+          order_id?: string | null;
+          product_id?: string | null;
           quantity: number;
           unit_price: number;
+          subtotal: number;
           notes?: string | null;
+          customizations?: Json | null;
+          extras?: Json | null;
+          created_at?: string;
         };
         Update: {
-          order_id?: string;
-          product_id?: string;
+          id?: string;
+          order_id?: string | null;
+          product_id?: string | null;
           quantity?: number;
           unit_price?: number;
+          subtotal?: number;
           notes?: string | null;
+          customizations?: Json | null;
+          extras?: Json | null;
+          created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey";
+            columns: ["order_id"];
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey";
+            columns: ["product_id"];
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       payments: {
         Row: {
           id: string;
-          order_id: string;
+          order_id: string | null;
+          amount: number;
           method: "efectivo" | "tarjeta" | "nequi";
-          amount_total: number;
-          amount_received: number;
-          amount_change: number;
-          processed_by: string;
+          status: string;
+          transaction_id: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
-          order_id: string;
+          order_id?: string | null;
+          amount: number;
           method: "efectivo" | "tarjeta" | "nequi";
-          amount_total: number;
-          amount_received: number;
-          amount_change?: number;
-          processed_by: string;
+          status: string;
+          transaction_id?: string | null;
+          created_at?: string;
         };
         Update: {
+          id?: string;
+          order_id?: string | null;
+          amount?: number;
           method?: "efectivo" | "tarjeta" | "nequi";
-          amount_total?: number;
-          amount_received?: number;
-          amount_change?: number;
+          status?: string;
+          transaction_id?: string | null;
+          created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "payments_order_id_fkey";
+            columns: ["order_id"];
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       notifications: {
         Row: {
+          read: unknown;
           id: string;
-          user_id: string;
+          user_id: string | null;
+          title: string;
           message: string;
           type: "info" | "success" | "warning";
-          order_id: string | null;
-          read: boolean;
+          is_read: boolean;
           created_at: string;
         };
         Insert: {
           id?: string;
-          user_id: string;
+          user_id?: string | null;
+          title: string;
           message: string;
-          type?: "info" | "success" | "warning";
-          order_id?: string | null;
-          read?: boolean;
+          type: "info" | "success" | "warning";
+          is_read?: boolean;
+          created_at?: string;
         };
         Update: {
+          id?: string;
+          user_id?: string | null;
+          title?: string;
           message?: string;
           type?: "info" | "success" | "warning";
-          read?: boolean;
+          is_read?: boolean;
+          created_at?: string;
         };
-      };
-      order_status_log: {
-        Row: {
-          id: string;
-          order_id: string;
-          previous_status:
-            | "pendiente"
-            | "confirmado"
-            | "en_preparacion"
-            | "listo"
-            | "entregado"
-            | "cancelado"
-            | null;
-          new_status:
-            | "pendiente"
-            | "confirmado"
-            | "en_preparacion"
-            | "listo"
-            | "entregado"
-            | "cancelado";
-          changed_by: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          order_id: string;
-          previous_status?:
-            | "pendiente"
-            | "confirmado"
-            | "en_preparacion"
-            | "listo"
-            | "entregado"
-            | "cancelado"
-            | null;
-          new_status:
-            | "pendiente"
-            | "confirmado"
-            | "en_preparacion"
-            | "listo"
-            | "entregado"
-            | "cancelado";
-          changed_by?: string | null;
-        };
-        Update: Record<string, never>;
-      };
-      cash_register_closings: {
-        Row: {
-          id: string;
-          closed_by: string;
-          period_start: string;
-          period_end: string;
-          total_sales: number;
-          total_orders: number;
-          delivered_count: number;
-          pending_count: number;
-          pending_total: number;
-          cancelled_count: number;
-          cancelled_total: number;
-          cash_total: number;
-          card_total: number;
-          nequi_total: number;
-          notes: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          closed_by: string;
-          period_start: string;
-          period_end: string;
-          total_sales?: number;
-          total_orders?: number;
-          delivered_count?: number;
-          pending_count?: number;
-          pending_total?: number;
-          cancelled_count?: number;
-          cancelled_total?: number;
-          cash_total?: number;
-          card_total?: number;
-          nequi_total?: number;
-          notes?: string | null;
-        };
-        Update: Record<string, never>;
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Views: {
-      v_daily_sales: {
-        Row: {
-          sale_date: string;
-          total_orders: number;
-          delivered_orders: number;
-          cancelled_orders: number;
-          total_revenue: number;
-          avg_ticket: number;
-        };
-      };
-      v_hourly_sales: {
-        Row: {
-          sale_date: string;
-          hour: number;
-          order_count: number;
-          total_revenue: number;
-        };
-      };
-      v_top_products: {
-        Row: {
-          id: string;
-          name: string;
-          category: string;
-          total_quantity: number;
-          total_revenue: number;
-        };
-      };
-      v_waiter_performance: {
-        Row: {
-          user_id: string;
-          waiter_name: string;
-          total_orders: number;
-          total_revenue: number;
-          delivered_revenue: number;
-          cancelled_orders: number;
-        };
-      };
+      [_ in never]: never;
     };
     Functions: {
       get_my_profile: {
@@ -439,8 +419,21 @@ export type Database = {
           is_active: boolean;
         }[];
       };
+      cleanup_old_records: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
       create_order: {
-        Args: { p_locator: string; p_items: Json; p_notes?: string | null };
+        Args: { p_locator: string; p_items: Json; p_notes: string | null };
+        Returns: Json;
+      };
+      update_order: {
+        Args: {
+          p_order_id: string;
+          p_locator: string;
+          p_items: Json;
+          p_notes: string | null;
+        };
         Returns: Json;
       };
       update_order_status: {
@@ -506,7 +499,7 @@ export type Database = {
         Returns: Json;
       };
       get_top_products: {
-        Args: { p_limit?: number };
+        Args: { p_limit: number | null };
         Returns: {
           product_name: string;
           category: string;

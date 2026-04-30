@@ -1,75 +1,64 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useCallback, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useMemo,
+} from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
-import type { Order, OrderStatus, Notification } from "@/types";
+import type { Order, OrderStatus, ProductWithCategory } from "@/types";
 import { supabase } from "@/lib/supabase";
 import type { Json } from "@/types/database.types";
 import { toast } from "sonner";
 
-/**
- * Calcula el inicio del turno operativo actual.
- * El turno comienza a las 4:00 PM (16:00) y se extiende hasta
- * la madrugada del día siguiente (~2-3 AM).
- *
- * - Si la hora actual es >= 16:00, el turno inició HOY a las 16:00.
- * - Si la hora actual es < 16:00, el turno inició AYER a las 16:00
- *   (estamos en la cola del turno de la noche anterior).
- */
 function getShiftStart(): string {
-  const SHIFT_START_HOUR = 12; // 12 del medio día para dar margen de preparación
+  const SHIFT_START_HOUR = 12;
   const now = new Date();
   const shiftStart = new Date(now);
   shiftStart.setHours(SHIFT_START_HOUR, 0, 0, 0);
-
   if (now.getHours() < SHIFT_START_HOUR) {
-    // Aún estamos en el turno de ayer (madrugada)
     shiftStart.setDate(shiftStart.getDate() - 1);
   }
-
   return shiftStart.toISOString();
 }
 
+type OrderItemInput = {
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  notes?: string;
+};
+
 export interface OrderContextType {
   orders: Order[];
+  activeOrders: Order[];
   loading: boolean;
+  loadingActive: boolean;
   addOrder: (
     locator: string,
-    items: {
-      product_id: string;
-      quantity: number;
-      unit_price: number;
-      notes?: string;
-    }[],
-    notes?: string
+    items: OrderItemInput[],
+    notes?: string,
   ) => Promise<void>;
   updateOrder: (
     orderId: string,
     locator: string,
-    items: {
-      product_id: string;
-      quantity: number;
-      unit_price: number;
-      notes?: string;
-    }[],
-    notes?: string
+    items: OrderItemInput[],
+    notes?: string,
   ) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
   processPayment: (
     orderId: string,
     method: string,
-    amountReceived: number
+    amountReceived: number,
   ) => Promise<void>;
   getOrdersByStatus: (...statuses: OrderStatus[]) => Order[];
   refreshOrders: () => Promise<void>;
-  notifications: Notification[];
-  unreadCount: number;
-  markAllRead: () => Promise<void>;
-  clearNotifications: () => Promise<void>;
 }
 
 export const OrderContext = createContext<OrderContextType | undefined>(
-  undefined
+  undefined,
 );
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -81,206 +70,215 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   cancelado: "Cancelado",
 };
 
-function playNotificationSound() {
-  try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 800;
-    osc.type = "sine";
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.3);
-  } catch {
-    // Audio not available
-  }
-}
-
 function sanitizeOrders(raw: unknown[]): Order[] {
   return (raw ?? [])
-    .filter((o): o is Record<string, unknown> => o != null && typeof o === "object")
-    .map((o) => ({
-      ...o,
-      created_at: o.created_at ?? new Date().toISOString(),
-      total: o.total ?? 0,
-      order_items: ((o.order_items as unknown[]) ?? [])
-        .filter(
-          (item): item is Record<string, unknown> =>
-            item != null &&
-            typeof item === "object" &&
-            (item as Record<string, unknown>).products != null
-        )
-        .map((item) => ({
-          ...item,
-          quantity: (item.quantity as number) ?? 1,
-          unit_price: (item.unit_price as number) ?? 0,
-        })),
-    })) as Order[];
+    .filter(
+      (o): o is Record<string, unknown> => o != null && typeof o === "object",
+    )
+    .map((o) => {
+      const total_amount = (o.total_amount as number | null | undefined) ?? (o.total as number | null | undefined) ?? 0;
+      return {
+        ...o,
+        created_at: (o.created_at as string) ?? new Date().toISOString(),
+        total_amount,
+        total: total_amount,
+        order_items: ((o.order_items as unknown[]) ?? [])
+          .filter(
+            (item): item is Record<string, unknown> =>
+              item != null &&
+              typeof item === "object" &&
+              (item as Record<string, unknown>).products != null,
+          )
+          .map((item) => ({
+            ...item,
+            quantity: (item.quantity as number | null | undefined) ?? 1,
+            unit_price: (item.unit_price as number | null | undefined) ?? 0,
+            subtotal: (item.subtotal as number | null | undefined) ?? ((item.quantity as number) * (item.unit_price as number)),
+          })),
+      };
+    }) as unknown as Order[];
 }
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // ─── Limpieza automática de registros antiguos ─────────────
-  // Se ejecuta una vez al día cuando un admin inicia sesión.
-  // Limpia notificaciones y logs de estado de turnos anteriores.
   useEffect(() => {
     if (!user || user.role !== "admin") return;
-
     const CLEANUP_KEY = "la30-last-cleanup";
     const today = new Date().toDateString();
-    const lastCleanup = localStorage.getItem(CLEANUP_KEY);
-
-    if (lastCleanup === today) return; // Ya se limpió hoy
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.rpc as any)("cleanup_old_records")
-      .then(({ data, error }: { data: unknown; error: unknown }) => {
-        if (error) {
-          console.warn("Cleanup failed:", error);
-          return;
-        }
-        localStorage.setItem(CLEANUP_KEY, today);
-        console.log("Cleanup completed:", data);
-      });
+    if (localStorage.getItem(CLEANUP_KEY) === today) return;
+    supabase.rpc("cleanup_old_records").then(
+      () => localStorage.setItem(CLEANUP_KEY, today),
+      (err) => console.warn(err),
+    );
   }, [user]);
 
-  // Query de Órdenes — filtradas por turno operativo actual
-  const { data: orders = [], isLoading: loadingOrders, refetch: refreshOrders } = useQuery({
-    queryKey: ['orders', user?.id],
+  // Query global (historial del día para Dashboard/Reportería)
+  const {
+    data: orders = [],
+    isLoading: loadingOrders,
+    refetch: refreshOrders,
+  } = useQuery({
+    queryKey: ["orders", user?.id],
     queryFn: async () => {
       const shiftStart = getShiftStart();
       const { data, error } = await supabase
         .from("orders")
-        .select(`
-          *,
-          order_items (
-            *,
-            products (
-              *,
-              categories (*)
-            )
-          )
-        `)
+        .select("*, order_items(*, products(*, categories(*)))")
         .gte("created_at", shiftStart)
         .order("created_at", { ascending: false });
-
       if (error) throw error;
       return sanitizeOrders((data as unknown[]) ?? []);
     },
-    staleTime: 1000 * 30, // 30 segundos de gracia
-    enabled: !!user,
+    staleTime: 1000 * 60,
+    enabled: !!user?.id,
   });
 
-  // Query de Notificaciones
-  const { data: notifications = [], refetch: refreshNotifications } = useQuery({
-    queryKey: ['notifications', user?.id],
+  // Query quirúrgica para Cocina/Caja (solo pedidos activos)
+  const { data: activeOrders = [], isLoading: loadingActive } = useQuery({
+    queryKey: ["active-orders", user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
       const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(50);
-
+        .from("orders")
+        .select("*, order_items(*, products(*, categories(*)))")
+        .in("status", ["pendiente", "confirmado", "en_preparacion", "listo"])
+        .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data || []) as Notification[];
+      return sanitizeOrders((data as unknown[]) ?? []);
     },
-    enabled: !!user,
+    staleTime: 1000 * 30,
+    enabled: !!user?.id,
   });
 
-  // Realtime optimizado
   useEffect(() => {
-    let debounceTimer: ReturnType<typeof setTimeout>;
-
+    if (!user?.id) return;
     const ordersChannel = supabase
-      .channel("orders-realtime")
+      .channel("orders-realtime-speed")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders" },
         (payload) => {
-          // Actualización incremental de la caché para cambios en la tabla 'orders'
-          if (payload.eventType === 'UPDATE') {
-            queryClient.setQueryData(['orders', user?.id], (oldOrders: Order[] | undefined) => {
-              if (!oldOrders) return oldOrders;
-              return oldOrders.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o);
-            });
+          if (payload.eventType === "UPDATE") {
+            const updateFn = (old: Order[] | undefined) => {
+              if (!old) return old;
+              return old.map((o) =>
+                o.id === payload.new.id ? { ...o, ...payload.new } : o,
+              );
+            };
+            queryClient.setQueryData(["orders", user.id], updateFn);
+            queryClient.setQueryData(
+              ["active-orders", user.id],
+              (old: Order[] | undefined) => {
+                if (!old) return old;
+                if (
+                  ["entregado", "cancelado"].includes(
+                    payload.new.status as string,
+                  )
+                ) {
+                  return old.filter((o) => o.id !== payload.new.id);
+                }
+                return old.map((o) =>
+                  o.id === payload.new.id ? { ...o, ...payload.new } : o,
+                );
+              },
+            );
           } else {
-            // Para INSERT o DELETE, invalidamos para traer los items relacionados correctamente
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => queryClient.invalidateQueries({ queryKey: ['orders', user?.id] }), 300);
+            queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
+            queryClient.invalidateQueries({
+              queryKey: ["active-orders", user.id],
+            });
           }
-        }
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "order_items" },
         () => {
-          // Cambios en items requieren refetch total para mantener consistencia de relaciones
-          clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => queryClient.invalidateQueries({ queryKey: ['orders', user?.id] }), 500);
-        }
+          queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
+          queryClient.invalidateQueries({
+            queryKey: ["active-orders", user.id],
+          });
+        },
       )
       .subscribe();
-
     return () => {
-      clearTimeout(debounceTimer);
       supabase.removeChannel(ordersChannel);
     };
   }, [queryClient, user?.id]);
 
-  // Realtime de notificaciones
-  useEffect(() => {
-    if (!user?.id) return;
-    const notifChannel = supabase
-      .channel("notifications-realtime")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications" },
-        (payload) => {
-          const newNotif = payload.new as Notification;
-          queryClient.setQueryData(['notifications', user.id], (old: Notification[] | undefined) => {
-            const list = old || [];
-            return [newNotif, ...list].slice(0, 50);
-          });
-          playNotificationSound();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(notifChannel);
-    };
-  }, [queryClient, user?.id]);
-
   const addOrder = useCallback(
-    async (
-      locator: string,
-      items: { product_id: string; quantity: number; unit_price: number; notes?: string }[],
-      notes?: string
-    ) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.rpc as any)("create_order", {
+    async (locator: string, items: OrderItemInput[], notes?: string) => {
+      const tempId = crypto.randomUUID();
+      const total_amount = items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
+      const newOrderOptimistic = {
+        id: tempId,
+        user_id: user?.id || null,
+        locator,
+        status: "pendiente" as OrderStatus,
+        total_amount,
+        total: total_amount,
+        notes: notes || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        order_items: items.map((i) => ({
+          id: crypto.randomUUID(),
+          order_id: tempId,
+          product_id: i.product_id,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+          subtotal: i.unit_price * i.quantity,
+          notes: i.notes || null,
+          customizations: null,
+          extras: null,
+          created_at: new Date().toISOString(),
+          products: {
+            id: i.product_id,
+            category_id: null,
+            name: "Enviando...",
+            description: null,
+            price: i.unit_price,
+            image_url: null,
+            is_active: true,
+            is_available: true,
+            created_at: new Date().toISOString(),
+            categories: { 
+              id: "", 
+              name: "", 
+              description: null, 
+              is_active: true, 
+              created_at: new Date().toISOString() 
+            },
+          } as ProductWithCategory,
+        })),
+      } as Order;
+
+      const updateList = (old: Order[] | undefined) => [
+        newOrderOptimistic,
+        ...(old || []),
+      ];
+      queryClient.setQueryData(["orders", user?.id], updateList);
+      queryClient.setQueryData(["active-orders", user?.id], updateList);
+
+      const { data, error } = await supabase.rpc("create_order", {
         p_locator: locator,
         p_items: items as unknown as Json,
         p_notes: notes || null,
       });
 
       if (error) {
-        toast.error(`Error al crear pedido: ${error.message}`);
+        toast.error(`Error: ${error.message}`);
+        queryClient.invalidateQueries({ queryKey: ["orders", user?.id] });
+        queryClient.invalidateQueries({
+          queryKey: ["active-orders", user?.id],
+        });
         return;
       }
 
-      const result = data as { locator: string } | null;
-      toast.success(`Pedido ${result?.locator || locator} enviado a caja`);
-      queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
+      const createdOrder = data as unknown as { locator: string };
+      toast.success(`Pedido ${createdOrder?.locator || locator} enviado`);
+      queryClient.invalidateQueries({ queryKey: ["orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id] });
     },
     [queryClient, user?.id],
   );
@@ -289,131 +287,119 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     async (
       orderId: string,
       locator: string,
-      items: { product_id: string; quantity: number; unit_price: number; notes?: string }[],
-      notes?: string
+      items: OrderItemInput[],
+      notes?: string,
     ) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.rpc as any)("update_order", {
+      const { error } = await supabase.rpc("update_order", {
         p_order_id: orderId,
         p_locator: locator,
         p_items: items as unknown as Json,
         p_notes: notes || null,
       });
-
       if (error) {
-        toast.error(`Error al actualizar pedido: ${error.message}`);
+        toast.error(`Error: ${error.message}`);
         return;
       }
-
-      const result = data as { locator: string } | null;
-      toast.success(`Pedido ${result?.locator || locator} actualizado correctamente`);
-      queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
+      toast.success("Pedido actualizado");
+      queryClient.invalidateQueries({ queryKey: ["orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id] });
     },
     [queryClient, user?.id],
   );
 
   const updateOrderStatus = useCallback(
     async (orderId: string, status: OrderStatus) => {
-      // Optmistic Update
-      const previousOrders = queryClient.getQueryData(['orders']);
-      queryClient.setQueryData(['orders'], (old: Order[] | undefined) => {
-        if (!old) return old;
-        return old.map(o => o.id === orderId ? { ...o, status } : o);
-      });
+      const previousOrders = queryClient.getQueryData(["orders", user?.id]);
+      const previousActive = queryClient.getQueryData([
+        "active-orders",
+        user?.id,
+      ]);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.rpc as any)("update_order_status", {
+      const updateFn = (old: Order[] | undefined) => {
+        if (!old) return old;
+        if (["entregado", "cancelado"].includes(status))
+          return old.filter((o) => o.id !== orderId);
+        return old.map((o) => (o.id === orderId ? { ...o, status } : o));
+      };
+
+      queryClient.setQueryData(["active-orders", user?.id], updateFn);
+
+      const { error } = await supabase.rpc("update_order_status", {
         p_order_id: orderId,
         p_status: status as string,
       });
 
       if (error) {
         toast.error(`Error: ${error.message}`);
-        queryClient.setQueryData(['orders'], previousOrders); // Rollback
+        queryClient.setQueryData(["orders", user?.id], previousOrders);
+        queryClient.setQueryData(["active-orders", user?.id], previousActive);
         return;
       }
-
-      toast.success(`Pedido actualizado: ${STATUS_LABELS[status]}`);
-      queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
+      toast.success(`Pedido: ${STATUS_LABELS[status]}`);
     },
     [queryClient, user?.id],
   );
 
   const processPayment = useCallback(
     async (orderId: string, method: string, amountReceived: number) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: paymentError } = await (supabase.rpc as any)("process_payment", {
+      const { error: paymentError } = await supabase.rpc("process_payment", {
         p_order_id: orderId,
         p_method: method,
         p_amount_received: amountReceived,
       });
-
       if (paymentError) {
-        toast.error(`Error al procesar pago: ${paymentError.message}`);
+        toast.error(`Error de pago: ${paymentError.message}`);
         return;
       }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: statusError } = await (supabase.rpc as any)("update_order_status", {
+      await supabase.rpc("update_order_status", {
         p_order_id: orderId,
         p_status: "en_preparacion",
       });
-
-      if (statusError) {
-        toast.warning("Pago registrado, pero mueve el pedido manualmente");
-      } else {
-        toast.success("Pago procesado y enviado a Cocina");
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
+      toast.success("Pago procesado");
+      queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id] });
     },
     [queryClient, user?.id],
   );
 
   const getOrdersByStatus = useCallback(
     (...statuses: OrderStatus[]) =>
-      orders.filter((o) => statuses.includes(o.status)),
-    [orders],
+      activeOrders.filter((o) => statuses.includes(o.status)),
+    [activeOrders],
   );
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const handleRefreshOrders = useCallback(async () => {
+    await refreshOrders();
+  }, [refreshOrders]);
 
-  const markAllRead = useCallback(async () => {
-    const { error } = await supabase.rpc("mark_notifications_read");
-    if (!error) {
-      queryClient.setQueryData(['notifications', user?.id], (old: Notification[] | undefined) => {
-        if (!old) return old;
-        return old.map(n => ({ ...n, read: true }));
-      });
-    }
-  }, [queryClient, user?.id]);
-
-  const clearNotifications = useCallback(async () => {
-    const { error } = await supabase.rpc("clear_my_notifications");
-    if (!error) {
-      queryClient.setQueryData(['notifications', user?.id], []);
-    }
-  }, [queryClient, user?.id]);
+  const value = useMemo(
+    () => ({
+      orders,
+      activeOrders,
+      loading: loadingOrders,
+      loadingActive,
+      addOrder,
+      updateOrder,
+      updateOrderStatus,
+      processPayment,
+      getOrdersByStatus,
+      refreshOrders: handleRefreshOrders,
+    }),
+    [
+      orders,
+      activeOrders,
+      loadingOrders,
+      loadingActive,
+      addOrder,
+      updateOrder,
+      updateOrderStatus,
+      processPayment,
+      getOrdersByStatus,
+      handleRefreshOrders,
+    ],
+  );
 
   return (
-    <OrderContext.Provider
-      value={{
-        orders,
-        loading: loadingOrders,
-        addOrder,
-        updateOrder,
-        updateOrderStatus,
-        processPayment,
-        getOrdersByStatus,
-        refreshOrders: async () => { refreshOrders(); refreshNotifications(); },
-        notifications,
-        unreadCount,
-        markAllRead,
-        clearNotifications,
-      }}
-    >
-      {children}
-    </OrderContext.Provider>
+    <OrderContext.Provider value={value}>{children}</OrderContext.Provider>
   );
 }
 

@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useEffect,
   useRef,
+  useMemo,
 } from "react";
 import type { User, UserRole } from "@/types";
 import { supabase } from "@/lib/supabase";
@@ -209,17 +210,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     import("@/lib/systemUtils").then((m) => m.forceSystemReset());
   }, []);
 
+  const value = useMemo(() => ({
+    user,
+    login,
+    logout,
+    forceReset,
+    isAuthenticated: !!user,
+    loading,
+  }), [user, login, logout, forceReset, loading]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        logout,
-        forceReset,
-        isAuthenticated: !!user,
-        loading,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

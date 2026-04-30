@@ -96,17 +96,18 @@ export async function deleteProductImage(pathOrUrl: string): Promise<void> {
 
 /**
  * Genera una URL de imagen optimizada usando la API de Supabase.
- * @param originalUrl URL pública original
- * @param width Ancho deseado
- * @param quality Calidad (0-100)
+ * Aprovecha el resizing al vuelo y conversión a WebP para máxima velocidad.
  */
 export function getOptimizedImageUrl(
   originalUrl: string | null | undefined,
   width = 400,
-  quality = 80,
+  quality = 70,
 ): string {
   if (!originalUrl) return "";
 
+  // Si es base64, no se puede optimizar vía URL
+  if (originalUrl.startsWith('data:')) return originalUrl;
+  
   // Si no es una URL de Supabase, devolver tal cual
   if (!originalUrl.includes("supabase.co")) return originalUrl;
 
@@ -114,8 +115,9 @@ export function getOptimizedImageUrl(
     const url = new URL(originalUrl);
     const baseUrl = url.origin;
 
-    // Extraer el path buscando lo que sigue a '/assets/'
-    // Esto funciona aunque la URL no tenga '/public/'
+    // Detectar si ya es una URL de renderizado para no duplicar
+    if (url.pathname.includes('/render/image/')) return originalUrl;
+
     const bucketToken = "/assets/";
     const index = url.pathname.indexOf(bucketToken);
 
@@ -124,19 +126,10 @@ export function getOptimizedImageUrl(
     const path = url.pathname.substring(index + bucketToken.length);
     if (!path) return originalUrl;
 
-    // Retornar la URL de renderizado (que SIEMPRE requiere /public/ para ser accesible)
-    return `${baseUrl}/storage/v1/render/image/public/assets/${path}?width=${width}&quality=${quality}`;
+    // Retornar la URL de renderizado con WebP y resizing
+    // Usamos format=origin para que Supabase elija automáticamente el mejor formato (webp/avif)
+    return `${baseUrl}/storage/v1/render/image/public/assets/${path}?width=${width}&quality=${quality}&format=origin`;
   } catch (e) {
-    // Si falla el parsing de URL, intentar una reparación manual de string
-    if (
-      typeof originalUrl === "string" &&
-      originalUrl.includes("/storage/v1/object/assets/")
-    ) {
-      return originalUrl.replace(
-        "/storage/v1/object/assets/",
-        "/storage/v1/object/public/assets/",
-      );
-    }
     return originalUrl || "";
   }
 }

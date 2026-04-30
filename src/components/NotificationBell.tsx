@@ -1,4 +1,4 @@
-import { useOrders } from "@/context/OrderContext";
+import { useNotifications } from "@/context/NotificationContext";
 import { Button } from "@/components/ui/button";
 import { Bell, Check, Trash2, Clock } from "lucide-react";
 import {
@@ -16,7 +16,7 @@ function formatNotifTime(dateStr: string | undefined | null): string {
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAllRead, clearNotifications } =
-    useOrders();
+    useNotifications();
 
   return (
     <Popover>

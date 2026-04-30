@@ -30,6 +30,7 @@ export interface OrderItem extends OrderItemRow {
 // Order with joined items (each item includes its product)
 export interface Order extends OrderRow {
   order_items: OrderItem[];
+  total: number;
 }
 
 // Custom option with its choices (for ProductCustomizer)
