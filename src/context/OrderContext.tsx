@@ -13,17 +13,7 @@ import { supabase } from "@/lib/supabase";
 import type { Json } from "@/types/database.types";
 import { toast } from "sonner";
 
-function getShiftStart(): string {
-  const SHIFT_START_HOUR = 12;
-  const now = new Date();
-  const shiftStart = new Date(now);
-  shiftStart.setHours(SHIFT_START_HOUR, 0, 0, 0);
-  if (now.getHours() < SHIFT_START_HOUR) {
-    shiftStart.setDate(shiftStart.getDate() - 1);
-  }
-  return shiftStart.toISOString();
-}
-
+import { getShiftStart } from "@/lib/shiftUtils";
 type OrderItemInput = {
   product_id: string;
   quantity: number;
@@ -54,6 +44,7 @@ export interface OrderContextType {
     amountReceived: number,
   ) => Promise<void>;
   getOrdersByStatus: (...statuses: OrderStatus[]) => Order[];
+  getCompletedOrders: () => Order[];
   refreshOrders: () => Promise<void>;
 }
 
@@ -76,7 +67,10 @@ function sanitizeOrders(raw: unknown[]): Order[] {
       (o): o is Record<string, unknown> => o != null && typeof o === "object",
     )
     .map((o) => {
-      const total_amount = (o.total_amount as number | null | undefined) ?? (o.total as number | null | undefined) ?? 0;
+      const total_amount =
+        (o.total_amount as number | null | undefined) ??
+        (o.total as number | null | undefined) ??
+        0;
       return {
         ...o,
         created_at: (o.created_at as string) ?? new Date().toISOString(),
@@ -93,7 +87,9 @@ function sanitizeOrders(raw: unknown[]): Order[] {
             ...item,
             quantity: (item.quantity as number | null | undefined) ?? 1,
             unit_price: (item.unit_price as number | null | undefined) ?? 0,
-            subtotal: (item.subtotal as number | null | undefined) ?? ((item.quantity as number) * (item.unit_price as number)),
+            subtotal:
+              (item.subtotal as number | null | undefined) ??
+              (item.quantity as number) * (item.unit_price as number),
           })),
       };
     }) as unknown as Order[];
@@ -122,7 +118,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   } = useQuery({
     queryKey: ["orders", user?.id],
     queryFn: async () => {
-      const shiftStart = getShiftStart();
+      const shiftStart = getShiftStart().toISOString();
       const { data, error } = await supabase
         .from("orders")
         .select("*, order_items(*, products(*, categories(*)))")
@@ -210,7 +206,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const addOrder = useCallback(
     async (locator: string, items: OrderItemInput[], notes?: string) => {
       const tempId = crypto.randomUUID();
-      const total_amount = items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
+      const total_amount = items.reduce(
+        (sum, i) => sum + i.unit_price * i.quantity,
+        0,
+      );
       const newOrderOptimistic = {
         id: tempId,
         user_id: user?.id || null,
@@ -240,16 +239,16 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             price: i.unit_price,
             image_url: null,
             is_active: true,
-            is_available: true,
+            available: true,
             created_at: new Date().toISOString(),
-            categories: { 
-              id: "", 
-              name: "", 
-              description: null, 
-              is_active: true, 
-              created_at: new Date().toISOString() 
+            categories: {
+              id: "",
+              name: "",
+              description: null,
+              is_active: true,
+              created_at: new Date().toISOString(),
             },
-          } as ProductWithCategory,
+          } as unknown as ProductWithCategory,
         })),
       } as Order;
 
@@ -367,6 +366,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     [activeOrders],
   );
 
+  const getCompletedOrders = useCallback(
+    () => orders.filter((o) => ["entregado", "cancelado"].includes(o.status)),
+    [orders],
+  );
+
   const handleRefreshOrders = useCallback(async () => {
     await refreshOrders();
   }, [refreshOrders]);
@@ -382,6 +386,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       updateOrderStatus,
       processPayment,
       getOrdersByStatus,
+      getCompletedOrders,
       refreshOrders: handleRefreshOrders,
     }),
     [
@@ -394,6 +399,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       updateOrderStatus,
       processPayment,
       getOrdersByStatus,
+      getCompletedOrders,
       handleRefreshOrders,
     ],
   );

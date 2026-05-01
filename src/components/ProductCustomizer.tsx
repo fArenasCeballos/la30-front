@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { Product } from "@/types";
+import type { ProductWithCategory } from "@/types";
 import { formatPrice } from "@/lib/formatPrice";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
@@ -31,11 +31,11 @@ interface ExtraOption {
 }
 
 interface ProductCustomizerProps {
-  product: Product | null;
+  product: ProductWithCategory | null;
   categoryName?: string;
   open: boolean;
   onClose: () => void;
-  onConfirm: (product: Product, notes: string, extraCost: number) => void;
+  onConfirm: (product: ProductWithCategory, notes: string, extraCost: number) => void;
 }
 
 export function ProductCustomizer({
@@ -143,7 +143,7 @@ export function ProductCustomizer({
         <DialogContent className="max-w-sm text-center p-6 space-y-4">
           <DialogTitle className="font-display text-xl font-bold flex flex-col items-center gap-4">
             <span className="text-5xl">
-              {categoryName === "bebidas" ? "🥤" : "🍔"}
+              {product.categories?.icon || "🍔"}
             </span>
             {product.name}
           </DialogTitle>
@@ -172,7 +172,7 @@ export function ProductCustomizer({
         <DialogHeader className="p-4 pb-3 border-b">
           <DialogTitle className="font-display text-xl flex items-center gap-2">
             <span className="text-2xl">
-              {categoryName === "perros" ? "🌭" : "🍔"}
+              {product.categories?.icon || "🍔"}
             </span>
             {product.name}
           </DialogTitle>

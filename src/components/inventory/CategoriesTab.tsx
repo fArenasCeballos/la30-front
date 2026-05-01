@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import type { Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { EmojiPicker } from '@/components/ui/emoji-picker';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -22,6 +23,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
+
+const generateSlug = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '_');
 
 export function CategoriesTab() {
   const { user } = useAuth();
@@ -50,9 +60,14 @@ export function CategoriesTab() {
     load();
   }, [fetchCategories, user]);
 
+  const nextSortOrder = () => {
+    if (categories.length === 0) return 0;
+    return Math.max(...categories.map(c => c.sort_order ?? 0)) + 1;
+  };
+
   const openNew = () => {
     setEditCategory(null);
-    setForm({ name: '', label: '', icon: '📦', sort_order: String(categories.length) });
+    setForm({ name: '', label: '', icon: '📦', sort_order: String(nextSortOrder()) });
     setIsDialogOpen(true);
   };
 
@@ -219,40 +234,30 @@ export function CategoriesTab() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Icono (emoji)</Label>
-              <Input
+              <EmojiPicker
                 value={form.icon}
-                onChange={e => setForm(f => ({ ...f, icon: e.target.value }))}
-                placeholder="🌭"
-                className="text-2xl text-center"
+                onChange={(emoji) => setForm(f => ({ ...f, icon: emoji }))}
               />
-            </div>
-            <div className="space-y-2">
-              <Label>Nombre clave (slug)</Label>
-              <Input
-                value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="perros_calientes"
-              />
-              <p className="text-xs text-muted-foreground">
-                Identificador interno, sin espacios ni tildes. Ej: <code>perros</code>, <code>hamburguesas</code>
-              </p>
             </div>
             <div className="space-y-2">
               <Label>Etiqueta visible</Label>
               <Input
                 value={form.label}
-                onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
+                onChange={e => {
+                  const label = e.target.value;
+                  setForm(f => ({
+                    ...f,
+                    label,
+                    name: editCategory ? f.name : generateSlug(label),
+                  }));
+                }}
                 placeholder="Perros Calientes"
               />
-            </div>
-            <div className="space-y-2">
-              <Label>Orden de visualización</Label>
-              <Input
-                type="number"
-                value={form.sort_order}
-                onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))}
-                placeholder="0"
-              />
+              {form.name && (
+                <p className="text-xs text-muted-foreground">
+                  Clave: <code className="bg-muted px-1 rounded">{form.name}</code>
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">

@@ -1,122 +1,26 @@
-import { useRef } from 'react';
-import type { Order } from '@/types';
-import { formatPrice } from '@/lib/formatPrice';
-import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Printer, X } from 'lucide-react';
+import { useRef } from "react";
+import type { Order } from "@/types";
+import { formatPrice } from "@/lib/formatPrice";
+import { PRINT_STYLES } from "@/lib/receiptUtils";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Printer, X } from "lucide-react";
 
 interface OrderReceiptProps {
   order: Order | null;
   open: boolean;
   onClose: () => void;
-  type: 'customer' | 'kitchen';
+  type: "customer" | "kitchen";
   paymentMethod?: string;
   paymentReceived?: number;
   paymentChange?: number;
 }
-
-/* ── Estilos para la ventana de impresión ────────────────────────── */
-const PRINT_STYLES = `
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Courier New', 'Lucida Console', monospace;
-    width: 280px;
-    padding: 10px;
-    font-size: 12px;
-    color: #000;
-    line-height: 1.4;
-  }
-  .center   { text-align: center; }
-  .right    { text-align: right; }
-  .bold     { font-weight: bold; }
-  .divider  { border-top: 1px dashed #000; margin: 6px 0; }
-  .double-divider {
-    border-top: 2px solid #000;
-    border-bottom: 2px solid #000;
-    padding: 2px 0;
-    margin: 6px 0;
-  }
-  .row {
-    display: flex;
-    justify-content: space-between;
-    padding: 1px 0;
-  }
-  .row-indent { padding-left: 8px; }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 4px 0;
-  }
-  th {
-    border-bottom: 1px solid #000;
-    border-top: 1px solid #000;
-    padding: 3px 0;
-    font-size: 11px;
-    text-align: left;
-  }
-  th:last-child { text-align: right; }
-  td {
-    padding: 2px 0;
-    vertical-align: top;
-    font-size: 11px;
-  }
-  td:first-child { width: 50%; }
-  td:nth-child(2) { width: 15%; text-align: center; }
-  td:last-child { text-align: right; }
-  .item-notes {
-    font-size: 10px;
-    color: #333;
-    padding-left: 8px;
-    font-style: italic;
-  }
-  .header-title {
-    font-size: 18px;
-    font-weight: bold;
-    letter-spacing: 1px;
-  }
-  .total-row {
-    font-size: 14px;
-    font-weight: bold;
-  }
-  .big-total {
-    font-size: 16px;
-    font-weight: bold;
-  }
-  /* ── Comanda de cocina ───────────────────────────────────── */
-  .kitchen-title {
-    font-size: 20px;
-    font-weight: bold;
-    letter-spacing: 2px;
-  }
-  .kitchen-locator {
-    font-size: 40px;
-    font-weight: bold;
-    letter-spacing: 4px;
-    line-height: 1.1;
-  }
-  .kitchen-ticket {
-    font-size: 14px;
-  }
-  .kitchen-cashier {
-    font-size: 12px;
-    font-weight: bold;
-  }
-  .kitchen-item-name {
-    font-size: 16px;
-    font-weight: bold;
-    padding: 6px 0 2px;
-  }
-  .kitchen-obs {
-    font-size: 12px;
-    padding: 0 0 6px 4px;
-    word-break: break-word;
-  }
-  .kitchen-footer {
-    font-size: 12px;
-    margin-top: 6px;
-  }
-`;
 
 export function OrderReceipt({
   order,
@@ -133,26 +37,26 @@ export function OrderReceipt({
   if (!order) return null;
 
   /* ── Datos comunes ─────────────────────────────────────── */
-  const cajeroName = user?.name ?? 'Cajero';
+  const cajeroName = user?.name ?? "Cajero";
   const now = order.created_at ? new Date(order.created_at) : new Date();
-  const dateOnly = new Intl.DateTimeFormat('es-CO', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
+  const dateOnly = new Intl.DateTimeFormat("es-CO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   }).format(now);
-  const timeOnly = new Intl.DateTimeFormat('es-CO', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
+  const timeOnly = new Intl.DateTimeFormat("es-CO", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
     hour12: false,
   }).format(now);
-  const printDate = new Intl.DateTimeFormat('es-CO', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
+  const printDate = new Intl.DateTimeFormat("es-CO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
     hour12: false,
   }).format(new Date());
 
@@ -165,19 +69,19 @@ export function OrderReceipt({
   );
 
   /* ── Ticket # consecutivo desde la BD ── */
-  const ticketNumber = order.ticket_number ?? '—';
+  const ticketNumber = order.ticket_number ?? "—";
 
   /* ── Imprimir ──────────────────────────────────────────── */
   const handlePrint = () => {
     if (!printRef.current) return;
-    const printWindow = window.open('', '_blank', 'width=320,height=700');
+    const printWindow = window.open("", "_blank", "width=320,height=700");
     if (!printWindow) return;
 
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
-        <title>${type === 'customer' ? 'Recibo' : 'Comanda'} - ${order.locator}</title>
+        <title>${type === "customer" ? "Recibo" : "Comanda"} - ${order.locator}</title>
         <style>${PRINT_STYLES}</style>
       </head>
       <body>${printRef.current.innerHTML}</body>
@@ -204,7 +108,7 @@ export function OrderReceipt({
         </div>
       </div>
 
-      <div className="row" style={{ fontSize: '10px' }}>
+      <div className="row" style={{ fontSize: "10px" }}>
         <span>Fecha Hora Impr.:</span>
         <span>{printDate}</span>
       </div>
@@ -215,7 +119,7 @@ export function OrderReceipt({
         <span>{dateOnly}</span>
       </div>
       <div className="row">
-        <span>Hora  :</span>
+        <span>Hora :</span>
         <span>{timeOnly}</span>
       </div>
 
@@ -244,13 +148,13 @@ export function OrderReceipt({
           {validItems.map((item) => (
             <tr key={item.id}>
               <td>
-                {(item.products?.name ?? 'Producto').toUpperCase()}
-                {item.notes && (
-                  <div className="item-notes">{item.notes}</div>
-                )}
+                {(item.products?.name ?? "Producto").toUpperCase()}
+                {item.notes && <div className="item-notes">{item.notes}</div>}
               </td>
-              <td style={{ textAlign: 'center' }}>{item.quantity}</td>
-              <td>{formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}</td>
+              <td style={{ textAlign: "center" }}>{item.quantity}</td>
+              <td>
+                {formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -288,16 +192,14 @@ export function OrderReceipt({
           </div>
           <div className="row">
             <span className="bold">Cambio</span>
-            <span className="bold">
-              {formatPrice(paymentChange ?? 0)}
-            </span>
+            <span className="bold">{formatPrice(paymentChange ?? 0)}</span>
           </div>
-          <div style={{ fontSize: '11px', padding: '4px 0 0' }}>
-            {paymentMethod === 'efectivo'
-              ? 'Efectivo'
-              : paymentMethod === 'tarjeta'
-                ? 'Tarjeta'
-                : 'Nequi'}{' '}
+          <div style={{ fontSize: "11px", padding: "4px 0 0" }}>
+            {paymentMethod === "efectivo"
+              ? "Efectivo"
+              : paymentMethod === "tarjeta"
+                ? "Tarjeta"
+                : "Nequi"}{" "}
             {formatPrice(paymentReceived ?? order.total ?? 0)}
           </div>
           <div className="divider" />
@@ -305,14 +207,13 @@ export function OrderReceipt({
       )}
 
       {/* Footer */}
-      <div className="center" style={{ padding: '4px 0' }}>
+      <div className="center" style={{ padding: "4px 0" }}>
         <p>¡Gracias por tu compra!</p>
         <p>
-          Espera tu número:{' '}
-          <span className="bold">{order.locator}</span>
+          Espera tu número: <span className="bold">{order.locator}</span>
         </p>
         <div className="divider" />
-        <p className="bold" style={{ fontSize: '11px', paddingTop: '4px' }}>
+        <p className="bold" style={{ fontSize: "11px", paddingTop: "4px" }}>
           La 30 Perros y Hamburguesas
         </p>
       </div>
@@ -328,7 +229,7 @@ export function OrderReceipt({
         <p className="kitchen-title">PEDIDO</p>
       </div>
 
-      <div className="row" style={{ alignItems: 'baseline' }}>
+      <div className="row" style={{ alignItems: "baseline" }}>
         <span className="bold">Mesa #</span>
         <span className="kitchen-locator">{order.locator}</span>
       </div>
@@ -338,13 +239,13 @@ export function OrderReceipt({
         <span className="bold kitchen-ticket">{ticketNumber}</span>
       </div>
 
-      <div className="center" style={{ padding: '2px 0' }}>
+      <div className="center" style={{ padding: "2px 0" }}>
         <span className="kitchen-cashier">{cajeroName.toUpperCase()}</span>
       </div>
 
       <div className="divider" />
 
-      <div className="row" style={{ fontSize: '10px' }}>
+      <div className="row" style={{ fontSize: "10px" }}>
         <span className="bold">Cantidad</span>
         <span className="bold">Productos</span>
       </div>
@@ -353,13 +254,12 @@ export function OrderReceipt({
       {validItems.map((item) => (
         <div key={item.id}>
           <p className="kitchen-item-name">
-            {item.quantity}{' '}
-            {(item.products?.name ?? 'Producto').toUpperCase()}
+            {item.quantity} {(item.products?.name ?? "Producto").toUpperCase()}
           </p>
           {item.notes && (
             <div className="kitchen-obs">
-              {item.notes.split(',').map((note, idx) => (
-                <p key={idx} style={{ margin: '1px 0', paddingLeft: '4px' }}>
+              {item.notes.split(",").map((note, idx) => (
+                <p key={idx} style={{ margin: "1px 0", paddingLeft: "4px" }}>
                   • {note.trim()}
                 </p>
               ))}
@@ -376,7 +276,7 @@ export function OrderReceipt({
         </>
       )}
 
-      <div className="divider" style={{ borderTopStyle: 'dotted' }} />
+      <div className="divider" style={{ borderTopStyle: "dotted" }} />
 
       <div className="center kitchen-footer">
         <p>Hora: {timeOnly}</p>
@@ -393,9 +293,9 @@ export function OrderReceipt({
       <DialogContent className="max-w-sm p-0 gap-0 max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="p-4 pb-2 border-b flex-row items-center justify-between">
           <DialogTitle className="font-display text-lg">
-            {type === 'customer'
-              ? '🧾 Recibo de Venta'
-              : '👨‍🍳 Comanda de Cocina'}
+            {type === "customer"
+              ? "🧾 Recibo de Venta"
+              : "👨‍🍳 Comanda de Cocina"}
           </DialogTitle>
         </DialogHeader>
 
@@ -403,9 +303,9 @@ export function OrderReceipt({
           <div
             ref={printRef}
             className="font-mono text-xs space-y-1 bg-white text-black p-4 rounded-lg border shadow-inner"
-            style={{ maxWidth: 280, margin: '0 auto' }}
+            style={{ maxWidth: 280, margin: "0 auto" }}
           >
-            {type === 'customer' ? customerReceipt : kitchenReceipt}
+            {type === "customer" ? customerReceipt : kitchenReceipt}
           </div>
         </div>
 

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import type { Category, ProductCustomOption, ProductCustomChoice } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { EmojiPicker } from '@/components/ui/emoji-picker';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
@@ -12,7 +13,26 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
 import { Plus, Edit, Trash2, ListChecks } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
+
+const generateSlug = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '_');
 
 export function OptionsTab() {
   const [options, setOptions] = useState<ProductCustomOption[]>([]);
@@ -22,6 +42,7 @@ export function OptionsTab() {
   const [filterCat, setFilterCat] = useState<string>('all');
   
   const [editOption, setEditOption] = useState<ProductCustomOption | null>(null);
+  const [optionToDelete, setOptionToDelete] = useState<ProductCustomOption | null>(null);
   const [isOptionDialogOpen, setIsOptionDialogOpen] = useState(false);
   const [optionForm, setOptionForm] = useState({
     category_id: '',
@@ -32,6 +53,7 @@ export function OptionsTab() {
   });
 
   const [editChoice, setEditChoice] = useState<{choice: ProductCustomChoice | null, optionId: string}>({choice: null, optionId: ''});
+  const [choiceToDelete, setChoiceToDelete] = useState<ProductCustomChoice | null>(null);
   const [isChoiceDialogOpen, setIsChoiceDialogOpen] = useState(false);
   const [choiceForm, setChoiceForm] = useState({
     value: '',
@@ -79,6 +101,11 @@ export function OptionsTab() {
     ? options
     : options.filter(o => o.category_id === filterCat);
 
+  const nextOptionSortOrder = () => {
+    if (options.length === 0) return 0;
+    return Math.max(...options.map(o => o.sort_order ?? 0)) + 1;
+  };
+
   // --- Opciones (Grupos) ---
   const openNewOption = () => {
     setEditOption(null);
@@ -87,7 +114,7 @@ export function OptionsTab() {
       option_key: '',
       label: '',
       icon: '🧅',
-      sort_order: String(options.length),
+      sort_order: String(nextOptionSortOrder()),
     });
     setIsOptionDialogOpen(true);
   };
@@ -140,23 +167,25 @@ export function OptionsTab() {
     }
   };
 
-  const deleteOption = async (id: string) => {
-    if (!confirm('¿Seguro que deseas eliminar esta opción de personalización? Se eliminarán también todas sus variables.')) return;
-    const { error } = await supabase.from('product_custom_options').delete().eq('id', id);
+  const deleteOption = async () => {
+    if (!optionToDelete) return;
+    const { error } = await supabase.from('product_custom_options').delete().eq('id', optionToDelete.id);
     if (error) { toast.error(`Error: ${error.message}`); return; }
-    setOptions(prev => prev.filter(o => o.id !== id));
+    setOptions(prev => prev.filter(o => o.id !== optionToDelete.id));
     toast.success('Opción eliminada');
+    setOptionToDelete(null);
   };
 
   // --- Opciones (Choices) ---
   const openNewChoice = (optionId: string) => {
     const currentChoices = choices[optionId] || [];
+    const nextOrder = currentChoices.length === 0 ? 0 : Math.max(...currentChoices.map(c => c.sort_order ?? 0)) + 1;
     setEditChoice({ choice: null, optionId });
     setChoiceForm({
       value: '',
       label: '',
       icon: '✅',
-      sort_order: String(currentChoices.length),
+      sort_order: String(nextOrder),
     });
     setIsChoiceDialogOpen(true);
   };
@@ -208,12 +237,13 @@ export function OptionsTab() {
     }
   };
 
-  const deleteChoice = async (id: string) => {
-    if (!confirm('¿Seguro que deseas eliminar esta variable?')) return;
-    const { error } = await supabase.from('product_custom_choices').delete().eq('id', id);
+  const deleteChoice = async () => {
+    if (!choiceToDelete) return;
+    const { error } = await supabase.from('product_custom_choices').delete().eq('id', choiceToDelete.id);
     if (error) { toast.error(`Error: ${error.message}`); return; }
     fetchData();
     toast.success('Variable eliminada');
+    setChoiceToDelete(null);
   };
 
   if (loading) {
@@ -263,7 +293,7 @@ export function OptionsTab() {
                   <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditOption(option)}>
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteOption(option.id)}>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setOptionToDelete(option)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -292,7 +322,7 @@ export function OptionsTab() {
                           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditChoice(choice)}>
                             <Edit className="h-3 w-3" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteChoice(choice.id)}>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setChoiceToDelete(choice)}>
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
@@ -340,20 +370,23 @@ export function OptionsTab() {
             </div>
             <div className="space-y-2">
               <Label>Icono (emoji)</Label>
-              <Input value={optionForm.icon} onChange={e => setOptionForm(f => ({ ...f, icon: e.target.value }))} placeholder="🧅" className="text-2xl text-center" />
-            </div>
-            <div className="space-y-2">
-              <Label>Clave (slug)</Label>
-              <Input value={optionForm.option_key} onChange={e => setOptionForm(f => ({ ...f, option_key: e.target.value }))} placeholder="cebolla" />
-              <p className="text-xs text-muted-foreground">Identificador único dentro de la categoría</p>
+              <EmojiPicker value={optionForm.icon} onChange={(emoji) => setOptionForm(f => ({ ...f, icon: emoji }))} />
             </div>
             <div className="space-y-2">
               <Label>Etiqueta visible</Label>
-              <Input value={optionForm.label} onChange={e => setOptionForm(f => ({ ...f, label: e.target.value }))} placeholder="Cebolla" />
-            </div>
-            <div className="space-y-2">
-              <Label>Orden</Label>
-              <Input type="number" value={optionForm.sort_order} onChange={e => setOptionForm(f => ({ ...f, sort_order: e.target.value }))} placeholder="0" />
+              <Input value={optionForm.label} onChange={e => {
+                const label = e.target.value;
+                setOptionForm(f => ({
+                  ...f,
+                  label,
+                  option_key: editOption ? f.option_key : generateSlug(label),
+                }));
+              }} placeholder="Cebolla" />
+              {optionForm.option_key && (
+                <p className="text-xs text-muted-foreground">
+                  Clave: <code className="bg-muted px-1 rounded">{optionForm.option_key}</code>
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -374,19 +407,23 @@ export function OptionsTab() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Icono (emoji)</Label>
-              <Input value={choiceForm.icon} onChange={e => setChoiceForm(f => ({ ...f, icon: e.target.value }))} placeholder="🚫" className="text-xl text-center" />
-            </div>
-            <div className="space-y-2">
-              <Label>Valor (slug)</Label>
-              <Input value={choiceForm.value} onChange={e => setChoiceForm(f => ({ ...f, value: e.target.value }))} placeholder="sin_cebolla" />
+              <EmojiPicker value={choiceForm.icon} onChange={(emoji) => setChoiceForm(f => ({ ...f, icon: emoji }))} />
             </div>
             <div className="space-y-2">
               <Label>Etiqueta visible</Label>
-              <Input value={choiceForm.label} onChange={e => setChoiceForm(f => ({ ...f, label: e.target.value }))} placeholder="Sin cebolla" />
-            </div>
-            <div className="space-y-2">
-              <Label>Orden</Label>
-              <Input type="number" value={choiceForm.sort_order} onChange={e => setChoiceForm(f => ({ ...f, sort_order: e.target.value }))} placeholder="0" />
+              <Input value={choiceForm.label} onChange={e => {
+                const label = e.target.value;
+                setChoiceForm(f => ({
+                  ...f,
+                  label,
+                  value: editChoice.choice ? f.value : generateSlug(label),
+                }));
+              }} placeholder="Sin cebolla" />
+              {choiceForm.value && (
+                <p className="text-xs text-muted-foreground">
+                  Clave: <code className="bg-muted px-1 rounded">{choiceForm.value}</code>
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -395,6 +432,54 @@ export function OptionsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* AlertDialog para Borrar Opción */}
+      <AlertDialog 
+        open={!!optionToDelete} 
+        onOpenChange={(open) => !open && setOptionToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar grupo de personalización?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Seguro que deseas eliminar <strong>{optionToDelete?.label}</strong>? Se eliminarán también todas sus variables asociadas. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={deleteOption}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar Grupo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog para Borrar Variable */}
+      <AlertDialog 
+        open={!!choiceToDelete} 
+        onOpenChange={(open) => !open && setChoiceToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar variable?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Seguro que deseas eliminar la variable <strong>{choiceToDelete?.label}</strong>? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={deleteChoice}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar Variable
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

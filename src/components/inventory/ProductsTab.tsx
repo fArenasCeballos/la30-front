@@ -1,52 +1,87 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { formatPrice } from '@/lib/formatPrice';
-import type { Category, ProductWithCategory } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { formatPrice } from "@/lib/formatPrice";
+import type { Category, ProductWithCategory } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from '@/components/ui/select';
-import { Plus, Edit, Trash2, Search, ImagePlus, X, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { resizeImage, uploadProductImage, getOptimizedImageUrl, deleteProductImage } from '@/lib/imageUtils';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  ImagePlus,
+  X,
+  Loader2,
+} from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import {
+  resizeImage,
+  uploadProductImage,
+  getOptimizedImageUrl,
+  deleteProductImage,
+} from "@/lib/imageUtils";
 
 export function ProductsTab() {
   const { user } = useAuth();
   const [products, setProducts] = useState<ProductWithCategory[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [editProduct, setEditProduct] = useState<ProductWithCategory | null>(null);
+  const [search, setSearch] = useState("");
+  const [editProduct, setEditProduct] = useState<ProductWithCategory | null>(
+    null,
+  );
+  const [productToDelete, setProductToDelete] = useState<ProductWithCategory | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', category_id: '', price: '' });
+  const [form, setForm] = useState({ name: "", category_id: "", price: "" });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchProducts = useCallback(async () => {
     const { data: prodData } = await supabase
-      .from('products')
-      .select('*, categories(*)')
-      .order('sort_order');
+      .from("products")
+      .select("*, categories(*)")
+      .order("sort_order");
     if (prodData) setProducts(prodData as unknown as ProductWithCategory[]);
     setLoading(false);
   }, []);
 
   const fetchCategories = useCallback(async () => {
     const { data: catData } = await supabase
-      .from('categories')
-      .select('*')
-      .order('sort_order');
+      .from("categories")
+      .select("*")
+      .order("sort_order");
     if (catData) setCategories(catData as Category[]);
   }, []);
 
@@ -59,14 +94,18 @@ export function ProductsTab() {
     load();
   }, [fetchProducts, fetchCategories, user]);
 
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products.filter((p) => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory =
+      categoryFilter === "all" || p.category_id === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const openNew = () => {
     setEditProduct(null);
-    setForm({ name: '', category_id: categories[0]?.id || '', price: '' });
-    if (imagePreview && imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+    setForm({ name: "", category_id: categories[0]?.id || "", price: "" });
+    if (imagePreview && imagePreview.startsWith("blob:"))
+      URL.revokeObjectURL(imagePreview);
     setImagePreview(null);
     setSelectedFile(null);
     setIsDragging(false);
@@ -75,16 +114,24 @@ export function ProductsTab() {
 
   const openEdit = (product: ProductWithCategory) => {
     setEditProduct(product);
-    setForm({ name: product.name, category_id: product.category_id, price: String(product.price) });
-    if (imagePreview && imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
-    
+    setForm({
+      name: product.name,
+      category_id: product.category_id || "",
+      price: String(product.price),
+    });
+    if (imagePreview && imagePreview.startsWith("blob:"))
+      URL.revokeObjectURL(imagePreview);
+
     // Normalizar la URL si viene rota de la DB (inyectar /public/ si falta)
     let initialImage = product.image_url;
-    if (initialImage && initialImage.includes('/storage/v1/object/assets/')) {
-       const baseUrl = import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, '');
-       initialImage = initialImage.replace(/\/storage\/v1\/object\/assets\//, `${baseUrl}/storage/v1/object/public/assets/`);
+    if (initialImage && initialImage.includes("/storage/v1/object/assets/")) {
+      const baseUrl = import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, "");
+      initialImage = initialImage.replace(
+        /\/storage\/v1\/object\/assets\//,
+        `${baseUrl}/storage/v1/object/public/assets/`,
+      );
     }
-    
+
     setImagePreview(initialImage || null);
     setSelectedFile(null);
     setIsDragging(false);
@@ -92,18 +139,18 @@ export function ProductsTab() {
   };
 
   const processFile = (file: File) => {
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      toast.error('Solo se permiten imágenes JPG o PNG');
+    if (!["image/jpeg", "image/png"].includes(file.type)) {
+      toast.error("Solo se permiten imágenes JPG o PNG");
       return;
     }
 
     if (file.size > 15 * 1024 * 1024) {
-      toast.error('La imagen no debe superar 15MB');
+      toast.error("La imagen no debe superar 15MB");
       return;
     }
 
     setSelectedFile(file);
-    if (imagePreview && imagePreview.startsWith('blob:')) {
+    if (imagePreview && imagePreview.startsWith("blob:")) {
       URL.revokeObjectURL(imagePreview);
     }
     setImagePreview(URL.createObjectURL(file));
@@ -135,7 +182,7 @@ export function ProductsTab() {
     let uploadedPath: string | null = null;
     try {
       if (!form.name.trim() || !form.price || !form.category_id) {
-        toast.error('Completa todos los campos');
+        toast.error("Completa todos los campos");
         return;
       }
 
@@ -149,7 +196,10 @@ export function ProductsTab() {
           finalImageUrl = publicUrl;
           uploadedPath = path; // Guardamos el path para rollback si falla el DB
         } catch (uploadError: unknown) {
-          const msg = uploadError instanceof Error ? uploadError.message : 'Error al subir imagen';
+          const msg =
+            uploadError instanceof Error
+              ? uploadError.message
+              : "Error al subir imagen";
           toast.error(msg);
           setSaving(false);
           return;
@@ -165,12 +215,14 @@ export function ProductsTab() {
 
       if (editProduct) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase.from('products') as any).update(productData).eq('id', editProduct.id);
-        if (error) { 
+        const { error } = await (supabase.from("products") as any)
+          .update(productData)
+          .eq("id", editProduct.id);
+        if (error) {
           // ROLLBACK STORAGE: Si el DB falla, borramos la imagen que acabamos de subir
           if (uploadedPath) await deleteProductImage(uploadedPath);
-          toast.error(`Error DB: ${error.message}`); 
-          return; 
+          toast.error(`Error DB: ${error.message}`);
+          return;
         }
 
         // LIMPIEZA: Si el nuevo upload fue exitoso y el update DB también, borramos la vieja
@@ -178,17 +230,19 @@ export function ProductsTab() {
           await deleteProductImage(editProduct.image_url);
         }
 
-        toast.success('Producto actualizado');
+        toast.success("Producto actualizado");
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase.from('products') as any).insert([productData]);
-        if (error) { 
+        const { error } = await (supabase.from("products") as any).insert([
+          productData,
+        ]);
+        if (error) {
           // ROLLBACK STORAGE
           if (uploadedPath) await deleteProductImage(uploadedPath);
-          toast.error(`Error DB: ${error.message}`); 
-          return; 
+          toast.error(`Error DB: ${error.message}`);
+          return;
         }
-        toast.success('Producto creado');
+        toast.success("Producto creado");
       }
 
       await fetchProducts();
@@ -197,7 +251,7 @@ export function ProductsTab() {
       console.error("Error in handleSave:", err);
       // ROLLBACK STORAGE
       if (uploadedPath) await deleteProductImage(uploadedPath);
-      toast.error('Error interno al guardar el producto');
+      toast.error("Error interno al guardar el producto");
     } finally {
       setSaving(false);
     }
@@ -205,27 +259,48 @@ export function ProductsTab() {
 
   const toggleAvailability = async (id: string, currentStatus: boolean) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('products') as any).update({ available: !currentStatus }).eq('id', id);
-    if (error) { toast.error(`Error DB: ${error.message}`); return; }
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, available: !currentStatus } : p));
+    const { error } = await (supabase.from("products") as any)
+      .update({ available: !currentStatus })
+      .eq("id", id);
+    if (error) {
+      toast.error(`Error DB: ${error.message}`);
+      return;
+    }
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, available: !currentStatus } : p)),
+    );
   };
 
-  const handleDelete = async (product: ProductWithCategory) => {
-    if (!confirm(`¿Seguro que deseas eliminar el producto "${product.name}"?`)) return;
-    
+  const handleDelete = async () => {
+    if (!productToDelete) return;
+
+    const product = productToDelete;
     // Guardar referencia de la imagen antes de borrar de la DB
     const imageUrl = product.image_url;
-    
-    const { error } = await supabase.from('products').delete().eq('id', product.id);
-    if (error) { toast.error(`Error: ${error.message}`); return; }
-    
+
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", product.id);
+      
+    if (error) {
+      if (error.code === '23503') {
+        toast.error("No se puede eliminar: Este producto tiene pedidos asociados.");
+      } else {
+        toast.error(`Error: ${error.message}`);
+      }
+      setProductToDelete(null);
+      return;
+    }
+
     // Si el borrado de la DB fue exitoso, borrar la imagen del Storage
     if (imageUrl) {
       await deleteProductImage(imageUrl);
     }
 
-    setProducts(prev => prev.filter(p => p.id !== product.id));
-    toast.success('Producto eliminado');
+    setProducts((prev) => prev.filter((p) => p.id !== product.id));
+    toast.success("Producto eliminado");
+    setProductToDelete(null);
   };
 
   if (loading) {
@@ -243,38 +318,99 @@ export function ProductsTab() {
         </Button>
       </div>
 
+      {/* Category filter pills */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        <Button
+          variant={categoryFilter === "all" ? "default" : "secondary"}
+          size="touch"
+          onClick={() => setCategoryFilter("all")}
+          className="whitespace-nowrap text-xs sm:text-sm shrink-0"
+        >
+          Todos
+        </Button>
+        {categories.map((cat) => (
+          <Button
+            key={cat.id}
+            variant={categoryFilter === cat.id ? "default" : "secondary"}
+            size="touch"
+            onClick={() => setCategoryFilter(cat.id)}
+            className="whitespace-nowrap text-xs sm:text-sm shrink-0"
+          >
+            {cat.icon} {cat.label}
+          </Button>
+        ))}
+      </div>
+
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar producto..." className="pl-10 h-11" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar producto..."
+          className="pl-10 h-11"
+        />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-        {filtered.map(product => (
-          <div key={product.id} className={`pos-card transition-opacity ${!product.available ? 'opacity-50' : ''}`}>
+        {filtered.map((product) => (
+          <div
+            key={product.id}
+            className={`pos-card transition-opacity ${!product.available ? "opacity-50" : ""}`}
+          >
             <div className="aspect-square rounded-lg bg-muted/50 mb-3 overflow-hidden flex items-center justify-center">
               {product.image_url ? (
-                <img src={getOptimizedImageUrl(product.image_url, 400)} alt={product.name} className="w-full h-full object-cover" />
+                <img
+                  src={getOptimizedImageUrl(product.image_url, 400)}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
               ) : (
-                <span className="text-4xl sm:text-5xl">{product.categories?.icon || '📦'}</span>
+                <span className="text-4xl sm:text-5xl">
+                  {product.categories?.icon || "📦"}
+                </span>
               )}
             </div>
             <div className="flex items-start justify-between mb-1">
               <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-sm sm:text-base truncate">{product.name}</h3>
-                <span className="text-xs text-muted-foreground">{product.categories?.label}</span>
+                <h3 className="font-semibold text-sm sm:text-base truncate">
+                  {product.name}
+                </h3>
+                <span className="text-xs text-muted-foreground">
+                  {product.categories?.label}
+                </span>
               </div>
-              <Switch checked={product.available} onCheckedChange={() => toggleAvailability(product.id, product.available)} />
+              <Switch
+                checked={product.available}
+                onCheckedChange={() =>
+                  toggleAvailability(product.id, product.available)
+                }
+              />
             </div>
-            <p className="font-display text-lg sm:text-xl font-bold text-primary mb-2">{formatPrice(product.price)}</p>
+            <p className="font-display text-lg sm:text-xl font-bold text-primary mb-2">
+              {formatPrice(product.price)}
+            </p>
             <div className="flex items-center gap-2">
-              <Badge variant={product.available ? 'success' : 'pending'} className="text-xs">
-                {product.available ? 'Disponible' : 'Agotado'}
+              <Badge
+                variant={product.available ? "success" : "pending"}
+                className="text-xs"
+              >
+                {product.available ? "Disponible" : "Agotado"}
               </Badge>
               <div className="ml-auto flex gap-1">
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(product)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={() => openEdit(product)}
+                >
                   <Edit className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDelete(product)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={() => setProductToDelete(product)}
+                >
                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
                 </Button>
               </div>
@@ -287,7 +423,7 @@ export function ProductsTab() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {editProduct ? 'Editar Producto' : 'Nuevo Producto'}
+              {editProduct ? "Editar Producto" : "Nuevo Producto"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -295,9 +431,9 @@ export function ProductsTab() {
               <Label>Imagen del producto</Label>
               <div
                 className={`relative aspect-video rounded-xl border-2 border-dashed transition-all flex items-center justify-center cursor-pointer overflow-hidden ${
-                  isDragging 
-                    ? 'border-primary bg-primary/10 scale-[1.02]' 
-                    : 'border-border bg-muted/30 hover:border-primary/50'
+                  isDragging
+                    ? "border-primary bg-primary/10 scale-[1.02]"
+                    : "border-border bg-muted/30 hover:border-primary/50"
                 }`}
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={handleDragOver}
@@ -306,46 +442,94 @@ export function ProductsTab() {
               >
                 {imagePreview ? (
                   <>
-                    <img src={imagePreview.startsWith('blob:') ? imagePreview : getOptimizedImageUrl(imagePreview, 600)} alt="Preview" className="w-full h-full object-cover" />
-                    <Button size="icon" variant="destructive" className="absolute top-2 right-2 h-7 w-7" onClick={(e) => { 
-                      e.stopPropagation(); 
-                      if (imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
-                      setImagePreview(null); 
-                      setSelectedFile(null); 
-                    }}>
+                    <img
+                      src={
+                        imagePreview.startsWith("blob:")
+                          ? imagePreview
+                          : getOptimizedImageUrl(imagePreview, 600)
+                      }
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-2 right-2 h-7 w-7"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (imagePreview.startsWith("blob:"))
+                          URL.revokeObjectURL(imagePreview);
+                        setImagePreview(null);
+                        setSelectedFile(null);
+                      }}
+                    >
                       <X className="h-3.5 w-3.5" />
                     </Button>
                   </>
                 ) : (
                   <div className="text-center space-y-2 p-4">
-                    <ImagePlus className={`h-8 w-8 mx-auto transition-colors ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <ImagePlus
+                      className={`h-8 w-8 mx-auto transition-colors ${isDragging ? "text-primary" : "text-muted-foreground"}`}
+                    />
                     <p className="text-sm text-muted-foreground">
-                      {isDragging ? 'Suelta para subir' : 'Arrastra o toca para subir imagen'}
+                      {isDragging
+                        ? "Suelta para subir"
+                        : "Arrastra o toca para subir imagen"}
                     </p>
-                    <p className="text-xs text-muted-foreground">JPG, PNG (máx. 15MB)</p>
+                    <p className="text-xs text-muted-foreground">
+                      JPG, PNG (máx. 15MB)
+                    </p>
                   </div>
                 )}
               </div>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+              />
             </div>
             <div className="space-y-2">
               <Label>Nombre</Label>
-              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre del producto" />
+              <Input
+                value={form.name}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value }))
+                }
+                placeholder="Nombre del producto"
+              />
             </div>
             <div className="space-y-2">
               <Label>Categoría</Label>
-              <Select value={form.category_id} onValueChange={(v) => setForm(f => ({ ...f, category_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecciona una categoría" /></SelectTrigger>
+              <Select
+                value={form.category_id}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, category_id: v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una categoría" />
+                </SelectTrigger>
                 <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.icon} {cat.label}</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Precio (COP)</Label>
-              <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="15000" />
+              <Input
+                type="number"
+                value={form.price}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, price: e.target.value }))
+                }
+                placeholder="15000"
+              />
               {form.price && (
                 <p className="text-sm font-medium text-primary text-right animate-in fade-in slide-in-from-top-1">
                   {formatPrice(Number(form.price))}
@@ -354,14 +538,42 @@ export function ProductsTab() {
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editProduct ? 'Guardar cambios' : 'Crear producto'}
+              {editProduct ? "Guardar cambios" : "Crear producto"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlertDialog 
+        open={!!productToDelete} 
+        onOpenChange={(open) => !open && setProductToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará el producto <strong>{productToDelete?.name}</strong> permanentemente de la base de datos y su imagen del almacenamiento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar Producto
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

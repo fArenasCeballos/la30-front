@@ -24,12 +24,7 @@ interface CartItem {
   unit_price: number;
 }
 
-const categoryEmoji: Record<string, string> = {
-  perros: '🌭',
-  hamburguesas: '🍔',
-  bebidas: '🥤',
-  extras: '🍟',
-};
+
 
 export default function Kiosko() {
   const [searchParams] = useSearchParams();
@@ -77,7 +72,7 @@ export default function Kiosko() {
           window.history.replaceState({}, '', '/kiosko');
           return;
         }
-        setLocator(orderToEdit.locator);
+        setLocator(orderToEdit.locator || '');
         setOrderNotes(orderToEdit.notes || '');
         
         // Transformar order_items a CartItem
@@ -380,7 +375,7 @@ export default function Kiosko() {
                             loading="lazy"
                           />
                         ) : (
-                          <span className="text-3xl sm:text-4xl">{categoryEmoji[product.categories?.name || ''] || '🍔'}</span>
+                          <span className="text-3xl sm:text-4xl">{product.categories?.icon || '📦'}</span>
                         )}
                       </div>
                       <h3 className="font-semibold text-xs sm:text-sm mb-1 truncate">{product.name}</h3>

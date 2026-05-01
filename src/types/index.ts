@@ -29,6 +29,7 @@ export interface OrderItem extends OrderItemRow {
 
 // Order with joined items (each item includes its product)
 export interface Order extends OrderRow {
+  ticket_number: string;
   order_items: OrderItem[];
   total: number;
 }

@@ -4,6 +4,7 @@ import { formatPrice } from '@/lib/formatPrice';
 import type { Category, ProductExtra } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { EmojiPicker } from '@/components/ui/emoji-picker';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
@@ -13,7 +14,26 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
 import { Plus, Edit, Trash2, Sparkles } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
+
+const generateSlug = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '_');
 
 export function ExtrasTab() {
   const [extras, setExtras] = useState<ProductExtra[]>([]);
@@ -21,6 +41,7 @@ export function ExtrasTab() {
   const [loading, setLoading] = useState(true);
   const [filterCat, setFilterCat] = useState<string>('all');
   const [editExtra, setEditExtra] = useState<ProductExtra | null>(null);
+  const [extraToDelete, setExtraToDelete] = useState<ProductExtra | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [form, setForm] = useState({
     category_id: '',
@@ -58,6 +79,11 @@ export function ExtrasTab() {
     ? extras
     : extras.filter(e => e.category_id === filterCat);
 
+  const nextSortOrder = () => {
+    if (extras.length === 0) return 0;
+    return Math.max(...extras.map(e => e.sort_order ?? 0)) + 1;
+  };
+
   const openNew = () => {
     setEditExtra(null);
     setForm({
@@ -67,7 +93,7 @@ export function ExtrasTab() {
       icon: '🧀',
       price_per_unit: '',
       max_qty: '1',
-      sort_order: String(extras.length),
+      sort_order: String(nextSortOrder()),
     });
     setIsDialogOpen(true);
   };
@@ -124,12 +150,13 @@ export function ExtrasTab() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Seguro que deseas eliminar este extra?')) return;
-    const { error } = await supabase.from('product_extras').delete().eq('id', id);
+  const handleDelete = async () => {
+    if (!extraToDelete) return;
+    const { error } = await supabase.from('product_extras').delete().eq('id', extraToDelete.id);
     if (error) { toast.error(`Error: ${error.message}`); return; }
-    setExtras(prev => prev.filter(e => e.id !== id));
+    setExtras(prev => prev.filter(e => e.id !== extraToDelete.id));
     toast.success('Extra eliminado');
+    setExtraToDelete(null);
   };
 
   if (loading) {
@@ -183,8 +210,8 @@ export function ExtrasTab() {
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(extra)}>
                   <Edit className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDelete(extra.id)}>
-                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setExtraToDelete(extra)}>
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -221,16 +248,23 @@ export function ExtrasTab() {
             </div>
             <div className="space-y-2">
               <Label>Icono (emoji)</Label>
-              <Input value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="🧀" className="text-2xl text-center" />
-            </div>
-            <div className="space-y-2">
-              <Label>Clave (slug)</Label>
-              <Input value={form.extra_key} onChange={e => setForm(f => ({ ...f, extra_key: e.target.value }))} placeholder="queso_extra" />
-              <p className="text-xs text-muted-foreground">Identificador único: sin espacios ni tildes</p>
+              <EmojiPicker value={form.icon} onChange={(emoji) => setForm(f => ({ ...f, icon: emoji }))} />
             </div>
             <div className="space-y-2">
               <Label>Etiqueta visible</Label>
-              <Input value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} placeholder="Queso extra" />
+              <Input value={form.label} onChange={e => {
+                const label = e.target.value;
+                setForm(f => ({
+                  ...f,
+                  label,
+                  extra_key: editExtra ? f.extra_key : generateSlug(label),
+                }));
+              }} placeholder="Queso extra" />
+              {form.extra_key && (
+                <p className="text-xs text-muted-foreground">
+                  Clave: <code className="bg-muted px-1 rounded">{form.extra_key}</code>
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -242,10 +276,6 @@ export function ExtrasTab() {
                 <Input type="number" value={form.max_qty} onChange={e => setForm(f => ({ ...f, max_qty: e.target.value }))} placeholder="3" />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Orden</Label>
-              <Input type="number" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} placeholder="0" />
-            </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
@@ -255,6 +285,29 @@ export function ExtrasTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog 
+        open={!!extraToDelete} 
+        onOpenChange={(open) => !open && setExtraToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar extra?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Seguro que deseas eliminar el extra <strong>{extraToDelete?.label}</strong>? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar Extra
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

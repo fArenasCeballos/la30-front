@@ -16,19 +16,20 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfDay, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getCalendarShiftRange } from '@/lib/shiftUtils';
 import type { DateRange } from 'react-day-picker';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const QUICK_RANGES = [
-  { label: 'Hoy', getValue: () => ({ from: startOfDay(new Date()), to: endOfDay(new Date()) }) },
-  { label: 'Ayer', getValue: () => ({ from: startOfDay(subDays(new Date(), 1)), to: endOfDay(subDays(new Date(), 1)) }) },
-  { label: 'Últimos 7 días', getValue: () => ({ from: startOfDay(subDays(new Date(), 6)), to: endOfDay(new Date()) }) },
-  { label: 'Este mes', getValue: () => ({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) }) },
+  { label: 'Hoy', getValue: () => ({ from: startOfDay(new Date()), to: startOfDay(new Date()) }) },
+  { label: 'Ayer', getValue: () => ({ from: startOfDay(subDays(new Date(), 1)), to: startOfDay(subDays(new Date(), 1)) }) },
+  { label: 'Últimos 7 días', getValue: () => ({ from: startOfDay(subDays(new Date(), 6)), to: startOfDay(new Date()) }) },
+  { label: 'Este mes', getValue: () => ({ from: startOfMonth(new Date()), to: startOfDay(endOfMonth(new Date())) }) },
   { label: 'Mes pasado', getValue: () => {
     const d = subDays(startOfMonth(new Date()), 1);
-    return { from: startOfMonth(d), to: endOfMonth(d) };
+    return { from: startOfMonth(d), to: startOfDay(endOfMonth(d)) };
   }},
 ];
 
@@ -54,7 +55,7 @@ export default function Reporteria() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfDay(new Date()),
-    to: endOfDay(new Date()),
+    to: startOfDay(new Date()),
   });
   const [activeQuick, setActiveQuick] = useState('Hoy');
 
@@ -62,8 +63,9 @@ export default function Reporteria() {
     queryKey: ['report-orders', user?.id, dateRange],
     queryFn: async () => {
       if (!dateRange?.from) return [];
-      const from = startOfDay(dateRange.from).toISOString();
-      const to = dateRange.to ? endOfDay(dateRange.to).toISOString() : endOfDay(dateRange.from).toISOString();
+      const shift = getCalendarShiftRange(dateRange.from, dateRange.to);
+      const from = shift.from.toISOString();
+      const to = shift.to.toISOString();
 
       // Fetch orders with nested profile and items
       const { data, error } = await supabase

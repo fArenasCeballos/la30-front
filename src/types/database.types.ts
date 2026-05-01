@@ -51,6 +51,9 @@ export type Database = {
       };
       categories: {
         Row: {
+          sort_order: number;
+          label: string;
+          icon: string;
           id: string;
           name: string;
           description: string | null;
@@ -81,8 +84,7 @@ export type Database = {
           description: string | null;
           price: number;
           image_url: string | null;
-          is_active: boolean;
-          is_available: boolean;
+          available: boolean;
           created_at: string;
         };
         Insert: {
@@ -92,8 +94,7 @@ export type Database = {
           description?: string | null;
           price: number;
           image_url?: string | null;
-          is_active?: boolean;
-          is_available?: boolean;
+          available?: boolean;
           created_at?: string;
         };
         Update: {
@@ -103,8 +104,7 @@ export type Database = {
           description?: string | null;
           price?: number;
           image_url?: string | null;
-          is_active?: boolean;
-          is_available?: boolean;
+          available?: boolean;
           created_at?: string;
         };
         Relationships: [
@@ -118,6 +118,11 @@ export type Database = {
       };
       product_custom_options: {
         Row: {
+          icon: string;
+          label: string;
+          option_key: string;
+          sort_order: number;
+          category_id: string;
           id: string;
           product_id: string | null;
           name: string;
@@ -152,8 +157,12 @@ export type Database = {
       };
       product_custom_choices: {
         Row: {
+          icon: string;
+          label: string;
+          value: string;
+          sort_order: number;
           id: string;
-          option_id: string | null;
+          option_id: string;
           name: string;
           price_adjustment: number;
           is_active: boolean;
@@ -408,6 +417,13 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_update_user_password: {
+        Args: {
+          p_user_id: string;
+          p_new_password: string;
+        };
+        Returns: undefined;
+      };
       get_my_profile: {
         Args: Record<string, never>;
         Returns: {
