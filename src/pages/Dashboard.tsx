@@ -36,7 +36,7 @@ export default function Dashboard() {
   const { data: productStats = [] } = useQuery({
     queryKey: ['top-products'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc<'get_top_products'>('get_top_products', { p_limit: 6 });
+      const { data, error } = await supabase.rpc('get_top_products', { p_limit: 6 });
       if (error) throw error;
       return data;
     },

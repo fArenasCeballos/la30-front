@@ -24,6 +24,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Popover, PopoverContent, PopoverTrigger
+} from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
 const generateSlug = (text: string) =>
@@ -44,7 +48,7 @@ export function ExtrasTab() {
   const [extraToDelete, setExtraToDelete] = useState<ProductExtra | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [form, setForm] = useState({
-    category_id: '',
+    category_ids: [] as string[],
     extra_key: '',
     label: '',
     icon: '',
@@ -77,7 +81,10 @@ export function ExtrasTab() {
 
   const filtered = filterCat === 'all'
     ? extras
-    : extras.filter(e => e.category_id === filterCat);
+    : extras.filter(e => 
+        (e.category_ids && e.category_ids.includes(filterCat)) || 
+        (e.category_id === filterCat)
+      );
 
   const nextSortOrder = () => {
     if (extras.length === 0) return 0;
@@ -87,7 +94,7 @@ export function ExtrasTab() {
   const openNew = () => {
     setEditExtra(null);
     setForm({
-      category_id: categories[0]?.id || '',
+      category_ids: filterCat !== 'all' ? [filterCat] : (categories[0]?.id ? [categories[0].id] : []),
       extra_key: '',
       label: '',
       icon: '🧀',
@@ -101,7 +108,7 @@ export function ExtrasTab() {
   const openEdit = (extra: ProductExtra) => {
     setEditExtra(extra);
     setForm({
-      category_id: extra.category_id,
+      category_ids: extra.category_ids || (extra.category_id ? [extra.category_id] : []),
       extra_key: extra.extra_key,
       label: extra.label,
       icon: extra.icon || '',
@@ -114,12 +121,13 @@ export function ExtrasTab() {
 
   const handleSave = async () => {
     try {
-      if (!form.label.trim() || !form.extra_key.trim() || !form.category_id || !form.price_per_unit) {
+      if (!form.label.trim() || !form.extra_key.trim() || form.category_ids.length === 0 || !form.price_per_unit) {
         toast.error('Completa todos los campos obligatorios');
         return;
       }
       const extraData = {
-        category_id: form.category_id,
+        category_ids: form.category_ids,
+        category_id: form.category_ids[0], // Keep first for backward compat if column still exists
         extra_key: form.extra_key.toLowerCase().replace(/\s+/g, '_'),
         label: form.label,
         icon: form.icon || null,
@@ -197,8 +205,14 @@ export function ExtrasTab() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="default" className="text-xs">{getCatLabel(extra.category_id)}</Badge>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {extra.category_ids && extra.category_ids.length > 0 ? (
+                extra.category_ids.map(cid => (
+                  <Badge key={cid} variant="default" className="text-[10px] px-1 h-5">{getCatLabel(cid)}</Badge>
+                ))
+              ) : (
+                <Badge variant="default" className="text-[10px] px-1 h-5">{getCatLabel(extra.category_id)}</Badge>
+              )}
             </div>
 
             <div className="flex items-center justify-between">
@@ -236,15 +250,52 @@ export function ExtrasTab() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Categoría</Label>
-              <Select value={form.category_id} onValueChange={(v) => setForm(f => ({ ...f, category_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecciona una categoría" /></SelectTrigger>
-                <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.icon} {cat.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Categorías</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal h-auto min-h-10 py-2">
+                    {form.category_ids.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {form.category_ids.map(catId => {
+                          const cat = categories.find(c => c.id === catId);
+                          return (
+                            <Badge key={catId} variant="secondary" className="text-[10px] px-1 h-5">
+                              {cat?.icon} {cat?.label}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Selecciona una o más categorías</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-2" align="start">
+                  <div className="max-h-[300px] overflow-y-auto space-y-1">
+                    {categories.map((cat) => (
+                      <div 
+                        key={cat.id} 
+                        className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md cursor-pointer"
+                        onClick={() => {
+                          const current = form.category_ids;
+                          const next = current.includes(cat.id)
+                            ? current.filter(id => id !== cat.id)
+                            : [...current, cat.id];
+                          setForm(f => ({ ...f, category_ids: next }));
+                        }}
+                      >
+                        <Checkbox 
+                          checked={form.category_ids.includes(cat.id)} 
+                          onCheckedChange={() => {}} // Handle in parent div
+                        />
+                        <label className="text-sm cursor-pointer flex-1 select-none">
+                          {cat.icon} {cat.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label>Icono (emoji)</Label>

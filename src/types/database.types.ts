@@ -196,26 +196,38 @@ export type Database = {
       product_extras: {
         Row: {
           id: string;
-          product_id: string | null;
-          name: string;
-          price: number;
-          is_active: boolean;
+          category_id: string;
+          category_ids: string[] | null;
+          extra_key: string;
+          label: string;
+          icon: string | null;
+          price_per_unit: number;
+          max_qty: number;
+          sort_order: number | null;
           created_at: string;
         };
         Insert: {
           id?: string;
-          product_id?: string | null;
-          name: string;
-          price: number;
-          is_active?: boolean;
+          category_id?: string | null;
+          category_ids?: string[] | null;
+          extra_key: string;
+          label: string;
+          icon?: string | null;
+          price_per_unit: number;
+          max_qty?: number;
+          sort_order?: number | null;
           created_at?: string;
         };
         Update: {
           id?: string;
-          product_id?: string | null;
-          name?: string;
-          price?: number;
-          is_active?: boolean;
+          category_id?: string | null;
+          category_ids?: string[] | null;
+          extra_key?: string;
+          label?: string;
+          icon?: string | null;
+          price_per_unit?: number;
+          max_qty?: number;
+          sort_order?: number | null;
           created_at?: string;
         };
         Relationships: [
@@ -229,6 +241,7 @@ export type Database = {
       };
       orders: {
         Row: {
+          total: number;
           id: string;
           user_id: string | null;
           status:
@@ -254,6 +267,7 @@ export type Database = {
             | "listo"
             | "entregado"
             | "cancelado";
+          total?: number;
           total_amount: number;
           notes?: string | null;
           locator?: string | null;
@@ -270,6 +284,7 @@ export type Database = {
             | "listo"
             | "entregado"
             | "cancelado";
+          total?: number;
           total_amount?: number;
           notes?: string | null;
           locator?: string | null;
