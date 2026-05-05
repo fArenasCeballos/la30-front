@@ -3,7 +3,7 @@ import { useOrders } from "@/context/OrderContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/formatPrice";
 import type { Profile, UserRole } from "@/types";
-import { Users, Pencil, ShoppingCart } from "lucide-react";
+import { Users, Pencil, ShoppingCart, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -56,6 +56,7 @@ export default function Usuarios() {
   const [formRole, setFormRole] = useState<UserRole>("mesero");
   const [newPassword, setNewPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const fetchProfiles = useCallback(async () => {
     const { data } = await supabase.from("profiles").select("*").order("name");
@@ -83,6 +84,7 @@ export default function Usuarios() {
     setFormPassword("");
     setFormRole("mesero");
     setNewPassword("");
+    setShowPassword(false);
     setShowForm(true);
   };
 
@@ -91,6 +93,7 @@ export default function Usuarios() {
     setFormName(p.name || "");
     setFormRole((p.role as UserRole) || "mesero");
     setNewPassword("");
+    setShowPassword(false);
     setShowForm(true);
   };
 
@@ -323,24 +326,44 @@ export default function Usuarios() {
                 </div>
                 <div>
                   <Label>Contraseña</Label>
-                  <Input
-                    type="password"
-                    value={formPassword}
-                    onChange={(e) => setFormPassword(e.target.value)}
-                    placeholder="Contraseña mínima 6 caracteres"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      placeholder="Contraseña mínima 6 caracteres"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
               </>
             )}
             {editingProfile && currentUser?.role === "admin" && (
               <div>
                 <Label>Nueva Contraseña (opcional)</Label>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Dejar en blanco para no cambiar"
-                />
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Dejar en blanco para no cambiar"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
             )}
             <div>

@@ -750,7 +750,7 @@ CREATE OR REPLACE FUNCTION auto_cleanup_notifications()
 RETURNS TRIGGER AS $$
 BEGIN
   IF (SELECT COUNT(*) FROM notifications) > 100 THEN
-    DELETE FROM notifications;
+    DELETE FROM notifications WHERE TRUE;
   END IF;
   RETURN NULL;
 END;
