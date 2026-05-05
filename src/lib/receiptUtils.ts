@@ -1,4 +1,4 @@
-import type { Order } from "@/types";
+import type { Order, OrderItem } from "@/types";
 import { formatPrice } from "@/lib/formatPrice";
 
 /* ── Estilos para la ventana de impresión ────────────────────────── */
@@ -135,7 +135,7 @@ function getReceiptDates(order: Order) {
   return { dateOnly, timeOnly, printDate };
 }
 
-function getValidItems(order: Order) {
+function getValidItems(order: Order): OrderItem[] {
   return (order.order_items ?? []).filter((item) => item?.products != null);
 }
 
@@ -243,14 +243,17 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
   `;
 }
 
-/** Genera el HTML completo de la comanda de cocina */
-export function buildKitchenReceiptHTML(data: ReceiptData): string {
+/** Genera el HTML completo de la comanda de cocina (soporta filtrado por categoría) */
+export function buildKitchenReceiptHTML(
+  data: ReceiptData,
+  filteredItems?: OrderItem[],
+): string {
   const { order, cajeroName } = data;
   const { dateOnly, timeOnly } = getReceiptDates(order);
-  const validItems = getValidItems(order);
+  const itemsToPrint = filteredItems ?? getValidItems(order);
   const ticketNumber = order.ticket_number ?? "—";
 
-  const itemsHTML = validItems
+  const itemsHTML = itemsToPrint
     .map((item) => {
       const notesHTML = item.notes
         ? `<div class="kitchen-obs">${item.notes
@@ -287,7 +290,7 @@ export function buildKitchenReceiptHTML(data: ReceiptData): string {
     <div class="row"><span>Ticket Control</span><span class="bold kitchen-ticket">${ticketNumber}</span></div>
     <div class="center" style="padding:2px 0"><span class="kitchen-cashier">${cajeroName.toUpperCase()}</span></div>
     <div class="divider"></div>
-    <div class="row" style="font-size:10px"><span class="bold">Cantidad</span><span class="bold">Productos</span></div>
+    <div class="row" style="font-size:10px"><span class="bold">Cant.</span><span class="bold">Producto</span></div>
     <div class="divider"></div>
     ${itemsHTML}
     ${orderNotesHTML}

@@ -25,7 +25,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { formatPrice } from "@/lib/formatPrice";
-import type { Order } from "@/types";
+import type { Order, OrderItem } from "@/types";
 
 interface ReceiptState {
   order: Order;
@@ -79,10 +79,26 @@ export default function Caja() {
       `Recibo - ${payingOrder.locator}`,
     );
 
-    // Auto-imprimir comanda de cocina (con un delay mayor para estabilidad)
-    setTimeout(() => {
-      silentPrint(buildKitchenReceiptHTML(receiptData));
-    }, 1500);
+    // Agrupar productos por categoría para comandas separadas
+    const items = (payingOrder.order_items ?? []).filter(
+      (i) => i.products != null,
+    );
+    const categoryGroups: Record<string, OrderItem[]> = {};
+
+    items.forEach((item) => {
+      const catName = item.products?.categories?.name || "General";
+      if (!categoryGroups[catName]) categoryGroups[catName] = [];
+      categoryGroups[catName].push(item);
+    });
+
+    const categoryKeys = Object.keys(categoryGroups);
+
+    // Auto-imprimir comanda de cocina (una por cada categoría)
+    categoryKeys.forEach((catName) => {
+      silentPrint(
+        buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
+      );
+    });
 
     setPayingOrder(null);
   };

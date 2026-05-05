@@ -1,7 +1,11 @@
 import { useRef } from "react";
-import type { Order } from "@/types";
+import type { Order, OrderItem } from "@/types";
 import { formatPrice } from "@/lib/formatPrice";
-import { PRINT_STYLES } from "@/lib/receiptUtils";
+import {
+  silentPrint,
+  buildCustomerReceiptHTML,
+  buildKitchenReceiptHTML,
+} from "@/lib/receiptUtils";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,22 +79,41 @@ export function OrderReceipt({
 
   /* ── Imprimir ──────────────────────────────────────────── */
   const handlePrint = () => {
-    if (!printRef.current) return;
-    const printWindow = window.open("", "_blank", "width=320,height=700");
-    if (!printWindow) return;
+    const receiptData = {
+      order,
+      cajeroName,
+      paymentMethod,
+      paymentReceived,
+      paymentChange,
+      paymentBreakdown,
+    };
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${type === "customer" ? "Recibo" : "Comanda"} - ${order.locator}</title>
-        <style>${PRINT_STYLES}</style>
-      </head>
-      <body>${printRef.current.innerHTML}</body>
-      <script>window.onload = () => { window.print(); window.close(); }</script>
-      </html>
-    `);
-    printWindow.document.close();
+    if (type === "customer") {
+      silentPrint(
+        buildCustomerReceiptHTML(receiptData),
+        `Recibo - ${order.locator}`,
+      );
+    } else {
+      // Agrupar por categoría para comandas separadas
+      const items = (order.order_items ?? []).filter((i) => i.products != null);
+      const categoryGroups: Record<string, OrderItem[]> = {};
+
+      items.forEach((item) => {
+        const catName = item.products?.categories?.name || "General";
+        if (!categoryGroups[catName]) categoryGroups[catName] = [];
+        categoryGroups[catName].push(item);
+      });
+
+      const categoryKeys = Object.keys(categoryGroups);
+
+      // Imprimir una comanda por cada categoría
+      categoryKeys.forEach((catName) => {
+        silentPrint(
+          buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
+        );
+      });
+    }
+    onClose();
   };
 
   /* ═══════════════════════════════════════════════════════════
