@@ -63,25 +63,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       .on(
         "postgres_changes",
         { 
-          event: "*", 
+          event: "INSERT", 
           schema: "public", 
           table: "notifications",
           filter: `user_id=eq.${user.id}` 
         },
         (payload) => {
-          if (payload.eventType === "INSERT") {
-            const newNotif = payload.new as Notification;
-            queryClient.setQueryData(['notifications', user.id], (old: Notification[] | undefined) => {
-              const list = old || [];
-              return [newNotif, ...list].slice(0, 50);
-            });
-            playNotificationSound();
-          } else if (payload.eventType === "DELETE") {
-            queryClient.setQueryData(['notifications', user.id], (old: Notification[] | undefined) => {
-              if (!old) return [];
-              return old.filter(n => n.id !== payload.old.id);
-            });
-          }
+          const newNotif = payload.new as Notification;
+          queryClient.setQueryData(['notifications', user.id], (old: Notification[] | undefined) => {
+            const list = old || [];
+            return [newNotif, ...list].slice(0, 50);
+          });
+          playNotificationSound();
         }
       )
       .subscribe();

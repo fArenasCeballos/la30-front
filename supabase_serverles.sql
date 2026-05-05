@@ -741,18 +741,26 @@ RETURNS VOID LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
 $$;
 
 CREATE OR REPLACE FUNCTION clear_my_notifications()
-RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE
-  v_role user_role;
-BEGIN
-  SELECT role INTO v_role FROM profiles WHERE id = auth.uid();
-  IF v_role = 'admin' THEN
-    DELETE FROM notifications;
-  ELSE
-    DELETE FROM notifications WHERE user_id = auth.uid();
-  END IF;
-END;
+RETURNS VOID LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  DELETE FROM notifications WHERE user_id = auth.uid();
 $$;
+
+-- ── Limpieza automática de notificaciones ───────────────────
+CREATE OR REPLACE FUNCTION auto_cleanup_notifications()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF (SELECT COUNT(*) FROM notifications) > 100 THEN
+    DELETE FROM notifications;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_auto_cleanup_notifications ON notifications;
+CREATE TRIGGER trg_auto_cleanup_notifications
+  AFTER INSERT ON notifications
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION auto_cleanup_notifications();
 
 CREATE OR REPLACE FUNCTION get_unread_count()
 RETURNS INTEGER LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
