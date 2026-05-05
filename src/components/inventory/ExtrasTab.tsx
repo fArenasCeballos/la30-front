@@ -136,18 +136,42 @@ export function ExtrasTab() {
         sort_order: Number(form.sort_order) || 0,
       };
 
+      // Validar duplicados localmente antes de enviar a la BD
+      const isDuplicate = extras.some(e => 
+        e.extra_key === extraData.extra_key && (!editExtra || e.id !== editExtra.id)
+      );
+
+      if (isDuplicate) {
+        toast.error('Este extra ya existe (nombre o clave duplicada). Por favor usa uno diferente.');
+        return;
+      }
+
       if (editExtra) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await (supabase.from('product_extras') as any)
           .update(extraData)
           .eq('id', editExtra.id);
-        if (error) { toast.error(`Error DB: ${error.message}`); return; }
+        if (error) { 
+          if (error.code === '23505') {
+            toast.error('Este extra ya existe (nombre o clave duplicada). Por favor usa uno diferente.');
+          } else {
+            toast.error(`Error DB: ${error.message}`); 
+          }
+          return; 
+        }
         toast.success('Extra actualizado');
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await (supabase.from('product_extras') as any)
           .insert([extraData]);
-        if (error) { toast.error(`Error DB: ${error.message}`); return; }
+        if (error) { 
+          if (error.code === '23505') {
+            toast.error('Este extra ya existe (nombre o clave duplicada). Por favor usa uno diferente.');
+          } else {
+            toast.error(`Error DB: ${error.message}`); 
+          }
+          return; 
+        }
         toast.success('Extra creado');
       }
       await fetchData();
