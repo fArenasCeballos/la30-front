@@ -173,9 +173,7 @@ export function PaymentCalculator({
       const currentReceived =
         overrideReceived !== undefined ? overrideReceived : receivedNum;
       const currentSecondMethod =
-        overrideSecondMethod !== undefined
-          ? overrideSecondMethod
-          : secondMethod;
+        overrideSecondMethod !== undefined ? overrideSecondMethod : secondMethod;
 
       const finalReceived =
         method === "mixto" ? firstAmountNum + currentReceived : currentReceived;
@@ -204,8 +202,8 @@ export function PaymentCalculator({
       method,
       receivedNum,
       secondMethod,
-      firstAmountNum,
       firstMethod,
+      firstAmountNum,
       remainingTotal,
       onPaymentComplete,
       resetState,
