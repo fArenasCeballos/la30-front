@@ -3,31 +3,35 @@ import { formatPrice } from "@/lib/formatPrice";
 
 /* ── Estilos para la ventana de impresión ────────────────────────── */
 export const PRINT_STYLES = `
+  @page {
+    margin: 0;
+    size: 80mm auto;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Courier New', 'Lucida Console', monospace;
-    width: 280px;
-    padding: 10px;
-    font-size: 12px;
+    width: 80mm;
+    padding: 4mm;
+    font-size: 13px;
     color: #000;
-    line-height: 1.4;
+    line-height: 1.2;
+    background: #fff;
   }
   .center   { text-align: center; }
   .right    { text-align: right; }
   .bold     { font-weight: bold; }
-  .divider  { border-top: 1px dashed #000; margin: 6px 0; }
+  .divider  { border-top: 1px dashed #000; margin: 4px 0; }
   .double-divider {
     border-top: 2px solid #000;
     border-bottom: 2px solid #000;
-    padding: 2px 0;
-    margin: 6px 0;
+    padding: 1px 0;
+    margin: 4px 0;
   }
   .row {
     display: flex;
     justify-content: space-between;
     padding: 1px 0;
   }
-  .row-indent { padding-left: 8px; }
   table {
     width: 100%;
     border-collapse: collapse;
@@ -36,61 +40,63 @@ export const PRINT_STYLES = `
   th {
     border-bottom: 1px solid #000;
     border-top: 1px solid #000;
-    padding: 3px 0;
-    font-size: 11px;
+    padding: 2px 0;
+    font-size: 12px;
     text-align: left;
   }
   th:last-child { text-align: right; }
   td {
     padding: 2px 0;
     vertical-align: top;
-    font-size: 11px;
+    font-size: 12px;
   }
-  td:first-child { width: 50%; }
-  td:nth-child(2) { width: 15%; text-align: center; }
+  td:first-child { width: 60%; }
+  td:nth-child(2) { width: 10%; text-align: center; }
   td:last-child { text-align: right; }
   .item-notes {
-    font-size: 10px;
-    color: #333;
-    padding-left: 8px;
-    font-style: italic;
+    font-size: 11px;
+    padding-left: 4px;
   }
   .header-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
-    letter-spacing: 1px;
+    margin-bottom: 2px;
   }
   .total-row {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: bold;
+    margin-top: 4px;
   }
   .big-total {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: bold;
   }
   /* ── Comanda de cocina ───────────────────────────────────── */
   .kitchen-title {
-    font-size: 20px;
+    font-size: 22px;
     font-weight: bold;
-    letter-spacing: 2px;
+    border: 2px solid #000;
+    display: inline-block;
+    padding: 2px 10px;
+    margin-bottom: 4px;
   }
   .kitchen-locator {
-    font-size: 40px;
+    font-size: 48px;
     font-weight: bold;
-    letter-spacing: 4px;
-    line-height: 1.1;
+    line-height: 1;
   }
   .kitchen-ticket {
-    font-size: 14px;
+    font-size: 16px;
   }
   .kitchen-cashier {
     font-size: 12px;
     font-weight: bold;
   }
   .kitchen-item-name {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: bold;
-    padding: 6px 0 2px;
+    padding: 4px 0 1px;
+    border-bottom: 1px solid #eee;
   }
   .kitchen-obs {
     font-size: 12px;
