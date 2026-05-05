@@ -122,7 +122,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const shiftStart = getShiftStart().toISOString();
       const { data, error } = await supabase
         .from("orders")
-        .select("*, order_items(*, products(*, categories(*)))")
+        .select("*, order_items(*, products(*, categories(*))), payments(*)")
         .gte("created_at", shiftStart)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -138,7 +138,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("*, order_items(*, products(*, categories(*)))")
+        .select("*, order_items(*, products(*, categories(*))), payments(*)")
         .in("status", ["pendiente", "confirmado", "en_preparacion", "listo"])
         .order("created_at", { ascending: true });
       if (error) throw error;

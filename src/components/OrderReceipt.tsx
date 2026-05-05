@@ -31,6 +31,7 @@ export function OrderReceipt({
   paymentMethod,
   paymentReceived,
   paymentChange,
+  paymentBreakdown,
 }: OrderReceiptProps) {
   const printRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -195,13 +196,42 @@ export function OrderReceipt({
             <span className="bold">Cambio</span>
             <span className="bold">{formatPrice(paymentChange ?? 0)}</span>
           </div>
+
           <div style={{ fontSize: "11px", padding: "4px 0 0" }}>
-            {paymentMethod === "efectivo"
-              ? "Efectivo"
-              : paymentMethod === "tarjeta"
-                ? "Tarjeta"
-                : "Nequi"}{" "}
-            {formatPrice(paymentReceived ?? order.total ?? 0)}
+            {paymentMethod === "mixto" && paymentBreakdown ? (
+              <div className="space-y-0.5">
+                {paymentBreakdown.efectivo && (
+                  <div className="row">
+                    <span>Efectivo:</span>
+                    <span>{formatPrice(paymentBreakdown.efectivo)}</span>
+                  </div>
+                )}
+                {paymentBreakdown.tarjeta && (
+                  <div className="row">
+                    <span>Tarjeta:</span>
+                    <span>{formatPrice(paymentBreakdown.tarjeta)}</span>
+                  </div>
+                )}
+                {paymentBreakdown.nequi && (
+                  <div className="row">
+                    <span>Nequi:</span>
+                    <span>{formatPrice(paymentBreakdown.nequi)}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="row">
+                <span>
+                  {paymentMethod === "efectivo"
+                    ? "Efectivo"
+                    : paymentMethod === "tarjeta"
+                      ? "Tarjeta"
+                      : "Nequi"}
+                  :
+                </span>
+                <span>{formatPrice(paymentReceived ?? order.total ?? 0)}</span>
+              </div>
+            )}
           </div>
           <div className="divider" />
         </>

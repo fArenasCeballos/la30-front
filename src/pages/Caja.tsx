@@ -33,6 +33,7 @@ interface ReceiptState {
   paymentMethod?: string;
   paymentReceived?: number;
   paymentChange?: number;
+  paymentBreakdown?: { efectivo?: number; tarjeta?: number; nequi?: number };
 }
 
 export default function Caja() {
@@ -94,7 +95,19 @@ export default function Caja() {
   };
 
   const handleReprintCustomer = (order: Order) => {
-    setReceipt({ order, type: "customer" });
+    const lastPayment = order.payments?.[0];
+    setReceipt({ 
+      order, 
+      type: "customer",
+      paymentMethod: lastPayment?.method,
+      paymentReceived: lastPayment?.amount_received,
+      paymentChange: lastPayment?.amount_change,
+      paymentBreakdown: lastPayment ? {
+        efectivo: lastPayment.amount_efectivo,
+        tarjeta: lastPayment.amount_tarjeta,
+        nequi: lastPayment.amount_nequi
+      } : undefined
+    });
   };
 
   return (
@@ -385,6 +398,7 @@ export default function Caja() {
           paymentMethod={receipt.paymentMethod}
           paymentReceived={receipt.paymentReceived}
           paymentChange={receipt.paymentChange}
+          paymentBreakdown={receipt.paymentBreakdown}
         />
       )}
     </div>

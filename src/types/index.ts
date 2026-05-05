@@ -32,6 +32,7 @@ export interface Order extends OrderRow {
   ticket_number: string;
   order_items: OrderItem[];
   total: number;
+  payments?: Payment[];
 }
 
 // Custom option with its choices (for ProductCustomizer)
