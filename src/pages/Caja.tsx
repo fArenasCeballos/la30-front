@@ -231,16 +231,25 @@ export default function Caja() {
               <OrderCard
                 key={order.id}
                 order={order}
-                compact
                 actions={
-                  <Button
-                    size="touch"
-                    variant="outline"
-                    className="flex-1 text-xs sm:text-sm"
-                    onClick={() => handleShowKitchenReceipt(order)}
-                  >
-                    <Printer className="h-4 w-4 mr-1" /> Reimprimir Comanda
-                  </Button>
+                  <div className="flex gap-2 w-full">
+                    <Button
+                      size="touch"
+                      variant="success"
+                      className="flex-1 text-xs sm:text-sm font-bold"
+                      onClick={() => updateOrderStatus(order.id, "listo")}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" /> Marcar Listo
+                    </Button>
+                    <Button
+                      size="touch"
+                      variant="outline"
+                      className="flex-1 text-xs sm:text-sm"
+                      onClick={() => handleShowKitchenReceipt(order)}
+                    >
+                      <Printer className="h-4 w-4 mr-1" /> Reimprimir Comanda
+                    </Button>
+                  </div>
                 }
               />
             ))}

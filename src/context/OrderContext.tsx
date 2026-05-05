@@ -42,6 +42,7 @@ export interface OrderContextType {
     orderId: string,
     method: string,
     amountReceived: number,
+    breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number },
   ) => Promise<void>;
   getOrdersByStatus: (...statuses: OrderStatus[]) => Order[];
   getCompletedOrders: () => Order[];
