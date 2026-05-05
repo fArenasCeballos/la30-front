@@ -849,17 +849,38 @@ $$;
 
 -- ── 4.6 Dashboard stats ──────────────────────────────────────
 -- Usado en Dashboard.tsx. Devuelve métricas del día en Bogotá.
+-- ── Auxiliar: Inicio de turno (4 PM Bogotá) ──────────────────
+CREATE OR REPLACE FUNCTION get_shift_start(p_now TIMESTAMPTZ DEFAULT now())
+RETURNS TIMESTAMPTZ AS $$
+DECLARE
+  v_now_bogota TIMESTAMPTZ;
+  v_year INT; v_month INT; v_day INT; v_hour INT;
+BEGIN
+  v_now_bogota := p_now AT TIME ZONE 'America/Bogota';
+  v_year  := EXTRACT(YEAR  FROM v_now_bogota);
+  v_month := EXTRACT(MONTH FROM v_now_bogota);
+  v_day   := EXTRACT(DAY   FROM v_now_bogota);
+  v_hour  := EXTRACT(HOUR  FROM v_now_bogota);
+
+  IF v_hour < 16 THEN
+    RETURN make_timestamptz(v_year, v_month, v_day, 16, 0, 0, 'America/Bogota') - INTERVAL '1 day';
+  ELSE
+    RETURN make_timestamptz(v_year, v_month, v_day, 16, 0, 0, 'America/Bogota');
+  END IF;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
 CREATE OR REPLACE FUNCTION get_dashboard_stats()
 RETURNS JSONB LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  v_today_start  TIMESTAMPTZ;
+  v_shift_start  TIMESTAMPTZ;
   v_revenue      INTEGER;
   v_active       INTEGER;
   v_completed    INTEGER;
   v_cancelled    INTEGER;
   v_avg_ticket   INTEGER;
 BEGIN
-  v_today_start := DATE_TRUNC('day', now() AT TIME ZONE 'America/Bogota') AT TIME ZONE 'America/Bogota';
+  v_shift_start := get_shift_start();
 
   SELECT
     COALESCE(SUM(total) FILTER (WHERE status = 'entregado'),                                0),
@@ -868,7 +889,7 @@ BEGIN
     COUNT(*)            FILTER (WHERE status = 'cancelado')
   INTO v_revenue, v_active, v_completed, v_cancelled
   FROM orders
-  WHERE created_at >= v_today_start;
+  WHERE created_at >= v_shift_start;
 
   v_avg_ticket := CASE WHEN v_completed > 0 THEN v_revenue / v_completed ELSE 0 END;
 
@@ -898,6 +919,7 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   JOIN categories c ON c.id = p.category_id
   JOIN orders     o ON o.id = oi.order_id
   WHERE o.status != 'cancelado'
+    AND o.created_at >= get_shift_start()
   GROUP BY p.name, c.label
   ORDER BY quantity DESC
   LIMIT p_limit;
