@@ -35,7 +35,11 @@ interface ProductCustomizerProps {
   categoryName?: string;
   open: boolean;
   onClose: () => void;
-  onConfirm: (product: ProductWithCategory, notes: string, extraCost: number) => void;
+  onConfirm: (
+    product: ProductWithCategory,
+    notes: string,
+    extraCost: number,
+  ) => void;
 }
 
 export function ProductCustomizer({
@@ -45,9 +49,9 @@ export function ProductCustomizer({
   onClose,
   onConfirm,
 }: ProductCustomizerProps) {
-  const [selections, setSelections] = useState<Record<string, string>>({});
+  const [selections, setSelections] = useState<Record<string, string[]>>({});
   const [extraQtys, setExtraQtys] = useState<Record<string, number>>({});
-  
+
   const [options, setOptions] = useState<CustomOption[]>([]);
   const [extras, setExtras] = useState<ExtraOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,9 +63,12 @@ export function ProductCustomizer({
     const fetchCustomization = async () => {
       setLoading(true);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.rpc as any)('get_customization_for_category', { 
-        p_category_name: categoryName 
-      });
+      const { data, error } = await (supabase.rpc as any)(
+        "get_customization_for_category",
+        {
+          p_category_name: categoryName,
+        },
+      );
 
       if (!error && data && isMounted) {
         setOptions(data.options || []);
@@ -84,8 +91,25 @@ export function ProductCustomizer({
     0,
   );
 
-  const handleSelect = (optionId: string, value: string) => {
-    setSelections((prev) => ({ ...prev, [optionId]: value }));
+  const handleSelect = (
+    optionId: string,
+    value: string,
+    maxChoices: number,
+  ) => {
+    setSelections((prev) => {
+      const current = prev[optionId] || [];
+      if (current.includes(value)) {
+        return { ...prev, [optionId]: current.filter((v) => v !== value) };
+      }
+
+      // Business rule: if there are N options, allow selecting up to N-1
+      const maxAllowed = Math.max(1, maxChoices - 1);
+      if (current.length >= maxAllowed) {
+        return prev;
+      }
+
+      return { ...prev, [optionId]: [...current, value] };
+    });
   };
 
   const handleExtraQty = (extId: string, delta: number, max: number) => {
@@ -99,11 +123,11 @@ export function ProductCustomizer({
   const handleConfirm = () => {
     const noteParts: string[] = [];
     options.forEach((opt) => {
-      const sel = selections[opt.id];
-      if (sel) {
-        const choice = opt.choices.find((c) => c.value === sel);
+      const selectedValues = selections[opt.id] || [];
+      selectedValues.forEach((val) => {
+        const choice = opt.choices.find((c) => c.value === val);
         if (choice) noteParts.push(choice.label);
-      }
+      });
     });
     extras.forEach((ext) => {
       const qty = extraQtys[ext.id] || 0;
@@ -128,7 +152,9 @@ export function ProductCustomizer({
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-sm text-center p-12 flex flex-col items-center justify-center">
           <DialogTitle className="sr-only">Cargando opciones</DialogTitle>
-          <DialogDescription className="sr-only">Estamos preparando las opciones de personalización para ti.</DialogDescription>
+          <DialogDescription className="sr-only">
+            Estamos preparando las opciones de personalización para ti.
+          </DialogDescription>
           <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
           <p className="text-muted-foreground">Cargando opciones...</p>
         </DialogContent>
@@ -142,9 +168,7 @@ export function ProductCustomizer({
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-sm text-center p-6 space-y-4">
           <DialogTitle className="font-display text-xl font-bold flex flex-col items-center gap-4">
-            <span className="text-5xl">
-              {product.categories?.icon || "🍔"}
-            </span>
+            <span className="text-5xl">{product.categories?.icon || "🍔"}</span>
             {product.name}
           </DialogTitle>
           <DialogDescription className="text-2xl font-display font-bold text-primary">
@@ -171,9 +195,7 @@ export function ProductCustomizer({
       <DialogContent className="max-w-md p-0 gap-0 max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="p-4 pb-3 border-b">
           <DialogTitle className="font-display text-xl flex items-center gap-2">
-            <span className="text-2xl">
-              {product.categories?.icon || "🍔"}
-            </span>
+            <span className="text-2xl">{product.categories?.icon || "🍔"}</span>
             {product.name}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
@@ -185,28 +207,25 @@ export function ProductCustomizer({
           {options.map((opt) => (
             <div key={opt.id} className="space-y-2">
               <p className="font-semibold text-sm flex items-center gap-2">
-                <span className="text-lg">{opt.icon || '🛠️'}</span> {opt.label}
+                <span className="text-lg">{opt.icon || "🛠️"}</span> {opt.label}
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {opt.choices.map((choice) => {
-                  const selected = selections[opt.id] === choice.value;
-                  return (
-                    <button
-                      key={choice.id}
-                      onClick={() => handleSelect(opt.id, choice.value)}
-                      className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all active:scale-95 touch-target ${
-                        selected
-                          ? "border-primary bg-primary/10 shadow-sm"
-                          : "border-border bg-card hover:border-primary/40"
-                      }`}
-                    >
-                      <span className="text-xl">{choice.icon || '🔹'}</span>
-                      <span className="text-sm font-medium">
-                        {choice.label}
-                      </span>
-                    </button>
-                  );
-                })}
+                {opt.choices.map((choice) => (
+                  <button
+                    key={choice.id}
+                    onClick={() =>
+                      handleSelect(opt.id, choice.value, opt.choices.length)
+                    }
+                    className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all active:scale-95 touch-target ${
+                      (selections[opt.id] || []).includes(choice.value)
+                        ? "border-primary bg-primary/10 shadow-sm"
+                        : "border-border bg-card hover:border-primary/40"
+                    }`}
+                  >
+                    <span className="text-xl">{choice.icon || "🔹"}</span>
+                    <span className="text-sm font-medium">{choice.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
           ))}
@@ -225,9 +244,11 @@ export function ProductCustomizer({
                         : "border-border bg-card"
                     }`}
                   >
-                    <span className="text-2xl">{ext.icon || '➕'}</span>
+                    <span className="text-2xl">{ext.icon || "➕"}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{ext.label}</p>
+                      <p className="text-sm font-medium truncate">
+                        {ext.label}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         +{formatPrice(ext.price_per_unit)} c/u
                       </p>

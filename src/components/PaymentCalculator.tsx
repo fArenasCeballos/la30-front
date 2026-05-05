@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import type { Order } from "@/types";
 import { formatPrice } from "@/lib/formatPrice";
 import { Button } from "@/components/ui/button";
@@ -131,50 +131,114 @@ export function PaymentCalculator({
     return receivedNum >= order.total;
   }, [method, secondMethod, receivedNum, remainingTotal, order.total]);
 
-  const handleNumpad = (val: string) => {
-    const setter = step === "split_amount" ? setFirstAmount : setReceived;
-    if (val === "C") {
-      setter("");
-    } else if (val === "DEL") {
-      setter((prev) => prev.slice(0, -1));
-    } else {
-      setter((prev) => (prev + val).slice(0, 10));
-    }
-  };
+  const handleNumpad = useCallback(
+    (val: string) => {
+      const setter = step === "split_amount" ? setFirstAmount : setReceived;
+      if (val === "C") {
+        setter("");
+      } else if (val === "DEL") {
+        setter((prev) => prev.slice(0, -1));
+      } else {
+        setter((prev) => (prev + val).slice(0, 10));
+      }
+    },
+    [step],
+  );
 
-  const handleQuickAmount = (amount: number) => {
+  const handleQuickAmount = useCallback((amount: number) => {
     setReceived((prev) => String((parseInt(prev) || 0) + amount));
-  };
+  }, []);
 
-  const handleExact = () => {
+  const handleExact = useCallback(() => {
     setReceived(String(remainingTotal));
-  };
+  }, [remainingTotal]);
 
-  const handleConfirmPayment = (overrideReceived?: number) => {
-    if (!method) return;
-    setStep("done");
+  const handleConfirmPayment = useCallback(
+    (overrideReceived?: number, overrideSecondMethod?: PaymentMethod) => {
+      if (!method) return;
+      setStep("done");
 
-    const currentReceived = overrideReceived !== undefined ? overrideReceived : receivedNum;
-    const finalReceived =
-      method === "mixto" ? firstAmountNum + currentReceived : currentReceived;
+      const currentReceived =
+        overrideReceived !== undefined ? overrideReceived : receivedNum;
+      const currentSecondMethod =
+        overrideSecondMethod !== undefined ? overrideSecondMethod : secondMethod;
 
-    // Build breakdown
-    const breakdown: { efectivo?: number; tarjeta?: number; nequi?: number } = {};
-    if (method === "mixto") {
-      if (firstMethod) breakdown[firstMethod] = firstAmountNum;
-      if (secondMethod)
-        breakdown[secondMethod] =
-          secondMethod === "efectivo" ? currentReceived : remainingTotal;
-    } else if (method) {
-      // For simple payment methods, we've already narrowed out 'mixto'
-      breakdown[method as Exclude<PaymentMethod, "mixto">] = currentReceived;
-    }
+      const finalReceived =
+        method === "mixto" ? firstAmountNum + currentReceived : currentReceived;
 
-    setTimeout(() => {
-      onPaymentComplete(method, finalReceived, breakdown);
-      resetState();
-    }, 1500);
-  };
+      // Build breakdown
+      const breakdown: { efectivo?: number; tarjeta?: number; nequi?: number } =
+        {};
+      if (method === "mixto") {
+        if (firstMethod) breakdown[firstMethod] = firstAmountNum;
+        if (currentSecondMethod)
+          breakdown[currentSecondMethod] =
+            currentSecondMethod === "efectivo"
+              ? currentReceived
+              : remainingTotal;
+      } else if (method) {
+        // For simple payment methods, we've already narrowed out 'mixto'
+        breakdown[method as Exclude<PaymentMethod, "mixto">] = currentReceived;
+      }
+
+      setTimeout(() => {
+        onPaymentComplete(method, finalReceived, breakdown);
+        resetState();
+      }, 1500);
+    },
+    [
+      method,
+      receivedNum,
+      secondMethod,
+      firstMethod,
+      firstAmountNum,
+      remainingTotal,
+      onPaymentComplete,
+    ],
+  );
+
+  // Keyboard support
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Numbers 0-9
+      if (e.key >= "0" && e.key <= "9") {
+        handleNumpad(e.key);
+      }
+      // Backspace -> DEL
+      else if (e.key === "Backspace") {
+        handleNumpad("DEL");
+      }
+      // Escape or Delete -> C (Clear)
+      else if (e.key === "Escape" || e.key === "Delete") {
+        handleNumpad("C");
+      }
+      // Enter -> Confirm or Next
+      else if (e.key === "Enter") {
+        if (step === "amount" && canConfirm) {
+          handleConfirmPayment();
+        } else if (
+          step === "split_amount" &&
+          firstAmountNum > 0 &&
+          firstAmountNum < order.total
+        ) {
+          setStep("split_second");
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    open,
+    step,
+    canConfirm,
+    firstAmountNum,
+    order.total,
+    handleNumpad,
+    handleConfirmPayment,
+  ]);
 
   const resetState = () => {
     setMethod(null);
@@ -443,7 +507,7 @@ export function PaymentCalculator({
                   onClick={() => {
                     setSecondMethod("nequi");
                     setReceived(String(remainingTotal));
-                    handleConfirmPayment(remainingTotal);
+                    handleConfirmPayment(remainingTotal, "nequi");
                   }}
                   className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
                 >
@@ -456,7 +520,7 @@ export function PaymentCalculator({
                   onClick={() => {
                     setSecondMethod("tarjeta");
                     setReceived(String(remainingTotal));
-                    handleConfirmPayment(remainingTotal);
+                    handleConfirmPayment(remainingTotal, "tarjeta");
                   }}
                   className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
                 >
