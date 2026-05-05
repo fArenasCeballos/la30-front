@@ -149,19 +149,33 @@ export function PaymentCalculator({
     setReceived((prev) => String((parseInt(prev) || 0) + amount));
   }, []);
 
+  const resetState = useCallback(() => {
+    setMethod(null);
+    setReceived("");
+    setFirstMethod(null);
+    setFirstAmount("");
+    setSecondMethod(null);
+    setStep("method");
+  }, []);
+
   const handleExact = useCallback(() => {
     setReceived(String(remainingTotal));
   }, [remainingTotal]);
 
   const handleConfirmPayment = useCallback(
-    (overrideReceived?: number, overrideSecondMethod?: PaymentMethod) => {
+    (
+      overrideReceived?: number,
+      overrideSecondMethod?: Exclude<PaymentMethod, "mixto">,
+    ) => {
       if (!method) return;
       setStep("done");
 
       const currentReceived =
         overrideReceived !== undefined ? overrideReceived : receivedNum;
       const currentSecondMethod =
-        overrideSecondMethod !== undefined ? overrideSecondMethod : secondMethod;
+        overrideSecondMethod !== undefined
+          ? overrideSecondMethod
+          : secondMethod;
 
       const finalReceived =
         method === "mixto" ? firstAmountNum + currentReceived : currentReceived;
@@ -190,10 +204,11 @@ export function PaymentCalculator({
       method,
       receivedNum,
       secondMethod,
-      firstMethod,
       firstAmountNum,
+      firstMethod,
       remainingTotal,
       onPaymentComplete,
+      resetState,
     ],
   );
 
@@ -239,15 +254,6 @@ export function PaymentCalculator({
     handleNumpad,
     handleConfirmPayment,
   ]);
-
-  const resetState = () => {
-    setMethod(null);
-    setReceived("");
-    setFirstMethod(null);
-    setFirstAmount("");
-    setSecondMethod(null);
-    setStep("method");
-  };
 
   const handleClose = () => {
     resetState();
@@ -410,7 +416,12 @@ export function PaymentCalculator({
               </Button>
               <div>
                 <p className="font-display font-bold text-lg text-primary">
-                  Monto {firstMethod === "nequi" ? "Nequi" : firstMethod === "tarjeta" ? "Tarjeta" : "Efectivo"}
+                  Monto{" "}
+                  {firstMethod === "nequi"
+                    ? "Nequi"
+                    : firstMethod === "tarjeta"
+                      ? "Tarjeta"
+                      : "Efectivo"}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Total Pedido: {formatPrice(order.total)}
