@@ -648,7 +648,7 @@ BEGIN
       v_allowed := v_user_role IN ('caja','cocina','admin') AND v_order.status = 'confirmado';
 
     WHEN 'listo' THEN
-      v_allowed := v_user_role IN ('cocina','admin') AND v_order.status = 'en_preparacion';
+      v_allowed := v_user_role IN ('caja','cocina','admin') AND v_order.status = 'en_preparacion';
 
     WHEN 'entregado' THEN
       v_allowed := v_user_role IN ('caja','admin') AND v_order.status = 'listo';
