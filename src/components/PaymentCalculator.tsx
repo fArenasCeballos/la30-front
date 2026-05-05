@@ -86,7 +86,7 @@ export function PaymentCalculator({
   // States for mixed payment
   const [firstMethod, setFirstMethod] = useState<Exclude<
     PaymentMethod,
-    "mixto" | "efectivo"
+    "mixto"
   > | null>(null);
   const [firstAmount, setFirstAmount] = useState("");
   const [secondMethod, setSecondMethod] = useState<Exclude<
@@ -150,12 +150,13 @@ export function PaymentCalculator({
     setReceived(String(remainingTotal));
   };
 
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = (overrideReceived?: number) => {
     if (!method) return;
     setStep("done");
 
+    const currentReceived = overrideReceived !== undefined ? overrideReceived : receivedNum;
     const finalReceived =
-      method === "mixto" ? firstAmountNum + receivedNum : receivedNum;
+      method === "mixto" ? firstAmountNum + currentReceived : currentReceived;
 
     // Build breakdown
     const breakdown: { efectivo?: number; tarjeta?: number; nequi?: number } = {};
@@ -163,10 +164,10 @@ export function PaymentCalculator({
       if (firstMethod) breakdown[firstMethod] = firstAmountNum;
       if (secondMethod)
         breakdown[secondMethod] =
-          secondMethod === "efectivo" ? receivedNum : remainingTotal;
+          secondMethod === "efectivo" ? currentReceived : remainingTotal;
     } else if (method) {
       // For simple payment methods, we've already narrowed out 'mixto'
-      breakdown[method as Exclude<PaymentMethod, 'mixto'>] = receivedNum;
+      breakdown[method as Exclude<PaymentMethod, "mixto">] = currentReceived;
     }
 
     setTimeout(() => {
@@ -297,26 +298,36 @@ export function PaymentCalculator({
                 </p>
               </div>
             </div>
-            <div className="p-4 grid grid-cols-2 gap-2">
+            <div className="p-4 grid grid-cols-3 gap-2">
+              <button
+                onClick={() => {
+                  setFirstMethod("efectivo");
+                  setStep("split_amount");
+                }}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
+              >
+                <Banknote className="h-6 w-6 text-primary" />
+                <span className="text-xs font-medium">Efectivo</span>
+              </button>
               <button
                 onClick={() => {
                   setFirstMethod("nequi");
                   setStep("split_amount");
                 }}
-                className="flex flex-col items-center gap-2 p-6 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
               >
-                <Smartphone className="h-8 w-8 text-primary" />
-                <span className="font-medium">Nequi / Transf.</span>
+                <Smartphone className="h-6 w-6 text-primary" />
+                <span className="text-xs font-medium">Nequi / Transf.</span>
               </button>
               <button
                 onClick={() => {
                   setFirstMethod("tarjeta");
                   setStep("split_amount");
                 }}
-                className="flex flex-col items-center gap-2 p-6 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
               >
-                <CreditCard className="h-8 w-8 text-primary" />
-                <span className="font-medium">Tarjeta</span>
+                <CreditCard className="h-6 w-6 text-primary" />
+                <span className="text-xs font-medium">Tarjeta</span>
               </button>
             </div>
           </div>
@@ -335,7 +346,7 @@ export function PaymentCalculator({
               </Button>
               <div>
                 <p className="font-display font-bold text-lg text-primary">
-                  Monto {firstMethod === "nequi" ? "Nequi" : "Tarjeta"}
+                  Monto {firstMethod === "nequi" ? "Nequi" : firstMethod === "tarjeta" ? "Tarjeta" : "Efectivo"}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Total Pedido: {formatPrice(order.total)}
@@ -415,38 +426,44 @@ export function PaymentCalculator({
               </div>
             </div>
             <div className="p-4 grid grid-cols-3 gap-2">
-              <button
-                onClick={() => {
-                  setSecondMethod("efectivo");
-                  setStep("amount");
-                }}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
-              >
-                <Banknote className="h-6 w-6 text-primary" />
-                <span className="text-xs font-medium">Efectivo</span>
-              </button>
-              <button
-                onClick={() => {
-                  setSecondMethod("nequi");
-                  setReceived(String(remainingTotal));
-                  handleConfirmPayment();
-                }}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
-              >
-                <Smartphone className="h-6 w-6 text-primary" />
-                <span className="text-xs font-medium">Nequi</span>
-              </button>
-              <button
-                onClick={() => {
-                  setSecondMethod("tarjeta");
-                  setReceived(String(remainingTotal));
-                  handleConfirmPayment();
-                }}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
-              >
-                <CreditCard className="h-6 w-6 text-primary" />
-                <span className="text-xs font-medium">Tarjeta</span>
-              </button>
+              {firstMethod !== "efectivo" && (
+                <button
+                  onClick={() => {
+                    setSecondMethod("efectivo");
+                    setStep("amount");
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
+                >
+                  <Banknote className="h-6 w-6 text-primary" />
+                  <span className="text-xs font-medium">Efectivo</span>
+                </button>
+              )}
+              {firstMethod !== "nequi" && (
+                <button
+                  onClick={() => {
+                    setSecondMethod("nequi");
+                    setReceived(String(remainingTotal));
+                    handleConfirmPayment(remainingTotal);
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
+                >
+                  <Smartphone className="h-6 w-6 text-primary" />
+                  <span className="text-xs font-medium">Nequi</span>
+                </button>
+              )}
+              {firstMethod !== "tarjeta" && (
+                <button
+                  onClick={() => {
+                    setSecondMethod("tarjeta");
+                    setReceived(String(remainingTotal));
+                    handleConfirmPayment(remainingTotal);
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
+                >
+                  <CreditCard className="h-6 w-6 text-primary" />
+                  <span className="text-xs font-medium">Tarjeta</span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -573,7 +590,7 @@ export function PaymentCalculator({
                 size="touch"
                 className="w-full h-14 text-lg"
                 disabled={!canConfirm}
-                onClick={handleConfirmPayment}
+                onClick={() => handleConfirmPayment()}
               >
                 <CheckCircle className="h-5 w-5 mr-2" />
                 {canConfirm
