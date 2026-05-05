@@ -33,13 +33,14 @@ export default function Dashboard() {
     refetchInterval: 30000, // Cada 30 seg
   });
 
-  const { data: productStats = [] } = useQuery({
+  const { data: productStats = [], refetch: refetchProducts } = useQuery({
     queryKey: ['top-products'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_top_products', { p_limit: 6 });
       if (error) throw error;
       return data;
     },
+    refetchInterval: 30000, // Sincronizar con el resto de los stats
   });
 
   // Query ligera para actividad reciente (solo los últimos 8 pedidos)
