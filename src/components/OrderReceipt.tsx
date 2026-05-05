@@ -20,6 +20,7 @@ interface OrderReceiptProps {
   paymentMethod?: string;
   paymentReceived?: number;
   paymentChange?: number;
+  paymentBreakdown?: { efectivo?: number; tarjeta?: number; nequi?: number };
 }
 
 export function OrderReceipt({

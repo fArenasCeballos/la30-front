@@ -340,11 +340,19 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   );
 
   const processPayment = useCallback(
-    async (orderId: string, method: string, amountReceived: number) => {
+    async (
+      orderId: string, 
+      method: string, 
+      amountReceived: number,
+      breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number }
+    ) => {
       const { error: paymentError } = await supabase.rpc("process_payment", {
         p_order_id: orderId,
         p_method: method,
         p_amount_received: amountReceived,
+        p_amt_efectivo: breakdown?.efectivo || 0,
+        p_amt_tarjeta: breakdown?.tarjeta || 0,
+        p_amt_nequi: breakdown?.nequi || 0,
       });
       if (paymentError) {
         toast.error(`Error de pago: ${paymentError.message}`);

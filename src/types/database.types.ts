@@ -349,29 +349,41 @@ export type Database = {
       payments: {
         Row: {
           id: string;
-          order_id: string | null;
-          amount: number;
-          method: "efectivo" | "tarjeta" | "nequi";
-          status: string;
-          transaction_id: string | null;
+          order_id: string;
+          method: "efectivo" | "tarjeta" | "nequi" | "mixto";
+          amount_total: number;
+          amount_received: number;
+          amount_change: number;
+          amount_efectivo: number;
+          amount_tarjeta: number;
+          amount_nequi: number;
+          processed_by: string;
           created_at: string;
         };
         Insert: {
           id?: string;
-          order_id?: string | null;
-          amount: number;
-          method: "efectivo" | "tarjeta" | "nequi";
-          status: string;
-          transaction_id?: string | null;
+          order_id: string;
+          method: "efectivo" | "tarjeta" | "nequi" | "mixto";
+          amount_total: number;
+          amount_received: number;
+          amount_change?: number;
+          amount_efectivo?: number;
+          amount_tarjeta?: number;
+          amount_nequi?: number;
+          processed_by: string;
           created_at?: string;
         };
         Update: {
           id?: string;
-          order_id?: string | null;
-          amount?: number;
-          method?: "efectivo" | "tarjeta" | "nequi";
-          status?: string;
-          transaction_id?: string | null;
+          order_id?: string;
+          method?: "efectivo" | "tarjeta" | "nequi" | "mixto";
+          amount_total?: number;
+          amount_received?: number;
+          amount_change?: number;
+          amount_efectivo?: number;
+          amount_tarjeta?: number;
+          amount_nequi?: number;
+          processed_by?: string;
           created_at?: string;
         };
         Relationships: [
@@ -546,7 +558,7 @@ export type Database = {
         | "listo"
         | "entregado"
         | "cancelado";
-      payment_method: "efectivo" | "tarjeta" | "nequi";
+      payment_method: "efectivo" | "tarjeta" | "nequi" | "mixto";
       notification_type: "info" | "success" | "warning";
     };
   };

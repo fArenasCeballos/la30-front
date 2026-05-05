@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { cn } from "@/lib/utils";
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { formatPrice } from '@/lib/formatPrice';
@@ -331,26 +332,32 @@ export default function Kiosko() {
 
               <Badge variant="default" className="hidden lg:flex">{itemCount} items</Badge>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              {loadingCats ? (
-                [1,2,3,4].map(i => <Skeleton key={i} className="h-10 w-24 rounded-lg shrink-0" />)
-              ) : (
-                categories.map(cat => (
-                  <Button
-                    key={cat.id}
-                    variant={currentCategory === cat.name ? 'default' : 'secondary'}
-                    size="touch"
-                    onClick={() => setActiveCategory(cat.name)}
-                    className="whitespace-nowrap text-xs sm:text-sm"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span>{cat.icon}</span>
-                      <span className="sm:hidden">{cat.label.substring(0, 4)}</span>
-                      <span className="hidden sm:inline">{cat.label}</span>
-                    </div>
-                  </Button>
-                ))
-              )}
+            <div className="bg-muted/30 p-1.5 rounded-2xl">
+              <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
+                {loadingCats ? (
+                  [1,2,3,4].map(i => <Skeleton key={i} className="h-12 w-28 rounded-xl shrink-0" />)
+                ) : (
+                  categories.map(cat => (
+                    <Button
+                      key={cat.id}
+                      variant={currentCategory === cat.name ? 'default' : 'secondary'}
+                      onClick={() => setActiveCategory(cat.name)}
+                      className={cn(
+                        "h-12 px-6 rounded-xl whitespace-nowrap text-sm font-medium transition-all shrink-0 border-none",
+                        currentCategory === cat.name 
+                          ? "shadow-lg shadow-primary/20 scale-[1.02]" 
+                          : "bg-background/50 text-muted-foreground hover:bg-background hover:text-foreground"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{cat.icon}</span>
+                        <span className="sm:hidden">{cat.label.substring(0, 4)}</span>
+                        <span className="hidden sm:inline">{cat.label}</span>
+                      </div>
+                    </Button>
+                  ))
+                )}
+              </div>
             </div>
           </div>
 

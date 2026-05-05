@@ -143,6 +143,7 @@ export interface ReceiptData {
   paymentMethod?: string;
   paymentReceived?: number;
   paymentChange?: number;
+  paymentBreakdown?: { efectivo?: number; tarjeta?: number; nequi?: number };
 }
 
 /** Genera el HTML completo de la factura del cliente */
@@ -172,22 +173,34 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
     )
     .join("");
 
-  const paymentSection = paymentMethod
-    ? `
-    <div class="row">
-      <span class="bold">Entregado</span>
-      <span class="bold">${formatPrice(paymentReceived ?? order.total ?? 0)}</span>
-    </div>
-    <div class="row">
-      <span class="bold">Cambio</span>
-      <span class="bold">${formatPrice(paymentChange ?? 0)}</span>
-    </div>
-    <div style="font-size:11px;padding:4px 0 0">
-      ${paymentMethod === "efectivo" ? "Efectivo" : paymentMethod === "tarjeta" ? "Tarjeta" : "Nequi"} ${formatPrice(paymentReceived ?? order.total ?? 0)}
-    </div>
-    <div class="divider"></div>
-  `
-    : "";
+  let paymentSection = "";
+  if (paymentMethod) {
+    let breakdownDetails = "";
+    if (paymentMethod === "mixto" && data.paymentBreakdown) {
+      const b = data.paymentBreakdown;
+      if (b.efectivo) breakdownDetails += `<div class="row"><span>Efectivo:</span><span>${formatPrice(b.efectivo)}</span></div>`;
+      if (b.tarjeta)  breakdownDetails += `<div class="row"><span>Tarjeta:</span><span>${formatPrice(b.tarjeta)}</span></div>`;
+      if (b.nequi)    breakdownDetails += `<div class="row"><span>Nequi:</span><span>${formatPrice(b.nequi)}</span></div>`;
+    } else {
+      const label = paymentMethod === "efectivo" ? "Efectivo" : paymentMethod === "tarjeta" ? "Tarjeta" : "Nequi";
+      breakdownDetails = `<div class="row"><span>${label}:</span><span>${formatPrice(paymentReceived ?? order.total ?? 0)}</span></div>`;
+    }
+
+    paymentSection = `
+      <div class="row">
+        <span class="bold">Entregado</span>
+        <span class="bold">${formatPrice(paymentReceived ?? order.total ?? 0)}</span>
+      </div>
+      <div class="row">
+        <span class="bold">Cambio</span>
+        <span class="bold">${formatPrice(paymentChange ?? 0)}</span>
+      </div>
+      <div style="font-size:11px;padding:4px 0 0">
+        ${breakdownDetails}
+      </div>
+      <div class="divider"></div>
+    `;
+  }
 
   return `
     <div class="center"><p class="header-title">VENTA A LA MESA</p></div>

@@ -55,10 +55,14 @@ export default function Caja() {
 
   const cajeroName = user?.name ?? "Cajero";
 
-  const handlePaymentComplete = async (method: string, received: number) => {
+  const handlePaymentComplete = async (
+    method: string, 
+    received: number, 
+    breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number }
+  ) => {
     if (!payingOrder) return;
     const change = Math.max(0, received - payingOrder.total);
-    await processPayment(payingOrder.id, method, received);
+    await processPayment(payingOrder.id, method, received, breakdown);
 
     // Auto-imprimir factura del cliente
     const receiptData: ReceiptData = {
@@ -67,6 +71,7 @@ export default function Caja() {
       paymentMethod: method,
       paymentReceived: received,
       paymentChange: change,
+      paymentBreakdown: breakdown,
     };
     silentPrint(
       buildCustomerReceiptHTML(receiptData),
