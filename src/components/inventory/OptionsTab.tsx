@@ -12,7 +12,9 @@ import { Label } from '@/components/ui/label';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
-import { Plus, Edit, Trash2, ListChecks } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ChevronDown, Plus, Edit, Trash2, ListChecks } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,7 +47,7 @@ export function OptionsTab() {
   const [optionToDelete, setOptionToDelete] = useState<ProductCustomOption | null>(null);
   const [isOptionDialogOpen, setIsOptionDialogOpen] = useState(false);
   const [optionForm, setOptionForm] = useState({
-    category_id: '',
+    category_ids: [] as string[],
     option_key: '',
     label: '',
     icon: '',
@@ -99,7 +101,10 @@ export function OptionsTab() {
 
   const filteredOptions = filterCat === 'all'
     ? options
-    : options.filter(o => o.category_id === filterCat);
+    : options.filter(o => 
+        o.category_id === filterCat || 
+        (o.category_ids && o.category_ids.includes(filterCat))
+      );
 
   const nextOptionSortOrder = () => {
     if (options.length === 0) return 0;
@@ -110,7 +115,7 @@ export function OptionsTab() {
   const openNewOption = () => {
     setEditOption(null);
     setOptionForm({
-      category_id: categories[0]?.id || '',
+      category_ids: filterCat !== 'all' ? [filterCat] : [],
       option_key: '',
       label: '',
       icon: '🧅',
@@ -122,7 +127,7 @@ export function OptionsTab() {
   const openEditOption = (option: ProductCustomOption) => {
     setEditOption(option);
     setOptionForm({
-      category_id: option.category_id,
+      category_ids: option.category_ids || (option.category_id ? [option.category_id] : []),
       option_key: option.option_key,
       label: option.label,
       icon: option.icon || '',
@@ -133,12 +138,13 @@ export function OptionsTab() {
 
   const saveOption = async () => {
     try {
-      if (!optionForm.label.trim() || !optionForm.option_key.trim() || !optionForm.category_id) {
+      if (!optionForm.label.trim() || !optionForm.option_key.trim() || optionForm.category_ids.length === 0) {
         toast.error('Completa todos los campos obligatorios');
         return;
       }
       const optionData = {
-        category_id: optionForm.category_id,
+        category_ids: optionForm.category_ids,
+        category_id: optionForm.category_ids[0], // Compatibilidad
         option_key: optionForm.option_key.toLowerCase().replace(/\s+/g, '_'),
         label: optionForm.label,
         icon: optionForm.icon || null,
@@ -284,7 +290,13 @@ export function OptionsTab() {
                   <div>
                     <h3 className="font-semibold">{option.label}</h3>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs">{getCatLabel(option.category_id)}</Badge>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(option.category_ids || (option.category_id ? [option.category_id] : [])).map(cid => (
+                        <Badge key={cid} variant="outline" className="text-xs">
+                          {getCatLabel(cid)}
+                        </Badge>
+                      ))}
+                    </div>
                       <span className="text-xs text-muted-foreground font-mono">{option.option_key}</span>
                     </div>
                   </div>
@@ -358,15 +370,54 @@ export function OptionsTab() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Categoría</Label>
-              <Select value={optionForm.category_id} onValueChange={(v) => setOptionForm(f => ({ ...f, category_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecciona una categoría" /></SelectTrigger>
-                <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.icon} {cat.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Categorías *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between h-auto py-2 px-3 font-normal"
+                  >
+                    <div className="flex flex-wrap gap-1 items-center">
+                      {optionForm.category_ids.length > 0 ? (
+                        optionForm.category_ids.map(cid => (
+                          <Badge key={cid} variant="secondary" className="font-normal">
+                            {getCatLabel(cid)}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Seleccionar categorías...</span>
+                      )}
+                    </div>
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0" align="start">
+                  <div className="max-h-[300px] overflow-y-auto p-2">
+                    {categories.map((cat) => (
+                      <div
+                        key={cat.id}
+                        className="flex items-center space-x-2 p-2 hover:bg-accent rounded-sm cursor-pointer"
+                        onClick={() => {
+                          const current = optionForm.category_ids;
+                          const next = current.includes(cat.id)
+                            ? current.filter(id => id !== cat.id)
+                            : [...current, cat.id];
+                          setOptionForm({ ...optionForm, category_ids: next });
+                        }}
+                      >
+                        <Checkbox
+                          checked={optionForm.category_ids.includes(cat.id)}
+                          onCheckedChange={() => {}} // Manejado por el onClick del div
+                        />
+                        <label className="text-sm font-medium leading-none cursor-pointer">
+                          {cat.icon} {cat.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label>Icono (emoji)</Label>

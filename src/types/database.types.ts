@@ -118,42 +118,36 @@ export type Database = {
       };
       product_custom_options: {
         Row: {
-          icon: string;
-          label: string;
-          option_key: string;
-          sort_order: number;
-          category_id: string;
           id: string;
-          product_id: string | null;
-          name: string;
-          is_required: boolean;
-          max_selections: number;
+          category_id: string;
+          category_ids: string[] | null;
+          option_key: string;
+          label: string;
+          icon: string | null;
+          sort_order: number;
           created_at: string;
         };
         Insert: {
           id?: string;
-          product_id?: string | null;
-          name: string;
-          is_required?: boolean;
-          max_selections?: number;
+          category_id?: string | null;
+          category_ids?: string[] | null;
+          option_key: string;
+          label: string;
+          icon?: string | null;
+          sort_order?: number;
           created_at?: string;
         };
         Update: {
           id?: string;
-          product_id?: string | null;
-          name?: string;
-          is_required?: boolean;
-          max_selections?: number;
+          category_id?: string | null;
+          category_ids?: string[] | null;
+          option_key?: string;
+          label?: string;
+          icon?: string | null;
+          sort_order?: number;
           created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "product_custom_options_product_id_fkey";
-            columns: ["product_id"];
-            referencedRelation: "products";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       product_custom_choices: {
         Row: {

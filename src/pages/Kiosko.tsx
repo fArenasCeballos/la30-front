@@ -343,7 +343,11 @@ export default function Kiosko() {
                     onClick={() => setActiveCategory(cat.name)}
                     className="whitespace-nowrap text-xs sm:text-sm"
                   >
-                    {cat.icon} {cat.label}
+                    <div className="flex items-center gap-1.5">
+                      <span>{cat.icon}</span>
+                      <span className="sm:hidden">{cat.label.substring(0, 4)}</span>
+                      <span className="hidden sm:inline">{cat.label}</span>
+                    </div>
                   </Button>
                 ))
               )}
