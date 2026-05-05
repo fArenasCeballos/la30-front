@@ -299,21 +299,48 @@ export function buildKitchenReceiptHTML(data: ReceiptData): string {
   `;
 }
 
-/** Impresión silenciosa: abre ventana y lanza window.print() automáticamente */
-export function silentPrint(bodyHTML: string, title = "Recibo") {
-  const printWindow = window.open("", "_blank", "width=320,height=700");
-  if (!printWindow) return;
+/** Impresión silenciosa: usa un iframe oculto para evitar bloqueos de popups */
+export function silentPrint(bodyHTML: string, title?: string) {
+  const iframe = document.createElement("iframe");
+  
+  // Estilos para que sea invisible pero funcional
+  iframe.style.position = "fixed";
+  iframe.style.bottom = "0";
+  iframe.style.right = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "none";
+  
+  document.body.appendChild(iframe);
 
-  printWindow.document.write(`
+  const doc = iframe.contentWindow?.document;
+  if (!doc) return;
+
+  doc.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>${title}</title>
       <style>${PRINT_STYLES}</style>
     </head>
-    <body>${bodyHTML}</body>
-    <script>window.onload = () => { window.print(); window.close(); }</script>
+    <body>
+      ${bodyHTML}
+      <script>
+        window.onload = () => {
+          window.focus();
+          setTimeout(() => {
+            window.print();
+          }, 200);
+        };
+      </script>
+    </body>
     </html>
   `);
-  printWindow.document.close();
+  doc.close();
+
+  // Eliminar el iframe después de un tiempo prudente para no ensuciar el DOM
+  setTimeout(() => {
+    if (document.body.contains(iframe)) {
+      document.body.removeChild(iframe);
+    }
+  }, 30000);
 }

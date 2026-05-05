@@ -57,9 +57,9 @@ export default function Caja() {
   const cajeroName = user?.name ?? "Cajero";
 
   const handlePaymentComplete = async (
-    method: string, 
-    received: number, 
-    breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number }
+    method: string,
+    received: number,
+    breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number },
   ) => {
     if (!payingOrder) return;
     const change = Math.max(0, received - payingOrder.total);
@@ -76,16 +76,13 @@ export default function Caja() {
     };
     silentPrint(
       buildCustomerReceiptHTML(receiptData),
-      `Recibo - ${payingOrder.locator}`
+      `Recibo - ${payingOrder.locator}`,
     );
 
-    // Auto-imprimir comanda de cocina (con un pequeño delay para que el navegador procese la primera)
+    // Auto-imprimir comanda de cocina (con un delay mayor para estabilidad)
     setTimeout(() => {
-      silentPrint(
-        buildKitchenReceiptHTML(receiptData),
-        `Comanda - ${payingOrder.locator}`
-      );
-    }, 800);
+      silentPrint(buildKitchenReceiptHTML(receiptData));
+    }, 1500);
 
     setPayingOrder(null);
   };
@@ -96,17 +93,19 @@ export default function Caja() {
 
   const handleReprintCustomer = (order: Order) => {
     const lastPayment = order.payments?.[0];
-    setReceipt({ 
-      order, 
+    setReceipt({
+      order,
       type: "customer",
       paymentMethod: lastPayment?.method,
       paymentReceived: lastPayment?.amount_received,
       paymentChange: lastPayment?.amount_change,
-      paymentBreakdown: lastPayment ? {
-        efectivo: lastPayment.amount_efectivo,
-        tarjeta: lastPayment.amount_tarjeta,
-        nequi: lastPayment.amount_nequi
-      } : undefined
+      paymentBreakdown: lastPayment
+        ? {
+            efectivo: lastPayment.amount_efectivo,
+            tarjeta: lastPayment.amount_tarjeta,
+            nequi: lastPayment.amount_nequi,
+          }
+        : undefined,
     });
   };
 
@@ -176,9 +175,7 @@ export default function Caja() {
                     <Button
                       size="touch"
                       className="flex-1 text-xs sm:text-sm"
-                      onClick={() =>
-                        updateOrderStatus(order.id, "confirmado")
-                      }
+                      onClick={() => updateOrderStatus(order.id, "confirmado")}
                     >
                       <CheckCircle className="h-4 w-4 mr-1" /> Confirmar
                     </Button>
@@ -194,9 +191,7 @@ export default function Caja() {
                       size="touch"
                       variant="destructive"
                       className="text-xs sm:text-sm"
-                      onClick={() =>
-                        updateOrderStatus(order.id, "cancelado")
-                      }
+                      onClick={() => updateOrderStatus(order.id, "cancelado")}
                     >
                       Cancelar
                     </Button>
@@ -286,12 +281,9 @@ export default function Caja() {
                     size="touch"
                     variant="outline"
                     className="flex-1 text-xs sm:text-sm"
-                    onClick={() =>
-                      updateOrderStatus(order.id, "entregado")
-                    }
+                    onClick={() => updateOrderStatus(order.id, "entregado")}
                   >
-                    <CheckCircle className="h-4 w-4 mr-1" /> Marcar
-                    Entregado
+                    <CheckCircle className="h-4 w-4 mr-1" /> Marcar Entregado
                   </Button>
                 }
               />
