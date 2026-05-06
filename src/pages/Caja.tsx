@@ -26,7 +26,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { formatPrice } from "@/lib/formatPrice";
-import type { Order, OrderItem } from "@/types";
+import type { Order, OrderItem, OrderStatus } from "@/types";
 
 interface ReceiptState {
   order: Order;
@@ -48,6 +48,27 @@ export default function Caja() {
   } = useOrders();
   const [payingOrder, setPayingOrder] = useState<Order | null>(null);
   const [receipt, setReceipt] = useState<ReceiptState | null>(null);
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
+
+  const handleUpdateStatus = async (orderId: string, status: OrderStatus) => {
+    if (updatingIds.has(orderId)) return;
+
+    setUpdatingIds((prev) => {
+      const next = new Set(prev);
+      next.add(orderId);
+      return next;
+    });
+
+    try {
+      await updateOrderStatus(orderId, status);
+    } finally {
+      setUpdatingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(orderId);
+        return next;
+      });
+    }
+  };
 
   const pendientes = getOrdersByStatus("pendiente");
   const confirmados = getOrdersByStatus("confirmado");
@@ -277,9 +298,15 @@ export default function Caja() {
                       size="touch"
                       variant="success"
                       className="flex-1 text-xs sm:text-sm font-bold"
-                      onClick={() => updateOrderStatus(order.id, "listo")}
+                      onClick={() => handleUpdateStatus(order.id, "listo")}
+                      disabled={updatingIds.has(order.id)}
                     >
-                      <CheckCircle className="h-4 w-4 mr-1" /> Marcar Listo
+                      {updatingIds.has(order.id) ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                      )}
+                      Marcar Listo
                     </Button>
                     <Button
                       size="touch"

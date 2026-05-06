@@ -73,43 +73,45 @@ export const PRINT_STYLES = `
   }
   /* ── Comanda de cocina ───────────────────────────────────── */
   .kitchen-title {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: bold;
-    border: 2px solid #000;
+    border: 3px solid #000;
     display: inline-block;
-    padding: 2px 10px;
-    margin-bottom: 4px;
+    padding: 2px 12px;
+    margin-bottom: 6px;
   }
   .kitchen-locator {
-    font-size: 60px;
+    font-size: 75px;
     font-weight: bold;
     line-height: 1;
   }
   .kitchen-ticket {
-    font-size: 18px;
+    font-size: 20px;
   }
   .kitchen-cashier {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: bold;
   }
   .kitchen-item-name {
-    font-size: 24px;
+    font-size: 32px;
     font-weight: bold;
-    padding: 4px 0 1px;
-    border-bottom: 2px solid #000;
+    padding: 6px 0 2px;
+    border-bottom: 3px solid #000;
   }
   .kitchen-item-notes {
-    font-size: 15px;
+    font-size: 19px;
     font-weight: bold;
-    padding-left: 15px;
-    margin-bottom: 8px;
+    padding-left: 10px;
+    margin-bottom: 10px;
+    line-height: 1.3;
   }
   .kitchen-footer-notes {
-    font-size: 16px;
+    font-size: 20px;
+    font-weight: bold;
     background: #eee;
-    padding: 4px;
-    border: 1px dashed #000;
-    margin-top: 8px;
+    padding: 6px;
+    border: 2px dashed #000;
+    margin-top: 10px;
   }
   .kitchen-obs {
     font-size: 12px;
@@ -289,7 +291,7 @@ export function buildKitchenReceiptHTML(
                  .map((n) => {
                    const trimmed = n.trim();
                    if (trimmed.startsWith("Obs:")) {
-                     return `<div style="margin-top:4px; color:#000; border-top:1px dashed #999; padding-top:2px;">${trimmed.replace("Obs:", "<strong>OBS:</strong>")}</div>`;
+                     return `<div style="margin-top:6px; color:#000; border-top:2px solid #000; padding-top:4px; font-size:20px;">${trimmed.replace("Obs:", "<strong>OBS:</strong>")}</div>`;
                    }
                    return `• ${trimmed}`;
                  })
