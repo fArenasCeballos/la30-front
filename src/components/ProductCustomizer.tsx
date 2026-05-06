@@ -57,24 +57,41 @@ export function ProductCustomizer({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!open || !categoryName) return;
+    if (!open || !categoryName) {
+      if (!open) {
+        setOptions([]);
+        setExtras([]);
+        setSelections({});
+        setExtraQtys({});
+      }
+      return;
+    }
 
     let isMounted = true;
     const fetchCustomization = async () => {
       setLoading(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.rpc as any)(
-        "get_customization_for_category",
-        {
-          p_category_name: categoryName,
-        },
-      );
+      // Limpiar estados previos antes de cargar nuevos
+      setOptions([]);
+      setExtras([]);
 
-      if (!error && data && isMounted) {
-        setOptions(data.options || []);
-        setExtras(data.extras || []);
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase.rpc as any)(
+          "get_customization_for_category",
+          {
+            p_category_name: categoryName,
+          },
+        );
+
+        if (!error && data && isMounted) {
+          setOptions(data.options || []);
+          setExtras(data.extras || []);
+        }
+      } catch (err) {
+        console.error("Error fetching customization:", err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-      if (isMounted) setLoading(false);
     };
 
     fetchCustomization();
@@ -125,7 +142,7 @@ export function ProductCustomizer({
     options.forEach((opt) => {
       const selectedValues = selections[opt.id] || [];
       selectedValues.forEach((val) => {
-        const choice = opt.choices.find((c) => c.value === val);
+        const choice = opt.choices?.find((c) => c.value === val);
         if (choice) noteParts.push(choice.label);
       });
     });
@@ -210,11 +227,11 @@ export function ProductCustomizer({
                 <span className="text-lg">{opt.icon || "🛠️"}</span> {opt.label}
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {opt.choices.map((choice) => (
+                {opt.choices?.map((choice) => (
                   <button
                     key={choice.id}
                     onClick={() =>
-                      handleSelect(opt.id, choice.value, opt.choices.length)
+                      handleSelect(opt.id, choice.value, opt.choices?.length || 0)
                     }
                     className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all active:scale-95 touch-target ${
                       (selections[opt.id] || []).includes(choice.value)
