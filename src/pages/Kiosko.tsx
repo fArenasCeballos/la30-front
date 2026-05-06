@@ -294,13 +294,7 @@ export default function Kiosko() {
                   )}
                 </div>
                 <div className="flex items-center gap-3">
-                  {item.product.image_url && (
-                    <img
-                      src={getOptimizedImageUrl(item.product.image_url, 80)}
-                      alt={item.product.name}
-                      className="w-10 h-10 rounded-md object-cover border"
-                    />
-                  )}
+                  <CartItemImage product={item.product} />
                   <span className="text-sm font-semibold shrink-0">
                     {formatPrice(item.unit_price * item.quantity)}
                   </span>
@@ -483,18 +477,7 @@ export default function Kiosko() {
                       >
                         {/* Product image */}
                         <div className="aspect-square rounded-lg bg-muted/50 mb-2 overflow-hidden flex items-center justify-center">
-                          {product.image_url ? (
-                            <img
-                              src={getOptimizedImageUrl(product.image_url, 400)}
-                              alt={product.name}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <span className="text-3xl sm:text-4xl">
-                              {product.categories?.icon || "📦"}
-                            </span>
-                          )}
+                          <ProductImage product={product} />
                         </div>
                         <h3 className="font-semibold text-xs sm:text-sm mb-1 truncate">
                           {product.name}
@@ -676,5 +659,48 @@ function CartContent({
         </Button>
       </div>
     </>
+  );
+}
+
+function ProductImage({ product }: { product: ProductWithCategory }) {
+  const [error, setError] = useState(false);
+
+  if (!product.image_url || error) {
+    return (
+      <span className="text-3xl sm:text-4xl">
+        {product.categories?.icon || "📦"}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={getOptimizedImageUrl(product.image_url, 400)}
+      alt={product.name}
+      className="w-full h-full object-cover"
+      loading="lazy"
+      onError={() => setError(true)}
+    />
+  );
+}
+
+function CartItemImage({ product }: { product: ProductWithCategory }) {
+  const [error, setError] = useState(false);
+
+  if (!product.image_url || error) {
+    return (
+      <div className="w-10 h-10 rounded-md border flex items-center justify-center bg-muted/50 shrink-0">
+        <span className="text-lg">{product.categories?.icon || "📦"}</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={getOptimizedImageUrl(product.image_url, 80)}
+      alt={product.name}
+      className="w-10 h-10 rounded-md object-cover border shrink-0"
+      onError={() => setError(true)}
+    />
   );
 }

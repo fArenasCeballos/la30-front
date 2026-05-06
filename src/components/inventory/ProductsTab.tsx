@@ -359,17 +359,7 @@ export function ProductsTab() {
             className={`pos-card transition-opacity ${!product.available ? "opacity-50" : ""}`}
           >
             <div className="aspect-square rounded-lg bg-muted/50 mb-3 overflow-hidden flex items-center justify-center">
-              {product.image_url ? (
-                <img
-                  src={getOptimizedImageUrl(product.image_url, 400)}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-4xl sm:text-5xl">
-                  {product.categories?.icon || "📦"}
-                </span>
-              )}
+              <InventoryProductImage product={product} />
             </div>
             <div className="flex items-start justify-between mb-1">
               <div className="min-w-0 flex-1">
@@ -576,5 +566,26 @@ export function ProductsTab() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function InventoryProductImage({ product }: { product: ProductWithCategory }) {
+  const [error, setError] = useState(false);
+
+  if (!product.image_url || error) {
+    return (
+      <span className="text-4xl sm:text-5xl">
+        {product.categories?.icon || "📦"}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={getOptimizedImageUrl(product.image_url, 400)}
+      alt={product.name}
+      className="w-full h-full object-cover"
+      onError={() => setError(true)}
+    />
   );
 }
