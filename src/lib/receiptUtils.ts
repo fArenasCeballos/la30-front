@@ -11,7 +11,7 @@ export const PRINT_STYLES = `
   body {
     font-family: 'Courier New', 'Lucida Console', monospace;
     width: 80mm;
-    padding: 4mm;
+    padding: 0 4mm 4mm 4mm;
     font-size: 13px;
     color: #000;
     line-height: 1.2;
