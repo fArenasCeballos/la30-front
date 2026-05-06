@@ -286,7 +286,13 @@ export function buildKitchenReceiptHTML(
           ? `<div class="kitchen-item-notes">
                ${item.notes
                  .split(",")
-                 .map((n) => `• ${n.trim()}`)
+                 .map((n) => {
+                   const trimmed = n.trim();
+                   if (trimmed.startsWith("Obs:")) {
+                     return `<div style="margin-top:4px; color:#000; border-top:1px dashed #999; padding-top:2px;">${trimmed.replace("Obs:", "<strong>OBS:</strong>")}</div>`;
+                   }
+                   return `• ${trimmed}`;
+                 })
                  .join("<br>")}
              </div>`
           : ""

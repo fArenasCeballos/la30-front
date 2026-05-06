@@ -11,7 +11,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { CheckCircle, Plus, Minus, Loader2 } from "lucide-react";
+import { CheckCircle, Plus, Minus, Loader2, MessageSquare } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CustomOption {
   id: string;
@@ -51,6 +53,7 @@ export function ProductCustomizer({
 }: ProductCustomizerProps) {
   const [selections, setSelections] = useState<Record<string, string[]>>({});
   const [extraQtys, setExtraQtys] = useState<Record<string, number>>({});
+  const [observation, setObservation] = useState("");
 
   const [options, setOptions] = useState<CustomOption[]>([]);
   const [extras, setExtras] = useState<ExtraOption[]>([]);
@@ -151,14 +154,20 @@ export function ProductCustomizer({
       if (qty > 0) noteParts.push(`+${qty} ${ext.label}`);
     });
 
+    if (observation.trim()) {
+      noteParts.push(`Obs: ${observation.trim()}`);
+    }
+
     onConfirm(product, noteParts.join(", "), totalExtraCost);
     setSelections({});
     setExtraQtys({});
+    setObservation("");
   };
 
   const handleClose = () => {
     setSelections({});
     setExtraQtys({});
+    setObservation("");
     onClose();
   };
 
@@ -298,6 +307,21 @@ export function ProductCustomizer({
               })}
             </div>
           )}
+
+          <div className="space-y-2 pt-2 border-t">
+            <Label htmlFor="observation" className="flex items-center gap-2 text-sm font-semibold">
+              <MessageSquare className="h-4 w-4 text-primary" />
+              Observaciones especiales
+            </Label>
+            <Textarea
+              id="observation"
+              placeholder="Ej: Sin cebolla, término medio, etc."
+              className="resize-none rounded-xl bg-muted/50 border-none focus-visible:ring-primary"
+              value={observation}
+              onChange={(e) => setObservation(e.target.value)}
+              rows={2}
+            />
+          </div>
         </div>
 
         <div className="p-4 border-t space-y-3 bg-card">
