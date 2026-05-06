@@ -73,7 +73,7 @@ export const PRINT_STYLES = `
   }
   /* ── Comanda de cocina ───────────────────────────────────── */
   .kitchen-title {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: bold;
     border: 2px solid #000;
     display: inline-block;
@@ -81,22 +81,35 @@ export const PRINT_STYLES = `
     margin-bottom: 4px;
   }
   .kitchen-locator {
-    font-size: 48px;
+    font-size: 60px;
     font-weight: bold;
     line-height: 1;
   }
   .kitchen-ticket {
-    font-size: 16px;
+    font-size: 18px;
   }
   .kitchen-cashier {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: bold;
   }
   .kitchen-item-name {
-    font-size: 18px;
+    font-size: 24px;
     font-weight: bold;
     padding: 4px 0 1px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 2px solid #000;
+  }
+  .kitchen-item-notes {
+    font-size: 15px;
+    font-weight: bold;
+    padding-left: 15px;
+    margin-bottom: 8px;
+  }
+  .kitchen-footer-notes {
+    font-size: 16px;
+    background: #eee;
+    padding: 4px;
+    border: 1px dashed #000;
+    margin-top: 8px;
   }
   .kitchen-obs {
     font-size: 12px;
@@ -262,32 +275,35 @@ export function buildKitchenReceiptHTML(
   const ticketNumber = order.ticket_number ?? "—";
 
   const itemsHTML = itemsToPrint
-    .map((item) => {
-      const notesHTML = item.notes
-        ? `<div class="kitchen-obs">${item.notes
-            .split(",")
-            .map(
-              (note: string) =>
-                `<p style="margin:1px 0;padding-left:4px">• ${note.trim()}</p>`,
-            )
-            .join("")}</div>`
-        : "";
-      return `
-      <div>
-        <p class="kitchen-item-name">${item.quantity} ${(item.products?.name ?? "Producto").toUpperCase()}</p>
-        ${notesHTML}
+    .map(
+      (item) => `
+    <div style="margin-bottom: 12px;">
+      <div class="kitchen-item-name">
+        ${item.quantity} ${item.products?.name?.toUpperCase() ?? "PRODUCTO"}
       </div>
-    `;
-    })
+      ${
+        item.notes
+          ? `<div class="kitchen-item-notes">
+               ${item.notes
+                 .split(",")
+                 .map((n) => `• ${n.trim()}`)
+                 .join("<br>")}
+             </div>`
+          : ""
+      }
+    </div>
+  `,
+    )
     .join("");
 
-  const orderNotesHTML = order.notes
-    ? `
-    <div class="divider"></div>
-    <p class="bold">NOTAS DEL PEDIDO:</p>
-    <p class="kitchen-obs">${order.notes}</p>
-  `
-    : "";
+  let notesSection = "";
+  if (order.notes) {
+    notesSection = `
+      <div class="divider"></div>
+      <div class="bold" style="font-size:14px">NOTAS DEL PEDIDO:</div>
+      <div class="kitchen-footer-notes">${order.notes.toUpperCase()}</div>
+    `;
+  }
 
   return `
     <div class="center"><p class="kitchen-title">PEDIDO</p></div>
@@ -301,11 +317,11 @@ export function buildKitchenReceiptHTML(
     <div class="row" style="font-size:10px"><span class="bold">Cant.</span><span class="bold">Producto</span></div>
     <div class="divider"></div>
     ${itemsHTML}
-    ${orderNotesHTML}
-    <div class="divider" style="border-top-style:dotted"></div>
-    <div class="center kitchen-footer">
-      <p>Hora: ${timeOnly}</p>
-      <p>${dateOnly}</p>
+    ${notesSection}
+    <div class="divider"></div>
+    <div class="center" style="font-size:12px;margin-top:4px">
+      Hora: ${timeOnly}<br>
+      ${dateOnly}
     </div>
   `;
 }
