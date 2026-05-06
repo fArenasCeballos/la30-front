@@ -33,6 +33,7 @@ export interface Order extends OrderRow {
   order_items: OrderItem[];
   total: number;
   payments?: Payment[];
+  isOptimistic?: boolean;
 }
 
 // Custom option with its choices (for ProductCustomizer)

@@ -9,12 +9,12 @@ export const PRINT_STYLES = `
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
     width: 80mm;
-    padding: 0 4mm 4mm 4mm;
+    padding: 0 2mm 2mm 2mm;
     font-size: 13px;
     color: #000;
-    line-height: 1.2;
+    line-height: 1.1;
     background: #fff;
   }
   .center   { text-align: center; }
@@ -325,29 +325,55 @@ export async function silentPrint(bodyHTML: string, _title?: string): Promise<vo
     }
 
     // 2. Inyectar estilos de impresión y el contenido
-    // Usamos @media print para ocultar todo lo que NO sea nuestro mount
     mount.innerHTML = `
       <style>
+        /* Estilos en pantalla: el montador no existe */
         @media screen {
           #print-mount { display: none !important; }
         }
+
+        /* Estilos de impresión: SOLO existe el montador */
         @media print {
-          /* Ocultar el resto de la app */
-          #root, .sonner-toast, [data-radix-portal] { 
+          /* 0. Forzar margen cero en la página */
+          @page { margin: 0; }
+
+          /* 1. Ocultar TODO lo que sea hijo directo del body */
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          body > *:not(#print-mount) { 
             display: none !important; 
+            visibility: hidden !important;
           }
-          /* Mostrar solo el ticket */
-          #print-mount { 
+
+          /* 2. Mostrar ÚNICAMENTE el montador de tickets */
+          #print-mount, 
+          #print-mount * { 
             display: block !important; 
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
+            visibility: visible !important;
           }
+
+          /* 3. Forzar que el montador sea el dueño de la página */
+          #print-mount {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* 4. Estilos específicos del ticket */
           ${PRINT_STYLES}
         }
       </style>
-      ${bodyHTML}
+      <div class="print-content">
+        ${bodyHTML}
+      </div>
     `;
 
     // 3. Escuchar cuando el usuario cierra el cuadro de impresión

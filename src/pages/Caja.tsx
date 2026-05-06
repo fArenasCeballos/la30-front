@@ -23,6 +23,7 @@ import {
   History,
   RotateCcw,
   XCircle,
+  Loader2,
 } from "lucide-react";
 import { formatPrice } from "@/lib/formatPrice";
 import type { Order, OrderItem } from "@/types";
@@ -194,14 +195,21 @@ export default function Caja() {
                       size="touch"
                       className="flex-1 text-xs sm:text-sm"
                       onClick={() => updateOrderStatus(order.id, "confirmado")}
+                      disabled={order.isOptimistic}
                     >
-                      <CheckCircle className="h-4 w-4 mr-1" /> Confirmar
+                      {order.isOptimistic ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                      )}
+                      Confirmar
                     </Button>
                     <Button
                       size="touch"
                       variant="outline"
                       className="flex-1 text-xs sm:text-sm"
                       onClick={() => navigate(`/kiosko?edit=${order.id}`)}
+                      disabled={order.isOptimistic}
                     >
                       <Edit className="h-4 w-4 mr-1" /> Editar
                     </Button>
@@ -210,6 +218,7 @@ export default function Caja() {
                       variant="destructive"
                       className="text-xs sm:text-sm"
                       onClick={() => updateOrderStatus(order.id, "cancelado")}
+                      disabled={order.isOptimistic}
                     >
                       Cancelar
                     </Button>
@@ -236,9 +245,14 @@ export default function Caja() {
                     size="touch"
                     className="flex-1 text-xs sm:text-sm"
                     onClick={() => setPayingOrder(order)}
+                    disabled={order.isOptimistic}
                   >
-                    <DollarSign className="h-4 w-4 mr-1" /> Cobrar y Enviar a
-                    Cocina
+                    {order.isOptimistic ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <DollarSign className="h-4 w-4 mr-1" />
+                    )}
+                    Cobrar y Enviar a Cocina
                   </Button>
                 }
               />

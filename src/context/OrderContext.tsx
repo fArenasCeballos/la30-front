@@ -219,6 +219,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         total_amount,
         total: total_amount,
         notes: notes || null,
+        isOptimistic: true, // Marca para identificar que es temporal
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         order_items: items.map((i) => ({
@@ -235,7 +236,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           products: {
             id: i.product_id,
             category_id: null,
-            name: "Enviando...",
+            name: "Cargando productos...",
             description: null,
             price: i.unit_price,
             image_url: null,
@@ -251,7 +252,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             },
           } as unknown as ProductWithCategory,
         })),
-      } as Order;
+      } as Order & { isOptimistic?: boolean };
 
       const updateList = (old: Order[] | undefined) => [
         newOrderOptimistic,
