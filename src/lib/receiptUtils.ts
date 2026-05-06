@@ -184,11 +184,19 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
     let breakdownDetails = "";
     if (paymentMethod === "mixto" && data.paymentBreakdown) {
       const b = data.paymentBreakdown;
-      if (b.efectivo) breakdownDetails += `<div class="row"><span>Efectivo:</span><span>${formatPrice(b.efectivo)}</span></div>`;
-      if (b.tarjeta)  breakdownDetails += `<div class="row"><span>Tarjeta:</span><span>${formatPrice(b.tarjeta)}</span></div>`;
-      if (b.nequi)    breakdownDetails += `<div class="row"><span>Nequi:</span><span>${formatPrice(b.nequi)}</span></div>`;
+      if (b.efectivo)
+        breakdownDetails += `<div class="row"><span>Efectivo:</span><span>${formatPrice(b.efectivo)}</span></div>`;
+      if (b.tarjeta)
+        breakdownDetails += `<div class="row"><span>Tarjeta:</span><span>${formatPrice(b.tarjeta)}</span></div>`;
+      if (b.nequi)
+        breakdownDetails += `<div class="row"><span>Nequi:</span><span>${formatPrice(b.nequi)}</span></div>`;
     } else {
-      const label = paymentMethod === "efectivo" ? "Efectivo" : paymentMethod === "tarjeta" ? "Tarjeta" : "Nequi";
+      const label =
+        paymentMethod === "efectivo"
+          ? "Efectivo"
+          : paymentMethod === "tarjeta"
+            ? "Tarjeta"
+            : "Nequi";
       breakdownDetails = `<div class="row"><span>${label}:</span><span>${formatPrice(paymentReceived ?? order.total ?? 0)}</span></div>`;
     }
 
@@ -302,23 +310,41 @@ export function buildKitchenReceiptHTML(
   `;
 }
 
-/** Impresión silenciosa: usa un iframe oculto para evitar bloqueos de popups */
-export function silentPrint(bodyHTML: string, title?: string) {
+/* ── Sistema de Cola de Impresión ────────────────────────── */
+const printQueue: { bodyHTML: string }[] = [];
+let isPrinting = false;
+
+function processQueue() {
+  if (isPrinting || printQueue.length === 0) return;
+
+  isPrinting = true;
+  const { bodyHTML } = printQueue.shift()!;
+
   const iframe = document.createElement("iframe");
-  
-  // Estilos para que sea invisible pero funcional
   iframe.style.position = "fixed";
   iframe.style.bottom = "0";
   iframe.style.right = "0";
   iframe.style.width = "0";
   iframe.style.height = "0";
   iframe.style.border = "none";
-  
   document.body.appendChild(iframe);
 
-  const doc = iframe.contentWindow?.document;
-  if (!doc) return;
+  const win = iframe.contentWindow;
+  if (!win) {
+    isPrinting = false;
+    processQueue();
+    return;
+  }
 
+  // Evento que se dispara al cerrar el cuadro de impresión
+  win.onafterprint = () => {
+    document.body.removeChild(iframe);
+    isPrinting = false;
+    // Pequeño respiro para el navegador antes del siguiente
+    setTimeout(processQueue, 300);
+  };
+
+  const doc = win.document;
   doc.write(`
     <!DOCTYPE html>
     <html>
@@ -330,20 +356,18 @@ export function silentPrint(bodyHTML: string, title?: string) {
       <script>
         window.onload = () => {
           window.focus();
-          setTimeout(() => {
-            window.print();
-          }, 200);
+          // Un pequeño delay para asegurar que el estilo cargó
+          setTimeout(() => { window.print(); }, 100);
         };
       </script>
     </body>
     </html>
   `);
   doc.close();
+}
 
-  // Eliminar el iframe después de un tiempo prudente para no ensuciar el DOM
-  setTimeout(() => {
-    if (document.body.contains(iframe)) {
-      document.body.removeChild(iframe);
-    }
-  }, 30000);
+/** Impresión silenciosa: usa una cola para evitar bloqueos */
+export function silentPrint(bodyHTML: string, _title?: string) {
+  printQueue.push({ bodyHTML });
+  processQueue();
 }
