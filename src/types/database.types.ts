@@ -85,6 +85,7 @@ export type Database = {
           price: number;
           image_url: string | null;
           available: boolean;
+          sort_order: number;
           created_at: string;
         };
         Insert: {
@@ -95,6 +96,7 @@ export type Database = {
           price: number;
           image_url?: string | null;
           available?: boolean;
+          sort_order?: number;
           created_at?: string;
         };
         Update: {
@@ -105,6 +107,7 @@ export type Database = {
           price?: number;
           image_url?: string | null;
           available?: boolean;
+          sort_order?: number;
           created_at?: string;
         };
         Relationships: [

@@ -30,7 +30,25 @@ import {
   ImagePlus,
   X,
   Loader2,
+  GripHorizontal,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,7 +78,7 @@ export function ProductsTab() {
   );
   const [productToDelete, setProductToDelete] = useState<ProductWithCategory | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", category_id: "", price: "" });
+  const [form, setForm] = useState({ name: "", category_id: "", price: "", sort_order: "0" });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -104,7 +122,7 @@ export function ProductsTab() {
 
   const openNew = () => {
     setEditProduct(null);
-    setForm({ name: "", category_id: categories[0]?.id || "", price: "" });
+    setForm({ name: "", category_id: categories[0]?.id || "", price: "", sort_order: "0" });
     if (imagePreview && imagePreview.startsWith("blob:"))
       URL.revokeObjectURL(imagePreview);
     setImagePreview(null);
@@ -119,6 +137,7 @@ export function ProductsTab() {
       name: product.name,
       category_id: product.category_id || "",
       price: String(product.price),
+      sort_order: String(product.sort_order || 0),
     });
     if (imagePreview && imagePreview.startsWith("blob:"))
       URL.revokeObjectURL(imagePreview);
@@ -211,6 +230,7 @@ export function ProductsTab() {
         name: form.name,
         category_id: form.category_id,
         price: Number(form.price),
+        sort_order: Number(form.sort_order),
         image_url: finalImageUrl,
       };
 
@@ -304,6 +324,56 @@ export function ProductsTab() {
     setProductToDelete(null);
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setProducts((items) => {
+        const visibleItems = items.filter((p) => {
+          if (!p || !p.name) return false;
+          const matchesSearch = p.name.toLowerCase().includes((search || "").toLowerCase());
+          const matchesCategory = categoryFilter === "all" || p.category_id === categoryFilter;
+          return matchesSearch && matchesCategory;
+        });
+
+        const oldIndex = visibleItems.findIndex((i) => i.id === active.id);
+        const newIndex = visibleItems.findIndex((i) => i.id === over.id);
+
+        if (oldIndex === -1 || newIndex === -1) return items;
+
+        const newVisibleItems = arrayMove(visibleItems, oldIndex, newIndex);
+
+        const updatedItems = newVisibleItems.map((item, index) => ({
+          ...item,
+          sort_order: index,
+        }));
+
+        const newProducts = items.map((p) => {
+          const updated = updatedItems.find((u) => u.id === p.id);
+          return updated ? updated : p;
+        }).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+        // Actualización silenciosa a base de datos
+        updatedItems.forEach(async (u) => {
+          await supabase.from("products").update({ sort_order: u.sort_order }).eq("id", u.id);
+        });
+
+        return newProducts;
+      });
+    }
+  };
+
   if (loading) {
     return <div className="p-6 text-center">Cargando productos...</div>;
   }
@@ -352,63 +422,25 @@ export function ProductsTab() {
         />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-        {filtered.map((product) => (
-          <div
-            key={product.id}
-            className={`pos-card transition-opacity ${!product.available ? "opacity-50" : ""}`}
-          >
-            <div className="aspect-square rounded-lg bg-muted/50 mb-3 overflow-hidden flex items-center justify-center">
-              <InventoryProductImage product={product} />
-            </div>
-            <div className="flex items-start justify-between mb-1">
-              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-sm sm:text-base truncate">
-                  {product.name}
-                </h3>
-                <span className="text-xs text-muted-foreground">
-                  {product.categories?.label}
-                </span>
-              </div>
-              <Switch
-                checked={product.available}
-                onCheckedChange={() =>
-                  toggleAvailability(product.id, product.available)
-                }
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+          <SortableContext items={filtered.map((p) => p.id)} strategy={rectSortingStrategy}>
+            {filtered.map((product) => (
+              <SortableProductCard
+                key={product.id}
+                product={product}
+                openEdit={openEdit}
+                setProductToDelete={setProductToDelete}
+                toggleAvailability={toggleAvailability}
               />
-            </div>
-            <p className="font-display text-lg sm:text-xl font-bold text-primary mb-2">
-              {formatPrice(product.price)}
-            </p>
-            <div className="flex items-center gap-2">
-              <Badge
-                variant={product.available ? "success" : "pending"}
-                className="text-xs"
-              >
-                {product.available ? "Disponible" : "Agotado"}
-              </Badge>
-              <div className="ml-auto flex gap-1">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8"
-                  onClick={() => openEdit(product)}
-                >
-                  <Edit className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8"
-                  onClick={() => setProductToDelete(product)}
-                >
-                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+            ))}
+          </SortableContext>
+        </div>
+      </DndContext>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md">
@@ -527,6 +559,18 @@ export function ProductsTab() {
                 </p>
               )}
             </div>
+            <div className="space-y-2">
+              <Label>Orden (Prioridad)</Label>
+              <Input
+                type="number"
+                value={form.sort_order}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, sort_order: e.target.value }))
+                }
+                placeholder="Ej: 1, 2, 3..."
+              />
+              <p className="text-xs text-muted-foreground">Menor número aparece primero (ej. 1, 2, 3)</p>
+            </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
@@ -587,5 +631,95 @@ function InventoryProductImage({ product }: { product: ProductWithCategory }) {
       className="w-full h-full object-cover"
       onError={() => setError(true)}
     />
+  );
+}
+
+function SortableProductCard({
+  product,
+  openEdit,
+  setProductToDelete,
+  toggleAvailability,
+}: {
+  product: ProductWithCategory;
+  openEdit: (p: ProductWithCategory) => void;
+  setProductToDelete: (p: ProductWithCategory) => void;
+  toggleAvailability: (id: string, current: boolean) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: product.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: transform ? 1 : 0,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`pos-card transition-opacity relative group ${
+        !product.available ? "opacity-50" : ""
+      }`}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute top-2 left-2 z-10 p-2 bg-background/80 backdrop-blur rounded-md cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+      >
+        <GripHorizontal className="h-5 w-5 text-foreground" />
+      </div>
+
+      <div className="aspect-square rounded-lg bg-muted/50 mb-3 overflow-hidden flex items-center justify-center">
+        <InventoryProductImage product={product} />
+      </div>
+      <div className="flex items-start justify-between mb-1">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-sm sm:text-base truncate">
+            {product.name}
+          </h3>
+          <span className="text-xs text-muted-foreground">
+            {product.categories?.label}
+          </span>
+        </div>
+        <Switch
+          checked={product.available}
+          onCheckedChange={() =>
+            toggleAvailability(product.id, product.available)
+          }
+        />
+      </div>
+      <p className="font-display text-lg sm:text-xl font-bold text-primary mb-2">
+        {formatPrice(product.price)}
+      </p>
+      <div className="flex items-center gap-2">
+        <Badge
+          variant={product.available ? "success" : "pending"}
+          className="text-xs"
+        >
+          {product.available ? "Disponible" : "Agotado"}
+        </Badge>
+        <div className="ml-auto flex gap-1 z-20 relative">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 pointer-events-auto"
+            onClick={(e) => { e.stopPropagation(); openEdit(product); }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <Edit className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 pointer-events-auto"
+            onClick={(e) => { e.stopPropagation(); setProductToDelete(product); }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

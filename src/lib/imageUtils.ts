@@ -103,33 +103,8 @@ export function getOptimizedImageUrl(
   width = 400,
   quality = 70,
 ): string {
-  if (!originalUrl) return "";
-
-  // Si es base64, no se puede optimizar vía URL
-  if (originalUrl.startsWith('data:')) return originalUrl;
-  
-  // Si no es una URL de Supabase, devolver tal cual
-  if (!originalUrl.includes("supabase.co")) return originalUrl;
-
-  try {
-    const url = new URL(originalUrl);
-    const baseUrl = url.origin;
-
-    // Detectar si ya es una URL de renderizado para no duplicar
-    if (url.pathname.includes('/render/image/')) return originalUrl;
-
-    const bucketToken = "/assets/";
-    const index = url.pathname.indexOf(bucketToken);
-
-    if (index === -1) return originalUrl;
-
-    const path = url.pathname.substring(index + bucketToken.length);
-    if (!path) return originalUrl;
-
-    // Retornar la URL de renderizado con WebP y resizing
-    // Usamos format=origin para que Supabase elija automáticamente el mejor formato (webp/avif)
-    return `${baseUrl}/storage/v1/render/image/public/assets/${path}?width=${width}&quality=${quality}&format=origin`;
-  } catch (e) {
-    return originalUrl || "";
-  }
+  // Nota: La optimización de imágenes al vuelo (/render/image/) requiere el plan Pro de Supabase.
+  // Si está devolviendo 400 Bad Request, es porque la característica no está activa.
+  // Por ahora, devolvemos la URL original directamente para evitar fallos.
+  return originalUrl || "";
 }
