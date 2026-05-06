@@ -252,7 +252,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             },
           } as unknown as ProductWithCategory,
         })),
-      } as Order & { isOptimistic?: boolean };
+      } as Order;
 
       const updateList = (old: Order[] | undefined) => [
         newOrderOptimistic,
