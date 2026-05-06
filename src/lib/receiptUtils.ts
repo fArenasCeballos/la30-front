@@ -311,47 +311,58 @@ export function buildKitchenReceiptHTML(
 }
 
 /** 
- * Impresión mediante iframe: devuelve una Promesa que se resuelve 
- * cuando el usuario cierra el cuadro de diálogo de impresión.
+ * Impresión mediante la ventana principal: más compatible con PWA/Accesos directos.
+ * Oculta la app momentáneamente y muestra solo el contenido a imprimir.
  */
 export async function silentPrint(bodyHTML: string, _title?: string): Promise<void> {
   return new Promise((resolve) => {
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "absolute";
-    iframe.style.top = "-1000px";
-    iframe.style.left = "-1000px";
-    iframe.style.width = "1px";
-    iframe.style.height = "1px";
-    iframe.style.border = "none";
-    document.body.appendChild(iframe);
-
-    const win = iframe.contentWindow;
-    if (!win) {
-      document.body.removeChild(iframe);
-      resolve();
-      return;
+    // 1. Crear o recuperar el contenedor de montaje
+    let mount = document.getElementById("print-mount");
+    if (!mount) {
+      mount = document.createElement("div");
+      mount.id = "print-mount";
+      document.body.appendChild(mount);
     }
 
-    // Al terminar la impresión (o cancelar)
-    win.onafterprint = () => {
-      document.body.removeChild(iframe);
-      // Pequeño respiro para el navegador antes de resolver
-      setTimeout(resolve, 500);
+    // 2. Inyectar estilos de impresión y el contenido
+    // Usamos @media print para ocultar todo lo que NO sea nuestro mount
+    mount.innerHTML = `
+      <style>
+        @media screen {
+          #print-mount { display: none !important; }
+        }
+        @media print {
+          /* Ocultar el resto de la app */
+          #root, .sonner-toast, [data-radix-portal] { 
+            display: none !important; 
+          }
+          /* Mostrar solo el ticket */
+          #print-mount { 
+            display: block !important; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+          }
+          ${PRINT_STYLES}
+        }
+      </style>
+      ${bodyHTML}
+    `;
+
+    // 3. Escuchar cuando el usuario cierra el cuadro de impresión
+    const handleAfterPrint = () => {
+      window.removeEventListener("afterprint", handleAfterPrint);
+      mount!.innerHTML = ""; // Limpiar contenido
+      setTimeout(resolve, 300);
     };
 
-    const doc = win.document;
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>${PRINT_STYLES}</style>
-      </head>
-      <body onload="window.focus(); setTimeout(() => { window.print(); }, 500);">
-        ${bodyHTML}
-      </body>
-      </html>
-    `);
-    doc.close();
+    window.addEventListener("afterprint", handleAfterPrint);
+
+    // 4. Lanzar impresión
+    // Un pequeño delay para que el navegador procese el nuevo HTML
+    setTimeout(() => {
+      window.print();
+    }, 100);
   });
 }
