@@ -1,14 +1,37 @@
+import { useState } from 'react';
 import { useOrders } from '@/context/OrderContext';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/StatusBadge';
-import { ChefHat, CheckCheck, Clock, MapPin } from 'lucide-react';
+import { ChefHat, CheckCheck, Clock, MapPin, Loader2, CheckCircle } from 'lucide-react';
+import type { OrderStatus } from '@/types';
 
 export default function Cocina() {
   const { getOrdersByStatus, updateOrderStatus } = useOrders();
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
 
   const confirmados = getOrdersByStatus('confirmado');
   const enPreparacion = getOrdersByStatus('en_preparacion');
   const listos = getOrdersByStatus('listo');
+
+  const handleUpdateStatus = async (orderId: string, status: OrderStatus) => {
+    if (updatingIds.has(orderId)) return;
+
+    setUpdatingIds((prev) => {
+      const next = new Set(prev);
+      next.add(orderId);
+      return next;
+    });
+
+    try {
+      await updateOrderStatus(orderId, status);
+    } finally {
+      setUpdatingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(orderId);
+        return next;
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-foreground text-background p-4 lg:p-6">
@@ -51,9 +74,15 @@ export default function Cocina() {
             <Button
               size="touch"
               className="w-full"
-              onClick={() => updateOrderStatus(order.id, 'en_preparacion')}
+              onClick={() => handleUpdateStatus(order.id, 'en_preparacion')}
+              disabled={updatingIds.has(order.id)}
             >
-              <ChefHat className="h-5 w-5 mr-2" /> Preparar
+              {updatingIds.has(order.id) ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <ChefHat className="h-5 w-5 mr-2" />
+              )}
+              Preparar
             </Button>
           </div>
         ))}
@@ -81,9 +110,15 @@ export default function Cocina() {
               size="touch"
               variant="success"
               className="w-full"
-              onClick={() => updateOrderStatus(order.id, 'listo')}
+              onClick={() => handleUpdateStatus(order.id, 'listo')}
+              disabled={updatingIds.has(order.id)}
             >
-              <CheckCheck className="h-5 w-5 mr-2" /> ¡Listo!
+              {updatingIds.has(order.id) ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <CheckCheck className="h-5 w-5 mr-2" />
+              )}
+              ¡Listo!
             </Button>
           </div>
         ))}
@@ -91,16 +126,32 @@ export default function Cocina() {
         {/* Ready */}
         {listos.map(order => (
           <div key={order.id} className="rounded-xl border-2 border-success bg-success/10 p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-success" />
                 <span className="font-display text-3xl font-bold">{order.locator}</span>
               </div>
               <StatusBadge status={order.status} />
             </div>
-            <p className="text-center text-success font-display font-bold text-lg mt-2">
-              LLAMAR CLIENTE
-            </p>
+            <div className="space-y-3">
+              <p className="text-center text-success font-display font-bold text-lg">
+                LLAMAR CLIENTE
+              </p>
+              <Button
+                size="touch"
+                variant="outline"
+                className="w-full border-success text-success hover:bg-success hover:text-white"
+                onClick={() => handleUpdateStatus(order.id, 'entregado')}
+                disabled={updatingIds.has(order.id)}
+              >
+                {updatingIds.has(order.id) ? (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                )}
+                Marcar Entregado
+              </Button>
+            </div>
           </div>
         ))}
 
