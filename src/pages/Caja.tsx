@@ -74,7 +74,8 @@ export default function Caja() {
       paymentChange: change,
       paymentBreakdown: breakdown,
     };
-    silentPrint(
+    // Esperar a que se imprima la factura
+    await silentPrint(
       buildCustomerReceiptHTML(receiptData),
       `Recibo - ${payingOrder.locator}`,
     );
@@ -93,13 +94,14 @@ export default function Caja() {
 
     const categoryKeys = Object.keys(categoryGroups);
 
-    // Auto-imprimir comanda de cocina (una por cada categoría)
-    categoryKeys.forEach((catName) => {
-      silentPrint(
+    // Auto-imprimir comanda de cocina (esperando una tras otra)
+    for (const catName of categoryKeys) {
+      await silentPrint(
         buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
       );
-    });
+    }
 
+    // Solo cerrar el modal cuando TODO haya terminado de imprimirse
     setPayingOrder(null);
   };
 

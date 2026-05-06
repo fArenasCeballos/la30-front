@@ -310,64 +310,48 @@ export function buildKitchenReceiptHTML(
   `;
 }
 
-/* ── Sistema de Cola de Impresión ────────────────────────── */
-const printQueue: { bodyHTML: string }[] = [];
-let isPrinting = false;
+/** 
+ * Impresión mediante iframe: devuelve una Promesa que se resuelve 
+ * cuando el usuario cierra el cuadro de diálogo de impresión.
+ */
+export async function silentPrint(bodyHTML: string, _title?: string): Promise<void> {
+  return new Promise((resolve) => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "absolute";
+    iframe.style.top = "-1000px";
+    iframe.style.left = "-1000px";
+    iframe.style.width = "1px";
+    iframe.style.height = "1px";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
 
-function processQueue() {
-  if (isPrinting || printQueue.length === 0) return;
+    const win = iframe.contentWindow;
+    if (!win) {
+      document.body.removeChild(iframe);
+      resolve();
+      return;
+    }
 
-  isPrinting = true;
-  const { bodyHTML } = printQueue.shift()!;
+    // Al terminar la impresión (o cancelar)
+    win.onafterprint = () => {
+      document.body.removeChild(iframe);
+      // Pequeño respiro para el navegador antes de resolver
+      setTimeout(resolve, 500);
+    };
 
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "fixed";
-  iframe.style.bottom = "0";
-  iframe.style.right = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "none";
-  document.body.appendChild(iframe);
-
-  const win = iframe.contentWindow;
-  if (!win) {
-    isPrinting = false;
-    processQueue();
-    return;
-  }
-
-  // Evento que se dispara al cerrar el cuadro de impresión
-  win.onafterprint = () => {
-    document.body.removeChild(iframe);
-    isPrinting = false;
-    // Pequeño respiro para el navegador antes del siguiente
-    setTimeout(processQueue, 300);
-  };
-
-  const doc = win.document;
-  doc.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>${PRINT_STYLES}</style>
-    </head>
-    <body>
-      ${bodyHTML}
-      <script>
-        window.onload = () => {
-          window.focus();
-          // Un pequeño delay para asegurar que el estilo cargó
-          setTimeout(() => { window.print(); }, 100);
-        };
-      </script>
-    </body>
-    </html>
-  `);
-  doc.close();
-}
-
-/** Impresión silenciosa: usa una cola para evitar bloqueos */
-export function silentPrint(bodyHTML: string, _title?: string) {
-  printQueue.push({ bodyHTML });
-  processQueue();
+    const doc = win.document;
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>${PRINT_STYLES}</style>
+      </head>
+      <body onload="window.focus(); setTimeout(() => { window.print(); }, 500);">
+        ${bodyHTML}
+      </body>
+      </html>
+    `);
+    doc.close();
+  });
 }
