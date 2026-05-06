@@ -327,51 +327,53 @@ export async function silentPrint(bodyHTML: string, _title?: string): Promise<vo
     // 2. Inyectar estilos de impresión y el contenido
     mount.innerHTML = `
       <style>
-        /* Estilos en pantalla: el montador no existe */
         @media screen {
           #print-mount { display: none !important; }
         }
 
-        /* Estilos de impresión: SOLO existe el montador */
         @media print {
-          /* 0. Forzar margen cero en la página */
-          @page { margin: 0; }
-
-          /* 1. Ocultar TODO lo que sea hijo directo del body */
+          /* REGLA RADICAL: Todo es invisible por defecto */
           html, body {
+            visibility: hidden !important;
             margin: 0 !important;
             padding: 0 !important;
             height: auto !important;
-            overflow: visible !important;
+            background: #fff !important;
           }
 
-          body > *:not(#print-mount) { 
-            display: none !important; 
-            visibility: hidden !important;
-          }
-
-          /* 2. Mostrar ÚNICAMENTE el montador de tickets */
-          #print-mount, 
-          #print-mount * { 
-            display: block !important; 
+          /* EXCEPCIÓN: El ticket y sus hijos son visibles */
+          #print-mount, #print-mount * {
             visibility: visible !important;
           }
 
-          /* 3. Forzar que el montador sea el dueño de la página */
+          /* POSICIONAMIENTO: El ticket manda en la página */
           #print-mount {
+            display: block !important;
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
+            z-index: 99999 !important;
           }
 
-          /* 4. Estilos específicos del ticket */
+          /* CAZA DE PORTALES: Forzar ocultación de modales, diálogos y overlays */
+          #root, 
+          [role="dialog"], 
+          [data-radix-portal], 
+          .sonner-toast, 
+          .fixed, 
+          .absolute {
+            display: none !important;
+            opacity: 0 !important;
+          }
+
+          /* Estilos del ticket */
           ${PRINT_STYLES}
         }
       </style>
-      <div class="print-content">
+      <div class="print-ticket-wrapper">
         ${bodyHTML}
       </div>
     `;
@@ -385,10 +387,9 @@ export async function silentPrint(bodyHTML: string, _title?: string): Promise<vo
 
     window.addEventListener("afterprint", handleAfterPrint);
 
-    // 4. Lanzar impresión
-    // Un pequeño delay para que el navegador procese el nuevo HTML
+    // 4. Lanzar impresión con un delay más largo para asegurar renderizado
     setTimeout(() => {
       window.print();
-    }, 100);
+    }, 500);
   });
 }
