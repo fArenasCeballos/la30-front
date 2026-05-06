@@ -69,12 +69,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           filter: `user_id=eq.${user.id}` 
         },
         (payload) => {
-          const newNotif = payload.new as Notification;
-          queryClient.setQueryData(['notifications', user.id], (old: Notification[] | undefined) => {
-            const list = old || [];
-            return [newNotif, ...list].slice(0, 50);
-          });
-          playNotificationSound();
+          try {
+            const newNotif = payload.new as Notification;
+            if (!newNotif || !newNotif.id) return;
+            queryClient.setQueryData(['notifications', user.id], (old: Notification[] | undefined) => {
+              const list = old || [];
+              // Prevent duplicates
+              if (list.some(n => n.id === newNotif.id)) return list;
+              return [newNotif, ...list].slice(0, 50);
+            });
+            playNotificationSound();
+          } catch (err) {
+            console.error("Error handling realtime notification:", err);
+          }
         }
       )
       .subscribe();

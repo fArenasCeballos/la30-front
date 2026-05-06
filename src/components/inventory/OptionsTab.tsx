@@ -65,26 +65,32 @@ export function OptionsTab() {
   });
 
   const fetchData = useCallback(async () => {
-    const [{ data: optData }, { data: choData }, { data: catData }] = await Promise.all([
-      supabase.from('product_custom_options').select('*').order('sort_order'),
-      supabase.from('product_custom_choices').select('*').order('sort_order'),
-      supabase.from('categories').select('*').order('sort_order'),
-    ]);
-    
-    if (optData) setOptions(optData as ProductCustomOption[]);
-    if (catData) setCategories(catData as Category[]);
-    
-    if (choData) {
-      const groupedChoices: Record<string, ProductCustomChoice[]> = {};
-      (choData as ProductCustomChoice[]).forEach(choice => {
-        if (!groupedChoices[choice.option_id]) {
-          groupedChoices[choice.option_id] = [];
-        }
-        groupedChoices[choice.option_id].push(choice);
-      });
-      setChoices(groupedChoices);
+    try {
+      const [optRes, choRes, catRes] = await Promise.all([
+        supabase.from('product_custom_options').select('*').order('sort_order'),
+        supabase.from('product_custom_choices').select('*').order('sort_order'),
+        supabase.from('categories').select('*').order('sort_order'),
+      ]);
+      
+      if (optRes.data) setOptions(optRes.data as ProductCustomOption[]);
+      if (catRes.data) setCategories(catRes.data as Category[]);
+      
+      if (choRes.data) {
+        const groupedChoices: Record<string, ProductCustomChoice[]> = {};
+        (choRes.data as ProductCustomChoice[]).forEach(choice => {
+          if (!groupedChoices[choice.option_id]) {
+            groupedChoices[choice.option_id] = [];
+          }
+          groupedChoices[choice.option_id].push(choice);
+        });
+        setChoices(groupedChoices);
+      }
+    } catch (err) {
+      console.error("Error fetching customization data:", err);
+      toast.error("Error al cargar datos de personalización");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {

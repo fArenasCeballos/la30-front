@@ -7,6 +7,8 @@ import { CategoriesTab } from '@/components/inventory/CategoriesTab';
 import { ExtrasTab } from '@/components/inventory/ExtrasTab';
 import { OptionsTab } from '@/components/inventory/OptionsTab';
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
 export default function Inventario() {
   const [activeTab, setActiveTab] = React.useState('products');
 
@@ -40,19 +42,27 @@ export default function Inventario() {
         </div>
 
         <TabsContent value="products" className="mt-4 sm:mt-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          {activeTab === 'products' && <ProductsTab />}
+          <ErrorBoundary>
+            {activeTab === 'products' && <ProductsTab />}
+          </ErrorBoundary>
         </TabsContent>
         
         <TabsContent value="categories" className="mt-4 sm:mt-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          {activeTab === 'categories' && <CategoriesTab />}
+          <ErrorBoundary>
+            {activeTab === 'categories' && <CategoriesTab />}
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="extras" className="mt-4 sm:mt-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          {activeTab === 'extras' && <ExtrasTab />}
+          <ErrorBoundary>
+            {activeTab === 'extras' && <ExtrasTab />}
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="options" className="mt-4 sm:mt-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          {activeTab === 'options' && <OptionsTab />}
+          <ErrorBoundary>
+            {activeTab === 'options' && <OptionsTab />}
+          </ErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>

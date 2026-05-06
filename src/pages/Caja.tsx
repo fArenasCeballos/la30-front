@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { OrderCard } from "@/components/OrderCard";
 import { PaymentCalculator } from "@/components/PaymentCalculator";
 import { OrderReceipt } from "@/components/OrderReceipt";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
   buildCustomerReceiptHTML,
   buildKitchenReceiptHTML,
@@ -198,236 +199,245 @@ export default function Caja() {
             Historial ({completados.length})
           </TabsTrigger>
         </TabsList>
-
         <TabsContent value="pendientes">
-          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {pendientes.length === 0 && (
-              <p className="text-muted-foreground col-span-full py-12 text-center">
-                No hay pedidos pendientes
-              </p>
-            )}
-            {pendientes.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                actions={
-                  <div className="flex gap-2 w-full flex-wrap sm:flex-nowrap">
+          <ErrorBoundary>
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {pendientes.length === 0 && (
+                <p className="text-muted-foreground col-span-full py-12 text-center">
+                  No hay pedidos pendientes
+                </p>
+              )}
+              {(pendientes || []).map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  actions={
+                    <div className="flex gap-2 w-full flex-wrap sm:flex-nowrap">
+                      <Button
+                        size="touch"
+                        className="flex-1 text-xs sm:text-sm"
+                        onClick={() => updateOrderStatus(order.id, "confirmado")}
+                        disabled={order.isOptimistic}
+                      >
+                        {order.isOptimistic ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                        )}
+                        Confirmar
+                      </Button>
+                      <Button
+                        size="touch"
+                        variant="outline"
+                        className="flex-1 text-xs sm:text-sm"
+                        onClick={() => navigate(`/kiosko?edit=${order.id}`)}
+                        disabled={order.isOptimistic}
+                      >
+                        <Edit className="h-4 w-4 mr-1" /> Editar
+                      </Button>
+                      <Button
+                        size="touch"
+                        variant="destructive"
+                        className="text-xs sm:text-sm"
+                        onClick={() => updateOrderStatus(order.id, "cancelado")}
+                        disabled={order.isOptimistic}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  }
+                />
+              ))}
+            </div>
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="confirmados">
+          <ErrorBoundary>
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {confirmados.length === 0 && (
+                <p className="text-muted-foreground col-span-full py-12 text-center">
+                  No hay pedidos confirmados
+                </p>
+              )}
+              {(confirmados || []).map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  actions={
                     <Button
                       size="touch"
                       className="flex-1 text-xs sm:text-sm"
-                      onClick={() => updateOrderStatus(order.id, "confirmado")}
+                      onClick={() => setPayingOrder(order)}
                       disabled={order.isOptimistic}
                     >
                       {order.isOptimistic ? (
                         <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                       ) : (
-                        <CheckCircle className="h-4 w-4 mr-1" />
+                        <DollarSign className="h-4 w-4 mr-1" />
                       )}
-                      Confirmar
+                      Cobrar y Enviar a Cocina
                     </Button>
-                    <Button
-                      size="touch"
-                      variant="outline"
-                      className="flex-1 text-xs sm:text-sm"
-                      onClick={() => navigate(`/kiosko?edit=${order.id}`)}
-                      disabled={order.isOptimistic}
-                    >
-                      <Edit className="h-4 w-4 mr-1" /> Editar
-                    </Button>
-                    <Button
-                      size="touch"
-                      variant="destructive"
-                      className="text-xs sm:text-sm"
-                      onClick={() => updateOrderStatus(order.id, "cancelado")}
-                      disabled={order.isOptimistic}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                }
-              />
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="confirmados">
-          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {confirmados.length === 0 && (
-              <p className="text-muted-foreground col-span-full py-12 text-center">
-                No hay pedidos confirmados
-              </p>
-            )}
-            {confirmados.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                actions={
-                  <Button
-                    size="touch"
-                    className="flex-1 text-xs sm:text-sm"
-                    onClick={() => setPayingOrder(order)}
-                    disabled={order.isOptimistic}
-                  >
-                    {order.isOptimistic ? (
-                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    ) : (
-                      <DollarSign className="h-4 w-4 mr-1" />
-                    )}
-                    Cobrar y Enviar a Cocina
-                  </Button>
-                }
-              />
-            ))}
-          </div>
+                  }
+                />
+              ))}
+            </div>
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="cocina">
-          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {enCocina.length === 0 && (
-              <p className="text-muted-foreground col-span-full py-12 text-center">
-                No hay pedidos en cocina
-              </p>
-            )}
-            {enCocina.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                actions={
-                  <div className="flex gap-2 w-full">
-                    <Button
-                      size="touch"
-                      variant="success"
-                      className="flex-1 text-xs sm:text-sm font-bold"
-                      onClick={() => handleUpdateStatus(order.id, "listo")}
-                      disabled={updatingIds.has(order.id)}
-                    >
-                      {updatingIds.has(order.id) ? (
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                      ) : (
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                      )}
-                      Marcar Listo
-                    </Button>
+          <ErrorBoundary>
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {enCocina.length === 0 && (
+                <p className="text-muted-foreground col-span-full py-12 text-center">
+                  No hay pedidos en cocina
+                </p>
+              )}
+              {(enCocina || []).map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  actions={
+                    <div className="flex gap-2 w-full">
+                      <Button
+                        size="touch"
+                        variant="success"
+                        className="flex-1 text-xs sm:text-sm font-bold"
+                        onClick={() => handleUpdateStatus(order.id, "listo")}
+                        disabled={updatingIds.has(order.id)}
+                      >
+                        {updatingIds.has(order.id) ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                        )}
+                        Marcar Listo
+                      </Button>
+                      <Button
+                        size="touch"
+                        variant="outline"
+                        className="flex-1 text-xs sm:text-sm"
+                        onClick={() => handleShowKitchenReceipt(order)}
+                      >
+                        <Printer className="h-4 w-4 mr-1" /> Reimprimir Comanda
+                      </Button>
+                    </div>
+                  }
+                />
+              ))}
+            </div>
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="listos">
+          <ErrorBoundary>
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {listos.length === 0 && (
+                <p className="text-muted-foreground col-span-full py-12 text-center">
+                  No hay pedidos listos
+                </p>
+              )}
+              {(listos || []).map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  compact
+                  actions={
                     <Button
                       size="touch"
                       variant="outline"
                       className="flex-1 text-xs sm:text-sm"
-                      onClick={() => handleShowKitchenReceipt(order)}
+                      onClick={() => updateOrderStatus(order.id, "entregado")}
                     >
-                      <Printer className="h-4 w-4 mr-1" /> Reimprimir Comanda
+                      <CheckCircle className="h-4 w-4 mr-1" /> Marcar Entregado
                     </Button>
-                  </div>
-                }
-              />
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="listos">
-          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {listos.length === 0 && (
-              <p className="text-muted-foreground col-span-full py-12 text-center">
-                No hay pedidos listos
-              </p>
-            )}
-            {listos.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                compact
-                actions={
-                  <Button
-                    size="touch"
-                    variant="outline"
-                    className="flex-1 text-xs sm:text-sm"
-                    onClick={() => updateOrderStatus(order.id, "entregado")}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" /> Marcar Entregado
-                  </Button>
-                }
-              />
-            ))}
-          </div>
+                  }
+                />
+              ))}
+            </div>
+          </ErrorBoundary>
         </TabsContent>
 
         {/* ── HISTORIAL DEL DÍA ──────────────────────────── */}
         <TabsContent value="historial">
-          <div className="space-y-3">
-            {completados.length === 0 && (
-              <p className="text-muted-foreground py-12 text-center">
-                No hay pedidos completados en este turno
-              </p>
-            )}
-            {completados.map((order) => {
-              const total = order.total ?? 0;
-              const itemCount = (order.order_items ?? []).length;
-              const isEntregado = order.status === "entregado";
-              const createdAt = order.created_at
-                ? new Date(order.created_at)
-                : new Date();
-              const hora = new Intl.DateTimeFormat("es-CO", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              }).format(createdAt);
+          <ErrorBoundary>
+            <div className="space-y-3">
+              {completados.length === 0 && (
+                <p className="text-muted-foreground py-12 text-center">
+                  No hay pedidos completados en este turno
+                </p>
+              )}
+              {(completados || []).map((order) => {
+                const total = order.total ?? 0;
+                const itemCount = (order.order_items ?? []).length;
+                const isEntregado = order.status === "entregado";
+                const createdAt = order.created_at
+                  ? new Date(order.created_at)
+                  : new Date();
+                const hora = new Intl.DateTimeFormat("es-CO", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                }).format(createdAt);
 
-              return (
-                <div
-                  key={order.id}
-                  className="pos-card flex items-center justify-between gap-4"
-                >
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-2xl font-bold font-display">
-                        #{order.locator}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {hora}
-                      </span>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={isEntregado ? "default" : "destructive"}
-                          className="text-[10px] h-5"
-                        >
-                          {isEntregado ? (
-                            <>
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Entregado
-                            </>
-                          ) : (
-                            <>
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Cancelado
-                            </>
-                          )}
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {itemCount}{" "}
-                          {itemCount === 1 ? "producto" : "productos"}
+                return (
+                  <div
+                    key={order.id}
+                    className="pos-card flex items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-2xl font-bold font-display">
+                          #{order.locator}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {hora}
                         </span>
                       </div>
-                      <p className="text-lg font-bold mt-1">
-                        {formatPrice(total)}
-                      </p>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={isEntregado ? "default" : "destructive"}
+                            className="text-[10px] h-5"
+                          >
+                            {isEntregado ? (
+                              <>
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Entregado
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Cancelado
+                              </>
+                            )}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {itemCount}{" "}
+                            {itemCount === 1 ? "producto" : "productos"}
+                          </span>
+                        </div>
+                        <p className="text-lg font-bold mt-1">
+                          {formatPrice(total)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  {isEntregado && (
-                    <Button
-                      size="touch"
-                      variant="outline"
-                      className="shrink-0 text-xs sm:text-sm"
-                      onClick={() => handleReprintCustomer(order)}
-                    >
-                      <RotateCcw className="h-4 w-4 mr-1" /> Reimprimir
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                    {isEntregado && (
+                      <Button
+                        size="touch"
+                        variant="outline"
+                        className="shrink-0 text-xs sm:text-sm"
+                        onClick={() => handleReprintCustomer(order)}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-1" /> Reimprimir
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </ErrorBoundary>
         </TabsContent>
       </Tabs>
 

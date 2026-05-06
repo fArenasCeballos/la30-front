@@ -156,35 +156,39 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         "postgres_changes",
         { event: "*", schema: "public", table: "orders" },
         (payload) => {
-          if (payload.eventType === "UPDATE") {
-            const updateFn = (old: Order[] | undefined) => {
-              if (!old) return old;
-              return old.map((o) =>
-                o.id === payload.new.id ? { ...o, ...payload.new } : o,
-              );
-            };
-            queryClient.setQueryData(["orders", user.id], updateFn);
-            queryClient.setQueryData(
-              ["active-orders", user.id],
-              (old: Order[] | undefined) => {
+          try {
+            if (payload.eventType === "UPDATE") {
+              const updateFn = (old: Order[] | undefined) => {
                 if (!old) return old;
-                if (
-                  ["entregado", "cancelado"].includes(
-                    payload.new.status as string,
-                  )
-                ) {
-                  return old.filter((o) => o.id !== payload.new.id);
-                }
                 return old.map((o) =>
                   o.id === payload.new.id ? { ...o, ...payload.new } : o,
                 );
-              },
-            );
-          } else {
-            queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
-            queryClient.invalidateQueries({
-              queryKey: ["active-orders", user.id],
-            });
+              };
+              queryClient.setQueryData(["orders", user.id], updateFn);
+              queryClient.setQueryData(
+                ["active-orders", user.id],
+                (old: Order[] | undefined) => {
+                  if (!old) return old;
+                  if (
+                    ["entregado", "cancelado"].includes(
+                      payload.new.status as string,
+                    )
+                  ) {
+                    return old.filter((o) => o.id !== payload.new.id);
+                  }
+                  return old.map((o) =>
+                    o.id === payload.new.id ? { ...o, ...payload.new } : o,
+                  );
+                },
+              );
+            } else {
+              queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
+              queryClient.invalidateQueries({
+                queryKey: ["active-orders", user.id],
+              });
+            }
+          } catch (err) {
+            console.error("Error handling realtime order:", err);
           }
         },
       )
@@ -192,10 +196,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         "postgres_changes",
         { event: "*", schema: "public", table: "order_items" },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
-          queryClient.invalidateQueries({
-            queryKey: ["active-orders", user.id],
-          });
+          try {
+            queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
+            queryClient.invalidateQueries({
+              queryKey: ["active-orders", user.id],
+            });
+          } catch (err) {
+            console.error("Error handling realtime order item:", err);
+          }
         },
       )
       .subscribe();

@@ -94,8 +94,9 @@ export function ProductsTab() {
     load();
   }, [fetchProducts, fetchCategories, user]);
 
-  const filtered = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
+  const filtered = (products || []).filter((p) => {
+    if (!p || !p.name) return false;
+    const matchesSearch = p.name.toLowerCase().includes((search || "").toLowerCase());
     const matchesCategory =
       categoryFilter === "all" || p.category_id === categoryFilter;
     return matchesSearch && matchesCategory;

@@ -12,6 +12,7 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { NavLink } from "@/components/NavLink";
 import type { UserRole } from "@/types";
 import { NotificationBell } from "./NotificationBell";
@@ -118,7 +119,9 @@ export function AppLayout() {
       </header>
 
       <main className="flex-1">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
 
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>

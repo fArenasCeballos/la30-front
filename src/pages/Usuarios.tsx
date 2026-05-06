@@ -25,6 +25,7 @@ import {
 
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const ROLE_COLORS: Record<UserRole, string> = {
   admin: "bg-primary/15 text-primary border-primary/30",
@@ -191,7 +192,8 @@ export default function Usuarios() {
     return <div className="p-6 text-center">Cargando usuarios...</div>;
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <ErrorBoundary>
+      <div className="p-4 lg:p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Users className="h-7 w-7 text-primary" />
@@ -216,13 +218,13 @@ export default function Usuarios() {
           {profiles
             .filter((u) => u.role === "mesero")
             .map((u) => {
-              const uStats = orders.reduce(
+              const uStats = (orders || []).reduce(
                 (acc, o) => {
-                  if (o.created_at === u.id) {
+                  if (o && o.created_at === u.id) {
                     acc.orders++;
-                    acc.total += o.total;
+                    acc.total += (o.total || 0);
                     acc.items +=
-                      o.order_items?.reduce((sum, i) => sum + i.quantity, 0) ||
+                      o.order_items?.reduce((sum, i) => sum + (i.quantity || 0), 0) ||
                       0;
                   }
                   return acc;
@@ -404,6 +406,7 @@ export default function Usuarios() {
       </Dialog>
 
 
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

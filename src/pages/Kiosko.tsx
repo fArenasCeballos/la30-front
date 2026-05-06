@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 interface CartItem {
   id: string;
@@ -100,8 +101,9 @@ export default function Kiosko() {
         setOrderNotes(orderToEdit.notes || "");
 
         // Transformar order_items a CartItem
-        const initialCart = orderToEdit.order_items.map((item) => {
+        const initialCart = (orderToEdit.order_items || []).map((item) => {
           const product = item.products;
+          if (!product) return null;
           const cartKey = `${product.id}-${item.notes || ""}`;
           return {
             id: cartKey,
@@ -110,7 +112,7 @@ export default function Kiosko() {
             notes: item.notes || undefined,
             unit_price: item.unit_price,
           };
-        });
+        }).filter(Boolean) as CartItem[];
         setCart(initialCart);
         setStep("menu"); // Ir directo al menú al editar
       }
@@ -122,7 +124,7 @@ export default function Kiosko() {
     activeCategory || (categories.length > 0 ? categories[0].name : "");
 
   const filteredProducts = useMemo(
-    () => products.filter((p) => p.categories?.name === currentCategory),
+    () => (products || []).filter((p) => p?.categories?.name === currentCategory),
     [products, currentCategory],
   );
 
@@ -214,7 +216,8 @@ export default function Kiosko() {
   // Step 1: Locator
   if (step === "locator") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[80vh] p-4 sm:p-6">
+      <ErrorBoundary>
+        <div className="flex flex-col items-center justify-center min-h-[80vh] p-4 sm:p-6">
         <div className="w-full max-w-md space-y-6 text-center">
           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
             <ShoppingCart className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
@@ -242,14 +245,16 @@ export default function Kiosko() {
             Continuar
           </Button>
         </div>
-      </div>
+        </div>
+      </ErrorBoundary>
     );
   }
 
   // Step 3: Confirmation
   if (step === "confirm") {
     return (
-      <div className="max-w-lg mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 animate-slide-in">
+      <ErrorBoundary>
+        <div className="max-w-lg mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 animate-slide-in">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => setStep("menu")}>
             <ArrowLeft className="h-5 w-5" />
@@ -355,13 +360,14 @@ export default function Kiosko() {
             {editOrderId ? "Guardar Cambios" : "Enviar a Caja"}
           </Button>
         </div>
-      </div>
+        </div>
+      </ErrorBoundary>
     );
   }
 
   // Step 2: Menu selection
   return (
-    <>
+    <ErrorBoundary>
       <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)]">
         {/* Product selection */}
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -558,7 +564,7 @@ export default function Kiosko() {
         onClose={() => setCustomizingProduct(null)}
         onConfirm={handleCustomizationConfirm}
       />
-    </>
+    </ErrorBoundary>
   );
 }
 interface CartContentProps {

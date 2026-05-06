@@ -106,8 +106,8 @@ export function ProductCustomizer({
 
   if (!product) return null;
 
-  const totalExtraCost = extras.reduce(
-    (sum, ext) => sum + (extraQtys[ext.id] || 0) * ext.price_per_unit,
+  const totalExtraCost = (extras || []).reduce(
+    (sum, ext) => sum + (extraQtys[ext?.id] || 0) * (ext?.price_per_unit || 0),
     0,
   );
 
@@ -141,17 +141,18 @@ export function ProductCustomizer({
   };
 
   const handleConfirm = () => {
+    if (!product) return;
     const noteParts: string[] = [];
-    options.forEach((opt) => {
-      const selectedValues = selections[opt.id] || [];
+    (options || []).forEach((opt) => {
+      const selectedValues = selections[opt?.id] || [];
       selectedValues.forEach((val) => {
         const choice = opt.choices?.find((c) => c.value === val);
         if (choice) noteParts.push(choice.label);
       });
     });
-    extras.forEach((ext) => {
-      const qty = extraQtys[ext.id] || 0;
-      if (qty > 0) noteParts.push(`+${qty} ${ext.label}`);
+    (extras || []).forEach((ext) => {
+      const qty = extraQtys[ext?.id] || 0;
+      if (qty > 0) noteParts.push(`+${qty} ${ext.label || 'Extra'}`);
     });
 
     if (observation.trim()) {

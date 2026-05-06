@@ -41,6 +41,8 @@ const queryClient = new QueryClient({
   },
 });
 
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -49,22 +51,24 @@ const App = () => (
         <NotificationProvider>
           <OrderProvider>
             <BrowserRouter>
-              <Suspense fallback={<PageLoading />}>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route element={<AppLayout />}>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/kiosko" element={<Kiosko />} />
-                    <Route path="/caja" element={<Caja />} />
-                    <Route path="/cocina" element={<Cocina />} />
-                    <Route path="/reporteria" element={<Reporteria />} />
-                    <Route path="/inventario" element={<Inventario />} />
-                    <Route path="/usuarios" element={<Usuarios />} />
-                  </Route>
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoading />}>
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route element={<AppLayout />}>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/kiosko" element={<Kiosko />} />
+                      <Route path="/caja" element={<Caja />} />
+                      <Route path="/cocina" element={<Cocina />} />
+                      <Route path="/reporteria" element={<Reporteria />} />
+                      <Route path="/inventario" element={<Inventario />} />
+                      <Route path="/usuarios" element={<Usuarios />} />
+                    </Route>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </ErrorBoundary>
             </BrowserRouter>
           </OrderProvider>
         </NotificationProvider>
