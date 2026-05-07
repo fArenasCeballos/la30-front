@@ -32,6 +32,12 @@ interface ExtraOption {
   max_qty: number;
 }
 
+export interface CustomizationValues {
+  selections: Record<string, string[]>;
+  extraQtys: Record<string, number>;
+  observation: string;
+}
+
 interface ProductCustomizerProps {
   product: ProductWithCategory | null;
   categoryName?: string;
@@ -41,7 +47,9 @@ interface ProductCustomizerProps {
     product: ProductWithCategory,
     notes: string,
     extraCost: number,
+    customizationValues: CustomizationValues,
   ) => void;
+  initialValues?: CustomizationValues | null;
 }
 
 export function ProductCustomizer({
@@ -50,6 +58,7 @@ export function ProductCustomizer({
   open,
   onClose,
   onConfirm,
+  initialValues,
 }: ProductCustomizerProps) {
   const [selections, setSelections] = useState<Record<string, string[]>>({});
   const [extraQtys, setExtraQtys] = useState<Record<string, number>>({});
@@ -66,8 +75,20 @@ export function ProductCustomizer({
         setExtras([]);
         setSelections({});
         setExtraQtys({});
+        setObservation("");
       }
       return;
+    }
+
+    // Pre-fill from initialValues if editing
+    if (initialValues) {
+      setSelections(initialValues.selections);
+      setExtraQtys(initialValues.extraQtys);
+      setObservation(initialValues.observation);
+    } else {
+      setSelections({});
+      setExtraQtys({});
+      setObservation("");
     }
 
     let isMounted = true;
@@ -102,7 +123,7 @@ export function ProductCustomizer({
     return () => {
       isMounted = false;
     };
-  }, [open, categoryName]);
+  }, [open, categoryName, initialValues]);
 
   if (!product) return null;
 
@@ -152,14 +173,18 @@ export function ProductCustomizer({
     });
     (extras || []).forEach((ext) => {
       const qty = extraQtys[ext?.id] || 0;
-      if (qty > 0) noteParts.push(`+${qty} ${ext.label || 'Extra'}`);
+      if (qty > 0) noteParts.push(`+${qty} ${ext.label || "Extra"}`);
     });
 
     if (observation.trim()) {
       noteParts.push(`Obs: ${observation.trim()}`);
     }
 
-    onConfirm(product, noteParts.join(", "), totalExtraCost);
+    onConfirm(product, noteParts.join(", "), totalExtraCost, {
+      selections: { ...selections },
+      extraQtys: { ...extraQtys },
+      observation: observation.trim(),
+    });
     setSelections({});
     setExtraQtys({});
     setObservation("");
@@ -205,7 +230,11 @@ export function ProductCustomizer({
             size="touch"
             className="w-full"
             onClick={() => {
-              onConfirm(product, "", 0);
+              onConfirm(product, "", 0, {
+                selections: {},
+                extraQtys: {},
+                observation: "",
+              });
               setSelections({});
               setExtraQtys({});
             }}
@@ -241,7 +270,11 @@ export function ProductCustomizer({
                   <button
                     key={choice.id}
                     onClick={() =>
-                      handleSelect(opt.id, choice.value, opt.choices?.length || 0)
+                      handleSelect(
+                        opt.id,
+                        choice.value,
+                        opt.choices?.length || 0,
+                      )
                     }
                     className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all active:scale-95 touch-target ${
                       (selections[opt.id] || []).includes(choice.value)
@@ -310,7 +343,10 @@ export function ProductCustomizer({
           )}
 
           <div className="space-y-2 pt-2 border-t">
-            <Label htmlFor="observation" className="flex items-center gap-2 text-sm font-semibold">
+            <Label
+              htmlFor="observation"
+              className="flex items-center gap-2 text-sm font-semibold"
+            >
               <MessageSquare className="h-4 w-4 text-primary" />
               Observaciones especiales
             </Label>
@@ -347,7 +383,8 @@ export function ProductCustomizer({
             </span>
           </div>
           <Button size="touch" className="w-full" onClick={handleConfirm}>
-            <CheckCircle className="h-5 w-5 mr-2" /> Agregar al pedido
+            <CheckCircle className="h-5 w-5 mr-2" />
+            {initialValues ? "Guardar cambios" : "Agregar al pedido"}
           </Button>
         </div>
       </DialogContent>

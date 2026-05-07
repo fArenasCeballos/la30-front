@@ -6,6 +6,7 @@ import { formatPrice } from "@/lib/formatPrice";
 import type { Product, Category, ProductWithCategory } from "@/types";
 import { useOrders } from "@/context/OrderContext";
 import { ProductCustomizer } from "@/components/ProductCustomizer";
+import type { CustomizationValues } from "@/components/ProductCustomizer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,7 @@ interface CartItem {
   quantity: number;
   notes?: string;
   unit_price: number;
+  customizationValues?: CustomizationValues;
 }
 
 // --- Cart persistence via sessionStorage ---
@@ -87,6 +89,7 @@ export default function Kiosko() {
     useState<ProductWithCategory | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [draftHydrated, setDraftHydrated] = useState(false);
+  const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
 
   // Queries con React Query
   const { data: categories = [], isLoading: loadingCats } = useQuery({
@@ -231,14 +234,52 @@ export default function Kiosko() {
     setCustomizingProduct(product);
   };
 
+  const handleEditItem = (item: CartItem) => {
+    setEditingCartItem(item);
+    setCustomizingProduct(item.product);
+  };
+
   const handleCustomizationConfirm = (
     product: Product,
     notes: string,
     extraCost: number,
+    customizationValues: CustomizationValues,
   ) => {
     const unitPrice = product.price + extraCost;
     const cartKey = `${product.id}-${notes}`;
 
+    // If editing an existing cart item, replace it
+    if (editingCartItem) {
+      setCart((prev) => {
+        const filtered = prev.filter((i) => i.id !== editingCartItem.id);
+        const existing = filtered.find((i) => i.id === cartKey);
+        if (existing) {
+          // Merge quantity into existing item with same key
+          return filtered.map((i) =>
+            i.id === cartKey
+              ? { ...i, quantity: i.quantity + editingCartItem.quantity }
+              : i,
+          );
+        }
+        return [
+          ...filtered,
+          {
+            id: cartKey,
+            product: product as ProductWithCategory,
+            quantity: editingCartItem.quantity,
+            notes: notes || undefined,
+            unit_price: unitPrice,
+            customizationValues,
+          },
+        ];
+      });
+      toast.success(`${product.name} actualizado`, { duration: 1000 });
+      setEditingCartItem(null);
+      setCustomizingProduct(null);
+      return;
+    }
+
+    // Normal add flow
     setCart((prev) => {
       const existing = prev.find((i) => i.id === cartKey);
       if (existing) {
@@ -254,6 +295,7 @@ export default function Kiosko() {
           quantity: 1,
           notes: notes || undefined,
           unit_price: unitPrice,
+          customizationValues,
         },
       ];
     });
@@ -501,6 +543,7 @@ export default function Kiosko() {
                   <CartContent
                     cart={cart}
                     updateQuantity={updateQuantity}
+                    onEditItem={handleEditItem}
                     total={total}
                     itemCount={itemCount}
                     setStep={setStep}
@@ -622,6 +665,7 @@ export default function Kiosko() {
           <CartContent
             cart={cart}
             updateQuantity={updateQuantity}
+            onEditItem={handleEditItem}
             total={total}
             itemCount={itemCount}
             setStep={setStep}
@@ -634,8 +678,12 @@ export default function Kiosko() {
         product={customizingProduct}
         categoryName={customizingProduct?.categories?.name}
         open={!!customizingProduct}
-        onClose={() => setCustomizingProduct(null)}
+        onClose={() => {
+          setCustomizingProduct(null);
+          setEditingCartItem(null);
+        }}
         onConfirm={handleCustomizationConfirm}
+        initialValues={editingCartItem?.customizationValues || null}
       />
     </ErrorBoundary>
   );
@@ -643,6 +691,7 @@ export default function Kiosko() {
 interface CartContentProps {
   cart: CartItem[];
   updateQuantity: (itemId: string, delta: number) => void;
+  onEditItem: (item: CartItem) => void;
   total: number;
   itemCount: number;
   setStep: (step: "locator" | "menu" | "confirm") => void;
@@ -652,6 +701,7 @@ interface CartContentProps {
 function CartContent({
   cart,
   updateQuantity,
+  onEditItem,
   total,
   itemCount,
   setStep,
@@ -691,7 +741,18 @@ function CartContent({
                 {formatPrice(item.unit_price * item.quantity)}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 justify-end mt-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-primary"
+                onClick={() => {
+                  onEditItem(item);
+                  setCartOpen(false);
+                }}
+              >
+                <Edit3 className="h-4 w-4" />
+              </Button>
               <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
                 <Button
                   size="icon"
