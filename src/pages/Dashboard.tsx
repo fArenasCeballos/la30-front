@@ -11,6 +11,9 @@ import {
   TrendingUp,
   BarChart3,
   Loader2,
+  Banknote,
+  CreditCard,
+  Smartphone,
 } from "lucide-react";
 import {
   BarChart,
@@ -49,6 +52,9 @@ export default function Dashboard() {
         completed_today: number;
         cancelled_today: number;
         avg_ticket: number;
+        cash_total: number;
+        card_total: number;
+        nequi_total: number;
       };
     },
     refetchInterval: 30000, // Cada 30 seg
@@ -119,6 +125,33 @@ export default function Dashboard() {
     },
   ];
 
+  const paymentCards = [
+    {
+      label: "Efectivo",
+      value: formatPrice(stats?.cash_total ?? 0),
+      icon: Banknote,
+      color: "text-emerald-500",
+      bgColor: "bg-emerald-500/10",
+      borderColor: "border-emerald-500/30",
+    },
+    {
+      label: "Tarjeta",
+      value: formatPrice(stats?.card_total ?? 0),
+      icon: CreditCard,
+      color: "text-blue-500",
+      bgColor: "bg-blue-500/10",
+      borderColor: "border-blue-500/30",
+    },
+    {
+      label: "Nequi / Transferencia",
+      value: formatPrice(stats?.nequi_total ?? 0),
+      icon: Smartphone,
+      color: "text-purple-500",
+      bgColor: "bg-purple-500/10",
+      borderColor: "border-purple-500/30",
+    },
+  ];
+
   if (loadingStats) {
     return (
       <div className="h-[80vh] flex items-center justify-center">
@@ -149,6 +182,24 @@ export default function Dashboard() {
                 </span>
               </div>
               <p className="font-display text-2xl font-bold">{card.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Payment method breakdown */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {paymentCards.map((card) => (
+            <div
+              key={card.label}
+              className={`pos-card bg-card p-4 rounded-xl border-2 shadow-sm ${card.borderColor} ${card.bgColor}`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <card.icon className={`h-5 w-5 ${card.color}`} />
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                  {card.label}
+                </span>
+              </div>
+              <p className={`font-display text-2xl font-bold ${card.color}`}>{card.value}</p>
             </div>
           ))}
         </div>

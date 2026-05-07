@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import type { OrderStatus } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { formatPrice } from '@/lib/formatPrice';
-import { FileText, Download, Filter, CalendarIcon, DollarSign, TrendingUp, ShoppingCart, Clock } from 'lucide-react';
+import { FileText, Download, Filter, CalendarIcon, DollarSign, TrendingUp, ShoppingCart, Clock, Banknote, CreditCard, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/StatusBadge';
 import {
@@ -50,6 +50,17 @@ interface ReportOrder {
   }[];
 }
 
+interface ReportPayment {
+  id: string;
+  order_id: string;
+  method: 'efectivo' | 'tarjeta' | 'nequi' | 'mixto';
+  amount_total: number;
+  amount_efectivo: number;
+  amount_tarjeta: number;
+  amount_nequi: number;
+  created_at: string;
+}
+
 export default function Reporteria() {
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -59,13 +70,17 @@ export default function Reporteria() {
   });
   const [activeQuick, setActiveQuick] = useState('Hoy');
 
+  const shiftRange = useMemo(() => {
+    if (!dateRange?.from) return null;
+    return getCalendarShiftRange(dateRange.from, dateRange.to);
+  }, [dateRange]);
+
   const { data: reportOrders = [], isLoading } = useQuery({
     queryKey: ['report-orders', user?.id, dateRange],
     queryFn: async () => {
-      if (!dateRange?.from) return [];
-      const shift = getCalendarShiftRange(dateRange.from, dateRange.to);
-      const from = shift.from.toISOString();
-      const to = shift.to.toISOString();
+      if (!shiftRange) return [];
+      const from = shiftRange.from.toISOString();
+      const to = shiftRange.to.toISOString();
 
       // Fetch orders with nested profile and items
       const { data, error } = await supabase
@@ -78,7 +93,27 @@ export default function Reporteria() {
       if (error) throw error;
       return (data as unknown as ReportOrder[]) || [];
     },
-    enabled: !!user && !!dateRange?.from,
+    enabled: !!user && !!shiftRange,
+  });
+
+  // Query de pagos para el desglose por método
+  const { data: reportPayments = [] } = useQuery({
+    queryKey: ['report-payments', user?.id, dateRange],
+    queryFn: async () => {
+      if (!shiftRange) return [];
+      const from = shiftRange.from.toISOString();
+      const to = shiftRange.to.toISOString();
+
+      const { data, error } = await supabase
+        .from('payments')
+        .select('id, order_id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi, created_at')
+        .gte('created_at', from)
+        .lte('created_at', to);
+
+      if (error) throw error;
+      return (data as unknown as ReportPayment[]) || [];
+    },
+    enabled: !!user && !!shiftRange,
   });
 
   const filteredOrders = useMemo(() => {
@@ -111,6 +146,43 @@ export default function Reporteria() {
       totalOrders: reportOrders.length,
     };
   }, [reportOrders]);
+
+  // Desglose por método de pago
+  // SOLO pagos de pedidos ENTREGADOS
+  // NO mixto: method indica el método → amount_total es el monto real del pedido
+  // Mixto: los sub-montos indican cómo se dividió el total entre métodos
+  // (amount_efectivo guarda amount_received en pagos simples, NO sirve para el desglose)
+  const paymentSummary = useMemo(() => {
+    let efectivo = 0;
+    let tarjeta = 0;
+    let nequi = 0;
+
+    // Solo contar pagos de pedidos entregados
+    const deliveredOrderIds = new Set(
+      reportOrders.filter(o => o.status === 'entregado').map(o => o.id)
+    );
+
+    reportPayments
+      .filter(p => deliveredOrderIds.has(p.order_id))
+      .forEach((p) => {
+        if (p.method === 'mixto') {
+          // Pago mixto: usar sub-montos (representan la división real)
+          efectivo += p.amount_efectivo || 0;
+          tarjeta += p.amount_tarjeta || 0;
+          nequi += p.amount_nequi || 0;
+        } else {
+          // Pago simple: usar method + amount_total (el total real del pedido)
+          switch (p.method) {
+            case 'efectivo': efectivo += p.amount_total; break;
+            case 'tarjeta':  tarjeta += p.amount_total; break;
+            case 'nequi':    nequi += p.amount_total; break;
+            default: efectivo += p.amount_total; break;
+          }
+        }
+      });
+
+    return { efectivo, tarjeta, nequi, total: efectivo + tarjeta + nequi };
+  }, [reportPayments, reportOrders]);
 
   const hourlyData = useMemo(() => {
     const hours: Record<number, number> = {};
@@ -265,6 +337,31 @@ export default function Reporteria() {
             </div>
           </div>
 
+          {/* Desglose por método de pago */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Banknote className="h-5 w-5 text-emerald-500" />
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Efectivo</p>
+              </div>
+              <p className="font-display text-2xl font-bold text-emerald-600">{formatPrice(paymentSummary.efectivo)}</p>
+            </div>
+            <div className="rounded-xl border-2 border-blue-500/30 bg-blue-500/5 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CreditCard className="h-5 w-5 text-blue-500" />
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Tarjeta</p>
+              </div>
+              <p className="font-display text-2xl font-bold text-blue-600">{formatPrice(paymentSummary.tarjeta)}</p>
+            </div>
+            <div className="rounded-xl border-2 border-purple-500/30 bg-purple-500/5 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Smartphone className="h-5 w-5 text-purple-500" />
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Nequi / Transferencia</p>
+              </div>
+              <p className="font-display text-2xl font-bold text-purple-600">{formatPrice(paymentSummary.nequi)}</p>
+            </div>
+          </div>
+
           <div className="pos-card">
             <h3 className="font-display font-bold mb-4">Ventas por hora</h3>
             <div className="h-56">
@@ -308,6 +405,34 @@ export default function Reporteria() {
                 <p className="text-sm text-muted-foreground mb-1">Cancelados</p>
                 <p className="font-display text-2xl font-bold text-red-600">{formatPrice(cashSummary.cancelledTotal)}</p>
                 <p className="text-xs text-muted-foreground mt-1">{cashSummary.cancelledCount} pedidos cancelados</p>
+              </div>
+            </div>
+
+            {/* Desglose por método de pago */}
+            <div className="border-t pt-4 mb-4">
+              <h4 className="font-display font-bold text-base mb-4">💰 Desglose por método de pago</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 p-4 text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Banknote className="h-5 w-5 text-emerald-500" />
+                    <p className="text-sm text-muted-foreground">Efectivo</p>
+                  </div>
+                  <p className="font-display text-2xl font-bold text-emerald-600">{formatPrice(paymentSummary.efectivo)}</p>
+                </div>
+                <div className="rounded-xl border-2 border-blue-500/30 bg-blue-500/5 p-4 text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <CreditCard className="h-5 w-5 text-blue-500" />
+                    <p className="text-sm text-muted-foreground">Tarjeta</p>
+                  </div>
+                  <p className="font-display text-2xl font-bold text-blue-600">{formatPrice(paymentSummary.tarjeta)}</p>
+                </div>
+                <div className="rounded-xl border-2 border-purple-500/30 bg-purple-500/5 p-4 text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Smartphone className="h-5 w-5 text-purple-500" />
+                    <p className="text-sm text-muted-foreground">Nequi / Transferencia</p>
+                  </div>
+                  <p className="font-display text-2xl font-bold text-purple-600">{formatPrice(paymentSummary.nequi)}</p>
+                </div>
               </div>
             </div>
 
