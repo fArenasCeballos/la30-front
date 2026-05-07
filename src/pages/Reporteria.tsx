@@ -198,15 +198,18 @@ export default function Reporteria() {
 
   const waiterData = useMemo(() => {
     const map: Record<string, { name: string; orders: number; total: number }> = {};
-    reportOrders.forEach(o => {
-      const key = o.created_by;
-      const name = o.profiles?.name || 'Sistema';
-      if (!map[key]) {
-        map[key] = { name, orders: 0, total: 0 };
-      }
-      map[key].orders++;
-      map[key].total += o.total;
-    });
+    // Solo pedidos entregados cuentan como ventas reales por mesero
+    reportOrders
+      .filter(o => o.status === 'entregado')
+      .forEach(o => {
+        const key = o.created_by;
+        const name = o.profiles?.name || 'Sistema';
+        if (!map[key]) {
+          map[key] = { name, orders: 0, total: 0 };
+        }
+        map[key].orders++;
+        map[key].total += o.total;
+      });
     return Object.values(map).sort((a, b) => b.total - a.total);
   }, [reportOrders]);
 

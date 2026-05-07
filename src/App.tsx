@@ -19,6 +19,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Reporteria = lazy(() => import("./pages/Reporteria"));
 const Inventario = lazy(() => import("./pages/Inventario"));
 const Usuarios = lazy(() => import("./pages/Usuarios"));
+const MisPedidos = lazy(() => import("./pages/MisPedidos"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoading = () => (
@@ -64,6 +65,7 @@ const App = () => (
                       <Route path="/reporteria" element={<Reporteria />} />
                       <Route path="/inventario" element={<Inventario />} />
                       <Route path="/usuarios" element={<Usuarios />} />
+                      <Route path="/mis-pedidos" element={<MisPedidos />} />
                     </Route>
                     <Route path="*" element={<NotFound />} />
                   </Routes>

@@ -11,6 +11,7 @@ import {
   Package,
   Users,
   Wrench,
+  ClipboardList,
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { NavLink } from "@/components/NavLink";
@@ -47,6 +48,12 @@ const NAV_ITEMS: {
   { to: "/reporteria", label: "Reportes", icon: FileText, roles: ["admin"] },
   { to: "/inventario", label: "Inventario", icon: Package, roles: ["admin"] },
   { to: "/usuarios", label: "Usuarios", icon: Users, roles: ["admin"] },
+  {
+    to: "/mis-pedidos",
+    label: "Mis Pedidos",
+    icon: ClipboardList,
+    roles: ["mesero", "caja", "admin"],
+  },
 ];
 
 export function AppLayout() {
