@@ -42,18 +42,51 @@ interface CartItem {
   unit_price: number;
 }
 
+// --- Cart persistence via sessionStorage ---
+const CART_STORAGE_KEY = "la30_kiosko_draft";
+
+interface CartDraft {
+  locator: string;
+  step: "locator" | "menu" | "confirm";
+  orderNotes: string;
+  items: { productId: string; quantity: number; notes?: string; unitPrice: number }[];
+}
+
+function saveDraft(draft: CartDraft) {
+  try {
+    sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(draft));
+  } catch { /* quota exceeded — ignore */ }
+}
+
+function loadDraft(): CartDraft | null {
+  try {
+    const raw = sessionStorage.getItem(CART_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as CartDraft;
+  } catch { return null; }
+}
+
+function clearDraft() {
+  sessionStorage.removeItem(CART_STORAGE_KEY);
+}
+
 export default function Kiosko() {
   const [searchParams] = useSearchParams();
   const editOrderId = searchParams.get("edit");
   const { addOrder, updateOrder, orders } = useOrders();
-  const [locator, setLocator] = useState("");
+
+  // Initialize from draft if available (and not in edit mode)
+  const savedDraft = !editOrderId ? loadDraft() : null;
+
+  const [locator, setLocator] = useState(savedDraft?.locator ?? "");
   const [activeCategory, setActiveCategory] = useState<string>("");
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [step, setStep] = useState<"locator" | "menu" | "confirm">("locator");
-  const [orderNotes, setOrderNotes] = useState("");
+  const [cart, setCart] = useState<CartItem[]>([]); // rehydrated in useEffect below
+  const [step, setStep] = useState<"locator" | "menu" | "confirm">(savedDraft?.step ?? "locator");
+  const [orderNotes, setOrderNotes] = useState(savedDraft?.orderNotes ?? "");
   const [customizingProduct, setCustomizingProduct] =
     useState<ProductWithCategory | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [draftHydrated, setDraftHydrated] = useState(false);
 
   // Queries con React Query
   const { data: categories = [], isLoading: loadingCats } = useQuery({
@@ -86,6 +119,62 @@ export default function Kiosko() {
       setActiveCategory(categories[0].name);
     }
   }, [categories, activeCategory]);
+
+  // Rehydrate cart from sessionStorage once products are loaded
+  useEffect(() => {
+    if (draftHydrated || editOrderId || products.length === 0) return;
+    const draft = loadDraft();
+    if (!draft || draft.items.length === 0) {
+      setDraftHydrated(true);
+      return;
+    }
+    const rehydrated: CartItem[] = [];
+    const skipped: string[] = [];
+    for (const saved of draft.items) {
+      const product = products.find((p) => p.id === saved.productId);
+      if (!product) {
+        skipped.push(saved.productId);
+        continue;
+      }
+      const cartKey = `${product.id}-${saved.notes || ""}`;
+      rehydrated.push({
+        id: cartKey,
+        product,
+        quantity: saved.quantity,
+        notes: saved.notes,
+        unit_price: product.price, // always use current price
+      });
+    }
+    if (rehydrated.length > 0) {
+      setCart(rehydrated);
+      toast.info(`Carrito restaurado (${rehydrated.length} productos)`, { duration: 2000 });
+    }
+    if (skipped.length > 0) {
+      toast.warning(`${skipped.length} producto(s) ya no disponibles fueron removidos`, { duration: 3000 });
+    }
+    setDraftHydrated(true);
+  }, [products, draftHydrated, editOrderId]);
+
+  // Persist cart state to sessionStorage on every change
+  useEffect(() => {
+    if (!draftHydrated && !editOrderId) return; // don't overwrite before hydration
+    if (editOrderId) return; // don't persist edit mode
+    if (cart.length === 0 && step === "locator" && !locator) {
+      clearDraft();
+      return;
+    }
+    saveDraft({
+      locator,
+      step,
+      orderNotes,
+      items: cart.map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+        notes: item.notes,
+        unitPrice: item.unit_price,
+      })),
+    });
+  }, [cart, locator, step, orderNotes, draftHydrated, editOrderId]);
 
   // Cargar pedido para editar si existe editOrderId
   useEffect(() => {
@@ -208,6 +297,7 @@ export default function Kiosko() {
       setLocator("");
       setOrderNotes("");
       setStep("locator");
+      clearDraft();
     } finally {
       setIsSending(false);
     }
