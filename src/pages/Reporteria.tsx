@@ -122,13 +122,14 @@ export default function Reporteria() {
   }, [reportOrders, statusFilter]);
 
   const summary = useMemo(() => {
-    const total = filteredOrders.reduce((sum, o) => sum + o.total, 0);
-    const avgTicket = filteredOrders.length > 0 ? total / filteredOrders.length : 0;
-    const itemsSold = filteredOrders.reduce((sum, o) =>
-      sum + (o.order_items?.reduce((s: number, i) => s + i.quantity, 0) || 0), 0
-    );
+    // Solo pedidos entregados cuentan para ventas reales
     const delivered = filteredOrders.filter(o => o.status === 'entregado');
     const cancelled = filteredOrders.filter(o => o.status === 'cancelado');
+    const total = delivered.reduce((sum, o) => sum + o.total, 0);
+    const avgTicket = delivered.length > 0 ? total / delivered.length : 0;
+    const itemsSold = delivered.reduce((sum, o) =>
+      sum + (o.order_items?.reduce((s: number, i) => s + i.quantity, 0) || 0), 0
+    );
     return { total, avgTicket, count: filteredOrders.length, itemsSold, delivered: delivered.length, cancelled: cancelled.length };
   }, [filteredOrders]);
 
@@ -186,10 +187,13 @@ export default function Reporteria() {
 
   const hourlyData = useMemo(() => {
     const hours: Record<number, number> = {};
-    reportOrders.forEach(o => {
-      const h = new Date(o.created_at).getHours();
-      hours[h] = (hours[h] || 0) + o.total;
-    });
+    // Solo pedidos entregados en el gráfico de ventas por hora
+    reportOrders
+      .filter(o => o.status === 'entregado')
+      .forEach(o => {
+        const h = new Date(o.created_at).getHours();
+        hours[h] = (hours[h] || 0) + o.total;
+      });
     return Array.from({ length: 24 }, (_, i) => ({
       hora: `${i}:00`,
       ventas: hours[i] || 0,
