@@ -6,8 +6,10 @@ import { ChefHat, CheckCheck, Clock, MapPin, Loader2, CheckCircle } from 'lucide
 import type { OrderStatus } from '@/types';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
+import { cn } from '@/lib/utils';
+
 export default function Cocina() {
-  const { getOrdersByStatus, updateOrderStatus } = useOrders();
+  const { getOrdersByStatus, updateOrderStatus, toggleOrderItem } = useOrders();
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
 
   const confirmados = getOrdersByStatus('confirmado') || [];
@@ -91,7 +93,11 @@ export default function Cocina() {
           ))}
 
           {/* In preparation */}
-          {enPreparacion.map(order => (
+          {enPreparacion.map(order => {
+            const validItems = (order.order_items ?? []).filter(item => item != null && item.products != null);
+            const allChecked = validItems.length > 0 && validItems.every(item => item.is_completed);
+
+            return (
             <div key={order.id} className="rounded-xl border-2 border-preparing bg-preparing/10 p-4 animate-pulse-glow">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -101,11 +107,19 @@ export default function Cocina() {
                 <StatusBadge status={order.status} />
               </div>
               <div className="space-y-2 mb-4">
-                {(order.order_items || []).map((item) => (
-                  <div key={item.id} className="flex gap-2 text-sm">
-                    <span className="font-bold text-preparing">{item.quantity}x</span>
-                    <span>{item.products?.name || "Producto desconocido"}</span>
-                    {item.notes && <span className="text-muted-foreground">• {item.notes}</span>}
+                {validItems.map((item) => (
+                  <div key={item.id} className="flex gap-2 text-sm items-center">
+                    <input
+                      type="checkbox"
+                      checked={!!item.is_completed}
+                      onChange={(e) => toggleOrderItem(item.id, e.target.checked)}
+                      className="h-5 w-5 rounded border-gray-300 text-preparing focus:ring-preparing shrink-0 cursor-pointer"
+                    />
+                    <div className={cn("flex-1", item.is_completed && "line-through text-muted-foreground opacity-70")}>
+                      <span className="font-bold text-preparing mr-2">{item.quantity}x</span>
+                      <span>{item.products?.name || "Producto desconocido"}</span>
+                      {item.notes && <span className="text-muted-foreground ml-1">• {item.notes}</span>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -114,7 +128,7 @@ export default function Cocina() {
                 variant="success"
                 className="w-full"
                 onClick={() => handleUpdateStatus(order.id, 'listo')}
-                disabled={updatingIds.has(order.id)}
+                disabled={updatingIds.has(order.id) || !allChecked}
               >
                 {updatingIds.has(order.id) ? (
                   <Loader2 className="h-5 w-5 mr-2 animate-spin" />
@@ -124,7 +138,8 @@ export default function Cocina() {
                 ¡Listo!
               </Button>
             </div>
-          ))}
+            );
+          })}
 
           {/* Ready */}
           {listos.map(order => (

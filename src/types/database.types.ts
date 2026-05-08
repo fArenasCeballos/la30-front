@@ -308,6 +308,7 @@ export type Database = {
           notes: string | null;
           customizations: Json | null;
           extras: Json | null;
+          is_completed: boolean;
           created_at: string;
         };
         Insert: {
@@ -320,6 +321,7 @@ export type Database = {
           notes?: string | null;
           customizations?: Json | null;
           extras?: Json | null;
+          is_completed?: boolean;
           created_at?: string;
         };
         Update: {
@@ -332,6 +334,7 @@ export type Database = {
           notes?: string | null;
           customizations?: Json | null;
           extras?: Json | null;
+          is_completed?: boolean;
           created_at?: string;
         };
         Relationships: [
@@ -479,6 +482,10 @@ export type Database = {
       update_order_status: {
         Args: { p_order_id: string; p_status: string };
         Returns: Json;
+      };
+      toggle_order_item_completed: {
+        Args: { p_item_id: string; p_completed: boolean };
+        Returns: undefined;
       };
       process_payment: {
         Args: {

@@ -1,5 +1,6 @@
 import type { Order } from "@/types";
 import { StatusBadge } from "./StatusBadge";
+import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/formatPrice";
 import { Clock, MapPin } from "lucide-react";
 
@@ -17,9 +18,11 @@ interface OrderCardProps {
   order: Order;
   actions?: React.ReactNode;
   compact?: boolean;
+  checkable?: boolean;
+  onToggleItem?: (itemId: string, completed: boolean) => void;
 }
 
-export function OrderCard({ order, actions, compact }: OrderCardProps) {
+export function OrderCard({ order, actions, compact, checkable, onToggleItem }: OrderCardProps) {
   // Filtrar items que tengan producto válido (guard contra joins incompletos)
   const validItems = (order.order_items ?? []).filter(
     (item) => item != null && item.products != null
@@ -40,17 +43,27 @@ export function OrderCard({ order, actions, compact }: OrderCardProps) {
       {!compact && validItems.length > 0 && (
         <div className="space-y-1.5 mb-3">
           {validItems.map((item) => (
-            <div key={item.id} className="flex justify-between text-sm">
-              <span>
-                <span className="font-medium">{item.quantity}x</span>{" "}
-                {item.products?.name ?? "Producto"}
-                {item.notes && (
-                  <span className="text-muted-foreground ml-1">
-                    ({item.notes})
-                  </span>
+            <div key={item.id} className="flex justify-between text-sm items-center gap-2">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {checkable && onToggleItem && (
+                  <input
+                    type="checkbox"
+                    checked={!!item.is_completed}
+                    onChange={(e) => onToggleItem(item.id, e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary shrink-0"
+                  />
                 )}
-              </span>
-              <span className="text-muted-foreground">
+                <span className={cn("truncate", item.is_completed && checkable ? "line-through text-muted-foreground" : "")}>
+                  <span className="font-medium">{item.quantity}x</span>{" "}
+                  {item.products?.name ?? "Producto"}
+                  {item.notes && (
+                    <span className="text-muted-foreground ml-1">
+                      ({item.notes})
+                    </span>
+                  )}
+                </span>
+              </div>
+              <span className="text-muted-foreground shrink-0">
                 {formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}
               </span>
             </div>

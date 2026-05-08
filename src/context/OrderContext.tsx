@@ -38,6 +38,7 @@ export interface OrderContextType {
     notes?: string,
   ) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
+  toggleOrderItem: (itemId: string, completed: boolean) => Promise<void>;
   processPayment: (
     orderId: string,
     method: string,
@@ -349,6 +350,44 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     [queryClient, user?.id],
   );
 
+  const toggleOrderItem = useCallback(
+    async (itemId: string, completed: boolean) => {
+      const previousOrders = queryClient.getQueryData(["orders", user?.id]);
+      const previousActive = queryClient.getQueryData([
+        "active-orders",
+        user?.id,
+      ]);
+
+      const updateFn = (old: Order[] | undefined) => {
+        if (!old) return old;
+        return old.map((order) => {
+          if (!order.order_items?.some(item => item.id === itemId)) return order;
+          return {
+            ...order,
+            order_items: order.order_items.map((item) =>
+              item.id === itemId ? { ...item, is_completed: completed } : item
+            ),
+          };
+        });
+      };
+
+      queryClient.setQueryData(["orders", user?.id], updateFn);
+      queryClient.setQueryData(["active-orders", user?.id], updateFn);
+
+      const { error } = await supabase.rpc("toggle_order_item_completed", {
+        p_item_id: itemId,
+        p_completed: completed,
+      });
+
+      if (error) {
+        toast.error(`Error: ${error.message}`);
+        queryClient.setQueryData(["orders", user?.id], previousOrders);
+        queryClient.setQueryData(["active-orders", user?.id], previousActive);
+      }
+    },
+    [queryClient, user?.id],
+  );
+
   const processPayment = useCallback(
     async (
       orderId: string, 
@@ -402,6 +441,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       addOrder,
       updateOrder,
       updateOrderStatus,
+      toggleOrderItem,
       processPayment,
       getOrdersByStatus,
       getCompletedOrders,
@@ -415,6 +455,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       addOrder,
       updateOrder,
       updateOrderStatus,
+      toggleOrderItem,
       processPayment,
       getOrdersByStatus,
       getCompletedOrders,

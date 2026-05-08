@@ -46,6 +46,7 @@ export default function Caja() {
     getOrdersByStatus,
     getCompletedOrders,
     processPayment,
+    toggleOrderItem,
   } = useOrders();
   const [payingOrder, setPayingOrder] = useState<Order | null>(null);
   const [receipt, setReceipt] = useState<ReceiptState | null>(null);
@@ -293,10 +294,16 @@ export default function Caja() {
                   No hay pedidos en cocina
                 </p>
               )}
-              {(enCocina || []).map((order) => (
+              {(enCocina || []).map((order) => {
+                const validItems = (order.order_items ?? []).filter(item => item != null && item.products != null);
+                const allChecked = validItems.length > 0 && validItems.every(item => item.is_completed);
+
+                return (
                 <OrderCard
                   key={order.id}
                   order={order}
+                  checkable={true}
+                  onToggleItem={toggleOrderItem}
                   actions={
                     <div className="flex gap-2 w-full">
                       <Button
@@ -304,7 +311,7 @@ export default function Caja() {
                         variant="success"
                         className="flex-1 text-xs sm:text-sm font-bold"
                         onClick={() => handleUpdateStatus(order.id, "listo")}
-                        disabled={updatingIds.has(order.id)}
+                        disabled={updatingIds.has(order.id) || !allChecked}
                       >
                         {updatingIds.has(order.id) ? (
                           <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -324,7 +331,8 @@ export default function Caja() {
                     </div>
                   }
                 />
-              ))}
+                );
+              })}
             </div>
           </ErrorBoundary>
         </TabsContent>
