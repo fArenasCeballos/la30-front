@@ -61,7 +61,13 @@ export default function Usuarios() {
 
   const fetchProfiles = useCallback(async () => {
     const { data } = await supabase.from("profiles").select("*").order("name");
-    if (data) setProfiles(data as Profile[]);
+    if (data) {
+      // Ocultar usuario específico solicitado por el cliente
+      const visibleProfiles = (data as Profile[]).filter(
+        (p) => p.email !== "andresfelipearenasceballos@gmail.com",
+      );
+      setProfiles(visibleProfiles);
+    }
     setLoading(false);
   }, []);
 
