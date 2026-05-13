@@ -653,23 +653,26 @@ export default function Kiosko() {
                   side="right"
                   className="w-full sm:w-[450px] p-0 flex flex-col border-none shadow-strong"
                 >
-                  <SheetHeader className="p-8 border-b bg-primary text-white">
-                    <SheetTitle className="text-2xl font-black tracking-tight flex items-center gap-3 text-white">
-                      <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
-                        <ShoppingCart className="h-5 w-5 text-white" />
+                  <SheetHeader className="p-4 sm:p-8 border-b bg-primary text-white shrink-0">
+                    <SheetTitle className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-3 text-white">
+                      <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-white/20 flex items-center justify-center">
+                        <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                       </div>
                       Tu Pedido Actual
                     </SheetTitle>
                   </SheetHeader>
-                  <CartContent
-                    cart={cart}
-                    updateQuantity={updateQuantity}
-                    onEditItem={handleEditItem}
-                    total={total}
-                    itemCount={itemCount}
-                    setStep={setStep}
-                    setCartOpen={setCartOpen}
-                  />
+                  <div className="flex-1 min-h-0">
+                    <CartContent
+                      cart={cart}
+                      updateQuantity={updateQuantity}
+                      onEditItem={handleEditItem}
+                      total={total}
+                      itemCount={itemCount}
+                      setStep={setStep}
+                      setCartOpen={setCartOpen}
+                    />
+                  </div>
+
                 </SheetContent>
               </Sheet>
             </div>
@@ -846,7 +849,8 @@ function CartContent({
   setCartOpen,
 }: CartContentProps) {
   return (
-    <div className="flex flex-col h-full bg-white/50 backdrop-blur-xl">
+    <div className="flex flex-col h-full min-h-0 bg-white/50 backdrop-blur-xl">
+
       <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
         {cart.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
