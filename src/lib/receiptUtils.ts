@@ -356,44 +356,34 @@ export async function silentPrint(bodyHTML: string, _title?: string): Promise<vo
         }
 
         @media print {
-          /* REGLA RADICAL: Todo es invisible por defecto */
-          html, body {
+          /* REGLA MAESTRA: Ocultar todo lo que sea hijo directo del body excepto el mount */
+          body > *:not(#print-mount) {
+            display: none !important;
+            height: 0 !important;
+            overflow: hidden !important;
             visibility: hidden !important;
+          }
+
+          /* Asegurar que html y body no tengan scroll ni márgenes extraños */
+          html, body {
             margin: 0 !important;
             padding: 0 !important;
             height: auto !important;
             background: #fff !important;
           }
 
-          /* EXCEPCIÓN: El ticket y sus hijos son visibles */
-          #print-mount, #print-mount * {
+          /* El contenedor de impresión debe ser visible y ocupar el ancho */
+          #print-mount {
+            display: block !important;
+            visibility: visible !important;
+            width: 100% !important;
+          }
+
+          #print-mount * {
             visibility: visible !important;
           }
 
-          /* POSICIONAMIENTO: El ticket manda en la página */
-          #print-mount {
-            display: block !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            z-index: 99999 !important;
-          }
-
-          /* CAZA DE PORTALES: Forzar ocultación de modales, diálogos y overlays */
-          #root, 
-          [role="dialog"], 
-          [data-radix-portal], 
-          .sonner-toast, 
-          .fixed, 
-          .absolute {
-            display: none !important;
-            opacity: 0 !important;
-          }
-
-          /* Estilos del ticket */
+          /* Estilos específicos del ticket */
           ${PRINT_STYLES}
         }
       </style>
@@ -411,9 +401,9 @@ export async function silentPrint(bodyHTML: string, _title?: string): Promise<vo
 
     window.addEventListener("afterprint", handleAfterPrint);
 
-    // 4. Lanzar impresión con un delay más largo para asegurar renderizado
+    // 4. Lanzar impresión con un delay para asegurar renderizado de fuentes y estilos
     setTimeout(() => {
       window.print();
-    }, 500);
+    }, 800);
   });
 }
