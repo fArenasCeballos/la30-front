@@ -359,7 +359,7 @@ export default function Caja() {
           >
             <div className="grid gap-4 lg:gap-10 sm:grid-cols-2 xl:grid-cols-3">
               {confirmados.length === 0 ? (
-                <div className="col-span-full py-20 lg:py-40 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-[2rem] lg:rounded-[3rem] border-2 border-dashed border-accent/20 opacity-60 space-y-6">
+                <div className="col-span-full py-20 lg:py-40 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-4xl lg:rounded-[3rem] border-2 border-dashed border-accent/20 opacity-60 space-y-6">
                   <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
                     <DollarSign className="h-10 w-10 text-muted-foreground/60" />
                   </div>
@@ -404,7 +404,7 @@ export default function Caja() {
           >
             <div className="grid gap-4 lg:gap-10 sm:grid-cols-2 xl:grid-cols-3">
               {enCocina.length === 0 ? (
-                <div className="col-span-full py-20 lg:py-40 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-[2rem] lg:rounded-[3rem] border-2 border-dashed border-accent/20 opacity-60 space-y-6">
+                <div className="col-span-full py-20 lg:py-40 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-4xl lg:rounded-[3rem] border-2 border-dashed border-accent/20 opacity-60 space-y-6">
                   <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
                     <Loader2 className="h-10 w-10 text-muted-foreground/60 animate-spin" />
                   </div>

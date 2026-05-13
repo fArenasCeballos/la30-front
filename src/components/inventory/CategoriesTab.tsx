@@ -160,7 +160,8 @@ export function CategoriesTab() {
   };
 
   const toggleActive = async (id: string, currentStatus: boolean) => {
-    const { error } = await supabase.from("categories")
+    const { error } = await supabase
+      .from("categories")
       .update({ is_active: !currentStatus })
       .eq("id", id);
 
@@ -209,19 +210,19 @@ export function CategoriesTab() {
   }
 
   return (
-    <div className="space-y-16 animate-in fade-in duration-1000 fill-mode-both">
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-10 bg-white/40 backdrop-blur-xl p-10 rounded-[3.5rem] border-4 border-white shadow-strong relative overflow-hidden group">
+    <div className="space-y-8 lg:space-y-16 animate-in fade-in duration-1000 fill-mode-both">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-10 bg-white/40 backdrop-blur-xl p-6 lg:p-10 rounded-4xl lg:rounded-[3.5rem] border border-white shadow-strong relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-primary/10 transition-all duration-1000" />
 
         <div className="flex items-center gap-8 relative">
-          <div className="h-20 w-20 rounded-4xl bg-linear-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/5 group-hover:rotate-12 transition-transform duration-500">
-            <LayoutGrid className="h-10 w-10" strokeWidth={2.5} />
+          <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-linear-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/5 group-hover:rotate-12 transition-transform duration-500">
+            <LayoutGrid className="h-7 w-7 lg:h-10 lg:w-10" strokeWidth={2.5} />
           </div>
-          <div className="space-y-2">
-            <p className="text-[11px] font-black uppercase tracking-[0.5em] text-primary/40 leading-none">
+          <div className="space-y-1 lg:space-y-2">
+            <p className="text-[9px] lg:text-[11px] font-black uppercase tracking-[0.5em] text-primary/40 leading-none">
               ARQUITECTURA DE MENÚ
             </p>
-            <p className="text-4xl font-black tracking-tighter text-foreground">
+            <p className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground">
               {categories.length}{" "}
               <span className="text-primary/40 font-bold">Categorías</span>
             </p>
@@ -230,17 +231,17 @@ export function CategoriesTab() {
 
         <Button
           onClick={openNew}
-          className="h-20 px-12 rounded-[2.5rem] font-black text-sm tracking-widest shadow-strong shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-4 border-white/20 relative"
+          className="h-14 lg:h-20 px-8 lg:px-12 rounded-2xl lg:rounded-[2.5rem] font-black text-xs lg:text-sm tracking-widest shadow-strong shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-2 lg:border-4 border-white/20 relative"
         >
           <Plus
-            className="h-7 w-7 mr-4 group-hover:rotate-90 transition-transform duration-700"
+            className="h-5 w-5 lg:h-7 lg:w-7 mr-3 lg:mr-4 group-hover:rotate-90 transition-transform duration-700"
             strokeWidth={3}
           />
           NUEVA CATEGORÍA
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-10">
         {categories.map((cat, idx) => (
           <div
             key={cat.id}

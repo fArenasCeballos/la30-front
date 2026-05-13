@@ -243,27 +243,27 @@ export function ExtrasTab() {
   }
 
   return (
-    <div className="space-y-16 animate-in fade-in duration-1000 fill-mode-both">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 bg-white/40 backdrop-blur-xl p-10 rounded-[3.5rem] border-4 border-white shadow-strong relative overflow-hidden group">
+    <div className="space-y-8 lg:space-y-16 animate-in fade-in duration-1000 fill-mode-both">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-10 bg-white/40 backdrop-blur-xl p-6 lg:p-10 rounded-4xl lg:rounded-[3.5rem] border border-white shadow-strong relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-primary/10 transition-all duration-1000" />
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-10 relative">
-          <div className="h-20 w-20 rounded-4xl bg-linear-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/5 group-hover:rotate-12 transition-transform duration-500">
-            <Sparkles className="h-10 w-10" strokeWidth={2.5} />
+          <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-linear-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/5 group-hover:rotate-12 transition-transform duration-500">
+            <Sparkles className="h-7 w-7 lg:h-10 lg:w-10" strokeWidth={2.5} />
           </div>
           <div className="space-y-6 sm:space-y-2">
-            <p className="text-[11px] font-black uppercase tracking-[0.5em] text-primary/40 leading-none">
+            <p className="text-[9px] lg:text-[11px] font-black uppercase tracking-[0.5em] text-primary/40 leading-none">
               PERSONALIZACIÓN DE PLATOS
             </p>
             <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-              <p className="text-4xl font-black tracking-tighter text-foreground whitespace-nowrap">
+              <p className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground whitespace-nowrap">
                 {extras.length}{" "}
                 <span className="text-primary/40 font-bold">Adicionales</span>
               </p>
               <div className="h-12 w-[3px] bg-primary/10 hidden sm:block rounded-full" />
               <div className="relative group/select min-w-[280px]">
                 <Select value={filterCat} onValueChange={setFilterCat}>
-                  <SelectTrigger className="h-16 px-8 rounded-2xl border-4 border-white bg-white/60 backdrop-blur-md shadow-soft font-black text-xs uppercase tracking-widest transition-all focus:border-primary/40 focus:ring-0 group-hover/select:shadow-strong group-hover/select:scale-105">
+                  <SelectTrigger className="h-14 lg:h-16 px-6 lg:px-8 rounded-xl lg:rounded-2xl border-2 lg:border-4 border-white bg-white/60 backdrop-blur-md shadow-soft font-black text-[10px] lg:text-xs uppercase tracking-widest transition-all focus:border-primary/40 focus:ring-0 group-hover/select:shadow-strong group-hover/select:scale-105">
                     <SelectValue placeholder="Filtrar por grupo" />
                   </SelectTrigger>
                   <SelectContent className="rounded-[2.5rem] border-none shadow-strong p-3 bg-white/95 backdrop-blur-xl">
@@ -294,44 +294,44 @@ export function ExtrasTab() {
 
         <Button
           onClick={openNew}
-          className="h-20 px-12 rounded-[2.5rem] font-black text-sm tracking-widest shadow-strong shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-4 border-white/20 relative"
+          className="h-14 lg:h-20 px-8 lg:px-12 rounded-2xl lg:rounded-[2.5rem] font-black text-xs lg:text-sm tracking-widest shadow-strong shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-2 lg:border-4 border-white/20 relative"
         >
           <Plus
-            className="h-7 w-7 mr-4 group-hover:rotate-90 transition-transform duration-700"
+            className="h-5 w-5 lg:h-7 lg:w-7 mr-3 lg:mr-4 group-hover:rotate-90 transition-transform duration-700"
             strokeWidth={3}
           />
           NUEVO INGREDIENTE
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-10">
         {filtered.map((extra, idx) => (
           <div
             key={extra.id}
             className="pos-card group flex flex-col h-full border-4 transition-all duration-700 relative overflow-hidden bg-white/60 border-white hover:bg-white hover:border-primary/20 hover:shadow-2xl hover:scale-[1.03]"
             style={{ animationDelay: `${idx * 50}ms` }}
           >
-            <div className="flex items-start justify-between p-8 pb-4">
-              <div className="h-24 w-24 rounded-4xl bg-white border-4 border-accent/5 flex items-center justify-center text-6xl shadow-strong group-hover:scale-110 transition-all duration-700 group-hover:rotate-6 relative">
+            <div className="flex items-start justify-between p-4 lg:p-8 pb-4">
+              <div className="h-16 w-16 lg:h-24 lg:w-24 rounded-2xl lg:rounded-4xl bg-white border-2 lg:border-4 border-accent/5 flex items-center justify-center text-4xl lg:text-6xl shadow-strong group-hover:scale-110 transition-all duration-700 group-hover:rotate-6 relative">
                 <div className="absolute inset-0 bg-primary/5 rounded-full blur-xl scale-0 group-hover:scale-100 transition-transform duration-700" />
                 <span className="relative">{extra.icon || "➕"}</span>
               </div>
-              <div className="text-right space-y-2">
-                <p className="font-black text-4xl text-primary tracking-tighter group-hover:scale-110 transition-transform duration-500 origin-right">
+              <div className="text-right space-y-1 lg:space-y-2">
+                <p className="font-black text-xl lg:text-4xl text-primary tracking-tighter group-hover:scale-110 transition-transform duration-500 origin-right">
                   {formatPrice(extra.price_per_unit)}
                 </p>
-                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 block">
+                <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 block">
                   VALOR ADICIONAL
                 </span>
               </div>
             </div>
 
-            <div className="flex-1 p-8 pt-4 space-y-6">
+            <div className="flex-1 p-4 lg:p-8 pt-4 space-y-4 lg:space-y-6">
               <div className="space-y-2">
                 <p className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] leading-none">
                   IDENTIFICADOR: {extra.extra_key}
                 </p>
-                <h3 className="font-black text-3xl tracking-tighter leading-[1.1] group-hover:text-primary transition-colors duration-500 min-h-[2.2em]">
+                <h3 className="font-black text-xl lg:text-3xl tracking-tighter leading-[1.1] group-hover:text-primary transition-colors duration-500 min-h-[2.2em]">
                   {extra.label}
                 </h3>
               </div>
@@ -378,22 +378,22 @@ export function ExtrasTab() {
               </div>
             </div>
 
-            <div className="p-8 pt-0 flex items-center gap-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
+            <div className="p-4 lg:p-8 pt-0 flex items-center gap-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
               <Button
                 size="lg"
-                className="flex-1 h-16 rounded-2xl font-black text-[11px] tracking-widest shadow-strong bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
+                className="flex-1 h-12 lg:h-16 rounded-xl lg:rounded-2xl font-black text-[10px] lg:text-[11px] tracking-widest shadow-strong bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
                 onClick={() => openEdit(extra)}
               >
-                <Edit className="h-5 w-5 mr-3" />
+                <Edit className="h-4 w-4 lg:h-5 lg:w-5 mr-2 lg:mr-3" />
                 EDITAR
               </Button>
               <Button
                 size="icon"
                 variant="destructive"
-                className="h-16 w-16 rounded-2xl shadow-strong bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none"
+                className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl shadow-strong bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none"
                 onClick={() => setExtraToDelete(extra)}
               >
-                <Trash2 className="h-6 w-6" />
+                <Trash2 className="h-5 w-5 lg:h-6 lg:w-6" />
               </Button>
             </div>
 

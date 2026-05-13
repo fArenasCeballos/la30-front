@@ -607,7 +607,10 @@ export default function Reporteria() {
                       card.color,
                     )}
                   >
-                    <card.icon className="h-6 w-6 lg:h-8 lg:w-8" strokeWidth={3} />
+                    <card.icon
+                      className="h-6 w-6 lg:h-8 lg:w-8"
+                      strokeWidth={3}
+                    />
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 leading-none">
@@ -1040,7 +1043,7 @@ export default function Reporteria() {
                     BALANCE FINAL
                   </h3>
                 </div>
-                <div className="bg-primary p-8 lg:p-12 rounded-[2rem] lg:rounded-[2.5rem] shadow-strong shadow-primary/20 relative overflow-hidden group">
+                <div className="bg-primary p-8 lg:p-12 rounded-4xl lg:rounded-[2.5rem] shadow-strong shadow-primary/20 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-white/20 transition-all duration-700" />
                   <p className="text-white/60 font-black text-[9px] lg:text-[10px] tracking-[0.4em] uppercase mb-2">
                     GRAN TOTAL PERÍODO
@@ -1059,7 +1062,7 @@ export default function Reporteria() {
             </div>
           </div>
 
-          <div className="bg-accent/10 rounded-[2rem] lg:rounded-[3rem] p-6 lg:p-12 border-2 border-accent/20 relative group/section">
+          <div className="bg-accent/10 rounded-4xl lg:rounded-[3rem] p-6 lg:p-12 border-2 border-accent/20 relative group/section">
             <div className="flex items-center gap-3 lg:gap-4 mb-6 lg:mb-10 relative">
               <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-lg lg:rounded-xl bg-white border-2 shadow-soft flex items-center justify-center text-primary group-hover/section:scale-110 transition-transform">
                 <Banknote className="h-5 w-5 lg:h-6 lg:w-6" />
@@ -1106,7 +1109,10 @@ export default function Reporteria() {
                               : "bg-primary/10 text-primary",
                       )}
                     >
-                      <p.icon className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={2.5} />
+                      <p.icon
+                        className="h-5 w-5 lg:h-6 lg:w-6"
+                        strokeWidth={2.5}
+                      />
                     </div>
                     <p className="text-[10px] lg:text-[11px] font-black uppercase text-muted-foreground/40 tracking-widest leading-tight">
                       {p.label}
@@ -1409,7 +1415,7 @@ export default function Reporteria() {
                                     DESGLOSE DE CONSUMO
                                   </h4>
                                 </div>
-                                <div className="bg-white/80 backdrop-blur-md rounded-[2rem] lg:rounded-[3rem] p-6 lg:p-10 border-4 border-white shadow-strong">
+                                <div className="bg-white/80 backdrop-blur-md rounded-4xl lg:rounded-[3rem] p-6 lg:p-10 border-4 border-white shadow-strong">
                                   <div className="divide-y divide-accent/30">
                                     {order.order_items?.map((item) => (
                                       <div

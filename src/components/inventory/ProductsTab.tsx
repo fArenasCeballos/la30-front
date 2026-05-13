@@ -513,7 +513,7 @@ export function ProductsTab() {
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-10">
           <SortableContext
             items={filtered.map((p) => p.id)}
             strategy={rectSortingStrategy}
@@ -877,7 +877,7 @@ function SortableProductCard({
       )}
     >
       {/* Product Image Section */}
-      <div className="aspect-4/3 rounded-[2.5rem] bg-accent/10 m-3 overflow-hidden relative border-4 border-white shadow-soft group-hover:shadow-strong transition-all duration-700">
+      <div className="aspect-4/3 rounded-2xl lg:rounded-[2.5rem] bg-accent/10 m-2 lg:m-3 overflow-hidden relative border-2 lg:border-4 border-white shadow-soft group-hover:shadow-strong transition-all duration-700">
         <InventoryProductImage product={product} />
 
         {/* Drag Handle Overlay */}
@@ -941,7 +941,7 @@ function SortableProductCard({
       </div>
 
       {/* Content Info */}
-      <div className="flex-1 flex flex-col space-y-5 p-8 pt-2 relative">
+      <div className="flex-1 flex flex-col space-y-2 lg:space-y-5 p-4 lg:p-8 pt-2 relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 px-3 py-1 bg-primary/5 rounded-full border border-primary/10">
             <span className="text-[10px] mr-1.5">
@@ -961,7 +961,7 @@ function SortableProductCard({
           )}
         </div>
 
-        <h3 className="font-black text-2xl tracking-tighter text-foreground group-hover:text-primary transition-colors duration-500 leading-[1.1] min-h-[2.2em]">
+        <h3 className="font-black text-base lg:text-2xl tracking-tighter text-foreground group-hover:text-primary transition-colors duration-500 leading-[1.1] min-h-[2.2em]">
           {product.name}
         </h3>
 
@@ -970,7 +970,7 @@ function SortableProductCard({
             <p className="text-[9px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] mb-1">
               VALOR UNITARIO
             </p>
-            <p className="font-black text-4xl text-primary tracking-tighter group-hover:scale-110 transition-transform origin-left duration-700">
+            <p className="font-black text-xl lg:text-4xl text-primary tracking-tighter group-hover:scale-110 transition-transform origin-left duration-700">
               {formatPrice(product.price)}
             </p>
           </div>

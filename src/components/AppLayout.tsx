@@ -224,35 +224,41 @@ export function AppLayout() {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-6 left-4 right-4 z-50 bg-white/80 backdrop-blur-2xl border-2 border-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[2.5rem] p-2 flex items-center justify-between">
+      <nav className="lg:hidden fixed bottom-6 left-4 right-4 z-50 bg-white/90 backdrop-blur-3xl border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-[2.5rem] p-1.5 flex items-center justify-around overflow-hidden">
         {visibleNav.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
-            className="flex flex-col items-center justify-center flex-1 py-3 rounded-[1.75rem] transition-all relative group"
-            activeClassName="text-white scale-105"
+            className="flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-500 relative group min-w-[40px]"
+            activeClassName="text-primary"
           >
             {({ isActive }) => (
               <>
-                <item.icon
-                  className={cn(
-                    "h-5 w-5 transition-all duration-500 relative z-10",
-                    isActive ? "text-white scale-110" : "text-muted-foreground group-hover:text-primary",
+                <div className={cn(
+                  "relative z-10 flex flex-col items-center transition-all duration-500",
+                  isActive ? "translate-y-0" : "translate-y-0"
+                )}>
+                  <item.icon
+                    className={cn(
+                      "h-5 w-5 transition-all duration-500",
+                      isActive ? "text-white scale-110" : "text-muted-foreground/60 group-hover:text-primary group-hover:scale-110",
+                    )}
+                    strokeWidth={isActive ? 3 : 2.5}
+                  />
+                  {isActive && (
+                    <motion.span
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-[7px] font-black uppercase tracking-[0.2em] mt-1.5 text-white whitespace-nowrap"
+                    >
+                      {item.label.split(" ")[0]}
+                    </motion.span>
                   )}
-                  strokeWidth={isActive ? 3 : 2.5}
-                />
-                <span
-                  className={cn(
-                    "text-[8px] font-black uppercase tracking-widest mt-1.5 transition-all relative z-10",
-                    isActive ? "text-white" : "text-muted-foreground/60",
-                  )}
-                >
-                  {item.label.split(" ")[0]}
-                </span>
+                </div>
                 {isActive && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute inset-0 bg-primary rounded-[1.75rem] shadow-strong shadow-primary/20"
+                    className="absolute inset-0 bg-primary rounded-2xl shadow-lg shadow-primary/30"
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
