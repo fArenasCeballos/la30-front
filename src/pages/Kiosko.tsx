@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { formatPrice } from "@/lib/formatPrice";
 import type { Product, Category, ProductWithCategory } from "@/types";
 import { useOrders } from "@/context/OrderContext";
+import { useStore } from "@/context/StoreContext";
 import { ProductCustomizer } from "@/components/ProductCustomizer";
 import type { CustomizationValues } from "@/components/ProductCustomizer";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ import { supabase } from "@/lib/supabase";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { StatusBadge } from "@/components/StatusBadge";
 
 interface CartItem {
   id: string;
@@ -51,13 +53,20 @@ interface CartDraft {
   locator: string;
   step: "locator" | "menu" | "confirm";
   orderNotes: string;
-  items: { productId: string; quantity: number; notes?: string; unitPrice: number }[];
+  items: {
+    productId: string;
+    quantity: number;
+    notes?: string;
+    unitPrice: number;
+  }[];
 }
 
 function saveDraft(draft: CartDraft) {
   try {
     sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(draft));
-  } catch { /* quota exceeded — ignore */ }
+  } catch {
+    /* quota exceeded — ignore */
+  }
 }
 
 function loadDraft(): CartDraft | null {
@@ -65,7 +74,9 @@ function loadDraft(): CartDraft | null {
     const raw = sessionStorage.getItem(CART_STORAGE_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as CartDraft;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function clearDraft() {
@@ -76,6 +87,8 @@ export default function Kiosko() {
   const [searchParams] = useSearchParams();
   const editOrderId = searchParams.get("edit");
   const { addOrder, updateOrder, orders } = useOrders();
+  const { activeStore } = useStore();
+  const storeId = activeStore?.id;
 
   // Initialize from draft if available (and not in edit mode)
   const savedDraft = !editOrderId ? loadDraft() : null;
@@ -83,7 +96,9 @@ export default function Kiosko() {
   const [locator, setLocator] = useState(savedDraft?.locator ?? "");
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [cart, setCart] = useState<CartItem[]>([]); // rehydrated in useEffect below
-  const [step, setStep] = useState<"locator" | "menu" | "confirm">(savedDraft?.step ?? "locator");
+  const [step, setStep] = useState<"locator" | "menu" | "confirm">(
+    savedDraft?.step ?? "locator",
+  );
   const [orderNotes, setOrderNotes] = useState(savedDraft?.orderNotes ?? "");
   const [customizingProduct, setCustomizingProduct] =
     useState<ProductWithCategory | null>(null);
@@ -93,25 +108,29 @@ export default function Kiosko() {
 
   // Queries con React Query
   const { data: categories = [], isLoading: loadingCats } = useQuery({
-    queryKey: ["categories"],
+    queryKey: ["categories", storeId],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from("categories")
         .select("*")
         .eq("is_active", true)
         .order("sort_order");
+      if (storeId) query = query.contains("store_ids", [storeId]);
+      const { data } = await query;
       return (data || []) as Category[];
     },
   });
 
   const { data: products = [], isLoading: loadingProds } = useQuery({
-    queryKey: ["products"],
+    queryKey: ["products", storeId],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from("products")
         .select("*, categories(*)")
         .eq("available", true)
         .order("sort_order");
+      if (storeId) query = query.contains("store_ids", [storeId]);
+      const { data } = await query;
       return (data || []) as unknown as ProductWithCategory[];
     },
   });
@@ -150,10 +169,15 @@ export default function Kiosko() {
     }
     if (rehydrated.length > 0) {
       setCart(rehydrated);
-      toast.info(`Carrito restaurado (${rehydrated.length} productos)`, { duration: 2000 });
+      toast.info(`Carrito restaurado (${rehydrated.length} productos)`, {
+        duration: 2000,
+      });
     }
     if (skipped.length > 0) {
-      toast.warning(`${skipped.length} producto(s) ya no disponibles fueron removidos`, { duration: 3000 });
+      toast.warning(
+        `${skipped.length} producto(s) ya no disponibles fueron removidos`,
+        { duration: 3000 },
+      );
     }
     setDraftHydrated(true);
   }, [products, draftHydrated, editOrderId]);
@@ -193,18 +217,20 @@ export default function Kiosko() {
         setOrderNotes(orderToEdit.notes || "");
 
         // Transformar order_items a CartItem
-        const initialCart = (orderToEdit.order_items || []).map((item) => {
-          const product = item.products;
-          if (!product) return null;
-          const cartKey = `${product.id}-${item.notes || ""}`;
-          return {
-            id: cartKey,
-            product: product as ProductWithCategory,
-            quantity: item.quantity,
-            notes: item.notes || undefined,
-            unit_price: item.unit_price,
-          };
-        }).filter(Boolean) as CartItem[];
+        const initialCart = (orderToEdit.order_items || [])
+          .map((item) => {
+            const product = item.products;
+            if (!product) return null;
+            const cartKey = `${product.id}-${item.notes || ""}`;
+            return {
+              id: cartKey,
+              product: product as ProductWithCategory,
+              quantity: item.quantity,
+              notes: item.notes || undefined,
+              unit_price: item.unit_price,
+            };
+          })
+          .filter(Boolean) as CartItem[];
         setCart(initialCart);
         setStep("menu"); // Ir directo al menú al editar
       }
@@ -216,7 +242,8 @@ export default function Kiosko() {
     activeCategory || (categories.length > 0 ? categories[0].name : "");
 
   const filteredProducts = useMemo(
-    () => (products || []).filter((p) => p?.categories?.name === currentCategory),
+    () =>
+      (products || []).filter((p) => p?.categories?.name === currentCategory),
     [products, currentCategory],
   );
 
@@ -345,147 +372,223 @@ export default function Kiosko() {
     }
   };
 
-  // Step 1: Locator
+  // Step 1: Locator (Entry)
   if (step === "locator") {
     return (
       <ErrorBoundary>
-        <div className="flex flex-col items-center justify-center min-h-[80vh] p-4 sm:p-6">
-        <div className="w-full max-w-md space-y-6 text-center">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-            <ShoppingCart className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
+        <div className="section-container flex flex-col items-center justify-center min-h-[85vh] animate-in fade-in duration-700">
+          <div className="w-full max-w-xl space-y-12 text-center">
+            <div className="relative inline-block">
+              <div className="absolute inset-0 bg-primary/20 blur-[100px] rounded-full animate-pulse" />
+              <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-[2.5rem] bg-white border shadow-strong flex items-center justify-center mx-auto group">
+                <ShoppingCart className="h-10 w-10 sm:h-14 sm:w-14 text-primary group-hover:scale-110 transition-transform duration-500" />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-center gap-2 text-primary font-bold uppercase tracking-[0.3em] text-[10px]">
+                <div className="h-px w-6 sm:w-8 bg-primary/30" />
+                Nueva Orden
+                <div className="h-px w-6 sm:w-8 bg-primary/30" />
+              </div>
+              <h1 className="text-4xl sm:text-5xl font-black tracking-tight">
+                Identifica el Pedido
+              </h1>
+              <p className="text-muted-foreground font-medium text-base sm:text-lg max-w-sm mx-auto px-4">
+                Ingresa el número de localizador asignado para comenzar la
+                selección.
+              </p>
+            </div>
+
+            <div className="relative max-w-sm mx-auto group">
+              <Input
+                value={locator}
+                onChange={(e) => setLocator(e.target.value.toUpperCase())}
+                placeholder="00"
+                className="h-28 text-center text-6xl font-black rounded-4xl border-4 border-primary/10 shadow-soft focus-visible:ring-primary focus-visible:border-primary transition-all bg-white/50 backdrop-blur-sm"
+                autoFocus
+              />
+              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg opacity-0 group-focus-within:opacity-100 transition-opacity">
+                Localizador
+              </div>
+            </div>
+
+            <Button
+              size="lg"
+              className="h-16 px-12 rounded-2xl text-lg font-black shadow-strong hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 group"
+              disabled={!locator.trim()}
+              onClick={() => setStep("menu")}
+            >
+              INICIAR SELECCIÓN
+              <ArrowRight className="h-6 w-6 ml-3 group-hover:translate-x-1 transition-transform" />
+            </Button>
           </div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold">
-            Nuevo Pedido
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Ingresa el número de localizador del cliente
-          </p>
-          <Input
-            value={locator}
-            onChange={(e) => setLocator(e.target.value.toUpperCase())}
-            placeholder="Ej: 12"
-            className="h-14 sm:h-16 text-center text-xl sm:text-2xl font-display font-bold"
-            autoFocus
-          />
-          <Button
-            size="xl"
-            className="w-full"
-            disabled={!locator.trim()}
-            onClick={() => setStep("menu")}
-          >
-            <ArrowRight className="h-5 w-5 mr-2" />
-            Continuar
-          </Button>
-        </div>
         </div>
       </ErrorBoundary>
     );
   }
 
-  // Step 3: Confirmation
+  // Step 3: Confirmation / Checkout
   if (step === "confirm") {
     return (
       <ErrorBoundary>
-        <div className="max-w-lg mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 animate-slide-in">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setStep("menu")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="font-display text-xl sm:text-2xl font-bold">
-            {editOrderId ? "Editar Pedido" : "Confirmar Pedido"}
-          </h1>
-        </div>
-
-        <div className="pos-card">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-muted-foreground">Localizador</span>
-            <span className="font-display text-xl sm:text-2xl font-bold text-primary">
-              {locator}
-            </span>
+        <div className="section-container max-w-4xl mx-auto py-6 sm:py-10 space-y-8 sm:space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl border-2 shadow-soft hover:shadow-medium"
+              onClick={() => setStep("menu")}
+            >
+              <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+            </Button>
+            <div>
+              <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-primary leading-none mb-1">
+                {editOrderId ? "Edición de Orden" : "Finalizar Pedido"}
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+                Revisión de Compra
+              </h1>
+            </div>
           </div>
 
-          <div className="space-y-3 border-t pt-4">
-            {cart.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-start justify-between gap-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default" className="text-xs shrink-0">
-                      {item.quantity}x
-                    </Badge>
-                    <span className="font-medium text-sm truncate">
-                      {item.product.name}
-                    </span>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-10">
+            <div className="lg:col-span-3 space-y-6 sm:space-y-8">
+              <div className="pos-card p-6 sm:p-8 border-2 border-primary/5">
+                <div className="flex items-center justify-between mb-8 pb-6 border-b">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-accent/50 border shadow-soft flex flex-col items-center justify-center">
+                      <span className="text-[9px] font-black opacity-40 leading-none mb-0.5">
+                        ORD
+                      </span>
+                      <span className="text-2xl font-black text-primary">
+                        {locator}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-black text-lg">Resumen de Items</p>
+                      <p className="text-xs font-bold text-muted-foreground">
+                        {itemCount} productos seleccionados
+                      </p>
+                    </div>
                   </div>
-                  {item.notes && (
-                    <p className="text-xs text-muted-foreground mt-1 ml-8">
-                      📝 {item.notes}
-                    </p>
-                  )}
+                  <StatusBadge
+                    status={editOrderId ? "confirmado" : "pendiente"}
+                  />
                 </div>
-                <div className="flex items-center gap-3">
-                  <CartItemImage product={item.product} />
-                  <span className="text-sm font-semibold shrink-0">
-                    {formatPrice(item.unit_price * item.quantity)}
-                  </span>
+
+                <div className="space-y-6">
+                  {cart.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-start justify-between gap-6 group"
+                    >
+                      <div className="flex gap-4">
+                        <div className="relative">
+                          <CartItemImage product={item.product} />
+                          <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-lg bg-primary text-white font-black p-0 flex items-center justify-center border-2 border-white shadow-soft">
+                            {item.quantity}
+                          </Badge>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-black text-sm group-hover:text-primary transition-colors">
+                            {item.product.name}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-accent/50 px-2 py-0.5 rounded-full">
+                              {item.product.categories?.name}
+                            </span>
+                          </div>
+                          {item.notes && (
+                            <p className="text-[11px] font-bold text-primary italic bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10 inline-block mt-2">
+                              “{item.notes}”
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <p className="font-black text-sm tabular-nums">
+                        {formatPrice(item.unit_price * item.quantity)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-10 pt-8 border-t-2 border-dashed border-accent">
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-sm font-bold text-muted-foreground">
+                      Subtotal
+                    </p>
+                    <p className="text-sm font-bold">{formatPrice(total)}</p>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xl font-black">Total a Pagar</p>
+                    <p className="text-3xl font-black text-primary tracking-tight">
+                      {formatPrice(total)}
+                    </p>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
 
-          <div className="border-t mt-4 pt-4">
-            <div className="flex justify-between items-center">
-              <span className="text-base sm:text-lg font-medium">Total</span>
-              <span className="font-display text-2xl sm:text-3xl font-bold text-primary">
-                {formatPrice(total)}
-              </span>
+              <div className="space-y-4">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground px-2 flex items-center gap-2">
+                  <Edit3 className="h-3 w-3" />
+                  Comentarios Adicionales
+                </h3>
+                <Textarea
+                  value={orderNotes}
+                  onChange={(e) => setOrderNotes(e.target.value)}
+                  placeholder="Instrucciones especiales para cocina o caja..."
+                  className="rounded-3xl border-2 p-6 h-32 shadow-soft focus:border-primary transition-all bg-white/50 backdrop-blur-sm font-medium"
+                />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {itemCount} producto(s)
-            </p>
+
+            <div className="lg:col-span-2">
+              <div className="sticky top-24 space-y-6">
+                <div className="pos-card p-8 bg-primary text-white shadow-strong shadow-primary/20 overflow-hidden relative group">
+                  <div className="absolute -right-10 -top-10 h-40 w-40 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
+                  <div className="relative z-10 space-y-6">
+                    <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                      <CheckCircle className="h-7 w-7 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-2xl font-black tracking-tight leading-tight mb-2">
+                        Listo para el despacho
+                      </h4>
+                      <p className="text-white/70 text-sm font-medium">
+                        Verifica que todos los productos y cantidades sean
+                        correctos antes de confirmar.
+                      </p>
+                    </div>
+                    <Button
+                      size="xl"
+                      variant="secondary"
+                      className="w-full h-16 rounded-2xl font-black text-primary shadow-lg hover:shadow-xl transition-all"
+                      onClick={handleSend}
+                      disabled={isSending}
+                    >
+                      {isSending ? (
+                        <Loader2 className="h-6 w-6 mr-2 animate-spin" />
+                      ) : (
+                        <ArrowRight className="h-6 w-6 mr-2" />
+                      )}
+                      {editOrderId ? "GUARDAR CAMBIOS" : "CONFIRMAR PEDIDO"}
+                    </Button>
+                  </div>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  className="w-full h-14 rounded-2xl font-black text-muted-foreground hover:text-primary transition-all"
+                  onClick={() => setStep("menu")}
+                  disabled={isSending}
+                >
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Seguir Agregando
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Notas del pedido (opcional)
-          </label>
-          <Textarea
-            value={orderNotes}
-            onChange={(e) => setOrderNotes(e.target.value)}
-            placeholder="Notas adicionales..."
-            className="resize-none"
-            rows={2}
-          />
-        </div>
-
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            size="touch"
-            className="flex-1"
-            onClick={() => setStep("menu")}
-            disabled={isSending}
-          >
-            <Edit3 className="h-4 w-4 mr-2" />
-            Editar
-          </Button>
-          <Button
-            size="touch"
-            className="flex-2"
-            onClick={handleSend}
-            disabled={isSending}
-          >
-            {isSending ? (
-              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-            ) : (
-              <CheckCircle className="h-5 w-5 mr-2" />
-            )}
-            {editOrderId ? "Guardar Cambios" : "Enviar a Caja"}
-          </Button>
-        </div>
         </div>
       </ErrorBoundary>
     );
@@ -494,37 +597,52 @@ export default function Kiosko() {
   // Step 2: Menu selection
   return (
     <ErrorBoundary>
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)]">
-        {/* Product selection */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="p-3 sm:p-4 border-b">
-            <div className="flex items-center gap-2 sm:gap-3 mb-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setStep("locator");
-                  setCart([]);
-                }}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h2 className="font-display text-lg sm:text-xl font-bold">
-                Mesa {locator}
-              </h2>
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-5rem)] bg-accent/20">
+        {/* Main Menu Area */}
+        <div className="flex-1 flex flex-col min-w-0 bg-white shadow-2xl z-10 lg:rounded-tr-[3rem] lg:rounded-br-[3rem] overflow-hidden">
+          {/* Menu Header */}
+          <div className="p-6 lg:p-8 space-y-8 border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-5">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 rounded-2xl border-2 shadow-soft group"
+                  onClick={() => {
+                    if (cart.length > 0) {
+                      toast.info(
+                        "Limpia el carrito para cambiar de localizador",
+                      );
+                      return;
+                    }
+                    setStep("locator");
+                  }}
+                >
+                  <ArrowLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
+                </Button>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary leading-none mb-1">
+                    Menú Digital
+                  </p>
+                  <h2 className="text-3xl font-black tracking-tight flex items-center gap-3">
+                    Mesa / Localizador:{" "}
+                    <span className="text-primary">{locator}</span>
+                  </h2>
+                </div>
+              </div>
 
-              {/* Mobile cart button */}
+              {/* Mobile Cart Floating Trigger */}
               <Sheet open={cartOpen} onOpenChange={setCartOpen}>
                 <SheetTrigger asChild>
                   <Button
-                    variant="outline"
-                    size="touch"
-                    className="ml-auto lg:hidden relative"
+                    variant="default"
+                    size="lg"
+                    className="lg:hidden h-14 px-6 rounded-2xl font-black shadow-strong relative group"
                   >
-                    <ShoppingCart className="h-4 w-4 mr-1" />
-                    <span className="text-sm">{itemCount}</span>
+                    <ShoppingCart className="h-5 w-5 mr-3" />
+                    {formatPrice(total)}
                     {itemCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
+                      <span className="absolute -top-2 -right-2 bg-white text-primary border-2 border-primary rounded-lg min-w-6 h-6 text-[10px] font-black flex items-center justify-center shadow-lg">
                         {itemCount}
                       </span>
                     )}
@@ -532,12 +650,14 @@ export default function Kiosko() {
                 </SheetTrigger>
                 <SheetContent
                   side="right"
-                  className="w-[85vw] sm:w-96 p-0 flex flex-col"
+                  className="w-full sm:w-[450px] p-0 flex flex-col border-none shadow-strong"
                 >
-                  <SheetHeader className="p-4 border-b">
-                    <SheetTitle className="font-display flex items-center gap-2">
-                      <ShoppingCart className="h-5 w-5 text-primary" />
-                      Carrito
+                  <SheetHeader className="p-8 border-b bg-primary text-white">
+                    <SheetTitle className="text-2xl font-black tracking-tight flex items-center gap-3 text-white">
+                      <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
+                        <ShoppingCart className="h-5 w-5 text-white" />
+                      </div>
+                      Tu Pedido Actual
                     </SheetTitle>
                   </SheetHeader>
                   <CartContent
@@ -551,127 +671,143 @@ export default function Kiosko() {
                   />
                 </SheetContent>
               </Sheet>
-
-              <Badge variant="default" className="hidden lg:flex">
-                {itemCount} items
-              </Badge>
             </div>
-            <div className="bg-muted/30 p-1.5 rounded-2xl">
-              <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
-                {loadingCats
-                  ? [1, 2, 3, 4].map((i) => (
-                      <Skeleton
-                        key={i}
-                        className="h-12 w-28 rounded-xl shrink-0"
-                      />
-                    ))
-                  : categories.map((cat) => (
+
+            {/* Categories Navigation */}
+            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar scroll-smooth">
+              {loadingCats
+                ? [1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton
+                      key={i}
+                      className="h-14 w-36 rounded-2xl shrink-0"
+                    />
+                  ))
+                : categories.map((cat) => {
+                    const isActive = currentCategory === cat.name;
+                    return (
                       <Button
                         key={cat.id}
-                        variant={
-                          currentCategory === cat.name ? "default" : "secondary"
-                        }
+                        variant={isActive ? "default" : "outline"}
                         onClick={() => setActiveCategory(cat.name)}
                         className={cn(
-                          "h-12 px-6 rounded-xl whitespace-nowrap text-sm font-medium transition-all shrink-0 border-none",
-                          currentCategory === cat.name
-                            ? "shadow-lg shadow-primary/20 scale-[1.02]"
-                            : "bg-background/50 text-muted-foreground hover:bg-background hover:text-foreground",
+                          "h-14 px-8 rounded-2xl font-black text-sm transition-all shrink-0 border-2",
+                          isActive
+                            ? "shadow-strong shadow-primary/20 scale-[1.05] z-10"
+                            : "bg-white border-accent shadow-soft hover:border-primary/30 text-muted-foreground hover:text-primary",
                         )}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{cat.icon}</span>
-                          <span className="sm:hidden">
-                            {cat.label.substring(0, 4)}
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl group-hover:scale-125 transition-transform">
+                            {cat.icon}
                           </span>
-                          <span className="hidden sm:inline">{cat.label}</span>
+                          <span className="uppercase tracking-widest">
+                            {cat.label}
+                          </span>
                         </div>
                       </Button>
-                    ))}
-              </div>
+                    );
+                  })}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+          {/* Products Grid */}
+          <div className="flex-1 overflow-y-auto p-6 lg:p-10 custom-scrollbar bg-white">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {loadingProds
-                ? [1, 2, 3, 4, 5, 6].map((i) => (
-                    <Skeleton key={i} className="aspect-square rounded-xl" />
+                ? [1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                    <Skeleton key={i} className="aspect-square rounded-4xl" />
                   ))
                 : filteredProducts.map((product) => {
                     const inCartCount = cart
                       .filter((i) => i.product.id === product.id)
                       .reduce((sum, i) => sum + i.quantity, 0);
                     return (
-                      <button
+                      <div
                         key={product.id}
                         onClick={() => handleProductClick(product)}
-                        className={`pos-card text-left hover:border-primary/50 active:scale-[0.98] transition-all touch-target ${inCartCount > 0 ? "border-primary/30 bg-accent/50" : ""}`}
+                        className={cn(
+                          "pos-card group p-5 text-left border-2 transition-all duration-300 relative cursor-pointer",
+                          inCartCount > 0
+                            ? "border-primary bg-primary/2 shadow-strong"
+                            : "border-transparent hover:border-primary/20 hover:shadow-medium bg-white",
+                        )}
                       >
-                        {/* Product image */}
-                        <div className="aspect-square rounded-lg bg-muted/50 mb-2 overflow-hidden flex items-center justify-center">
-                          <ProductImage product={product} />
-                        </div>
-                        <h3 className="font-semibold text-xs sm:text-sm mb-1 truncate">
-                          {product.name}
-                        </h3>
-                        <p className="font-display font-bold text-primary text-sm sm:text-base">
-                          {formatPrice(product.price)}
-                        </p>
+                        {/* Count Badge */}
                         {inCartCount > 0 && (
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <Badge variant="default" className="text-xs">
-                              {inCartCount}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              en pedido
-                            </span>
+                          <div className="absolute -top-3 -right-3 h-10 w-10 rounded-2xl bg-primary text-white border-4 border-white shadow-strong flex items-center justify-center font-black z-20 animate-in zoom-in">
+                            {inCartCount}
                           </div>
                         )}
-                      </button>
+
+                        <div className="aspect-square rounded-3xl bg-accent/30 mb-5 overflow-hidden flex items-center justify-center relative group-hover:scale-[1.02] transition-transform">
+                          <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <ProductImage product={product} />
+                          <div className="absolute bottom-4 left-4 right-4 translate-y-10 group-hover:translate-y-0 transition-transform">
+                            <Button
+                              size="sm"
+                              className="w-full h-10 rounded-xl font-black shadow-strong"
+                            >
+                              AGREGAR
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">
+                            {product.categories?.name}
+                          </p>
+                          <h3 className="font-black text-sm lg:text-base leading-tight group-hover:text-primary transition-colors">
+                            {product.name}
+                          </h3>
+                          <p className="font-black text-lg text-primary tracking-tight">
+                            {formatPrice(product.price)}
+                          </p>
+                        </div>
+                      </div>
                     );
                   })}
             </div>
-          </div>
-
-          {/* Mobile floating total bar */}
-          {cart.length > 0 && (
-            <div className="lg:hidden p-3 border-t bg-card flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  {itemCount} productos
-                </p>
-                <p className="font-display text-xl font-bold text-primary">
-                  {formatPrice(total)}
+            {filteredProducts.length === 0 && !loadingProds && (
+              <div className="h-full flex flex-col items-center justify-center space-y-6 opacity-30 py-20">
+                <div className="h-24 w-24 rounded-4xl border-4 border-dashed border-primary flex items-center justify-center">
+                  <Plus className="h-10 w-10 text-primary" />
+                </div>
+                <p className="font-black uppercase tracking-[0.3em] text-sm">
+                  Próximamente disponibles
                 </p>
               </div>
-              <Button size="touch" onClick={() => setStep("confirm")}>
-                <ArrowRight className="h-5 w-5 mr-2" />
-                Revisar
-              </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Desktop cart sidebar */}
-        <div className="hidden lg:flex w-96 border-l bg-card flex-col">
-          <div className="p-4 border-b flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5 text-primary" />
-            <h3 className="font-display font-bold">Carrito</h3>
-            <span className="text-xs text-muted-foreground ml-auto">
-              {itemCount} productos
-            </span>
+        {/* Desktop Cart Sidebar */}
+        <aside className="hidden lg:flex w-[400px] bg-accent/20 flex-col overflow-hidden animate-in slide-in-from-right duration-500">
+          <div className="p-8 border-b flex items-center justify-between bg-white/50 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <ShoppingCart className="h-5 w-5" />
+              </div>
+              <h3 className="font-black text-xl tracking-tight">Tu Pedido</h3>
+            </div>
+            <Badge
+              variant="outline"
+              className="font-black border-primary/20 text-primary px-3 py-1 rounded-full uppercase tracking-widest text-[9px]"
+            >
+              {itemCount} Artículos
+            </Badge>
           </div>
-          <CartContent
-            cart={cart}
-            updateQuantity={updateQuantity}
-            onEditItem={handleEditItem}
-            total={total}
-            itemCount={itemCount}
-            setStep={setStep}
-            setCartOpen={setCartOpen}
-          />
-        </div>
+          <div className="flex-1 flex flex-col min-h-0">
+            <CartContent
+              cart={cart}
+              updateQuantity={updateQuantity}
+              onEditItem={handleEditItem}
+              total={total}
+              itemCount={itemCount}
+              setStep={setStep}
+              setCartOpen={setCartOpen}
+            />
+          </div>
+        </aside>
       </div>
 
       <ProductCustomizer
@@ -688,6 +824,7 @@ export default function Kiosko() {
     </ErrorBoundary>
   );
 }
+
 interface CartContentProps {
   cart: CartItem[];
   updateQuantity: (itemId: string, delta: number) => void;
@@ -708,108 +845,133 @@ function CartContent({
   setCartOpen,
 }: CartContentProps) {
   return (
-    <>
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {cart.length === 0 && (
-          <div className="text-center py-12 space-y-2">
-            <ShoppingCart className="h-10 w-10 mx-auto text-muted-foreground/30" />
-            <p className="text-muted-foreground text-sm">
-              Toca un producto para agregarlo
-            </p>
+    <div className="flex flex-col h-full bg-white/50 backdrop-blur-xl">
+      <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+        {cart.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
+            <div className="w-20 h-20 rounded-4xl bg-accent/30 flex items-center justify-center text-muted-foreground/30 border-2 border-dashed border-accent">
+              <ShoppingCart className="h-10 w-10" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-black text-sm uppercase tracking-widest text-muted-foreground">
+                Carrito Vacío
+              </p>
+              <p className="text-xs font-medium text-muted-foreground/60 max-w-[180px]">
+                Toca cualquier producto para empezar a armar el pedido.
+              </p>
+            </div>
           </div>
-        )}
-        {cart.map((item) => (
-          <div
-            key={item.id}
-            className="rounded-xl bg-background p-3 space-y-2 animate-slide-in"
-          >
-            <div className="flex items-center gap-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">
-                  {item.product.name}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {formatPrice(item.unit_price)} c/u
-                </p>
-                {item.notes && (
-                  <p className="text-xs text-primary/80 mt-0.5">
-                    📝 {item.notes}
+        ) : (
+          cart.map((item) => (
+            <div
+              key={item.id}
+              className="pos-card p-4 space-y-4 group border-2 border-transparent hover:border-primary/10 transition-all animate-in slide-in-from-right duration-300"
+            >
+              <div className="flex items-start gap-4">
+                <div className="relative">
+                  <CartItemImage product={item.product} />
+                  <div className="absolute -top-2 -right-2 h-5 w-5 rounded-lg bg-primary text-white text-[10px] font-black flex items-center justify-center border-2 border-white shadow-soft">
+                    {item.quantity}
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black truncate group-hover:text-primary transition-colors">
+                    {item.product.name}
                   </p>
-                )}
-              </div>
-              <span className="font-display font-bold text-sm text-primary">
-                {formatPrice(item.unit_price * item.quantity)}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 justify-end mt-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-primary"
-                onClick={() => {
-                  onEditItem(item);
-                  setCartOpen(false);
-                }}
-              >
-                <Edit3 className="h-4 w-4" />
-              </Button>
-              <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8"
-                  onClick={() => updateQuantity(item.id, -1)}
-                >
-                  {item.quantity === 1 ? (
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  ) : (
-                    <Minus className="h-3.5 w-3.5" />
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">
+                    {formatPrice(item.unit_price)} c/u
+                  </p>
+                  {item.notes && (
+                    <p className="text-[11px] font-bold text-primary italic mt-1 leading-tight">
+                      “{item.notes}”
+                    </p>
                   )}
-                </Button>
-                <span className="w-8 text-center font-bold text-sm">
-                  {item.quantity}
-                </span>
+                </div>
+                <p className="font-black text-sm tabular-nums text-primary">
+                  {formatPrice(item.unit_price * item.quantity)}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 pt-2 border-t border-dashed border-accent">
                 <Button
+                  variant="outline"
                   size="icon"
-                  variant="ghost"
-                  className="h-8 w-8"
-                  onClick={() => updateQuantity(item.id, 1)}
+                  className="h-9 w-9 rounded-xl border-2 shadow-soft hover:text-primary transition-all"
+                  onClick={() => {
+                    onEditItem(item);
+                    setCartOpen(false);
+                  }}
                 >
-                  <Plus className="h-3.5 w-3.5" />
+                  <Edit3 className="h-4 w-4" />
                 </Button>
+
+                <div className="flex items-center gap-1.5 bg-accent/50 p-1 rounded-2xl border border-accent shadow-inner">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-9 w-9 rounded-xl hover:bg-white transition-all"
+                    onClick={() => updateQuantity(item.id, -1)}
+                  >
+                    {item.quantity === 1 ? (
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    ) : (
+                      <Minus className="h-4 w-4 font-black" />
+                    )}
+                  </Button>
+                  <span className="w-8 text-center font-black text-sm tabular-nums">
+                    {item.quantity}
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-9 w-9 rounded-xl hover:bg-white transition-all"
+                    onClick={() => updateQuantity(item.id, 1)}
+                  >
+                    <Plus className="h-4 w-4 font-black text-primary" />
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
-      <div className="p-4 border-t space-y-3 bg-card">
-        <div className="space-y-1">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Subtotal ({itemCount} items)</span>
-            <span>{formatPrice(total)}</span>
+      {cart.length > 0 && (
+        <div className="p-8 border-t-2 border-dashed border-accent space-y-6 bg-white/80 backdrop-blur-md">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              <span>Subtotal Items</span>
+              <span className="tabular-nums">{formatPrice(total)}</span>
+            </div>
+            <div className="flex justify-between items-end">
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-primary leading-none mb-1">
+                  Total del Pedido
+                </p>
+                <p className="text-3xl font-black tracking-tighter text-primary">
+                  {formatPrice(total)}
+                </p>
+              </div>
+              <p className="text-[10px] font-black text-muted-foreground bg-accent/50 px-2 py-1 rounded-lg">
+                {itemCount} {itemCount === 1 ? "ARTÍCULO" : "ARTÍCULOS"}
+              </p>
+            </div>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="font-semibold">Total</span>
-            <span className="font-display text-2xl sm:text-3xl font-bold text-primary">
-              {formatPrice(total)}
-            </span>
-          </div>
+
+          <Button
+            size="xl"
+            className="w-full h-16 rounded-2xl font-black text-lg shadow-strong hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 group"
+            onClick={() => {
+              setStep("confirm");
+              setCartOpen(false);
+            }}
+          >
+            REVISAR PEDIDO
+            <ArrowRight className="h-6 w-6 ml-3 group-hover:translate-x-1 transition-transform" />
+          </Button>
         </div>
-        <Button
-          size="touch"
-          className="w-full"
-          onClick={() => {
-            setStep("confirm");
-            setCartOpen(false);
-          }}
-          disabled={cart.length === 0}
-        >
-          <ArrowRight className="h-5 w-5 mr-2" />
-          Revisar Pedido
-        </Button>
-      </div>
-    </>
+      )}
+    </div>
   );
 }
 

@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      stores: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          icon: string | null;
+          color: string | null;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          icon?: string | null;
+          color?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          slug?: string;
+          icon?: string | null;
+          color?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;
@@ -17,6 +47,7 @@ export type Database = {
           role: "admin" | "caja" | "mesero" | "cocina";
           avatar_url: string | null;
           is_active: boolean;
+          store_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -27,6 +58,7 @@ export type Database = {
           role?: "admin" | "caja" | "mesero" | "cocina";
           avatar_url?: string | null;
           is_active?: boolean;
+          store_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -37,6 +69,7 @@ export type Database = {
           role?: "admin" | "caja" | "mesero" | "cocina";
           avatar_url?: string | null;
           is_active?: boolean;
+          store_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -58,6 +91,7 @@ export type Database = {
           name: string;
           description: string | null;
           is_active: boolean;
+          store_ids: string[];
           created_at: string;
         };
         Insert: {
@@ -65,6 +99,7 @@ export type Database = {
           name: string;
           description?: string | null;
           is_active?: boolean;
+          store_ids?: string[];
           created_at?: string;
         };
         Update: {
@@ -72,6 +107,7 @@ export type Database = {
           name?: string;
           description?: string | null;
           is_active?: boolean;
+          store_ids?: string[];
           created_at?: string;
         };
         Relationships: [];
@@ -86,6 +122,7 @@ export type Database = {
           image_url: string | null;
           available: boolean;
           sort_order: number;
+          store_ids: string[];
           created_at: string;
         };
         Insert: {
@@ -97,6 +134,7 @@ export type Database = {
           image_url?: string | null;
           available?: boolean;
           sort_order?: number;
+          store_ids?: string[];
           created_at?: string;
         };
         Update: {
@@ -108,6 +146,7 @@ export type Database = {
           image_url?: string | null;
           available?: boolean;
           sort_order?: number;
+          store_ids?: string[];
           created_at?: string;
         };
         Relationships: [
@@ -128,6 +167,7 @@ export type Database = {
           label: string;
           icon: string | null;
           sort_order: number;
+          store_ids: string[];
           created_at: string;
         };
         Insert: {
@@ -138,6 +178,7 @@ export type Database = {
           label: string;
           icon?: string | null;
           sort_order?: number;
+          store_ids?: string[];
           created_at?: string;
         };
         Update: {
@@ -148,6 +189,7 @@ export type Database = {
           label?: string;
           icon?: string | null;
           sort_order?: number;
+          store_ids?: string[];
           created_at?: string;
         };
         Relationships: [];
@@ -201,6 +243,7 @@ export type Database = {
           price_per_unit: number;
           max_qty: number;
           sort_order: number | null;
+          store_ids: string[];
           created_at: string;
         };
         Insert: {
@@ -213,6 +256,7 @@ export type Database = {
           price_per_unit: number;
           max_qty?: number;
           sort_order?: number | null;
+          store_ids?: string[];
           created_at?: string;
         };
         Update: {
@@ -225,6 +269,7 @@ export type Database = {
           price_per_unit?: number;
           max_qty?: number;
           sort_order?: number | null;
+          store_ids?: string[];
           created_at?: string;
         };
         Relationships: [
@@ -241,6 +286,7 @@ export type Database = {
           total: number;
           id: string;
           user_id: string | null;
+          store_id: string;
           status:
             | "pendiente"
             | "confirmado"
@@ -257,6 +303,7 @@ export type Database = {
         Insert: {
           id?: string;
           user_id?: string | null;
+          store_id: string;
           status?:
             | "pendiente"
             | "confirmado"
@@ -274,6 +321,7 @@ export type Database = {
         Update: {
           id?: string;
           user_id?: string | null;
+          store_id?: string;
           status?:
             | "pendiente"
             | "confirmado"
@@ -293,6 +341,12 @@ export type Database = {
             foreignKeyName: "orders_user_id_fkey";
             columns: ["user_id"];
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
             referencedColumns: ["id"];
           },
         ];
@@ -467,7 +521,7 @@ export type Database = {
         Returns: undefined;
       };
       create_order: {
-        Args: { p_locator: string; p_items: Json; p_notes: string | null };
+        Args: { p_locator: string; p_items: Json; p_notes: string | null; p_store_id?: string | null };
         Returns: Json;
       };
       update_order: {
@@ -512,6 +566,7 @@ export type Database = {
           p_period_start: string;
           p_period_end: string;
           p_notes?: string | null;
+          p_store_id?: string | null;
         };
         Returns: Json;
       };
@@ -534,6 +589,7 @@ export type Database = {
           p_email?: string | null;
           p_role?: string | null;
           p_is_active?: boolean | null;
+          p_store_id?: string | null;
         };
         Returns: Json;
       };
@@ -542,11 +598,38 @@ export type Database = {
         Returns: Json;
       };
       get_dashboard_stats: {
-        Args: Record<string, never>;
+        Args: { p_store_id?: string | null };
         Returns: Json;
       };
+      get_customization_for_category: {
+        Args: {
+          p_category_name: string;
+        };
+        Returns: {
+          options: {
+            id: string;
+            option_key: string;
+            label: string;
+            icon: string;
+            choices: {
+              id: string;
+              value: string;
+              label: string;
+              icon: string;
+            }[];
+          }[];
+          extras: {
+            id: string;
+            extra_key: string;
+            label: string;
+            icon: string;
+            price_per_unit: number;
+            max_qty: number;
+          }[];
+        };
+      };
       get_top_products: {
-        Args: { p_limit: number | null };
+        Args: { p_limit: number | null; p_store_id?: string | null };
         Returns: {
           product_name: string;
           category: string;

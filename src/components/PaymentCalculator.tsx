@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Banknote,
@@ -25,31 +26,36 @@ const PAYMENT_METHODS: {
   key: PaymentMethod;
   label: string;
   icon: React.ReactNode;
+  color: string;
 }[] = [
   {
     key: "efectivo",
-    label: "Efectivo",
-    icon: <Banknote className="h-6 w-6" />,
+    label: "EFECTIVO",
+    icon: <Banknote className="h-8 w-8" />,
+    color: "bg-green-500/10 text-green-600 border-green-500/20",
   },
   {
     key: "tarjeta",
-    label: "Tarjeta",
-    icon: <CreditCard className="h-6 w-6" />,
+    label: "TARJETA",
+    icon: <CreditCard className="h-8 w-8" />,
+    color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
   },
   {
     key: "nequi",
-    label: "Nequi / Transferencia",
-    icon: <Smartphone className="h-6 w-6" />,
+    label: "NEQUI",
+    icon: <Smartphone className="h-8 w-8" />,
+    color: "bg-purple-500/10 text-purple-600 border-purple-500/20",
   },
   {
     key: "mixto",
-    label: "Pago Combinado",
+    label: "COMBINADO",
     icon: (
-      <div className="flex -space-x-2">
-        <Banknote className="h-5 w-5" />
-        <Smartphone className="h-5 w-5" />
+      <div className="flex -space-x-4">
+        <Banknote className="h-7 w-7" />
+        <Smartphone className="h-7 w-7" />
       </div>
     ),
+    color: "bg-amber-500/10 text-amber-600 border-amber-500/20",
   },
 ];
 
@@ -173,7 +179,9 @@ export function PaymentCalculator({
       const currentReceived =
         overrideReceived !== undefined ? overrideReceived : receivedNum;
       const currentSecondMethod =
-        overrideSecondMethod !== undefined ? overrideSecondMethod : secondMethod;
+        overrideSecondMethod !== undefined
+          ? overrideSecondMethod
+          : secondMethod;
 
       const finalReceived =
         method === "mixto" ? firstAmountNum + currentReceived : currentReceived;
@@ -189,14 +197,13 @@ export function PaymentCalculator({
               ? currentReceived
               : remainingTotal;
       } else if (method) {
-        // For simple payment methods, we've already narrowed out 'mixto'
         breakdown[method as Exclude<PaymentMethod, "mixto">] = currentReceived;
       }
 
       setTimeout(() => {
         onPaymentComplete(method, finalReceived, breakdown);
         resetState();
-      }, 1500);
+      }, 2000);
     },
     [
       method,
@@ -210,37 +217,22 @@ export function PaymentCalculator({
     ],
   );
 
-  // Keyboard support
   useEffect(() => {
     if (!open) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Numbers 0-9
-      if (e.key >= "0" && e.key <= "9") {
-        handleNumpad(e.key);
-      }
-      // Backspace -> DEL
-      else if (e.key === "Backspace") {
-        handleNumpad("DEL");
-      }
-      // Escape or Delete -> C (Clear)
-      else if (e.key === "Escape" || e.key === "Delete") {
-        handleNumpad("C");
-      }
-      // Enter -> Confirm or Next
+      if (e.key >= "0" && e.key <= "9") handleNumpad(e.key);
+      else if (e.key === "Backspace") handleNumpad("DEL");
+      else if (e.key === "Escape" || e.key === "Delete") handleNumpad("C");
       else if (e.key === "Enter") {
-        if (step === "amount" && canConfirm) {
-          handleConfirmPayment();
-        } else if (
+        if (step === "amount" && canConfirm) handleConfirmPayment();
+        else if (
           step === "split_amount" &&
           firstAmountNum > 0 &&
           firstAmountNum < order.total
-        ) {
+        )
           setStep("split_second");
-        }
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
@@ -263,79 +255,126 @@ export function PaymentCalculator({
     if (m === "mixto") {
       setStep("split_first");
     } else {
-      if (m !== "efectivo") {
-        setReceived(String(order.total));
-      }
+      if (m !== "efectivo") setReceived(String(order.total));
       setStep("amount");
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden rounded-[3.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl">
         {/* Done step */}
         {step === "done" && (
-          <div className="flex flex-col items-center justify-center p-12 space-y-4 animate-slide-in">
-            <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center">
-              <CheckCircle className="h-12 w-12 text-green-500" />
+          <div className="flex flex-col items-center justify-center p-24 space-y-8 animate-in fade-in zoom-in duration-700">
+            <div className="relative">
+              <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" />
+              <div className="relative w-32 h-32 rounded-full bg-green-500/20 flex items-center justify-center border-4 border-green-500/10 shadow-inner">
+                <CheckCircle
+                  className="h-16 w-16 text-green-500"
+                  strokeWidth={3}
+                />
+              </div>
             </div>
-            <h2 className="font-display text-2xl font-bold">¡Pago Exitoso!</h2>
-            <p className="text-muted-foreground">Enviando pedido a cocina...</p>
+            <div className="text-center space-y-3">
+              <h2 className="text-5xl font-black tracking-tighter text-foreground">
+                ¡PAGO EXITOSO!
+              </h2>
+              <p className="text-muted-foreground font-medium text-xl">
+                Procesando facturación y comandas...
+              </p>
+            </div>
           </div>
         )}
 
         {/* Method selection */}
         {step === "method" && (
-          <>
-            <DialogHeader className="p-4 pb-2">
-              <DialogTitle className="font-display text-xl">
-                <div className="flex items-center gap-2">
-                  <Receipt className="h-5 w-5 text-primary" />
-                  Cobrar Pedido {order.locator}
+          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <DialogHeader className="p-10 pb-4">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="bg-primary/10 p-3 rounded-2xl">
+                  <Receipt className="h-8 w-8 text-primary" strokeWidth={3} />
                 </div>
-              </DialogTitle>
+                <div className="space-y-0.5">
+                  <div className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
+                    PUNTO DE PAGO
+                  </div>
+                  <DialogTitle className="text-4xl font-black tracking-tighter">
+                    Cobrar Pedido #{order.locator}
+                  </DialogTitle>
+                </div>
+              </div>
+              <DialogDescription className="sr-only">
+                Selección de método de pago
+              </DialogDescription>
             </DialogHeader>
 
-            <div className="p-4 space-y-4">
-              {/* Order summary */}
-              <div className="rounded-xl bg-muted/50 p-3 space-y-1.5">
-                {order.order_items?.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span>
-                      <span className="font-medium">{item.quantity}x</span>{" "}
-                      {item.products.name}
+            <div className="p-10 pt-4 space-y-10">
+              {/* Ticket Order summary */}
+              <div className="relative">
+                <div className="absolute inset-0 bg-accent/5 rounded-[2.5rem] -rotate-1 translate-y-1" />
+                <div className="relative rounded-[2.5rem] bg-white border-2 border-accent/20 p-8 space-y-4 shadow-soft">
+                  <div className="flex items-center justify-between border-b-2 border-dashed border-accent/20 pb-4 mb-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                      DETALLE DE ORDEN
                     </span>
-                    <span className="text-muted-foreground">
-                      {formatPrice(item.unit_price * item.quantity)}
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                      {order.order_items?.length} ITEMS
                     </span>
                   </div>
-                ))}
-                <div className="border-t pt-2 mt-2 flex justify-between items-center">
-                  <span className="font-semibold">Total a pagar</span>
-                  <span className="font-display text-2xl font-bold text-primary">
-                    {formatPrice(order.total)}
-                  </span>
+                  <div className="space-y-3 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
+                    {order.order_items?.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex justify-between items-center text-lg"
+                      >
+                        <span className="font-bold flex items-center gap-3">
+                          <span className="text-primary font-black bg-primary/5 px-2 py-0.5 rounded-lg text-sm">
+                            {item.quantity}x
+                          </span>
+                          {item.products.name}
+                        </span>
+                        <span className="font-black tracking-tighter text-muted-foreground/60">
+                          {formatPrice(item.unit_price * item.quantity)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t-2 border-accent/10 pt-6 flex justify-between items-end">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">
+                        TOTAL A RECAUDAR
+                      </span>
+                      <div className="text-5xl font-black tracking-tighter text-primary">
+                        {formatPrice(order.total)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Payment methods */}
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Selecciona método de pago
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="h-px flex-1 bg-accent/20" />
+                  <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.3em]">
+                    MÉTODO DE PAGO
+                  </span>
+                  <div className="h-px flex-1 bg-accent/20" />
+                </div>
+                <div className="grid grid-cols-2 gap-6">
                   {PAYMENT_METHODS.map((pm) => (
                     <button
                       key={pm.key}
                       onClick={() => selectMethod(pm.key)}
                       className={cn(
-                        "flex flex-col items-center gap-2 p-3 rounded-xl border-2 border-border bg-card hover:border-primary hover:bg-accent/50 transition-all active:scale-95 touch-target",
-                        pm.key === "mixto" &&
-                          "border-dashed border-primary/40 bg-primary/5",
+                        "group relative flex flex-col items-center justify-center gap-4 p-8 rounded-4xl border-2 transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] shadow-soft hover:shadow-xl",
+                        pm.color,
                       )}
                     >
-                      <div className="text-primary">{pm.icon}</div>
-                      <span className="text-xs font-medium text-center">
+                      <div className="transition-transform duration-500 group-hover:scale-125 group-hover:-rotate-6">
+                        {pm.icon}
+                      </div>
+                      <span className="text-xs font-black tracking-[0.2em]">
                         {pm.label}
                       </span>
                     </button>
@@ -343,99 +382,94 @@ export function PaymentCalculator({
                 </div>
               </div>
             </div>
-          </>
+          </div>
         )}
 
-        {/* Step: Split First Method */}
+        {/* Split First Method */}
         {step === "split_first" && (
-          <div className="animate-slide-in">
-            <div className="p-4 pb-2 flex items-center gap-3">
+          <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-10">
+            <div className="flex items-center gap-6 mb-10">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setStep("method")}
+                className="h-14 w-14 rounded-2xl bg-accent/10"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-6 w-6" strokeWidth={3} />
               </Button>
-              <div>
-                <p className="font-display font-bold text-lg text-primary">
-                  Pago Mixto - Paso 1
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Selecciona el primer medio de pago
-                </p>
+              <div className="space-y-0.5">
+                <div className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
+                  PASO 01 / 02
+                </div>
+                <h3 className="text-4xl font-black tracking-tighter">
+                  Primer Medio
+                </h3>
               </div>
             </div>
-            <div className="p-4 grid grid-cols-3 gap-2">
-              <button
-                onClick={() => {
-                  setFirstMethod("efectivo");
-                  setStep("split_amount");
-                }}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
-              >
-                <Banknote className="h-6 w-6 text-primary" />
-                <span className="text-xs font-medium">Efectivo</span>
-              </button>
-              <button
-                onClick={() => {
-                  setFirstMethod("nequi");
-                  setStep("split_amount");
-                }}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
-              >
-                <Smartphone className="h-6 w-6 text-primary" />
-                <span className="text-xs font-medium">Nequi / Transf.</span>
-              </button>
-              <button
-                onClick={() => {
-                  setFirstMethod("tarjeta");
-                  setStep("split_amount");
-                }}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
-              >
-                <CreditCard className="h-6 w-6 text-primary" />
-                <span className="text-xs font-medium">Tarjeta</span>
-              </button>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {PAYMENT_METHODS.filter((pm) => pm.key !== "mixto").map((pm) => (
+                <button
+                  key={pm.key}
+                  onClick={() => {
+                    setFirstMethod(pm.key as Exclude<PaymentMethod, "mixto">);
+                    setStep("split_amount");
+                  }}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-4 p-10 rounded-[2.5rem] border-2 transition-all duration-500 hover:scale-[1.05] shadow-soft hover:shadow-xl",
+                    pm.color,
+                  )}
+                >
+                  {pm.icon}
+                  <span className="text-[10px] font-black tracking-widest">
+                    {pm.label}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Step: Split First Amount */}
+        {/* Split First Amount */}
         {step === "split_amount" && (
-          <div className="animate-slide-in">
-            <div className="p-4 pb-2 flex items-center gap-3">
+          <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-10">
+            <div className="flex items-center gap-6 mb-10">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setStep("split_first")}
+                className="h-14 w-14 rounded-2xl bg-accent/10"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-6 w-6" strokeWidth={3} />
               </Button>
-              <div>
-                <p className="font-display font-bold text-lg text-primary">
-                  Monto{" "}
-                  {firstMethod === "nequi"
-                    ? "Nequi"
-                    : firstMethod === "tarjeta"
-                      ? "Tarjeta"
-                      : "Efectivo"}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Total Pedido: {formatPrice(order.total)}
-                </p>
+              <div className="space-y-0.5">
+                <div className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
+                  MONTO PARA {firstMethod?.toUpperCase()}
+                </div>
+                <h3 className="text-4xl font-black tracking-tighter">
+                  ¿Cuánto recibiste?
+                </h3>
               </div>
             </div>
-            <div className="px-4 space-y-4">
-              <div className="rounded-xl bg-muted/50 p-4 text-center space-y-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                  ¿Cuánto pagó por este medio?
+
+            <div className="space-y-10">
+              <div className="rounded-[2.5rem] bg-accent/5 p-10 text-center space-y-2 border-2 border-accent/5 shadow-inner">
+                <p className="text-[11px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                  INGRESAR VALOR
                 </p>
-                <p className="font-display text-4xl font-bold">
+                <p className="text-7xl font-black tracking-tighter text-foreground">
                   {firstAmount ? formatPrice(firstAmountNum) : "$0"}
                 </p>
+                <div className="pt-6 border-t border-accent/10 mt-6">
+                  <p className="text-xs font-bold text-muted-foreground/60">
+                    Total Pedido:{" "}
+                    <span className="text-foreground font-black">
+                      {formatPrice(order.total)}
+                    </span>
+                  </p>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-1.5">
+
+              <div className="grid grid-cols-3 gap-4">
                 {[
                   "1",
                   "2",
@@ -452,99 +486,104 @@ export function PaymentCalculator({
                 ].map((key) => (
                   <Button
                     key={key}
-                    variant={
+                    variant="secondary"
+                    className={cn(
+                      "h-20 rounded-2xl font-black text-2xl transition-all active:scale-95 shadow-soft border-2 border-transparent",
                       key === "C"
-                        ? "destructive"
+                        ? "text-destructive hover:bg-destructive/5 hover:border-destructive/10"
                         : key === "DEL"
-                          ? "outline"
-                          : "secondary"
-                    }
-                    className="h-12 font-display text-lg"
+                          ? "hover:bg-accent/10"
+                          : "hover:border-primary/20",
+                    )}
                     onClick={() => handleNumpad(key)}
                   >
-                    {key === "DEL" ? <Delete className="h-5 w-5" /> : key}
+                    {key === "DEL" ? (
+                      <Delete className="h-7 w-7" strokeWidth={2.5} />
+                    ) : (
+                      key
+                    )}
                   </Button>
                 ))}
               </div>
+
               <Button
-                className="w-full h-12"
+                size="lg"
+                className="w-full h-20 rounded-3xl bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-widest shadow-strong shadow-primary/20 transition-all active:scale-95"
                 disabled={firstAmountNum <= 0 || firstAmountNum >= order.total}
                 onClick={() => setStep("split_second")}
               >
-                Siguiente (Faltan {formatPrice(order.total - firstAmountNum)})
+                CONTINUAR (FALTAN {formatPrice(order.total - firstAmountNum)})
               </Button>
             </div>
           </div>
         )}
 
-        {/* Step: Split Second Method */}
+        {/* Split Second Method */}
         {step === "split_second" && (
-          <div className="animate-slide-in">
-            <div className="p-4 pb-2 flex items-center gap-3">
+          <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-10">
+            <div className="flex items-center gap-6 mb-10">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setStep("split_amount")}
+                className="h-14 w-14 rounded-2xl bg-accent/10"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-6 w-6" strokeWidth={3} />
               </Button>
-              <div>
-                <p className="font-display font-bold text-lg text-primary">
-                  Pago Mixto - Paso 2
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  ¿Cómo paga el resto? (
-                  {formatPrice(order.total - firstAmountNum)})
-                </p>
+              <div className="space-y-0.5">
+                <div className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
+                  PASO 02 / 02
+                </div>
+                <h3 className="text-4xl font-black tracking-tighter">
+                  ¿Cómo paga el resto?
+                </h3>
               </div>
             </div>
-            <div className="p-4 grid grid-cols-3 gap-2">
-              {firstMethod !== "efectivo" && (
+
+            <div className="bg-primary/5 rounded-[2.5rem] p-8 mb-10 border-2 border-primary/10 border-dashed text-center">
+              <p className="text-xs font-black text-primary/60 uppercase tracking-widest mb-1">
+                MONTO RESTANTE
+              </p>
+              <div className="text-5xl font-black tracking-tighter text-primary">
+                {formatPrice(order.total - firstAmountNum)}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {PAYMENT_METHODS.filter(
+                (pm) => pm.key !== "mixto" && pm.key !== firstMethod,
+              ).map((pm) => (
                 <button
+                  key={pm.key}
                   onClick={() => {
-                    setSecondMethod("efectivo");
-                    setStep("amount");
+                    const selected = pm.key as Exclude<PaymentMethod, "mixto">;
+                    setSecondMethod(selected);
+                    if (selected === "efectivo") {
+                      setStep("amount");
+                    } else {
+                      setReceived(String(remainingTotal));
+                      handleConfirmPayment(remainingTotal, selected);
+                    }
                   }}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-4 p-10 rounded-[2.5rem] border-2 transition-all duration-500 hover:scale-[1.05] shadow-soft hover:shadow-xl",
+                    pm.color,
+                  )}
                 >
-                  <Banknote className="h-6 w-6 text-primary" />
-                  <span className="text-xs font-medium">Efectivo</span>
+                  {pm.icon}
+                  <span className="text-[10px] font-black tracking-widest">
+                    {pm.label}
+                  </span>
                 </button>
-              )}
-              {firstMethod !== "nequi" && (
-                <button
-                  onClick={() => {
-                    setSecondMethod("nequi");
-                    setReceived(String(remainingTotal));
-                    handleConfirmPayment(remainingTotal, "nequi");
-                  }}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
-                >
-                  <Smartphone className="h-6 w-6 text-primary" />
-                  <span className="text-xs font-medium">Nequi</span>
-                </button>
-              )}
-              {firstMethod !== "tarjeta" && (
-                <button
-                  onClick={() => {
-                    setSecondMethod("tarjeta");
-                    setReceived(String(remainingTotal));
-                    handleConfirmPayment(remainingTotal, "tarjeta");
-                  }}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border bg-card hover:border-primary transition-all"
-                >
-                  <CreditCard className="h-6 w-6 text-primary" />
-                  <span className="text-xs font-medium">Tarjeta</span>
-                </button>
-              )}
+              ))}
             </div>
           </div>
         )}
 
         {/* Amount / calculator */}
         {step === "amount" && (method || secondMethod) && (
-          <div className="animate-slide-in">
-            <div className="p-4 pb-2 flex items-center gap-3">
+          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 p-10">
+            <div className="flex items-center gap-6 mb-10">
               <Button
                 variant="ghost"
                 size="icon"
@@ -553,40 +592,42 @@ export function PaymentCalculator({
                   else setStep("method");
                   setReceived("");
                 }}
+                className="h-14 w-14 rounded-2xl bg-accent/10"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-6 w-6" strokeWidth={3} />
               </Button>
-              <div>
-                <p className="font-display font-bold text-lg">
+              <div className="space-y-0.5">
+                <div className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
                   {method === "mixto"
-                    ? `Completar con ${secondMethod === "efectivo" ? "Efectivo" : secondMethod}`
-                    : PAYMENT_METHODS.find((p) => p.key === method)?.label}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {method === "mixto" ? `Faltante: ` : `Total: `}
-                  <span className="font-bold text-primary">
-                    {formatPrice(remainingTotal)}
-                  </span>
-                </p>
+                    ? "FINALIZAR PAGO MIXTO"
+                    : "REGISTRAR EFECTIVO"}
+                </div>
+                <h3 className="text-4xl font-black tracking-tighter">
+                  {method === "mixto" ? `Efectivo Faltante` : `Monto Recibido`}
+                </h3>
               </div>
             </div>
 
-            <div className="px-4 space-y-3">
+            <div className="space-y-8">
               {/* Display */}
-              <div className="rounded-xl bg-muted/50 p-4 text-center space-y-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                  Monto recibido
-                </p>
-                <p className="font-display text-4xl font-bold">
-                  {received ? formatPrice(receivedNum) : "$0"}
-                </p>
-                {(method === "efectivo" ||
-                  (method === "mixto" && secondMethod === "efectivo")) &&
-                  receivedNum > 0 && (
-                    <div className="pt-2 border-t mt-2">
-                      <p className="text-xs text-muted-foreground">Cambio</p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="rounded-[2.5rem] bg-accent/5 p-10 text-center space-y-4 border-2 border-accent/5 shadow-inner">
+                  <p className="text-[11px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                    EFECTIVO RECIBIDO
+                  </p>
+                  <p className="text-6xl font-black tracking-tighter text-foreground">
+                    {received ? formatPrice(receivedNum) : "$0"}
+                  </p>
+                  {receivedNum > 0 && (
+                    <div className="pt-6 border-t-2 border-accent/10 mt-6 flex flex-col items-center gap-2">
+                      <p className="text-xs font-black text-muted-foreground/40 uppercase tracking-widest leading-none">
+                        CAMBIO PARA EL CLIENTE
+                      </p>
                       <p
-                        className={`font-display text-2xl font-bold ${canConfirm ? "text-green-500" : "text-destructive"}`}
+                        className={cn(
+                          "text-4xl font-black tracking-tighter",
+                          canConfirm ? "text-green-500" : "text-destructive",
+                        )}
                       >
                         {canConfirm
                           ? formatPrice(change)
@@ -594,81 +635,103 @@ export function PaymentCalculator({
                       </p>
                     </div>
                   )}
-              </div>
+                  <div className="pt-4 mt-2">
+                    <p className="text-xs font-bold text-muted-foreground/40 uppercase tracking-widest">
+                      DEBE PAGAR:{" "}
+                      <span className="text-foreground font-black ml-1">
+                        {formatPrice(remainingTotal)}
+                      </span>
+                    </p>
+                  </div>
+                </div>
 
-              {(method === "efectivo" ||
-                (method === "mixto" && secondMethod === "efectivo")) && (
-                <>
-                  {/* Quick amounts */}
-                  <div className="flex flex-wrap gap-2">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="lg"
                       onClick={handleExact}
-                      className="text-xs"
+                      className="h-16 rounded-2xl border-2 font-black uppercase tracking-widest text-[10px] shadow-soft"
                     >
-                      Exacto
+                      MONTO EXACTO
                     </Button>
-                    {QUICK_AMOUNTS.map((a) => (
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => setReceived("50000")}
+                      className="h-16 rounded-2xl border-2 font-black text-lg shadow-soft"
+                    >
+                      $50.000
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {QUICK_AMOUNTS.slice(2, 6).map((a) => (
                       <Button
                         key={a}
                         variant="secondary"
-                        size="sm"
+                        size="lg"
                         onClick={() => handleQuickAmount(a)}
-                        className="text-xs"
+                        className="h-16 rounded-2xl font-black text-lg shadow-soft bg-white border-2 border-accent/5"
                       >
                         +{formatPrice(a)}
                       </Button>
                     ))}
                   </div>
+                </div>
+              </div>
 
-                  {/* Numpad */}
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {[
-                      "1",
-                      "2",
-                      "3",
-                      "4",
-                      "5",
-                      "6",
-                      "7",
-                      "8",
-                      "9",
-                      "C",
-                      "0",
-                      "DEL",
-                    ].map((key) => (
-                      <Button
-                        key={key}
-                        variant={
-                          key === "C"
-                            ? "destructive"
-                            : key === "DEL"
-                              ? "outline"
-                              : "secondary"
-                        }
-                        className="h-12 font-display text-lg"
-                        onClick={() => handleNumpad(key)}
-                      >
-                        {key === "DEL" ? <Delete className="h-5 w-5" /> : key}
-                      </Button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+              {/* Numpad */}
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "6",
+                  "7",
+                  "8",
+                  "9",
+                  "C",
+                  "0",
+                  "DEL",
+                ].map((key) => (
+                  <Button
+                    key={key}
+                    variant="secondary"
+                    className={cn(
+                      "h-16 rounded-2xl font-black text-2xl transition-all active:scale-95 shadow-soft border-2 border-transparent",
+                      key === "C"
+                        ? "text-destructive hover:bg-destructive/5 hover:border-destructive/10"
+                        : key === "DEL"
+                          ? "hover:bg-accent/10"
+                          : "hover:border-primary/20",
+                    )}
+                    onClick={() => handleNumpad(key)}
+                  >
+                    {key === "DEL" ? (
+                      <Delete className="h-6 w-6" strokeWidth={2.5} />
+                    ) : (
+                      key
+                    )}
+                  </Button>
+                ))}
+              </div>
 
-            <div className="p-4">
               <Button
-                size="touch"
-                className="w-full h-14 text-lg"
+                size="lg"
+                className="w-full h-20 rounded-3xl bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-[0.2em] shadow-strong shadow-primary/20 transition-all active:scale-95"
                 disabled={!canConfirm}
                 onClick={() => handleConfirmPayment()}
               >
-                <CheckCircle className="h-5 w-5 mr-2" />
-                {canConfirm
-                  ? "Confirmar Pago y Enviar a Cocina"
-                  : "Monto insuficiente"}
+                {canConfirm ? (
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="h-6 w-6" strokeWidth={3} />
+                    CONFIRMAR PAGO & ENVIAR A COCINA
+                  </div>
+                ) : (
+                  "MONTO INSUFICIENTE"
+                )}
               </Button>
             </div>
           </div>

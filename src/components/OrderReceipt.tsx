@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Printer, X } from "lucide-react";
 
@@ -351,6 +352,9 @@ export function OrderReceipt({
               ? "🧾 Recibo de Venta"
               : "👨‍🍳 Comanda de Cocina"}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Visualización previa del ticket para imprimir.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-4">

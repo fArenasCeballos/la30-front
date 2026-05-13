@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
+import { useStore } from "@/context/StoreContext";
 import type { Order, OrderStatus, ProductWithCategory } from "@/types";
 import { supabase } from "@/lib/supabase";
 import type { Json } from "@/types/database.types";
@@ -99,7 +100,9 @@ function sanitizeOrders(raw: unknown[]): Order[] {
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { activeStore } = useStore();
   const queryClient = useQueryClient();
+  const storeId = activeStore?.id;
 
   useEffect(() => {
     if (!user || user.role !== "admin") return;
@@ -118,14 +121,16 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     isLoading: loadingOrders,
     refetch: refreshOrders,
   } = useQuery({
-    queryKey: ["orders", user?.id],
+    queryKey: ["orders", user?.id, storeId],
     queryFn: async () => {
       const shiftStart = getShiftStart().toISOString();
-      const { data, error } = await supabase
+      let query = supabase
         .from("orders")
         .select("*, order_items(*, products(*, categories(*))), payments(*)")
         .gte("created_at", shiftStart)
         .order("created_at", { ascending: false });
+      if (storeId) query = query.eq("store_id", storeId);
+      const { data, error } = await query;
       if (error) throw error;
       return sanitizeOrders((data as unknown[]) ?? []);
     },
@@ -135,13 +140,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
   // Query quirúrgica para Cocina/Caja (solo pedidos activos)
   const { data: activeOrders = [], isLoading: loadingActive } = useQuery({
-    queryKey: ["active-orders", user?.id],
+    queryKey: ["active-orders", user?.id, storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("orders")
         .select("*, order_items(*, products(*, categories(*))), payments(*)")
         .in("status", ["pendiente", "confirmado", "en_preparacion", "listo"])
         .order("created_at", { ascending: true });
+      if (storeId) query = query.eq("store_id", storeId);
+      const { data, error } = await query;
       if (error) throw error;
       return sanitizeOrders((data as unknown[]) ?? []);
     },
@@ -165,9 +172,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                   o.id === payload.new.id ? { ...o, ...payload.new } : o,
                 );
               };
-              queryClient.setQueryData(["orders", user.id], updateFn);
+              queryClient.setQueryData(["orders", user.id, storeId], updateFn);
               queryClient.setQueryData(
-                ["active-orders", user.id],
+                ["active-orders", user.id, storeId],
                 (old: Order[] | undefined) => {
                   if (!old) return old;
                   if (
@@ -183,9 +190,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                 },
               );
             } else {
-              queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
+              queryClient.invalidateQueries({ queryKey: ["orders", user.id, storeId] });
               queryClient.invalidateQueries({
-                queryKey: ["active-orders", user.id],
+                queryKey: ["active-orders", user.id, storeId],
               });
             }
           } catch (err) {
@@ -198,9 +205,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         { event: "*", schema: "public", table: "order_items" },
         () => {
           try {
-            queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
+            queryClient.invalidateQueries({ queryKey: ["orders", user.id, storeId] });
             queryClient.invalidateQueries({
-              queryKey: ["active-orders", user.id],
+              queryKey: ["active-orders", user.id, storeId],
             });
           } catch (err) {
             console.error("Error handling realtime order item:", err);
@@ -211,7 +218,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     return () => {
       supabase.removeChannel(ordersChannel);
     };
-  }, [queryClient, user?.id]);
+  }, [queryClient, user?.id, storeId]);
 
   const addOrder = useCallback(
     async (locator: string, items: OrderItemInput[], notes?: string) => {
@@ -267,30 +274,31 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         newOrderOptimistic,
         ...(old || []),
       ];
-      queryClient.setQueryData(["orders", user?.id], updateList);
-      queryClient.setQueryData(["active-orders", user?.id], updateList);
+      queryClient.setQueryData(["orders", user?.id, storeId], updateList);
+      queryClient.setQueryData(["active-orders", user?.id, storeId], updateList);
 
       const { data, error } = await supabase.rpc("create_order", {
         p_locator: locator,
         p_items: items as unknown as Json,
         p_notes: notes || null,
+        p_store_id: storeId || null,
       });
 
       if (error) {
         toast.error(`Error: ${error.message}`);
-        queryClient.invalidateQueries({ queryKey: ["orders", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["orders", user?.id, storeId] });
         queryClient.invalidateQueries({
-          queryKey: ["active-orders", user?.id],
+          queryKey: ["active-orders", user?.id, storeId],
         });
         return;
       }
 
       const createdOrder = data as unknown as { locator: string };
       toast.success(`Pedido ${createdOrder?.locator || locator} enviado`);
-      queryClient.invalidateQueries({ queryKey: ["orders", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["orders", user?.id, storeId] });
+      queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id, storeId] });
     },
-    [queryClient, user?.id],
+    [queryClient, user?.id, storeId],
   );
 
   const updateOrder = useCallback(
@@ -311,18 +319,19 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       toast.success("Pedido actualizado");
-      queryClient.invalidateQueries({ queryKey: ["orders", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["orders", user?.id, storeId] });
+      queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id, storeId] });
     },
-    [queryClient, user?.id],
+    [queryClient, user?.id, storeId],
   );
 
   const updateOrderStatus = useCallback(
     async (orderId: string, status: OrderStatus) => {
-      const previousOrders = queryClient.getQueryData(["orders", user?.id]);
+      const previousOrders = queryClient.getQueryData(["orders", user?.id, storeId]);
       const previousActive = queryClient.getQueryData([
         "active-orders",
         user?.id,
+        storeId,
       ]);
 
       const updateFn = (old: Order[] | undefined) => {
@@ -332,7 +341,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         return old.map((o) => (o.id === orderId ? { ...o, status } : o));
       };
 
-      queryClient.setQueryData(["active-orders", user?.id], updateFn);
+      queryClient.setQueryData(["active-orders", user?.id, storeId], updateFn);
 
       const { error } = await supabase.rpc("update_order_status", {
         p_order_id: orderId,
@@ -341,21 +350,22 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         toast.error(`Error: ${error.message}`);
-        queryClient.setQueryData(["orders", user?.id], previousOrders);
-        queryClient.setQueryData(["active-orders", user?.id], previousActive);
+        queryClient.setQueryData(["orders", user?.id, storeId], previousOrders);
+        queryClient.setQueryData(["active-orders", user?.id, storeId], previousActive);
         return;
       }
       toast.success(`Pedido: ${STATUS_LABELS[status]}`);
     },
-    [queryClient, user?.id],
+    [queryClient, user?.id, storeId],
   );
 
   const toggleOrderItem = useCallback(
     async (itemId: string, completed: boolean) => {
-      const previousOrders = queryClient.getQueryData(["orders", user?.id]);
+      const previousOrders = queryClient.getQueryData(["orders", user?.id, storeId]);
       const previousActive = queryClient.getQueryData([
         "active-orders",
         user?.id,
+        storeId,
       ]);
 
       const updateFn = (old: Order[] | undefined) => {
@@ -371,8 +381,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         });
       };
 
-      queryClient.setQueryData(["orders", user?.id], updateFn);
-      queryClient.setQueryData(["active-orders", user?.id], updateFn);
+      queryClient.setQueryData(["orders", user?.id, storeId], updateFn);
+      queryClient.setQueryData(["active-orders", user?.id, storeId], updateFn);
 
       const { error } = await supabase.rpc("toggle_order_item_completed", {
         p_item_id: itemId,
@@ -381,11 +391,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         toast.error(`Error: ${error.message}`);
-        queryClient.setQueryData(["orders", user?.id], previousOrders);
-        queryClient.setQueryData(["active-orders", user?.id], previousActive);
+        queryClient.setQueryData(["orders", user?.id, storeId], previousOrders);
+        queryClient.setQueryData(["active-orders", user?.id, storeId], previousActive);
       }
     },
-    [queryClient, user?.id],
+    [queryClient, user?.id, storeId],
   );
 
   const processPayment = useCallback(
@@ -412,9 +422,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         p_status: "en_preparacion",
       });
       toast.success("Pago procesado");
-      queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id, storeId] });
     },
-    [queryClient, user?.id],
+    [queryClient, user?.id, storeId],
   );
 
   const getOrdersByStatus = useCallback(

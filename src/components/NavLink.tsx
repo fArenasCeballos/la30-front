@@ -4,6 +4,7 @@ import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { useStore } from "@/context/StoreContext";
 
 interface NavLinkCompatProps extends Omit<NavLinkProps, "className"> {
   className?: string;
@@ -14,6 +15,8 @@ interface NavLinkCompatProps extends Omit<NavLinkProps, "className"> {
 const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
   ({ className, activeClassName, pendingClassName, to, ...props }, ref) => {
     const queryClient = useQueryClient();
+    const { activeStore } = useStore();
+    const storeId = activeStore?.id;
 
     // Precarga inteligente basada en la ruta
     const handlePrefetch = () => {
@@ -21,41 +24,56 @@ const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
 
       if (path === "/dashboard") {
         queryClient.prefetchQuery({
-          queryKey: ["dashboard-stats"],
+          queryKey: ["dashboard-stats", storeId],
           queryFn: async () => {
-            const { data } = await supabase.rpc("get_dashboard_stats");
+            const { data } = await supabase.rpc("get_dashboard_stats", {
+              p_store_id: storeId,
+            });
             return data;
           },
         });
         queryClient.prefetchQuery({
-          queryKey: ["top-products"],
+          queryKey: ["top-products", storeId],
           queryFn: async () => {
             const { data } = await supabase.rpc("get_top_products", {
               p_limit: 6,
+              p_store_id: storeId,
             });
             return data;
           },
         });
       } else if (path === "/kiosko") {
         queryClient.prefetchQuery({
-          queryKey: ["categories"],
+          queryKey: ["categories", storeId],
           queryFn: async () => {
-            const { data } = await supabase
+            let query = supabase
               .from("categories")
               .select("*")
               .eq("is_active", true)
               .order("sort_order");
+
+            if (storeId) {
+              query = query.contains("store_ids", [storeId]);
+            }
+
+            const { data } = await query;
             return data;
           },
         });
         queryClient.prefetchQuery({
-          queryKey: ["products"],
+          queryKey: ["products", storeId],
           queryFn: async () => {
-            const { data } = await supabase
+            let query = supabase
               .from("products")
               .select("*, categories(*)")
               .eq("available", true)
               .order("sort_order");
+
+            if (storeId) {
+              query = query.contains("store_ids", [storeId]);
+            }
+
+            const { data } = await query;
             return data;
           },
         });

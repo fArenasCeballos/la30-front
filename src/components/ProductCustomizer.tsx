@@ -99,8 +99,7 @@ export function ProductCustomizer({
       setExtras([]);
 
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await (supabase.rpc as any)(
+        const { data, error } = await supabase.rpc(
           "get_customization_for_category",
           {
             p_category_name: categoryName,

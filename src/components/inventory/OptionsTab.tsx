@@ -1,20 +1,46 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { Category, ProductCustomOption, ProductCustomChoice } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { EmojiPicker } from '@/components/ui/emoji-picker';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import type {
+  Category,
+  ProductCustomOption,
+  ProductCustomChoice,
+} from "@/types";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { EmojiPicker } from "@/components/ui/emoji-picker";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronDown, Plus, Edit, Trash2, ListChecks } from 'lucide-react';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ChevronDown,
+  Plus,
+  Edit,
+  Trash2,
+  ListChecks,
+  Settings2,
+  Loader2,
+  CheckCircle2,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,59 +51,71 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from 'sonner';
+import { toast } from "sonner";
+import { StoreMultiSelect } from "./StoreMultiSelect";
 
 const generateSlug = (text: string) =>
   text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/[^a-z0-9\s]/g, "")
     .trim()
-    .replace(/\s+/g, '_');
+    .replace(/\s+/g, "_");
 
 export function OptionsTab() {
   const [options, setOptions] = useState<ProductCustomOption[]>([]);
-  const [choices, setChoices] = useState<Record<string, ProductCustomChoice[]>>({});
+  const [choices, setChoices] = useState<Record<string, ProductCustomChoice[]>>(
+    {},
+  );
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterCat, setFilterCat] = useState<string>('all');
-  
-  const [editOption, setEditOption] = useState<ProductCustomOption | null>(null);
-  const [optionToDelete, setOptionToDelete] = useState<ProductCustomOption | null>(null);
+  const [filterCat, setFilterCat] = useState<string>("all");
+
+  const [editOption, setEditOption] = useState<ProductCustomOption | null>(
+    null,
+  );
+  const [optionToDelete, setOptionToDelete] =
+    useState<ProductCustomOption | null>(null);
   const [isOptionDialogOpen, setIsOptionDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [optionForm, setOptionForm] = useState({
     category_ids: [] as string[],
-    option_key: '',
-    label: '',
-    icon: '',
-    sort_order: '0',
+    option_key: "",
+    label: "",
+    icon: "",
+    sort_order: "0",
+    store_ids: [] as string[],
   });
 
-  const [editChoice, setEditChoice] = useState<{choice: ProductCustomChoice | null, optionId: string}>({choice: null, optionId: ''});
-  const [choiceToDelete, setChoiceToDelete] = useState<ProductCustomChoice | null>(null);
+  const [editChoice, setEditChoice] = useState<{
+    choice: ProductCustomChoice | null;
+    optionId: string;
+  }>({ choice: null, optionId: "" });
+  const [choiceToDelete, setChoiceToDelete] =
+    useState<ProductCustomChoice | null>(null);
   const [isChoiceDialogOpen, setIsChoiceDialogOpen] = useState(false);
   const [choiceForm, setChoiceForm] = useState({
-    value: '',
-    label: '',
-    icon: '',
-    sort_order: '0',
+    value: "",
+    label: "",
+    icon: "",
+    sort_order: "0",
   });
 
   const fetchData = useCallback(async () => {
     try {
       const [optRes, choRes, catRes] = await Promise.all([
-        supabase.from('product_custom_options').select('*').order('sort_order'),
-        supabase.from('product_custom_choices').select('*').order('sort_order'),
-        supabase.from('categories').select('*').order('sort_order'),
+        supabase.from("product_custom_options").select("*").order("sort_order"),
+        supabase.from("product_custom_choices").select("*").order("sort_order"),
+        supabase.from("categories").select("*").order("sort_order"),
       ]);
-      
+
       if (optRes.data) setOptions(optRes.data as ProductCustomOption[]);
       if (catRes.data) setCategories(catRes.data as Category[]);
-      
+
       if (choRes.data) {
         const groupedChoices: Record<string, ProductCustomChoice[]> = {};
-        (choRes.data as ProductCustomChoice[]).forEach(choice => {
+        (choRes.data as ProductCustomChoice[]).forEach((choice) => {
           if (!groupedChoices[choice.option_id]) {
             groupedChoices[choice.option_id] = [];
           }
@@ -85,7 +123,7 @@ export function OptionsTab() {
         });
         setChoices(groupedChoices);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error fetching customization data:", err);
       toast.error("Error al cargar datos de personalización");
     } finally {
@@ -94,38 +132,37 @@ export function OptionsTab() {
   }, []);
 
   useEffect(() => {
-    const load = async () => {
-      await fetchData();
-    };
-    load();
+    fetchData();
   }, [fetchData]);
 
   const getCatLabel = (catId: string) => {
-    const cat = categories.find(c => c.id === catId);
-    return cat ? `${cat.icon || ''} ${cat.label}` : catId;
+    const cat = categories.find((c) => c.id === catId);
+    return cat ? `${cat.icon || ""} ${cat.label}` : catId;
   };
 
-  const filteredOptions = filterCat === 'all'
-    ? options
-    : options.filter(o => 
-        o.category_id === filterCat || 
-        (o.category_ids && o.category_ids.includes(filterCat))
-      );
+  const filteredOptions =
+    filterCat === "all"
+      ? options
+      : options.filter(
+          (o) =>
+            o.category_id === filterCat ||
+            (o.category_ids && o.category_ids.includes(filterCat)),
+        );
 
   const nextOptionSortOrder = () => {
     if (options.length === 0) return 0;
-    return Math.max(...options.map(o => o.sort_order ?? 0)) + 1;
+    return Math.max(...options.map((o) => o.sort_order ?? 0)) + 1;
   };
 
-  // --- Opciones (Grupos) ---
   const openNewOption = () => {
     setEditOption(null);
     setOptionForm({
-      category_ids: filterCat !== 'all' ? [filterCat] : [],
-      option_key: '',
-      label: '',
-      icon: '🧅',
+      category_ids: filterCat !== "all" ? [filterCat] : [],
+      option_key: "",
+      label: "",
+      icon: "🧅",
       sort_order: String(nextOptionSortOrder()),
+      store_ids: [],
     });
     setIsOptionDialogOpen(true);
   };
@@ -133,70 +170,96 @@ export function OptionsTab() {
   const openEditOption = (option: ProductCustomOption) => {
     setEditOption(option);
     setOptionForm({
-      category_ids: option.category_ids || (option.category_id ? [option.category_id] : []),
+      category_ids:
+        option.category_ids || (option.category_id ? [option.category_id] : []),
       option_key: option.option_key,
       label: option.label,
-      icon: option.icon || '',
+      icon: option.icon || "",
       sort_order: String(option.sort_order),
+      store_ids: option.store_ids || [],
     });
     setIsOptionDialogOpen(true);
   };
 
   const saveOption = async () => {
+    setSaving(true);
     try {
-      if (!optionForm.label.trim() || !optionForm.option_key.trim() || optionForm.category_ids.length === 0) {
-        toast.error('Completa todos los campos obligatorios');
+      if (
+        !optionForm.label.trim() ||
+        !optionForm.option_key.trim() ||
+        optionForm.category_ids.length === 0
+      ) {
+        toast.error("Completa todos los campos obligatorios");
+        setSaving(false);
         return;
       }
       const optionData = {
         category_ids: optionForm.category_ids,
-        category_id: optionForm.category_ids[0], // Compatibilidad
-        option_key: optionForm.option_key.toLowerCase().replace(/\s+/g, '_'),
+        category_id: optionForm.category_ids[0],
+        option_key: optionForm.option_key.toLowerCase().replace(/\s+/g, "_"),
         label: optionForm.label,
         icon: optionForm.icon || null,
         sort_order: Number(optionForm.sort_order) || 0,
+        store_ids: optionForm.store_ids,
       };
 
       if (editOption) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase.from('product_custom_options') as any)
+        const { error } = await supabase
+          .from("product_custom_options")
           .update(optionData)
-          .eq('id', editOption.id);
-        if (error) { toast.error(`Error DB: ${error.message}`); return; }
-        toast.success('Opción actualizada');
+          .eq("id", editOption.id);
+        if (error) {
+          toast.error(`Error DB: ${error.message}`);
+          setSaving(false);
+          return;
+        }
+        toast.success("Opción actualizada");
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase.from('product_custom_options') as any)
+        const { error } = await supabase
+          .from("product_custom_options")
           .insert([optionData]);
-        if (error) { toast.error(`Error DB: ${error.message}`); return; }
-        toast.success('Opción creada');
+        if (error) {
+          toast.error(`Error DB: ${error.message}`);
+          setSaving(false);
+          return;
+        }
+        toast.success("Opción creada");
       }
       await fetchData();
       setIsOptionDialogOpen(false);
     } catch (err: unknown) {
-      console.error("Error in saveOption:", err);
-      toast.error('Error interno al guardar la opción');
+      toast.error("Error interno al guardar la opción");
+    } finally {
+      setSaving(false);
     }
   };
 
   const deleteOption = async () => {
     if (!optionToDelete) return;
-    const { error } = await supabase.from('product_custom_options').delete().eq('id', optionToDelete.id);
-    if (error) { toast.error(`Error: ${error.message}`); return; }
-    setOptions(prev => prev.filter(o => o.id !== optionToDelete.id));
-    toast.success('Opción eliminada');
+    const { error } = await supabase
+      .from("product_custom_options")
+      .delete()
+      .eq("id", optionToDelete.id);
+    if (error) {
+      toast.error(`Error: ${error.message}`);
+      return;
+    }
+    setOptions((prev) => prev.filter((o) => o.id !== optionToDelete.id));
+    toast.success("Opción eliminada");
     setOptionToDelete(null);
   };
 
-  // --- Opciones (Choices) ---
   const openNewChoice = (optionId: string) => {
     const currentChoices = choices[optionId] || [];
-    const nextOrder = currentChoices.length === 0 ? 0 : Math.max(...currentChoices.map(c => c.sort_order ?? 0)) + 1;
+    const nextOrder =
+      currentChoices.length === 0
+        ? 0
+        : Math.max(...currentChoices.map((c) => c.sort_order ?? 0)) + 1;
     setEditChoice({ choice: null, optionId });
     setChoiceForm({
-      value: '',
-      label: '',
-      icon: '✅',
+      value: "",
+      label: "",
+      icon: "✅",
       sort_order: String(nextOrder),
     });
     setIsChoiceDialogOpen(true);
@@ -207,332 +270,667 @@ export function OptionsTab() {
     setChoiceForm({
       value: choice.value,
       label: choice.label,
-      icon: choice.icon || '',
+      icon: choice.icon || "",
       sort_order: String(choice.sort_order),
     });
     setIsChoiceDialogOpen(true);
   };
 
   const saveChoice = async () => {
+    setSaving(true);
     try {
       if (!choiceForm.label.trim() || !choiceForm.value.trim()) {
-        toast.error('Completa todos los campos obligatorios');
+        toast.error("Completa todos los campos obligatorios");
+        setSaving(false);
         return;
       }
       const choiceData = {
         option_id: editChoice.optionId,
-        value: choiceForm.value.toLowerCase().replace(/\s+/g, '_'),
+        name: choiceForm.label,
+        value: choiceForm.value.toLowerCase().replace(/\s+/g, "_"),
         label: choiceForm.label,
         icon: choiceForm.icon || null,
         sort_order: Number(choiceForm.sort_order) || 0,
       };
 
       if (editChoice.choice) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase.from('product_custom_choices') as any)
+        const { error } = await supabase
+          .from("product_custom_choices")
           .update(choiceData)
-          .eq('id', editChoice.choice.id);
-        if (error) { toast.error(`Error DB: ${error.message}`); return; }
-        toast.success('Variable actualizada');
+          .eq("id", editChoice.choice.id);
+        if (error) {
+          toast.error(`Error DB: ${error.message}`);
+          setSaving(false);
+          return;
+        }
+        toast.success("Variable actualizada");
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase.from('product_custom_choices') as any)
+        const { error } = await supabase
+          .from("product_custom_choices")
           .insert([choiceData]);
-        if (error) { toast.error(`Error DB: ${error.message}`); return; }
-        toast.success('Variable agregada');
+        if (error) {
+          toast.error(`Error DB: ${error.message}`);
+          setSaving(false);
+          return;
+        }
+        toast.success("Variable agregada");
       }
       await fetchData();
       setIsChoiceDialogOpen(false);
     } catch (err: unknown) {
-      console.error("Error in saveChoice:", err);
-      toast.error('Error interno al guardar la variable');
+      toast.error("Error interno al guardar la variable");
+    } finally {
+      setSaving(false);
     }
   };
 
   const deleteChoice = async () => {
     if (!choiceToDelete) return;
-    const { error } = await supabase.from('product_custom_choices').delete().eq('id', choiceToDelete.id);
-    if (error) { toast.error(`Error: ${error.message}`); return; }
+    const { error } = await supabase
+      .from("product_custom_choices")
+      .delete()
+      .eq("id", choiceToDelete.id);
+    if (error) {
+      toast.error(`Error: ${error.message}`);
+      return;
+    }
     fetchData();
-    toast.success('Variable eliminada');
+    toast.success("Variable eliminada");
     setChoiceToDelete(null);
   };
 
   if (loading) {
-    return <div className="p-6 text-center">Cargando opciones...</div>;
+    return (
+      <div className="py-20 flex flex-col items-center justify-center space-y-4 opacity-40">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="font-black uppercase tracking-[0.2em] text-[10px]">
+          Cargando personalizaciones...
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <Badge variant="secondary">{options.length} grupos</Badge>
-          <Select value={filterCat} onValueChange={setFilterCat}>
-            <SelectTrigger className="w-[180px] h-9">
-              <SelectValue placeholder="Filtrar categoría" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las categorías</SelectItem>
-              {categories.map(cat => (
-                <SelectItem key={cat.id} value={cat.id}>{cat.icon} {cat.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <div className="space-y-16 animate-in fade-in duration-1000 fill-mode-both">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 bg-white/40 backdrop-blur-xl p-10 rounded-[3.5rem] border-4 border-white shadow-strong relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-primary/10 transition-all duration-1000" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-10 relative">
+          <div className="h-20 w-20 rounded-4xl bg-linear-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/5 group-hover:rotate-12 transition-transform duration-500">
+            <ListChecks className="h-10 w-10" strokeWidth={2.5} />
+          </div>
+          <div className="space-y-6 sm:space-y-2">
+            <p className="text-[11px] font-black uppercase tracking-[0.5em] text-primary/40 leading-none">
+              PERSONALIZACIÓN POR SELECCIÓN
+            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+              <p className="text-4xl font-black tracking-tighter text-foreground whitespace-nowrap">
+                {options.length}{" "}
+                <span className="text-primary/40 font-bold">Variaciones</span>
+              </p>
+              <div className="h-12 w-[3px] bg-primary/10 hidden sm:block rounded-full" />
+              <div className="relative group/select min-w-[280px]">
+                <Select value={filterCat} onValueChange={setFilterCat}>
+                  <SelectTrigger className="h-16 px-8 rounded-2xl border-4 border-white bg-white/60 backdrop-blur-md shadow-soft font-black text-xs uppercase tracking-widest transition-all focus:border-primary/40 focus:ring-0 group-hover/select:shadow-strong group-hover/select:scale-105">
+                    <SelectValue placeholder="Filtrar por grupo" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-[2.5rem] border-none shadow-strong p-3 bg-white/95 backdrop-blur-xl">
+                    <SelectItem
+                      value="all"
+                      className="font-black uppercase tracking-widest text-[10px] rounded-2xl py-4 transition-colors"
+                    >
+                      🚀 TODOS LOS GRUPOS
+                    </SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem
+                        key={cat.id}
+                        value={cat.id}
+                        className="font-black uppercase tracking-widest text-[10px] rounded-2xl py-4 transition-colors"
+                      >
+                        <span className="mr-3 text-xl scale-125">
+                          {cat.icon}
+                        </span>{" "}
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
         </div>
-        <Button onClick={openNewOption} size="touch">
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Grupo
+
+        <Button
+          onClick={openNewOption}
+          className="h-20 px-12 rounded-[2.5rem] font-black text-sm tracking-widest shadow-strong shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-4 border-white/20 relative"
+        >
+          <Plus
+            className="h-7 w-7 mr-4 group-hover:rotate-90 transition-transform duration-700"
+            strokeWidth={3}
+          />
+          NUEVA VARIACIÓN
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {filteredOptions.map(option => {
+      <div className="space-y-12">
+        {filteredOptions.map((option, idx) => {
           const optChoices = choices[option.id] || [];
           return (
-            <div key={option.id} className="pos-card overflow-hidden">
-              <div className="bg-muted/30 -mx-4 -mt-4 p-4 border-b mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{option.icon || '🛠️'}</span>
-                  <div>
-                    <h3 className="font-semibold">{option.label}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {(option.category_ids || (option.category_id ? [option.category_id] : [])).map(cid => (
-                        <Badge key={cid} variant="outline" className="text-xs">
+            <div
+              key={option.id}
+              className="pos-card overflow-hidden group border-4 border-white transition-all duration-700 hover:shadow-2xl bg-white/60 hover:bg-white relative"
+              style={{ animationDelay: `${idx * 100}ms` }}
+            >
+              {/* Header Section */}
+              <div className="bg-linear-to-br from-accent/5 to-accent/10 p-12 border-b-4 border-white flex flex-col md:flex-row md:items-center justify-between gap-10">
+                <div className="flex items-center gap-8">
+                  <div className="h-24 w-24 rounded-4xl bg-white flex items-center justify-center text-6xl shadow-strong group-hover:scale-110 transition-all duration-700 group-hover:rotate-6 relative">
+                    <div className="absolute inset-0 bg-primary/5 rounded-full blur-xl scale-0 group-hover:scale-100 transition-transform duration-700" />
+                    <span className="relative">{option.icon || "🛠️"}</span>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="font-black text-4xl tracking-tighter text-foreground group-hover:text-primary transition-colors leading-none">
+                      {option.label}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-4">
+                      {(
+                        option.category_ids ||
+                        (option.category_id ? [option.category_id] : [])
+                      ).map((cid) => (
+                        <div
+                          key={cid}
+                          className="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 bg-primary/5 text-primary border-primary/10 shadow-soft"
+                        >
                           {getCatLabel(cid)}
-                        </Badge>
+                        </div>
                       ))}
-                    </div>
-                      <span className="text-xs text-muted-foreground font-mono">{option.option_key}</span>
+                      <div className="h-10 w-[2px] bg-primary/10 hidden sm:block rounded-full mx-2" />
+                      <span className="text-[10px] font-black text-primary/40 tracking-[0.3em] uppercase bg-primary/5 px-4 py-1.5 rounded-full border border-primary/10">
+                        KEY: {option.option_key}
+                      </span>
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditOption(option)}>
-                    <Edit className="h-4 w-4" />
+                <div className="flex gap-4 opacity-0 translate-x-10 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-700">
+                  <Button
+                    size="icon"
+                    className="h-16 w-16 rounded-2xl shadow-strong bg-white/90 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
+                    onClick={() => openEditOption(option)}
+                  >
+                    <Edit className="h-6 w-6" strokeWidth={3} />
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setOptionToDelete(option)}>
-                    <Trash2 className="h-4 w-4" />
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    className="h-16 w-16 rounded-2xl shadow-strong bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none"
+                    onClick={() => setOptionToDelete(option)}
+                  >
+                    <Trash2 className="h-6 w-6" />
                   </Button>
                 </div>
               </div>
 
-              <div className="space-y-3">
+              {/* Choices Section */}
+              <div className="p-12 space-y-10">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <ListChecks className="h-4 w-4" />
-                    Variables seleccionables ({optChoices.length})
-                  </span>
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => openNewChoice(option.id)}>
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Variable
+                  <div className="flex items-center gap-4">
+                    <div className="h-2 w-12 bg-primary/20 rounded-full" />
+                    <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-muted-foreground/40">
+                      OPCIONES DISPONIBLES ({optChoices.length})
+                    </h4>
+                  </div>
+                  <Button
+                    onClick={() => openNewChoice(option.id)}
+                    className="h-14 px-8 rounded-2xl font-black text-[10px] uppercase tracking-widest border-4 border-white shadow-soft bg-white hover:bg-primary hover:text-white hover:scale-105 transition-all"
+                  >
+                    <Plus className="h-5 w-5 mr-3" strokeWidth={3} /> AÑADIR
+                    OPCIÓN
                   </Button>
                 </div>
 
                 {optChoices.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                    {optChoices.map(choice => (
-                      <div key={choice.id} className="flex items-center justify-between p-2 rounded-lg border bg-card hover:border-primary/30 transition-colors">
-                        <div className="flex items-center gap-2">
-                          <span>{choice.icon || '🔹'}</span>
-                          <span className="text-sm font-medium">{choice.label}</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {optChoices.map((choice) => (
+                      <div
+                        key={choice.id}
+                        className="flex items-center justify-between p-6 rounded-4xl border-2 border-accent/5 bg-accent/5 hover:bg-white hover:border-primary/20 hover:shadow-strong transition-all duration-500 group/choice relative overflow-hidden"
+                      >
+                        <div className="flex items-center gap-5">
+                          <span className="text-3xl group-hover/choice:scale-125 group-hover/choice:rotate-12 transition-transform duration-500">
+                            {choice.icon || "🔹"}
+                          </span>
+                          <span className="text-sm font-black tracking-tighter text-foreground/80 group-hover/choice:text-primary transition-colors">
+                            {choice.label}
+                          </span>
                         </div>
-                        <div className="flex gap-1">
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditChoice(choice)}>
-                            <Edit className="h-3 w-3" />
+                        <div className="flex gap-2 opacity-0 translate-x-4 group-hover/choice:opacity-100 group-hover/choice:translate-x-0 transition-all duration-500">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors"
+                            onClick={() => openEditChoice(choice)}
+                          >
+                            <Edit className="h-4 w-4" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setChoiceToDelete(choice)}>
-                            <Trash2 className="h-3 w-3" />
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-10 w-10 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            onClick={() => setChoiceToDelete(choice)}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
+                        <div className="absolute -right-4 -bottom-4 w-12 h-12 bg-primary/5 rounded-full blur-xl opacity-0 group-hover/choice:opacity-100 transition-opacity" />
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center p-4 border border-dashed rounded-lg bg-muted/10">
-                    <p className="text-sm text-muted-foreground">No hay variables configuradas.</p>
+                  <div className="py-24 border-4 border-white rounded-[3.5rem] bg-accent/5 border-dashed flex flex-col items-center justify-center space-y-6">
+                    <div className="h-20 w-20 rounded-4xl bg-white border-2 shadow-soft flex items-center justify-center text-muted-foreground/20">
+                      <ListChecks className="h-10 w-10 animate-pulse" />
+                    </div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.5em] text-muted-foreground/30">
+                      Configura las opciones que el cliente podrá elegir.
+                    </p>
                   </div>
                 )}
               </div>
+
+              {/* Decorative element */}
+              <div className="absolute -right-24 -bottom-24 w-64 h-64 bg-primary/5 rounded-full blur-[100px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
             </div>
           );
         })}
 
         {filteredOptions.length === 0 && (
-          <div className="text-center py-12 border-2 border-dashed rounded-xl">
-            <ListChecks className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
-            <p className="text-muted-foreground">No hay grupos de personalización{filterCat !== 'all' ? ' para esta categoría' : ''}.</p>
-            <p className="text-sm text-muted-foreground">Crea grupos como "Tipo de pan" o "Cebolla".</p>
+          <div className="col-span-full py-48 flex flex-col items-center justify-center space-y-10 bg-white/40 rounded-[4rem] border-4 border-white shadow-soft group">
+            <div className="h-32 w-32 rounded-[3rem] bg-accent/5 flex items-center justify-center text-muted-foreground/20 group-hover:scale-110 transition-transform duration-700">
+              <ListChecks
+                className="h-16 w-16 animate-pulse"
+                strokeWidth={1.5}
+              />
+            </div>
+            <div className="text-center space-y-3">
+              <p className="font-black uppercase tracking-[0.5em] text-sm text-muted-foreground/40">
+                SIN VARIACIONES
+              </p>
+              <p className="text-xs font-bold text-muted-foreground/20 italic max-w-xs mx-auto">
+                Define grupos de variaciones para que tus clientes personalicen
+                sus productos.
+              </p>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Dialog para Grupos (Options) */}
+      {/* Option Editor Dialog */}
       <Dialog open={isOptionDialogOpen} onOpenChange={setIsOptionDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display">
-              {editOption ? 'Editar Grupo' : 'Nuevo Grupo de Personalización'}
-            </DialogTitle>
+        <DialogContent className="max-w-xl max-h-[95vh] overflow-y-auto rounded-[3.5rem] p-12 border-none shadow-strong bg-white/95 backdrop-blur-2xl">
+          <DialogHeader className="space-y-6 mb-12">
+            <div className="h-20 w-20 rounded-4xl bg-primary/10 flex items-center justify-center text-primary mb-2 shadow-inner group-hover:rotate-12 transition-transform">
+              {editOption ? (
+                <Edit className="h-10 w-10" />
+              ) : (
+                <Settings2 className="h-10 w-10" />
+              )}
+            </div>
+            <div>
+              <DialogTitle className="text-5xl font-black tracking-tighter mb-3">
+                {editOption ? "Editar Grupo" : "Nuevo Grupo"}
+              </DialogTitle>
+              <DialogDescription className="text-xl font-medium text-muted-foreground leading-relaxed">
+                Agrupa selecciones como "Término de Carne" o "Tipo de Pan".
+              </DialogDescription>
+            </div>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Categorías *</Label>
+
+          <div className="space-y-10">
+            <div className="space-y-4">
+              <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
+                Secciones Vinculadas
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    role="combobox"
-                    className="w-full justify-between h-auto py-2 px-3 font-normal"
+                    className="w-full justify-between h-auto min-h-20 py-4 px-6 rounded-4xl border-4 border-white shadow-soft bg-white/50 focus:border-primary/40 transition-all font-black"
                   >
-                    <div className="flex flex-wrap gap-1 items-center">
-                      {optionForm.category_ids.length > 0 ? (
-                        optionForm.category_ids.map(cid => (
-                          <Badge key={cid} variant="secondary" className="font-normal">
-                            {getCatLabel(cid)}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Seleccionar categorías...</span>
-                      )}
-                    </div>
-                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    {optionForm.category_ids.length > 0 ? (
+                      <div className="flex flex-wrap gap-2.5">
+                        {optionForm.category_ids.map((cid) => {
+                          const cat = categories.find((c) => c.id === cid);
+                          return (
+                            <div
+                              key={cid}
+                              className="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-white border border-accent/10 shadow-soft text-primary"
+                            >
+                              {cat?.icon} {cat?.label}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground opacity-30 text-sm tracking-widest uppercase">
+                        Seleccionar categorías vinculadas...
+                      </span>
+                    )}
+                    <ChevronDown className="h-6 w-6 opacity-30 ml-4 shrink-0" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
-                  <div className="max-h-[300px] overflow-y-auto p-2">
+                <PopoverContent
+                  className="w-[340px] p-4 rounded-[2.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl"
+                  align="start"
+                >
+                  <div className="max-h-[360px] overflow-y-auto space-y-2 p-2 no-scrollbar">
                     {categories.map((cat) => (
                       <div
                         key={cat.id}
-                        className="flex items-center space-x-2 p-2 hover:bg-accent rounded-sm cursor-pointer"
+                        className={cn(
+                          "flex items-center space-x-4 p-4 hover:bg-primary/5 rounded-2xl cursor-pointer transition-all group",
+                          optionForm.category_ids.includes(cat.id) &&
+                            "bg-primary/10",
+                        )}
                         onClick={() => {
                           const current = optionForm.category_ids;
                           const next = current.includes(cat.id)
-                            ? current.filter(id => id !== cat.id)
+                            ? current.filter((id) => id !== cat.id)
                             : [...current, cat.id];
-                          setOptionForm({ ...optionForm, category_ids: next });
+                          setOptionForm((f) => ({ ...f, category_ids: next }));
                         }}
                       >
                         <Checkbox
                           checked={optionForm.category_ids.includes(cat.id)}
-                          onCheckedChange={() => {}} // Manejado por el onClick del div
+                          onCheckedChange={() => {}}
+                          className="h-6 w-6 rounded-lg border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                         />
-                        <label className="text-sm font-medium leading-none cursor-pointer">
-                          {cat.icon} {cat.label}
-                        </label>
+                        <div className="flex-1 flex items-center gap-3">
+                          <span className="text-2xl">{cat.icon}</span>
+                          <span className="text-xs font-black uppercase tracking-widest group-hover:text-primary transition-colors">
+                            {cat.label}
+                          </span>
+                        </div>
+                        {optionForm.category_ids.includes(cat.id) && (
+                          <CheckCircle2
+                            className="h-5 w-5 text-primary"
+                            strokeWidth={3}
+                          />
+                        )}
                       </div>
                     ))}
                   </div>
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="space-y-2">
-              <Label>Icono (emoji)</Label>
-              <EmojiPicker value={optionForm.icon} onChange={(emoji) => setOptionForm(f => ({ ...f, icon: emoji }))} />
+
+            <div className="space-y-4">
+              <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
+                Identificador Visual (Emoji)
+              </Label>
+              <div className="bg-white/50 backdrop-blur-md p-10 rounded-[3rem] border-4 border-white shadow-soft flex justify-center group-focus-within:border-primary/20 transition-all">
+                <EmojiPicker
+                  value={optionForm.icon}
+                  onChange={(emoji) =>
+                    setOptionForm((f) => ({ ...f, icon: emoji }))
+                  }
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Etiqueta visible</Label>
-              <Input value={optionForm.label} onChange={e => {
-                const label = e.target.value;
-                setOptionForm(f => ({
-                  ...f,
-                  label,
-                  option_key: editOption ? f.option_key : generateSlug(label),
-                }));
-              }} placeholder="Cebolla" />
-              {optionForm.option_key && (
-                <p className="text-xs text-muted-foreground">
-                  Clave: <code className="bg-muted px-1 rounded">{optionForm.option_key}</code>
+
+            <div className="space-y-10">
+              <div className="space-y-4">
+                <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
+                  Nombre del Grupo
+                </Label>
+                <div className="relative group">
+                  <Input
+                    value={optionForm.label}
+                    onChange={(e) => {
+                      const label = e.target.value;
+                      setOptionForm((f) => ({
+                        ...f,
+                        label,
+                        option_key: editOption
+                          ? f.option_key
+                          : generateSlug(label),
+                      }));
+                    }}
+                    placeholder="Ej: Término de la Carne"
+                    className="h-16 px-8 rounded-2xl border-4 border-white shadow-soft bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
+                  />
+                  {optionForm.option_key && (
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2">
+                      <span className="text-[10px] font-black text-primary/40 uppercase tracking-widest bg-primary/5 px-4 py-1.5 rounded-full border border-primary/10 shadow-inner">
+                        KEY: {optionForm.option_key}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
+                  Prioridad de Visualización
+                </Label>
+                <Input
+                  type="number"
+                  value={optionForm.sort_order}
+                  onChange={(e) =>
+                    setOptionForm((f) => ({ ...f, sort_order: e.target.value }))
+                  }
+                  placeholder="0"
+                  className="h-16 px-8 rounded-2xl border-4 border-white shadow-soft bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
+                />
+                <p className="text-[10px] font-black text-muted-foreground/30 px-2 tracking-widest uppercase italic">
+                  VALORES MÁS BAJOS APARECEN PRIMERO
                 </p>
-              )}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
+                Alcance de Tiendas
+              </Label>
+              <div className="bg-white/50 backdrop-blur-md p-8 rounded-[2.5rem] border-4 border-white shadow-soft">
+                <StoreMultiSelect
+                  selectedStoreIds={optionForm.store_ids}
+                  onChange={(ids) =>
+                    setOptionForm((f) => ({ ...f, store_ids: ids }))
+                  }
+                />
+              </div>
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsOptionDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={saveOption}>{editOption ? 'Guardar' : 'Crear'}</Button>
+
+          <DialogFooter className="mt-16 gap-6">
+            <Button
+              variant="ghost"
+              onClick={() => setIsOptionDialogOpen(false)}
+              disabled={saving}
+              className="h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] px-12"
+            >
+              Cerrar
+            </Button>
+            <Button
+              onClick={saveOption}
+              disabled={saving}
+              className="h-16 px-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-[0.2em] text-[11px] shadow-strong shadow-primary/20 relative overflow-hidden group/save"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-3 animate-spin" />
+                  SINCRONIZANDO...
+                </>
+              ) : (
+                <>
+                  <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/save:translate-y-0 transition-transform duration-500" />
+                  <span className="relative">
+                    {editOption ? "ACTUALIZAR GRUPO" : "CREAR GRUPO"}
+                  </span>
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para Variables (Choices) */}
+      {/* Choice Editor Dialog */}
       <Dialog open={isChoiceDialogOpen} onOpenChange={setIsChoiceDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-display">
-              {editChoice.choice ? 'Editar Variable' : 'Nueva Variable'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Icono (emoji)</Label>
-              <EmojiPicker value={choiceForm.icon} onChange={(emoji) => setChoiceForm(f => ({ ...f, icon: emoji }))} />
+        <DialogContent className="max-w-lg rounded-[3rem] p-12 border-none shadow-strong bg-white/95 backdrop-blur-2xl">
+          <DialogHeader className="space-y-6 mb-10 text-center flex flex-col items-center">
+            <div className="h-20 w-20 rounded-[1.75rem] bg-primary/10 flex items-center justify-center text-primary shadow-inner mb-2">
+              <CheckCircle2 className="h-10 w-10" strokeWidth={3} />
             </div>
-            <div className="space-y-2">
-              <Label>Etiqueta visible</Label>
-              <Input value={choiceForm.label} onChange={e => {
-                const label = e.target.value;
-                setChoiceForm(f => ({
-                  ...f,
-                  label,
-                  value: editChoice.choice ? f.value : generateSlug(label),
-                }));
-              }} placeholder="Sin cebolla" />
-              {choiceForm.value && (
-                <p className="text-xs text-muted-foreground">
-                  Clave: <code className="bg-muted px-1 rounded">{choiceForm.value}</code>
-                </p>
-              )}
+            <div>
+              <DialogTitle className="text-4xl font-black tracking-tighter mb-2">
+                {editChoice.choice ? "Editar Opción" : "Añadir Opción"}
+              </DialogTitle>
+              <p className="text-muted-foreground font-medium uppercase tracking-widest text-[10px]">
+                Configura los valores de selección
+              </p>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-10">
+            <div className="flex flex-col items-center gap-4">
+              <Label className="text-[11px] font-black uppercase tracking-[0.3em] opacity-40">
+                Identificador Visual
+              </Label>
+              <div className="p-8 rounded-4xl bg-white border-4 border-white shadow-soft transition-transform hover:scale-110">
+                <EmojiPicker
+                  value={choiceForm.icon}
+                  onChange={(emoji) =>
+                    setChoiceForm((f) => ({ ...f, icon: emoji }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
+                Nombre de la Opción
+              </Label>
+              <Input
+                value={choiceForm.label}
+                onChange={(e) => {
+                  const label = e.target.value;
+                  setChoiceForm((f) => ({
+                    ...f,
+                    label,
+                    value: editChoice.choice ? f.value : generateSlug(label),
+                  }));
+                }}
+                placeholder="Ej: Brioche"
+                className="h-16 px-8 rounded-2xl border-4 border-white shadow-soft bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
+              />
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsChoiceDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={saveChoice}>{editChoice.choice ? 'Guardar' : 'Agregar'}</Button>
+
+          <DialogFooter className="mt-12 gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => setIsChoiceDialogOpen(false)}
+              className="h-14 rounded-xl font-black text-[11px] uppercase tracking-widest px-8"
+            >
+              CANCELAR
+            </Button>
+            <Button
+              onClick={saveChoice}
+              disabled={saving}
+              className="flex-1 h-14 bg-primary text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-strong shadow-primary/20 relative group/choice-save overflow-hidden"
+            >
+              {saving ? (
+                <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+              ) : (
+                <>
+                  <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/choice-save:translate-y-0 transition-transform duration-300" />
+                  <span className="relative">
+                    {editChoice.choice ? "GUARDAR CAMBIOS" : "AÑADIR OPCIÓN"}
+                  </span>
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* AlertDialog para Borrar Opción */}
-      <AlertDialog 
-        open={!!optionToDelete} 
+      {/* Group Delete Alert */}
+      <AlertDialog
+        open={!!optionToDelete}
         onOpenChange={(open) => !open && setOptionToDelete(null)}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar grupo de personalización?</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Seguro que deseas eliminar <strong>{optionToDelete?.label}</strong>? Se eliminarán también todas sus variables asociadas. Esta acción no se puede deshacer.
-            </AlertDialogDescription>
+        <AlertDialogContent className="rounded-[3.5rem] border-4 border-white p-12 max-w-lg bg-white/95 backdrop-blur-2xl shadow-strong">
+          <AlertDialogHeader className="space-y-6">
+            <div className="h-24 w-24 rounded-[2.5rem] bg-destructive/10 flex items-center justify-center text-destructive mb-2 shadow-inner">
+              <Trash2 className="h-12 w-12" />
+            </div>
+            <div>
+              <AlertDialogTitle className="text-4xl font-black tracking-tighter mb-4">
+                ¿Remover grupo?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-lg font-medium text-muted-foreground leading-relaxed">
+                El grupo{" "}
+                <strong className="text-foreground">
+                  "{optionToDelete?.label}"
+                </strong>{" "}
+                y todas sus opciones internas serán eliminadas de forma
+                permanente.
+                <div className="mt-8 flex items-start gap-4 p-6 bg-destructive/5 rounded-3xl border-2 border-destructive/10">
+                  <div className="h-3 w-3 rounded-full bg-destructive mt-1.5 shrink-0 animate-pulse" />
+                  <p className="text-[11px] font-black uppercase tracking-widest text-destructive leading-tight">
+                    Esta acción afectará la visualización en el kiosko
+                    inmediatamente.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </div>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
+          <AlertDialogFooter className="mt-12 gap-4">
+            <AlertDialogCancel className="h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] border-4 border-white bg-white/50 px-8 shadow-soft">
+              CANCELAR
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={deleteOption}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="h-16 px-10 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] bg-destructive text-white hover:bg-destructive/90 shadow-strong shadow-destructive/20 border-4 border-white/20"
             >
-              Eliminar Grupo
+              CONFIRMAR ELIMINACIÓN
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* AlertDialog para Borrar Variable */}
-      <AlertDialog 
-        open={!!choiceToDelete} 
+      {/* Choice Delete Alert */}
+      <AlertDialog
+        open={!!choiceToDelete}
         onOpenChange={(open) => !open && setChoiceToDelete(null)}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar variable?</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Seguro que deseas eliminar la variable <strong>{choiceToDelete?.label}</strong>? Esta acción no se puede deshacer.
-            </AlertDialogDescription>
+        <AlertDialogContent className="rounded-[3rem] border-4 border-white p-10 max-w-md bg-white/95 backdrop-blur-2xl shadow-strong">
+          <AlertDialogHeader className="space-y-4">
+            <div className="h-20 w-20 rounded-4xl bg-destructive/10 flex items-center justify-center text-destructive mb-2 shadow-inner">
+              <Trash2 className="h-10 w-10" />
+            </div>
+            <div>
+              <AlertDialogTitle className="text-3xl font-black tracking-tighter mb-2">
+                ¿Eliminar opción?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-muted-foreground font-medium">
+                La opción{" "}
+                <strong className="text-foreground">
+                  "{choiceToDelete?.label}"
+                </strong>{" "}
+                será removida de este grupo.
+              </AlertDialogDescription>
+            </div>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
+          <AlertDialogFooter className="mt-10 gap-3">
+            <AlertDialogCancel className="h-14 rounded-xl font-black uppercase tracking-[0.2em] text-[9px] border-4 border-white bg-white/50 px-6 shadow-soft">
+              CANCELAR
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={deleteChoice}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="h-14 flex-1 rounded-xl font-black uppercase tracking-[0.2em] text-[9px] bg-destructive text-white hover:bg-destructive/90 shadow-strong shadow-destructive/20"
             >
-              Eliminar Variable
+              ELIMINAR OPCIÓN
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

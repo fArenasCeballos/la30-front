@@ -6,6 +6,7 @@ export type OrderStatus = Enums<"order_status">;
 export type PaymentMethod = Enums<"payment_method">;
 
 // Row types from DB
+export type Store = Tables<"stores">;
 export type Profile = Tables<"profiles">;
 export type Category = Tables<"categories">;
 export type Product = Tables<"products">;
@@ -19,16 +20,18 @@ export type ProductExtra = Tables<"product_extras">;
 
 // Product with joined category
 export interface ProductWithCategory extends Product {
-  categories: Category;
+  categories: Category | null;
 }
 
 // Order item with joined product (and product's category)
 export interface OrderItem extends OrderItemRow {
+  choices: Record<string, { label: string; icon?: string }>;
   products: ProductWithCategory;
 }
 
 // Order with joined items (each item includes its product)
 export interface Order extends OrderRow {
+  profiles: Profile | null;
   ticket_number: string;
   order_items: OrderItem[];
   total: number;

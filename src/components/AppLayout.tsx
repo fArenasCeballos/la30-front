@@ -1,5 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
-import { Navigate, Outlet } from "react-router-dom";
+import { useStore } from "@/context/StoreContext";
+import { Navigate, Outlet, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   LogOut,
@@ -12,6 +13,7 @@ import {
   Users,
   Wrench,
   ClipboardList,
+  Store,
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { NavLink } from "@/components/NavLink";
@@ -29,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { Logo } from "./ui/logo";
+import { cn } from "@/lib/utils";
 
 const NAV_ITEMS: {
   to: string;
@@ -58,13 +61,20 @@ const NAV_ITEMS: {
 
 export function AppLayout() {
   const { user, logout, forceReset, isAuthenticated, loading } = useAuth();
+  const { activeStore, isAdmin } = useStore();
+  const navigate = useNavigate();
   const [showResetDialog, setShowResetDialog] = useState(false);
 
   if (loading) {
-    // Mientras Supabase verifica la sesión, no redirige
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span className="text-muted-foreground text-sm">Cargando...</span>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+        <div className="relative">
+          <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse" />
+          <Logo className="h-16 w-16 relative animate-bounce" />
+        </div>
+        <p className="mt-8 text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse">
+          Cargando Sistema
+        </p>
       </div>
     );
   }
@@ -78,74 +88,166 @@ export function AppLayout() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="h-16 border-b bg-card flex items-center px-4 gap-3 sticky top-0 z-50">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-card border shadow-sm flex items-center justify-center overflow-hidden">
-            <Logo className="h-7 w-7" />
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* Premium Glass Header */}
+      <header className="h-20 lg:h-24 border-b bg-white/70 backdrop-blur-xl flex items-center px-4 lg:px-10 gap-4 lg:gap-8 sticky top-0 z-50 transition-all duration-300">
+        {/* Brand & Store Selector */}
+        <div className="flex items-center gap-4 lg:gap-6">
+          <div
+            className="flex items-center gap-3 lg:gap-4 group cursor-pointer"
+            onClick={() => navigate("/dashboard")}
+          >
+            <div className="w-11 h-11 lg:w-14 lg:h-14 rounded-2xl lg:rounded-3xl bg-white border-2 shadow-soft flex items-center justify-center overflow-hidden group-hover:scale-105 group-hover:rotate-3 transition-all duration-500">
+              <Logo className="h-7 w-7 lg:h-10" />
+            </div>
+            <div className="hidden xl:block">
+              <span className="font-black text-2xl tracking-tighter block leading-none">
+                La 30
+              </span>
+              <span className="text-[9px] text-primary uppercase font-black tracking-[0.2em] mt-1 block">
+                Plataforma POS
+              </span>
+            </div>
           </div>
-          <span className="font-display font-bold text-lg hidden sm:block">
-            La 30
-          </span>
+
+          {activeStore && (
+            <div className="h-10 w-px bg-accent/60 mx-1 hidden lg:block" />
+          )}
+
+          {activeStore && (
+            <button
+              onClick={() => (isAdmin ? navigate("/select-store") : undefined)}
+              className={cn(
+                "flex items-center gap-3 px-5 py-2.5 rounded-2xl text-sm font-black transition-all border-2 shadow-soft",
+                isAdmin
+                  ? "bg-white hover:border-primary/30 hover:shadow-medium cursor-pointer"
+                  : "cursor-default bg-accent/30 border-transparent",
+              )}
+              style={{
+                color: activeStore.color || undefined,
+                borderColor: isAdmin ? undefined : `${activeStore.color}20`,
+              }}
+            >
+              <div className="h-6 w-6 rounded-lg bg-current/10 flex items-center justify-center">
+                <Store className="h-4 w-4" />
+              </div>
+              <span className="hidden sm:inline uppercase tracking-widest text-[11px]">
+                {activeStore.name}
+              </span>
+              <span className="sm:hidden">{activeStore.icon}</span>
+              {isAdmin && <Wrench className="h-3 w-3 opacity-30 ml-1" />}
+            </button>
+          )}
         </div>
 
-        <nav className="flex gap-0.5 ml-3 overflow-x-auto">
-          {visibleNav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent transition-colors touch-target whitespace-nowrap"
-              activeClassName="bg-accent text-accent-foreground"
-            >
-              <item.icon className="h-4 w-4" />
-              <span className="hidden md:inline">{item.label}</span>
-            </NavLink>
-          ))}
+        {/* Navigation */}
+        <nav className="flex-1 flex items-center justify-start gap-2 overflow-x-auto no-scrollbar scroll-smooth py-2 px-4">
+          <div className="flex items-center gap-2 mx-auto">
+            {visibleNav.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-black text-muted-foreground hover:bg-accent/50 hover:text-primary transition-all whitespace-nowrap group relative"
+                activeClassName="bg-primary/5 text-primary shadow-inner"
+              >
+                {({ isActive }) => (
+                  <>
+                    <item.icon
+                      className={cn(
+                        "h-4 w-4 transition-all duration-500",
+                        isActive
+                          ? "scale-110 rotate-3"
+                          : "group-hover:scale-110",
+                      )}
+                    />
+                    <span className="hidden lg:inline uppercase tracking-widest text-[10px]">
+                      {item.label}
+                    </span>
+                    {isActive && (
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(249,115,22,0.8)] animate-in zoom-in duration-500" />
+                    )}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        {/* User & Actions */}
+        <div className="flex items-center gap-2 lg:gap-4">
           <NotificationBell />
-          <span className="text-sm text-muted-foreground hidden lg:block">
-            {user?.name}{" "}
-            <span className="uppercase text-xs font-semibold text-primary">
-              ({user?.role})
-            </span>
-          </span>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setShowResetDialog(true)}
-            title="Reparar conexión"
-          >
-            <Wrench className="h-4 w-4 text-muted-foreground" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={logout} title="Cerrar sesión">
-            <LogOut className="h-4 w-4" />
-          </Button>
+
+          <div className="h-10 w-px bg-accent/60 mx-1 hidden lg:block" />
+
+          <div className="text-right hidden lg:block">
+            <p className="text-xs font-black uppercase tracking-widest leading-none mb-1">
+              {user?.name}
+            </p>
+            <p className="text-[10px] font-bold text-muted-foreground/60 bg-accent px-2 py-0.5 rounded-md inline-block">
+              {user?.role?.toUpperCase()}
+            </p>
+          </div>
+
+          <div className="flex items-center bg-accent/30 p-1.5 rounded-[1.25rem] border-2 border-accent/20">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-xl h-10 w-10 hover:bg-white hover:shadow-soft transition-all text-muted-foreground hover:text-primary"
+              onClick={() => setShowResetDialog(true)}
+              title="Reparar conexión"
+            >
+              <Wrench className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-xl h-10 w-10 hover:bg-white hover:shadow-soft text-muted-foreground hover:text-destructive transition-all"
+              onClick={logout}
+              title="Cerrar sesión"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
-      <main className="flex-1">
-        <ErrorBoundary>
-          <Outlet />
-        </ErrorBoundary>
+      {/* Main Content */}
+      <main className="flex-1 relative">
+        {/* Subtle Background Pattern */}
+        <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,var(--tw-gradient-stops))] from-primary/3 via-transparent to-transparent pointer-events-none" />
+        <div className="relative z-10">
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
+        </div>
       </main>
 
+      {/* Repair Dialog */}
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Reparar conexión?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción cerrará tu sesión actual, borrará los datos de caché del navegador y recargará la aplicación. 
-              <br /><br />
-              Úsala solo si experimentas problemas persistentes con el inicio de sesión o la carga de datos.
+        <AlertDialogContent className="rounded-[2.5rem] border-4 p-10 max-w-lg">
+          <AlertDialogHeader className="space-y-4">
+            <div className="h-20 w-20 rounded-4xl bg-primary/10 flex items-center justify-center text-primary mb-2">
+              <Wrench className="h-10 w-10" />
+            </div>
+            <AlertDialogTitle className="text-3xl font-black tracking-tight">
+              ¿Reparar conexión?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-lg font-medium text-muted-foreground leading-relaxed">
+              Esta acción cerrará tu sesión actual, borrará los datos de caché
+              del navegador y recargará la aplicación por completo.
+              <br />
+              <br />
+              Úsala solo si experimentas problemas persistentes con el inicio de
+              sesión o la carga de datos.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
+          <AlertDialogFooter className="mt-10 gap-4">
+            <AlertDialogCancel className="h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] border-2">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={forceReset}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              className="h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] bg-primary text-white hover:bg-primary/90 shadow-strong shadow-primary/20"
             >
               Confirmar Reparación
             </AlertDialogAction>

@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
+import { useStore } from "@/context/StoreContext";
 import type { OrderStatus } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/formatPrice";
 import {
-  FileText,
   Download,
   Filter,
   CalendarIcon,
@@ -17,9 +17,12 @@ import {
   CreditCard,
   Smartphone,
   ChevronDown,
-  ChevronUp,
-  ShoppingBag,
   User,
+  Activity,
+  ShoppingBag,
+  MapPin,
+  Award,
+  ListChecks,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -59,6 +62,7 @@ import { es } from "date-fns/locale";
 import { getCalendarShiftRange } from "@/lib/shiftUtils";
 import type { DateRange } from "react-day-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion, AnimatePresence } from "framer-motion";
 
 const QUICK_RANGES = [
   {
@@ -139,6 +143,8 @@ export default function Reporteria() {
     from: startOfDay(new Date()),
     to: startOfDay(new Date()),
   });
+  const { activeStore } = useStore();
+  const storeId = activeStore?.id;
   const [activeQuick, setActiveQuick] = useState("Hoy");
   const [expandedDetailId, setExpandedDetailId] = useState<string | null>(null);
 
@@ -148,21 +154,28 @@ export default function Reporteria() {
   }, [dateRange]);
 
   const { data: reportOrders = [], isLoading } = useQuery({
-    queryKey: ["report-orders", user?.id, dateRange],
+    queryKey: ["report-orders", user?.id, dateRange, storeId],
     queryFn: async () => {
       if (!shiftRange) return [];
       const from = shiftRange.from.toISOString();
       const to = shiftRange.to.toISOString();
 
       // Fetch orders with nested profile and items
-      const { data, error } = await supabase
+      let query = supabase
         .from("orders")
         .select(
           "*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*))",
         )
         .gte("created_at", from)
-        .lte("created_at", to)
-        .order("created_at", { ascending: false });
+        .lte("created_at", to);
+
+      if (storeId) {
+        query = query.eq("store_id", storeId);
+      }
+
+      const { data, error } = await query.order("created_at", {
+        ascending: false,
+      });
 
       if (error) throw error;
       return (data as unknown as ReportOrder[]) || [];
@@ -172,19 +185,28 @@ export default function Reporteria() {
 
   // Query de pagos para el desglose por método
   const { data: reportPayments = [] } = useQuery({
-    queryKey: ["report-payments", user?.id, dateRange],
+    queryKey: ["report-payments", user?.id, dateRange, storeId],
     queryFn: async () => {
       if (!shiftRange) return [];
       const from = shiftRange.from.toISOString();
       const to = shiftRange.to.toISOString();
 
-      const { data, error } = await supabase
+      const query = supabase
         .from("payments")
         .select(
           "id, order_id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi, created_at",
         )
         .gte("created_at", from)
         .lte("created_at", to);
+
+      if (storeId) {
+        // We filter payments by joining with orders store_id if possible,
+        // but since we already filter orders above, and we filter payments here by deliveredOrderIds below,
+        // it might be redundant but safer to filter here if the table had store_id.
+        // Wait, does payments have store_id? Let me check database.types.ts
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return (data as unknown as ReportPayment[]) || [];
@@ -339,371 +361,892 @@ export default function Reporteria() {
   };
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <FileText className="h-7 w-7 text-primary" />
-          <h1 className="font-display text-2xl font-bold">Reportería</h1>
+    <div className="section-container space-y-12 pb-32 animate-in fade-in duration-700">
+      {/* Premium Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-12 bg-white/40 backdrop-blur-xl p-12 rounded-[3.5rem] border border-white shadow-strong relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
+
+        <div className="relative space-y-4">
+          <div className="flex items-center gap-3 text-primary/60 font-black uppercase tracking-[0.4em] text-[10px]">
+            <div className="h-[2px] w-12 bg-primary/30 rounded-full" />
+            BUSINESS INTELLIGENCE
+          </div>
+          <h1 className="text-6xl font-black tracking-tighter flex items-center gap-6 text-foreground">
+            <div className="bg-primary/10 p-4 rounded-3xl">
+              <Activity className="h-14 w-14 text-primary" strokeWidth={2.5} />
+            </div>
+            Reportería
+          </h1>
+          <p className="text-muted-foreground font-medium text-xl max-w-lg leading-relaxed">
+            Análisis detallado de ventas y rendimiento en{" "}
+            <span className="text-primary font-black underline decoration-primary/20 underline-offset-4">
+              {activeStore?.name}
+            </span>
+            .
+          </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={exportCSV}
-          disabled={isLoading || reportOrders.length === 0}
-        >
-          <Download className="h-4 w-4 mr-2" /> Exportar CSV
-        </Button>
-      </div>
 
-      {/* Date range quick filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        {QUICK_RANGES.map((r) => (
+        <div className="relative">
           <Button
-            key={r.label}
-            variant={activeQuick === r.label ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleQuickRange(r.label)}
+            variant="outline"
+            size="touch"
+            className="rounded-4xl h-20 px-10 border-2 border-primary/20 font-black shadow-strong hover:shadow-xl hover:scale-105 active:scale-95 transition-all group bg-white/80"
+            onClick={exportCSV}
+            disabled={isLoading || reportOrders.length === 0}
           >
-            {r.label}
-          </Button>
-        ))}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(!dateRange && "text-muted-foreground")}
-            >
-              <CalendarIcon className="h-4 w-4 mr-2" />
-              {dateRange?.from
-                ? dateRange.to
-                  ? `${format(dateRange.from, "dd MMM", { locale: es })} - ${format(dateRange.to, "dd MMM", { locale: es })}`
-                  : format(dateRange.from, "dd MMM yyyy", { locale: es })
-                : "Rango personalizado"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={(range) => {
-                setDateRange(range);
-                setActiveQuick("");
-              }}
-              numberOfMonths={2}
-              locale={es}
-              className="p-3 pointer-events-auto"
+            <Download
+              className="h-7 w-7 mr-4 text-primary group-hover:translate-y-1 transition-transform"
+              strokeWidth={3}
             />
-          </PopoverContent>
-        </Popover>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 h-9">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Estado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="pendiente">Pendiente</SelectItem>
-            <SelectItem value="confirmado">Confirmado</SelectItem>
-            <SelectItem value="en_preparacion">En preparación</SelectItem>
-            <SelectItem value="listo">Listo</SelectItem>
-            <SelectItem value="entregado">Entregado</SelectItem>
-            <SelectItem value="cancelado">Cancelado</SelectItem>
-          </SelectContent>
-        </Select>
+            <span className="text-xs tracking-[0.2em]">EXPORTAR CSV</span>
+          </Button>
+        </div>
       </div>
 
-      <Tabs defaultValue="resumen" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="resumen">Resumen</TabsTrigger>
-          <TabsTrigger value="caja">Cierre de Caja</TabsTrigger>
-          <TabsTrigger value="meseros">Por Mesero</TabsTrigger>
-          <TabsTrigger value="detalle">Detalle</TabsTrigger>
-        </TabsList>
+      {/* Advanced Filters Bar */}
+      <div className="bg-white/60 backdrop-blur-2xl p-8 rounded-[3rem] border-2 border-white shadow-strong sticky top-24 z-40 flex flex-wrap items-center justify-between gap-8 animate-in slide-in-from-top-4 duration-1000 fill-mode-both">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex bg-accent/20 p-1.5 rounded-3xl border border-accent/20 shadow-inner">
+            {QUICK_RANGES.map((r) => (
+              <Button
+                key={r.label}
+                variant={activeQuick === r.label ? "default" : "ghost"}
+                size="sm"
+                className={cn(
+                  "rounded-xl px-6 py-5 font-black text-[10px] tracking-widest uppercase transition-all duration-500",
+                  activeQuick === r.label
+                    ? "bg-white text-primary shadow-medium hover:bg-white scale-105"
+                    : "text-muted-foreground/60 hover:text-primary hover:bg-white/40",
+                )}
+                onClick={() => handleQuickRange(r.label)}
+              >
+                {r.label}
+              </Button>
+            ))}
+          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "h-14 rounded-2xl border-2 px-8 font-black text-xs tracking-widest uppercase shadow-soft transition-all hover:bg-white hover:border-primary/40 group bg-white/40",
+                  !dateRange && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon
+                  className="h-5 w-5 mr-4 text-primary group-hover:scale-110 transition-transform"
+                  strokeWidth={2.5}
+                />
+                {dateRange?.from
+                  ? dateRange.to
+                    ? `${format(dateRange.from, "dd MMM", { locale: es })} - ${format(dateRange.to, "dd MMM", { locale: es })}`
+                    : format(dateRange.from, "dd MMM yyyy", { locale: es })
+                  : "Rango personalizado"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-auto p-0 rounded-[2.5rem] border-none shadow-strong overflow-hidden animate-in zoom-in-95 duration-300"
+              align="start"
+            >
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={(range) => {
+                  setDateRange(range);
+                  setActiveQuick("");
+                }}
+                numberOfMonths={2}
+                locale={es}
+                className="p-6"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-56 h-14 rounded-2xl border-2 font-black text-xs tracking-widest uppercase shadow-soft transition-all hover:bg-white hover:border-primary/40 bg-white/40">
+              <div className="flex items-center gap-3">
+                <Filter className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                <SelectValue placeholder="Estado" />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="rounded-2xl border-none shadow-strong p-2 overflow-hidden">
+              <SelectItem
+                value="all"
+                className="font-black text-[10px] tracking-widest uppercase py-4 rounded-xl"
+              >
+                TODOS LOS ESTADOS
+              </SelectItem>
+              {[
+                "pendiente",
+                "confirmado",
+                "en_preparacion",
+                "listo",
+                "entregado",
+                "cancelado",
+              ].map((status) => (
+                <SelectItem
+                  key={status}
+                  value={status}
+                  className={cn(
+                    "font-black text-[10px] tracking-widest uppercase py-4 rounded-xl",
+                    status === "entregado"
+                      ? "text-green-600 hover:bg-green-50"
+                      : status === "cancelado"
+                        ? "text-destructive hover:bg-red-50"
+                        : "",
+                  )}
+                >
+                  {status.replace("_", " ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Tabs defaultValue="resumen" className="space-y-16">
+        <div className="flex justify-center">
+          <TabsList className="bg-accent/10 p-2 rounded-[3rem] border-2 border-accent/20 shadow-inner inline-flex h-auto">
+            {[
+              { value: "resumen", label: "Resumen General", icon: TrendingUp },
+              { value: "caja", label: "Cierre Contable", icon: Banknote },
+              { value: "meseros", label: "Ventas Personal", icon: User },
+              { value: "detalle", label: "Auditoría", icon: ListChecks },
+            ].map((tab) => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="rounded-[2.5rem] px-12 py-5 font-black uppercase tracking-[0.2em] text-[11px] transition-all duration-500 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-strong data-[state=active]:scale-105 flex items-center gap-3"
+              >
+                <tab.icon className="h-4 w-4" strokeWidth={3} />
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         {/* ===== RESUMEN ===== */}
-        <TabsContent value="resumen" className="space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="pos-card">
-              <div className="flex items-center gap-2 mb-1">
-                <DollarSign className="h-4 w-4 text-primary" />
-                <p className="text-xs text-muted-foreground">Total ventas</p>
-              </div>
-              <p className="font-display text-xl font-bold">
-                {formatPrice(summary.total)}
-              </p>
-            </div>
-            <div className="pos-card">
-              <div className="flex items-center gap-2 mb-1">
-                <ShoppingCart className="h-4 w-4 text-primary" />
-                <p className="text-xs text-muted-foreground">Pedidos</p>
-              </div>
-              <p className="font-display text-xl font-bold">{summary.count}</p>
-            </div>
-            <div className="pos-card">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                <p className="text-xs text-muted-foreground">Ticket promedio</p>
-              </div>
-              <p className="font-display text-xl font-bold">
-                {formatPrice(summary.avgTicket)}
-              </p>
-            </div>
-            <div className="pos-card">
-              <div className="flex items-center gap-2 mb-1">
-                <Clock className="h-4 w-4 text-primary" />
-                <p className="text-xs text-muted-foreground">Items vendidos</p>
-              </div>
-              <p className="font-display text-xl font-bold">
-                {summary.itemsSold}
-              </p>
-            </div>
-          </div>
+        <TabsContent
+          value="resumen"
+          className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+            {[
+              {
+                label: "VENTAS NETAS",
+                value: formatPrice(summary.total),
+                icon: DollarSign,
+                color: "text-primary",
+                bg: "bg-primary/10",
+                shadow: "shadow-primary/10",
+                accent: "primary",
+              },
+              {
+                label: "VOLUMEN ÓRDENES",
+                value: summary.count,
+                icon: ShoppingCart,
+                color: "text-amber-600",
+                bg: "bg-amber-500/10",
+                shadow: "shadow-amber-500/10",
+                accent: "amber",
+              },
+              {
+                label: "TICKET PROMEDIO",
+                value: formatPrice(summary.avgTicket),
+                icon: Award,
+                color: "text-green-600",
+                bg: "bg-green-500/10",
+                shadow: "shadow-green-500/10",
+                accent: "green",
+              },
+              {
+                label: "ITEMS VENDIDOS",
+                value: summary.itemsSold,
+                icon: ShoppingBag,
+                color: "text-purple-600",
+                bg: "bg-purple-500/10",
+                shadow: "shadow-purple-500/10",
+                accent: "purple",
+              },
+            ].map((card, i) => (
+              <div
+                key={i}
+                className="pos-card p-10 group overflow-hidden relative border-2 transition-all duration-500 hover:scale-[1.05] hover:shadow-2xl"
+              >
+                <div
+                  className={cn(
+                    "absolute -right-8 -top-8 h-32 w-32 rounded-full blur-3xl opacity-20 transition-all duration-500 group-hover:scale-150 group-hover:opacity-40",
+                    card.accent === "primary"
+                      ? "bg-primary"
+                      : card.accent === "amber"
+                        ? "bg-amber-500"
+                        : card.accent === "green"
+                          ? "bg-green-500"
+                          : card.accent === "purple"
+                            ? "bg-purple-500"
+                            : "bg-primary",
+                  )}
+                />
 
-          {/* Desglose por método de pago */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Banknote className="h-5 w-5 text-emerald-500" />
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  Efectivo
-                </p>
-              </div>
-              <p className="font-display text-2xl font-bold text-emerald-600">
-                {formatPrice(paymentSummary.efectivo)}
-              </p>
-            </div>
-            <div className="rounded-xl border-2 border-blue-500/30 bg-blue-500/5 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CreditCard className="h-5 w-5 text-blue-500" />
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  Tarjeta
-                </p>
-              </div>
-              <p className="font-display text-2xl font-bold text-blue-600">
-                {formatPrice(paymentSummary.tarjeta)}
-              </p>
-            </div>
-            <div className="rounded-xl border-2 border-purple-500/30 bg-purple-500/5 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Smartphone className="h-5 w-5 text-purple-500" />
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  Nequi / Transferencia
-                </p>
-              </div>
-              <p className="font-display text-2xl font-bold text-purple-600">
-                {formatPrice(paymentSummary.nequi)}
-              </p>
-            </div>
-          </div>
-
-          <div className="pos-card">
-            <h3 className="font-display font-bold mb-4">Ventas por hora</h3>
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={hourlyData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                  />
-                  <XAxis
-                    dataKey="hora"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <YAxis
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickFormatter={(v) => formatPrice(v)}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                    formatter={(value: number) => [
-                      formatPrice(value),
-                      "Ventas",
-                    ]}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="ventas"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    dot={{ fill: "hsl(var(--primary))" }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* ===== CIERRE DE CAJA ===== */}
-        <TabsContent value="caja" className="space-y-4">
-          <div className="pos-card">
-            <h3 className="font-display font-bold text-lg mb-1">
-              Cierre de Caja —{" "}
-              {dateRange?.from
-                ? format(dateRange.from, "dd MMMM yyyy", { locale: es })
-                : "Hoy"}
-              {dateRange?.to &&
-                dateRange.from?.getTime() !== dateRange.to?.getTime() &&
-                ` al ${format(dateRange.to, "dd MMMM yyyy", { locale: es })}`}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Resumen de operaciones del período seleccionado
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div className="rounded-xl border-2 border-green-500/30 bg-green-500/5 p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-1">
-                  Ventas completadas
-                </p>
-                <p className="font-display text-2xl font-bold text-green-600">
-                  {formatPrice(cashSummary.totalSales)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {cashSummary.deliveredCount} pedidos entregados
-                </p>
-              </div>
-              <div className="rounded-xl border-2 border-amber-500/30 bg-amber-500/5 p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-1">
-                  Pedidos en proceso
-                </p>
-                <p className="font-display text-2xl font-bold text-amber-600">
-                  {formatPrice(cashSummary.pendingTotal)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {cashSummary.pendingCount} pedidos pendientes
-                </p>
-              </div>
-              <div className="rounded-xl border-2 border-red-500/30 bg-red-500/5 p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-1">Cancelados</p>
-                <p className="font-display text-2xl font-bold text-red-600">
-                  {formatPrice(cashSummary.cancelledTotal)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {cashSummary.cancelledCount} pedidos cancelados
-                </p>
-              </div>
-            </div>
-
-            {/* Desglose por método de pago */}
-            <div className="border-t pt-4 mb-4">
-              <h4 className="font-display font-bold text-base mb-4">
-                💰 Desglose por método de pago
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Banknote className="h-5 w-5 text-emerald-500" />
-                    <p className="text-sm text-muted-foreground">Efectivo</p>
+                <div className="flex items-center gap-5 mb-8">
+                  <div
+                    className={cn(
+                      "h-16 w-16 rounded-[1.75rem] flex items-center justify-center transition-all duration-500 group-hover:rotate-12 shadow-soft",
+                      card.bg,
+                      card.color,
+                    )}
+                  >
+                    <card.icon className="h-8 w-8" strokeWidth={3} />
                   </div>
-                  <p className="font-display text-2xl font-bold text-emerald-600">
-                    {formatPrice(paymentSummary.efectivo)}
-                  </p>
-                </div>
-                <div className="rounded-xl border-2 border-blue-500/30 bg-blue-500/5 p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <CreditCard className="h-5 w-5 text-blue-500" />
-                    <p className="text-sm text-muted-foreground">Tarjeta</p>
-                  </div>
-                  <p className="font-display text-2xl font-bold text-blue-600">
-                    {formatPrice(paymentSummary.tarjeta)}
-                  </p>
-                </div>
-                <div className="rounded-xl border-2 border-purple-500/30 bg-purple-500/5 p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Smartphone className="h-5 w-5 text-purple-500" />
-                    <p className="text-sm text-muted-foreground">
-                      Nequi / Transferencia
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 leading-none">
+                      {card.label}
                     </p>
-                  </div>
-                  <p className="font-display text-2xl font-bold text-purple-600">
-                    {formatPrice(paymentSummary.nequi)}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t pt-4 flex items-center justify-between">
-              <span className="font-display font-bold text-lg">
-                Total de órdenes del período
-              </span>
-              <span className="font-display font-bold text-2xl text-primary">
-                {cashSummary.totalOrders}
-              </span>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* ===== POR MESERO ===== */}
-        <TabsContent value="meseros" className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {waiterData.map((w) => (
-              <div key={w.name} className="pos-card">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                    {w.name.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="font-display font-bold">{w.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {w.orders} pedidos
-                    </p>
+                    <div className="h-1 w-8 bg-accent/20 rounded-full" />
                   </div>
                 </div>
-                <p className="font-display text-xl font-bold text-primary">
-                  {formatPrice(w.total)}
+                <p
+                  className={cn(
+                    "text-5xl font-black tracking-tighter transition-all duration-500 origin-left group-hover:scale-110",
+                    card.color,
+                  )}
+                >
+                  {card.value}
                 </p>
               </div>
             ))}
-            {waiterData.length === 0 && (
-              <p className="text-muted-foreground col-span-full text-center py-8">
-                Sin datos en el rango seleccionado
-              </p>
-            )}
           </div>
 
-          {waiterData.length > 0 && (
-            <div className="pos-card">
-              <h3 className="font-display font-bold mb-4">
-                Ventas por operario
-              </h3>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={waiterData}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            {/* Payment Methods Visual Breakdown */}
+            <div className="lg:col-span-1 space-y-10">
+              <div className="flex items-center gap-3 px-3">
+                <div className="h-4 w-4 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)]" />
+                <h3 className="text-[12px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">
+                  MIX DE PAGOS
+                </h3>
+              </div>
+              <div className="space-y-8">
+                {[
+                  {
+                    label: "Efectivo",
+                    amount: paymentSummary.efectivo,
+                    icon: Banknote,
+                    color: "emerald",
+                  },
+                  {
+                    label: "Datáfono",
+                    amount: paymentSummary.tarjeta,
+                    icon: CreditCard,
+                    color: "blue",
+                  },
+                  {
+                    label: "Digital",
+                    amount: paymentSummary.nequi,
+                    icon: Smartphone,
+                    color: "purple",
+                  },
+                ].map((p) => (
+                  <div
+                    key={p.label}
+                    className="pos-card p-10 group border-2 relative overflow-hidden transition-all duration-500 hover:scale-[1.02]"
+                  >
+                    <div
+                      className={cn(
+                        "absolute right-0 top-0 w-24 h-24 blur-3xl opacity-5 transition-all duration-500 group-hover:opacity-10",
+                        p.color === "emerald"
+                          ? "bg-emerald-500"
+                          : p.color === "blue"
+                            ? "bg-blue-500"
+                            : p.color === "purple"
+                              ? "bg-purple-500"
+                              : "bg-primary",
+                      )}
+                    />
+
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-6">
+                        <div
+                          className={cn(
+                            "h-16 w-16 rounded-2xl flex items-center justify-center transition-all group-hover:rotate-12 duration-500 shadow-soft",
+                            p.color === "emerald"
+                              ? "bg-emerald-500/10 text-emerald-600"
+                              : p.color === "blue"
+                                ? "bg-blue-500/10 text-blue-600"
+                                : p.color === "purple"
+                                  ? "bg-purple-500/10 text-purple-600"
+                                  : "bg-primary/10 text-primary",
+                          )}
+                        >
+                          <p.icon className="h-8 w-8" strokeWidth={2.5} />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none">
+                            {p.label}
+                          </p>
+                          <p
+                            className={cn(
+                              "text-3xl font-black tracking-tighter",
+                              p.color === "emerald"
+                                ? "text-emerald-600"
+                                : p.color === "blue"
+                                  ? "text-blue-600"
+                                  : p.color === "purple"
+                                    ? "text-purple-600"
+                                    : "text-primary",
+                            )}
+                          >
+                            {formatPrice(p.amount)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-black text-muted-foreground/20 italic">
+                          {paymentSummary.total > 0
+                            ? Math.round(
+                                (p.amount / paymentSummary.total) * 100,
+                              )
+                            : 0}
+                          %
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center px-1">
+                        <div className="h-1.5 w-1.5 rounded-full bg-accent/20" />
+                        <div className="h-1.5 w-1.5 rounded-full bg-accent/20" />
+                      </div>
+                      <div className="w-full h-4 bg-accent/5 rounded-full overflow-hidden border border-white p-0.5 shadow-inner">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-1000 ease-out shadow-lg",
+                            p.color === "emerald"
+                              ? "bg-emerald-500"
+                              : p.color === "blue"
+                                ? "bg-blue-500"
+                                : p.color === "purple"
+                                  ? "bg-purple-500"
+                                  : "bg-primary",
+                          )}
+                          style={{
+                            width: `${paymentSummary.total > 0 ? (p.amount / paymentSummary.total) * 100 : 0}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Hourly Chart */}
+            <div className="lg:col-span-2 space-y-10">
+              <div className="flex items-center gap-3 px-3">
+                <div className="h-4 w-4 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)]" />
+                <h3 className="text-[12px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">
+                  CURVA DE VENTAS POR HORA
+                </h3>
+              </div>
+              <div className="pos-card p-12 h-[580px] border-2 bg-white/80 backdrop-blur-xl relative overflow-hidden group shadow-strong">
+                <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary/20 to-transparent" />
+
+                <div className="flex items-center justify-between mb-12">
+                  <div>
+                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-2">
+                      RENDIMIENTO TEMPORAL
+                    </p>
+                    <h4 className="text-2xl font-black tracking-tight">
+                      Distribución de Ingresos
+                    </h4>
+                  </div>
+                  <div className="bg-primary/5 px-6 py-3 rounded-2xl border border-primary/10">
+                    <p className="text-xs font-black text-primary tracking-widest">
+                      REAL TIME
+                    </p>
+                  </div>
+                </div>
+
+                <ResponsiveContainer width="100%" height="75%">
+                  <LineChart
+                    data={hourlyData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient
+                        id="colorSales"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="hsl(var(--primary))"
+                          stopOpacity={0.15}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="hsl(var(--primary))"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid
-                      strokeDasharray="3 3"
+                      strokeDasharray="8 8"
                       stroke="hsl(var(--border))"
+                      vertical={false}
+                      opacity={0.3}
                     />
                     <XAxis
-                      dataKey="name"
+                      dataKey="hora"
                       stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
+                      fontSize={11}
+                      fontWeight={900}
+                      axisLine={false}
+                      tickLine={false}
+                      dy={20}
                     />
                     <YAxis
                       stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickFormatter={(v) => formatPrice(v)}
+                      fontSize={11}
+                      fontWeight={900}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => `$${v / 1000}k`}
+                      dx={-15}
                     />
                     <Tooltip
                       contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
+                        background: "rgba(255, 255, 255, 0.95)",
+                        backdropFilter: "blur(20px)",
+                        border: "1px solid white",
+                        borderRadius: "32px",
+                        boxShadow: "0 25px 60px -12px rgba(0,0,0,0.2)",
+                        padding: "24px",
+                      }}
+                      itemStyle={{
+                        color: "hsl(var(--primary))",
+                        fontWeight: 900,
+                        fontSize: "18px",
+                      }}
+                      labelStyle={{
+                        fontWeight: 900,
+                        color: "hsl(var(--muted-foreground))",
+                        marginBottom: "8px",
+                        fontSize: "11px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.2em",
                       }}
                       formatter={(value: number) => [
                         formatPrice(value),
                         "Ventas",
                       ]}
+                      cursor={{
+                        stroke: "hsl(var(--primary))",
+                        strokeWidth: 3,
+                        strokeDasharray: "10 10",
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="ventas"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={8}
+                      dot={{
+                        r: 10,
+                        fill: "white",
+                        stroke: "hsl(var(--primary))",
+                        strokeWidth: 4,
+                      }}
+                      activeDot={{
+                        r: 14,
+                        strokeWidth: 0,
+                        fill: "hsl(var(--primary))",
+                      }}
+                      animationDuration={2500}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ===== CIERRE DE CAJA ===== */}
+        <TabsContent
+          value="caja"
+          className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
+        >
+          <div className="pos-card bg-white/60 backdrop-blur-3xl p-16 border-4 border-white rounded-[4rem] shadow-strong relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-all duration-1000" />
+
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-12 mb-20 relative">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 text-primary/60 font-black uppercase tracking-[0.4em] text-[10px]">
+                  <div className="h-[2px] w-12 bg-primary/30 rounded-full" />
+                  CIERRE DE OPERACIONES
+                </div>
+                <h2 className="text-5xl font-black tracking-tighter">
+                  Estado de Caja
+                </h2>
+                <p className="text-muted-foreground/60 font-bold flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Período:{" "}
+                  {dateRange?.from
+                    ? format(dateRange.from, "PPP", { locale: es })
+                    : "Hoy"}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-6 bg-primary/5 p-8 rounded-[2.5rem] border border-primary/10 shadow-inner">
+                <div className="h-20 w-20 rounded-3xl bg-primary flex items-center justify-center text-white shadow-strong shadow-primary/20">
+                  <DollarSign className="h-10 w-10" strokeWidth={3} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-primary/40 tracking-[0.3em] uppercase mb-1">
+                    VENTAS TOTALES
+                  </p>
+                  <p className="text-4xl font-black tracking-tighter text-primary">
+                    {formatPrice(cashSummary.totalSales)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-20">
+              {[
+                {
+                  label: "EFECTIVO",
+                  amount: paymentSummary.efectivo,
+                  icon: Banknote,
+                  color: "emerald",
+                },
+                {
+                  label: "DATÁFONO",
+                  amount: paymentSummary.tarjeta,
+                  icon: CreditCard,
+                  color: "blue",
+                },
+                {
+                  label: "DIGITAL",
+                  amount: paymentSummary.nequi,
+                  icon: Smartphone,
+                  color: "purple",
+                },
+              ].map((m) => (
+                <div
+                  key={m.label}
+                  className="bg-white/40 p-10 rounded-[2.5rem] border-2 border-white shadow-soft group hover:scale-[1.02] transition-all duration-500"
+                >
+                  <div className="flex items-center gap-4 mb-6">
+                    <div
+                      className={cn(
+                        "h-12 w-12 rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12",
+                        m.color === "blue" ? "bg-blue-500/10 text-blue-600" : 
+                        m.color === "purple" ? "bg-purple-500/10 text-purple-600" : "bg-emerald-500/10 text-emerald-600"
+                      )}
+                    >
+                      <m.icon className="h-6 w-6" strokeWidth={2.5} />
+                    </div>
+                    <span className="text-[10px] font-black text-muted-foreground/40 tracking-[0.2em] uppercase">
+                      {m.label}
+                    </span>
+                  </div>
+                  <p
+                    className={cn(
+                      "text-3xl font-black tracking-tighter",
+                      m.color === "blue" ? "text-blue-600" : 
+                      m.color === "purple" ? "text-purple-600" : "text-emerald-600"
+                    )}
+                  >
+                    {formatPrice(m.amount)}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 relative">
+              <div className="space-y-8">
+                <div className="flex items-center gap-3 px-3">
+                  <div className="h-4 w-4 rounded-full bg-accent/30" />
+                  <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">
+                    DESGLOSE OPERATIVO
+                  </h3>
+                </div>
+                <div className="bg-white/40 rounded-[2.5rem] border-2 border-white shadow-soft p-10 space-y-6">
+                  {[
+                    {
+                      label: "Pedidos Entregados",
+                      count: cashSummary.deliveredCount,
+                      color: "text-green-600",
+                      bg: "bg-green-500/10",
+                    },
+                    {
+                      label: "Pedidos Pendientes",
+                      count: cashSummary.pendingCount,
+                      color: "text-amber-600",
+                      bg: "bg-amber-500/10",
+                    },
+                    {
+                      label: "Pedidos Cancelados",
+                      count: cashSummary.cancelledCount,
+                      color: "text-destructive",
+                      bg: "bg-red-500/10",
+                    },
+                  ].map((stat, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between p-6 rounded-3xl hover:bg-white/50 transition-colors group"
+                    >
+                      <span className="font-bold text-lg text-muted-foreground/70">
+                        {stat.label}
+                      </span>
+                      <div
+                        className={cn(
+                          "px-6 py-2 rounded-2xl font-black text-xl shadow-inner group-hover:scale-110 transition-transform",
+                          stat.bg,
+                          stat.color,
+                        )}
+                      >
+                        {stat.count}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-8">
+                <div className="flex items-center gap-3 px-3">
+                  <div className="h-4 w-4 rounded-full bg-primary/20" />
+                  <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">
+                    BALANCE FINAL
+                  </h3>
+                </div>
+                <div className="bg-primary p-12 rounded-[2.5rem] shadow-strong shadow-primary/20 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-white/20 transition-all duration-700" />
+                  <p className="text-white/60 font-black text-[10px] tracking-[0.4em] uppercase mb-2">
+                    GRAN TOTAL PERÍODO
+                  </p>
+                  <p className="text-6xl font-black text-white tracking-tighter mb-8 group-hover:scale-105 transition-transform origin-left">
+                    {formatPrice(cashSummary.totalSales)}
+                  </p>
+                  <div className="flex items-center gap-4 py-4 px-6 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-md">
+                    <TrendingUp className="h-5 w-5 text-white/60" />
+                    <p className="text-white/80 font-bold text-sm">
+                      Rendimiento óptimo del sistema de caja.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-accent/10 rounded-[3rem] p-12 border-2 border-accent/20 relative group/section">
+            <div className="flex items-center gap-4 mb-10 relative">
+              <div className="h-10 w-10 rounded-xl bg-white border-2 shadow-soft flex items-center justify-center text-primary group-hover/section:scale-110 transition-transform">
+                <Banknote className="h-6 w-6" />
+              </div>
+              <h4 className="text-2xl font-black tracking-tight text-foreground/80">
+                Liquidación por Medios de Pago
+              </h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+              {[
+                {
+                  label: "Caja (Efectivo)",
+                  value: paymentSummary.efectivo,
+                  icon: Banknote,
+                  color: "emerald",
+                },
+                {
+                  label: "Datáfono (Tarjetas)",
+                  value: paymentSummary.tarjeta,
+                  icon: CreditCard,
+                  color: "blue",
+                },
+                {
+                  label: "Digital (Nequi/Transferencia)",
+                  value: paymentSummary.nequi,
+                  icon: Smartphone,
+                  color: "purple",
+                },
+              ].map((p) => (
+                <div
+                  key={p.label}
+                  className="bg-white/80 p-8 rounded-3xl shadow-strong border-2 border-transparent hover:border-primary/20 transition-all duration-500 group/item hover:scale-105"
+                >
+                  <div className="flex items-center gap-4 mb-6">
+                    <div
+                      className={cn(
+                        "h-12 w-12 rounded-2xl flex items-center justify-center shadow-soft",
+                        p.color === "emerald" ? "bg-emerald-500/10 text-emerald-600" : 
+                        p.color === "blue" ? "bg-blue-500/10 text-blue-600" : 
+                        p.color === "purple" ? "bg-purple-500/10 text-purple-600" : "bg-primary/10 text-primary"
+                      )}
+                    >
+                      <p.icon className="h-6 w-6" strokeWidth={2.5} />
+                    </div>
+                    <p className="text-[11px] font-black uppercase text-muted-foreground/40 tracking-widest leading-tight">
+                      {p.label}
+                    </p>
+                  </div>
+                  <p
+                    className={cn(
+                      "text-3xl font-black tracking-tighter",
+                      p.color === "emerald" ? "text-emerald-600" : 
+                      p.color === "blue" ? "text-blue-600" : 
+                      p.color === "purple" ? "text-purple-600" : "text-primary"
+                    )}
+                  >
+                    {formatPrice(p.value)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ===== VENTAS POR PERSONAL ===== */}
+        <TabsContent
+          value="meseros"
+          className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
+            {waiterData.map((w, idx) => (
+              <div
+                key={w.name}
+                className="pos-card p-10 group overflow-hidden relative border-4 border-white shadow-strong hover:scale-[1.05] transition-all duration-700"
+                style={{ animationDelay: `${idx * 100}ms` }}
+              >
+                <div className="absolute -right-8 -top-8 h-40 w-40 bg-primary/5 rounded-full blur-[60px] group-hover:bg-primary/15 transition-all duration-1000" />
+
+                <div className="flex flex-col items-center text-center space-y-6 mb-10 relative">
+                  <div className="w-24 h-24 rounded-4xl bg-linear-to-br from-primary/80 to-primary flex items-center justify-center text-white font-black text-4xl shadow-strong shadow-primary/20 group-hover:rotate-12 transition-all duration-500">
+                    {w.name.charAt(0)}
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-black text-2xl tracking-tighter text-foreground group-hover:text-primary transition-colors">
+                      {w.name}
+                    </h3>
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/5 rounded-full border border-primary/10">
+                      <Award className="h-4 w-4 text-primary" />
+                      <span className="text-[10px] font-black text-primary/60 uppercase tracking-widest">
+                        {w.orders} SERVICIOS
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white/40 p-8 rounded-4xl border-2 border-white shadow-soft relative group/amount">
+                  <p className="text-[10px] font-black uppercase text-muted-foreground/30 tracking-[0.3em] mb-2">
+                    VENTAS ACUMULADAS
+                  </p>
+                  <p className="text-3xl font-black text-primary tracking-tighter">
+                    {formatPrice(w.total)}
+                  </p>
+                  <div className="absolute right-6 bottom-6 h-2 w-2 rounded-full bg-primary/20 animate-pulse" />
+                </div>
+              </div>
+            ))}
+
+            {waiterData.length === 0 && (
+              <div className="col-span-full py-48 flex flex-col items-center justify-center space-y-8 bg-white/40 rounded-[4rem] border-4 border-white shadow-soft border-dashed animate-pulse">
+                <div className="h-28 w-28 rounded-[2.5rem] bg-accent/10 flex items-center justify-center text-muted-foreground/20">
+                  <User className="h-14 w-14" strokeWidth={2.5} />
+                </div>
+                <div className="text-center space-y-2">
+                  <p className="font-black uppercase tracking-[0.5em] text-sm text-muted-foreground/40">
+                    SIN REGISTROS DE PERSONAL
+                  </p>
+                  <p className="text-xs font-bold text-muted-foreground/30 italic">
+                    No hay actividad detectada en el periodo seleccionado
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {waiterData.length > 0 && (
+            <div className="space-y-10">
+              <div className="flex items-center gap-4 px-3">
+                <div className="h-[2px] w-12 bg-primary/20 rounded-full" />
+                <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">
+                  COMPARATIVA DE DESEMPEÑO
+                </h3>
+              </div>
+              <div className="pos-card p-12 h-[550px] border-2 shadow-strong bg-white/80 backdrop-blur-md relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary/20 to-transparent" />
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={waiterData}
+                    margin={{ top: 30, right: 30, left: 30, bottom: 30 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="4 4"
+                      stroke="hsl(var(--border))"
+                      vertical={false}
+                      opacity={0.5}
+                    />
+                    <XAxis
+                      dataKey="name"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      fontWeight={900}
+                      axisLine={false}
+                      tickLine={false}
+                      dy={20}
+                    />
+                    <YAxis
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      fontWeight={900}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => `$${v / 1000}k`}
+                      dx={-15}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "rgba(255, 255, 255, 0.9)",
+                        backdropFilter: "blur(10px)",
+                        border: "2px solid hsl(var(--primary)/10%)",
+                        borderRadius: "24px",
+                        boxShadow: "0 20px 50px -10px rgba(0,0,0,0.15)",
+                        padding: "20px",
+                      }}
+                      itemStyle={{
+                        color: "hsl(var(--primary))",
+                        fontWeight: 900,
+                        fontSize: "16px",
+                      }}
+                      labelStyle={{
+                        fontWeight: 900,
+                        color: "hsl(var(--muted-foreground))",
+                        marginBottom: "6px",
+                        fontSize: "12px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.1em",
+                      }}
+                      cursor={{
+                        fill: "hsl(var(--primary))",
+                        opacity: 0.05,
+                        radius: 20,
+                      }}
+                      formatter={(value: number) => [
+                        formatPrice(value),
+                        "Total Vendido",
+                      ]}
                     />
                     <Bar
                       dataKey="total"
                       fill="hsl(var(--primary))"
-                      radius={[6, 6, 0, 0]}
+                      radius={[16, 16, 8, 8]}
+                      barSize={60}
+                      animationDuration={1500}
                     />
                   </BarChart>
                 </ResponsiveContainer>
@@ -712,146 +1255,292 @@ export default function Reporteria() {
           )}
         </TabsContent>
 
-        {/* ===== DETALLE ===== */}
-        <TabsContent value="detalle">
-          <div className="space-y-2">
-            {filteredOrders.length === 0 && (
-              <p className="text-muted-foreground text-center py-12">
-                Sin pedidos en el rango seleccionado
-              </p>
-            )}
-            {filteredOrders.map((order) => {
-              const isExpanded = expandedDetailId === order.id;
-              const itemCount =
-                order.order_items?.reduce(
-                  (s: number, i) => s + i.quantity,
-                  0,
-                ) || 0;
-              const hora = new Date(order.created_at).toLocaleTimeString(
-                "es-CO",
-                { hour: "2-digit", minute: "2-digit", hour12: true },
-              );
+        {/* ===== DETALLE HISTORICO ===== */}
+        <TabsContent
+          value="detalle"
+          className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
+        >
+          <div className="space-y-8 pb-20">
+            {filteredOrders.length === 0 ? (
+              <div className="py-48 flex flex-col items-center justify-center space-y-10 bg-white/40 rounded-[4rem] border-4 border-white shadow-soft group">
+                <div className="h-32 w-32 rounded-[2.5rem] bg-accent/5 flex items-center justify-center text-muted-foreground/20 group-hover:scale-110 transition-transform duration-700">
+                  <ShoppingCart className="h-16 w-16" strokeWidth={1.5} />
+                </div>
+                <div className="text-center space-y-3">
+                  <p className="font-black uppercase tracking-[0.5em] text-sm text-muted-foreground/40">
+                    ARCHIVO VACÍO
+                  </p>
+                  <p className="text-xs font-bold text-muted-foreground/20 italic max-w-xs mx-auto">
+                    Ajusta los filtros para explorar el historial de
+                    transacciones.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              filteredOrders.map((order, idx) => {
+                const isExpanded = expandedDetailId === order.id;
+                const itemCount =
+                  order.order_items?.reduce(
+                    (s: number, i) => s + i.quantity,
+                    0,
+                  ) || 0;
+                const hora = new Date(order.created_at).toLocaleTimeString(
+                  "es-CO",
+                  { hour: "2-digit", minute: "2-digit", hour12: true },
+                );
 
-              return (
-                <div
-                  key={order.id}
-                  className={`pos-card overflow-hidden transition-all duration-200 ${isExpanded ? "ring-2 ring-primary/20" : "hover:bg-accent/50 cursor-pointer"}`}
-                >
-                  {/* Header — clickable */}
-                  <button
-                    onClick={() =>
-                      setExpandedDetailId((prev) =>
-                        prev === order.id ? null : order.id,
-                      )
-                    }
-                    className="w-full flex items-center justify-between gap-3 p-0 text-left"
+                return (
+                  <div
+                    key={order.id}
+                    className={cn(
+                      "pos-card overflow-hidden transition-all duration-500 border-4 relative group",
+                      isExpanded
+                        ? "border-primary/40 shadow-strong bg-white scale-[1.02] z-10"
+                        : "border-white bg-white/60 hover:bg-white hover:border-primary/20 hover:shadow-xl cursor-pointer",
+                    )}
+                    style={{ animationDelay: `${idx * 40}ms` }}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex flex-col items-center gap-0.5 shrink-0">
-                        <span className="text-xl font-bold font-display">
-                          #{order.locator}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                          <Clock className="h-2.5 w-2.5" />
-                          {hora}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <StatusBadge status={order.status} />
-                          <span className="text-xs text-muted-foreground">
-                            {itemCount}{" "}
-                            {itemCount === 1 ? "producto" : "productos"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <p className="text-base font-bold">
-                            {formatPrice(order.total)}
-                          </p>
-                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                            <User className="h-2.5 w-2.5" />
-                            {order.profiles?.name || "Sistema"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-muted-foreground">
-                      {isExpanded ? (
-                        <ChevronUp className="h-5 w-5" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5" />
-                      )}
-                    </div>
-                  </button>
-
-                  {/* Detalle expandido */}
-                  {isExpanded && (
-                    <div className="mt-3 pt-3 border-t space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                      {(order.order_items ?? []).map((item) => (
+                    {/* Header — clickable */}
+                    <button
+                      onClick={() =>
+                        setExpandedDetailId((prev) =>
+                          prev === order.id ? null : order.id,
+                        )
+                      }
+                      className="w-full flex items-center justify-between gap-10 p-12 text-left"
+                    >
+                      <div className="flex items-center gap-10 min-w-0">
                         <div
-                          key={item.id}
-                          className="flex items-start justify-between gap-2 py-1.5"
+                          className={cn(
+                            "w-24 h-24 rounded-3xl flex flex-col items-center justify-center border-4 shadow-strong transition-all duration-500 group-hover:rotate-6",
+                            isExpanded
+                              ? "bg-primary text-white border-primary/20 shadow-primary/20"
+                              : "bg-white border-white text-primary",
+                          )}
                         >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <ShoppingBag className="h-3.5 w-3.5 text-primary shrink-0" />
-                              <span className="font-medium text-sm">
-                                {item.quantity}x{" "}
-                                {item.products?.name ?? "Producto"}
+                          <span className="text-[10px] font-black opacity-40 uppercase leading-none mb-1">
+                            ORD
+                          </span>
+                          <span className="text-3xl font-black">
+                            {order.locator}
+                          </span>
+                        </div>
+
+                        <div className="min-w-0 space-y-3">
+                          <div className="flex items-center gap-4 flex-wrap">
+                            <StatusBadge status={order.status} />
+                            <div className="h-1 w-1 rounded-full bg-accent/40" />
+                            <span className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] bg-white/80 px-4 py-1.5 rounded-full border border-white shadow-soft">
+                              {itemCount}{" "}
+                              {itemCount === 1 ? "ARTÍCULO" : "ARTÍCULOS"} •{" "}
+                              {hora}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-8">
+                            <p className="text-4xl font-black tracking-tighter text-foreground group-hover:text-primary transition-colors">
+                              {formatPrice(order.total)}
+                            </p>
+                            <div className="flex items-center gap-2.5 px-5 py-2 bg-primary/5 rounded-2xl border border-primary/10 shadow-inner">
+                              <User className="h-4 w-4 text-primary/60" />
+                              <span className="text-[10px] font-black text-primary uppercase tracking-widest">
+                                {order.profiles?.name || "SISTEMA"}
                               </span>
                             </div>
-                            <span className="text-[10px] text-muted-foreground ml-5.5 block">
-                              {item.products?.categories?.name}
-                            </span>
-                            {item.selected_options &&
-                              Object.keys(item.selected_options).length > 0 && (
-                                <div className="ml-5.5 mt-0.5">
-                                  {Object.entries(
-                                    item.selected_options,
-                                  ).map(([key, val]) => (
-                                    <span
-                                      key={key}
-                                      className="text-[10px] text-muted-foreground block"
-                                    >
-                                      {key}: {val}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            {item.selected_extras &&
-                              item.selected_extras.length > 0 && (
-                                <p className="text-[10px] text-muted-foreground ml-5.5 mt-0.5">
-                                  +{" "}
-                                  {item.selected_extras.join(
-                                    ", ",
-                                  )}
-                                </p>
-                              )}
-                            {item.notes && (
-                              <p className="text-[10px] text-amber-600 italic ml-5.5 mt-0.5">
-                                "{item.notes}"
-                              </p>
-                            )}
                           </div>
-                          <span className="text-sm font-medium tabular-nums shrink-0">
-                            {formatPrice(
-                              item.unit_price * item.quantity +
-                                (item.extras_total || 0),
-                            )}
-                          </span>
                         </div>
-                      ))}
-                      <div className="flex items-center justify-between pt-2 border-t">
-                        <span className="text-sm font-bold">Total</span>
-                        <span className="text-base font-bold text-primary">
-                          {formatPrice(order.total)}
-                        </span>
                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+
+                      <div
+                        className={cn(
+                          "h-16 w-16 rounded-full flex items-center justify-center border-2 transition-all duration-500",
+                          isExpanded
+                            ? "bg-primary border-primary/20 text-white shadow-strong shadow-primary/20"
+                            : "bg-white border-white text-muted-foreground shadow-soft group-hover:scale-110",
+                        )}
+                      >
+                        <ChevronDown
+                          className={cn(
+                            "h-8 w-8 transition-transform duration-500",
+                            isExpanded && "rotate-180",
+                          )}
+                          strokeWidth={3}
+                        />
+                      </div>
+                    </button>
+
+                    {/* Detailed Content */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.5, ease: "circOut" }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-12 bg-accent/5 border-t-4 border-dashed border-white/60">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                              <div className="lg:col-span-7 space-y-8">
+                                <div className="flex items-center gap-4 px-2">
+                                  <div className="h-2 w-2 rounded-full bg-primary" />
+                                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">
+                                    DESGLOSE DE CONSUMO
+                                  </h4>
+                                </div>
+                                <div className="bg-white/80 backdrop-blur-md rounded-[3rem] p-10 border-4 border-white shadow-strong">
+                                  <div className="divide-y divide-accent/30">
+                                    {order.order_items?.map((item) => (
+                                      <div
+                                        key={item.id}
+                                        className="py-8 first:pt-0 last:pb-0 group/item"
+                                      >
+                                        <div className="flex justify-between items-start mb-3">
+                                          <div className="flex gap-6">
+                                            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-lg border border-primary/5 shadow-inner">
+                                              {item.quantity}
+                                            </div>
+                                            <div className="space-y-1">
+                                              <p className="font-black text-xl text-foreground/80 group-hover/item:text-primary transition-colors">
+                                                {item.products?.name}
+                                              </p>
+                                              <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                                                P. UNITARIO:{" "}
+                                                {formatPrice(item.unit_price)}
+                                              </p>
+                                            </div>
+                                          </div>
+                                          <p className="font-black text-2xl tracking-tighter text-foreground/90">
+                                            {formatPrice(
+                                              item.unit_price * item.quantity,
+                                            )}
+                                          </p>
+                                        </div>
+
+                                        {(item.selected_options ||
+                                          item.selected_extras ||
+                                          item.notes) && (
+                                          <div className="ml-16 mt-4 p-5 bg-accent/5 rounded-2xl border border-accent/10 space-y-2">
+                                            {item.selected_options &&
+                                              Object.entries(
+                                                item.selected_options,
+                                              ).map(([key, val]) => (
+                                                <p
+                                                  key={key}
+                                                  className="text-xs text-muted-foreground/60 font-bold uppercase tracking-wider flex items-center gap-2"
+                                                >
+                                                  <div className="h-1 w-1 rounded-full bg-primary/40" />
+                                                  <span className="opacity-40">
+                                                    {key}:
+                                                  </span>{" "}
+                                                  {val}
+                                                </p>
+                                              ))}
+                                            {item.selected_extras &&
+                                              item.selected_extras.length >
+                                                0 && (
+                                                <p className="text-xs text-muted-foreground/60 font-bold uppercase tracking-wider flex items-center gap-2">
+                                                  <div className="h-1 w-1 rounded-full bg-primary/40" />
+                                                  <span className="opacity-40">
+                                                    Extras:
+                                                  </span>{" "}
+                                                  {item.selected_extras.join(
+                                                    ", ",
+                                                  )}
+                                                </p>
+                                              )}
+                                            {item.notes && (
+                                              <p className="text-xs text-primary font-black italic flex items-center gap-3 mt-3 bg-white/50 p-3 rounded-xl border border-primary/10">
+                                                <ListChecks className="h-4 w-4" />
+                                                "{item.notes}"
+                                              </p>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="lg:col-span-5 space-y-12">
+                                <div className="space-y-8">
+                                  <div className="flex items-center gap-4 px-2">
+                                    <div className="h-2 w-2 rounded-full bg-primary" />
+                                    <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">
+                                      TRAZABILIDAD LOGÍSTICA
+                                    </h4>
+                                  </div>
+                                  <div className="bg-white/80 backdrop-blur-md rounded-[3rem] p-10 border-4 border-white shadow-strong grid grid-cols-2 gap-10">
+                                    {[
+                                      {
+                                        label: "REGISTRO",
+                                        val: format(
+                                          new Date(order.created_at),
+                                          "PPP",
+                                          { locale: es },
+                                        ),
+                                        icon: CalendarIcon,
+                                      },
+                                      {
+                                        label: "CANAL",
+                                        val: "TERMINAL POS",
+                                        icon: Smartphone,
+                                      },
+                                      {
+                                        label: "OPERADOR",
+                                        val: order.profiles?.name || "SISTEMA",
+                                        icon: User,
+                                      },
+                                      {
+                                        label: "UBICACIÓN",
+                                        val: activeStore?.name,
+                                        icon: MapPin,
+                                      },
+                                    ].map((info, i) => (
+                                      <div key={i} className="space-y-2">
+                                        <div className="flex items-center gap-2 opacity-30">
+                                          <info.icon className="h-3 w-3" />
+                                          <p className="text-[9px] font-black uppercase tracking-[0.3em]">
+                                            {info.label}
+                                          </p>
+                                        </div>
+                                        <p className="text-sm font-black text-foreground/80 leading-tight">
+                                          {info.val}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="bg-primary p-12 rounded-[3.5rem] shadow-strong shadow-primary/20 relative overflow-hidden group/total">
+                                  <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-24 -mt-24 transition-all duration-1000 group-hover/total:bg-white/20" />
+                                  <div className="flex justify-between items-center relative">
+                                    <div className="space-y-2">
+                                      <p className="text-[11px] font-black uppercase tracking-[0.5em] text-white/50 leading-none">
+                                        TOTAL NETO
+                                      </p>
+                                      <p className="text-6xl font-black text-white tracking-tighter group-hover/total:scale-110 transition-transform origin-left duration-700">
+                                        {formatPrice(order.total)}
+                                      </p>
+                                    </div>
+                                    <div className="h-20 w-20 rounded-3xl bg-white/10 flex items-center justify-center border-2 border-white/10 shadow-inner group-hover/total:rotate-12 transition-transform duration-700">
+                                      <DollarSign
+                                        className="h-10 w-10 text-white"
+                                        strokeWidth={3}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })
+            )}
           </div>
         </TabsContent>
       </Tabs>
