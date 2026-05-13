@@ -653,7 +653,7 @@ export default function Kiosko() {
                 </SheetTrigger>
                 <SheetContent
                   side="right"
-                  className="w-full sm:w-[450px] p-0 flex flex-col border-none shadow-strong h-dvh"
+                  className="w-full sm:w-[450px] p-0 flex flex-col border-none shadow-strong h-dvh overflow-hidden"
                 >
                   <SheetHeader className="p-4 sm:p-8 border-b bg-primary text-white shrink-0">
                     <SheetTitle className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-3 text-white">
@@ -663,17 +663,15 @@ export default function Kiosko() {
                       Tu Pedido Actual
                     </SheetTitle>
                   </SheetHeader>
-                  <div className="flex-1 min-h-0">
-                    <CartContent
-                      cart={cart}
-                      updateQuantity={updateQuantity}
-                      onEditItem={handleEditItem}
-                      total={total}
-                      itemCount={itemCount}
-                      setStep={setStep}
-                      setCartOpen={setCartOpen}
-                    />
-                  </div>
+                  <CartContent
+                    cart={cart}
+                    updateQuantity={updateQuantity}
+                    onEditItem={handleEditItem}
+                    total={total}
+                    itemCount={itemCount}
+                    setStep={setStep}
+                    setCartOpen={setCartOpen}
+                  />
                 </SheetContent>
               </Sheet>
             </div>
@@ -850,7 +848,7 @@ function CartContent({
   setCartOpen,
 }: CartContentProps) {
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-white/50 backdrop-blur-xl">
+    <div className="flex flex-col flex-1 h-full min-h-0 bg-white/50 backdrop-blur-xl">
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 custom-scrollbar">
         {cart.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
