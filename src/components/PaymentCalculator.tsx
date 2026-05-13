@@ -262,7 +262,7 @@ export function PaymentCalculator({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden rounded-[3.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl">
+      <DialogContent className="max-w-2xl p-0 gap-0 overflow-y-auto max-h-[95vh] rounded-4xl lg:rounded-[3.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl custom-scrollbar">
         {/* Done step */}
         {step === "done" && (
           <div className="flex flex-col items-center justify-center p-24 space-y-8 animate-in fade-in zoom-in duration-700">
@@ -289,7 +289,7 @@ export function PaymentCalculator({
         {/* Method selection */}
         {step === "method" && (
           <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <DialogHeader className="p-10 pb-4">
+            <DialogHeader className="p-6 lg:p-10 pb-4">
               <div className="flex items-center gap-4 mb-2">
                 <div className="bg-primary/10 p-3 rounded-2xl">
                   <Receipt className="h-8 w-8 text-primary" strokeWidth={3} />
@@ -308,7 +308,7 @@ export function PaymentCalculator({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="p-10 pt-4 space-y-10">
+            <div className="p-6 lg:p-10 pt-4 space-y-6 lg:space-y-10">
               {/* Ticket Order summary */}
               <div className="relative">
                 <div className="absolute inset-0 bg-accent/5 rounded-[2.5rem] -rotate-1 translate-y-1" />
@@ -582,7 +582,7 @@ export function PaymentCalculator({
 
         {/* Amount / calculator */}
         {step === "amount" && (method || secondMethod) && (
-          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 p-10">
+          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 p-6 lg:p-10">
             <div className="flex items-center gap-6 mb-10">
               <Button
                 variant="ghost"
@@ -610,12 +610,12 @@ export function PaymentCalculator({
 
             <div className="space-y-8">
               {/* Display */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="rounded-[2.5rem] bg-accent/5 p-10 text-center space-y-4 border-2 border-accent/5 shadow-inner">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
+                <div className="rounded-4xl lg:rounded-[2.5rem] bg-accent/5 p-6 lg:p-10 text-center space-y-4 border-2 border-accent/5 shadow-inner">
                   <p className="text-[11px] font-black text-muted-foreground/40 uppercase tracking-widest">
                     EFECTIVO RECIBIDO
                   </p>
-                  <p className="text-6xl font-black tracking-tighter text-foreground">
+                  <p className="text-4xl lg:text-6xl font-black tracking-tighter text-foreground">
                     {received ? formatPrice(receivedNum) : "$0"}
                   </p>
                   {receivedNum > 0 && (
@@ -625,7 +625,7 @@ export function PaymentCalculator({
                       </p>
                       <p
                         className={cn(
-                          "text-4xl font-black tracking-tighter",
+                          "text-2xl lg:text-4xl font-black tracking-tighter",
                           canConfirm ? "text-green-500" : "text-destructive",
                         )}
                       >
@@ -700,7 +700,7 @@ export function PaymentCalculator({
                     key={key}
                     variant="secondary"
                     className={cn(
-                      "h-16 rounded-2xl font-black text-2xl transition-all active:scale-95 shadow-soft border-2 border-transparent",
+                      "h-14 lg:h-16 rounded-2xl font-black text-xl lg:text-2xl transition-all active:scale-95 shadow-soft border-2 border-transparent",
                       key === "C"
                         ? "text-destructive hover:bg-destructive/5 hover:border-destructive/10"
                         : key === "DEL"
@@ -720,7 +720,7 @@ export function PaymentCalculator({
 
               <Button
                 size="lg"
-                className="w-full h-20 rounded-3xl bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-[0.2em] shadow-strong shadow-primary/20 transition-all active:scale-95"
+                className="w-full h-16 lg:h-20 rounded-2xl lg:rounded-3xl bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-[0.2em] shadow-strong shadow-primary/20 transition-all active:scale-95"
                 disabled={!canConfirm}
                 onClick={() => handleConfirmPayment()}
               >
