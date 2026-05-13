@@ -226,28 +226,28 @@ export default function Dashboard() {
         </div>
 
         {/* Payment Methods Section */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold flex items-center gap-2 opacity-70">
+        <div className="space-y-3 sm:space-y-4">
+          <h2 className="text-sm sm:text-lg font-bold flex items-center gap-2 opacity-70">
             <div className="h-2 w-2 rounded-full bg-primary" />
             Resumen de Ingresos
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-2 sm:gap-6">
             {paymentCards.map((card, idx) => (
               <div
                 key={card.label}
-                className={`pos-card pos-card-hover border-transparent bg-white/40 backdrop-blur-sm shadow-soft group`}
+                className={`pos-card pos-card-hover border-transparent bg-white/40 backdrop-blur-sm shadow-soft group p-2.5 sm:p-5`}
                 style={{ 
                   animationDelay: `${(idx + 4) * 100}ms`,
-                  borderLeft: `4px solid ${card.color.replace('text-', '')}` 
+                  borderLeft: `3px sm:border-l-4 solid ${card.color.replace('text-', '')}` 
                 }}
               >
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center ${card.bgColor} ${card.color} transition-all duration-500 group-hover:rotate-360`}>
-                    <card.icon className="h-5 w-5 sm:h-7 sm:w-7" />
+                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
+                  <div className={`w-8 h-8 sm:w-14 sm:h-14 rounded-full flex items-center justify-center ${card.bgColor} ${card.color} transition-all duration-500 group-hover:rotate-12`}>
+                    <card.icon className="h-4 w-4 sm:h-7 sm:w-7" />
                   </div>
-                  <div>
-                    <p className="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{card.label}</p>
-                    <p className={`text-xl sm:text-2xl font-black ${card.color}`}>{card.value}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[7px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em] sm:tracking-[0.2em] truncate">{card.label}</p>
+                    <p className={`text-[10px] sm:text-2xl font-black ${card.color} truncate`}>{card.value}</p>
                   </div>
                 </div>
               </div>

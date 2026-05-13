@@ -31,28 +31,28 @@ const PAYMENT_METHODS: {
   {
     key: "efectivo",
     label: "EFECTIVO",
-    icon: <Banknote className="h-8 w-8" />,
+    icon: <Banknote className="h-5 w-5 lg:h-8 lg:w-8" />,
     color: "bg-green-500/10 text-green-600 border-green-500/20",
   },
   {
     key: "tarjeta",
     label: "TARJETA",
-    icon: <CreditCard className="h-8 w-8" />,
+    icon: <CreditCard className="h-5 w-5 lg:h-8 lg:w-8" />,
     color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
   },
   {
     key: "nequi",
-    label: "NEQUI",
-    icon: <Smartphone className="h-8 w-8" />,
+    label: "NEQUI / TRANSF.",
+    icon: <Smartphone className="h-5 w-5 lg:h-8 lg:w-8" />,
     color: "bg-purple-500/10 text-purple-600 border-purple-500/20",
   },
   {
     key: "mixto",
     label: "COMBINADO",
     icon: (
-      <div className="flex -space-x-4">
-        <Banknote className="h-7 w-7" />
-        <Smartphone className="h-7 w-7" />
+      <div className="flex -space-x-2 lg:-space-x-4">
+        <Banknote className="h-4 w-4 lg:h-7 lg:w-7" />
+        <Smartphone className="h-4 w-4 lg:h-7 lg:w-7" />
       </div>
     ),
     color: "bg-amber-500/10 text-amber-600 border-amber-500/20",
@@ -361,20 +361,20 @@ export function PaymentCalculator({
                   </span>
                   <div className="h-px flex-1 bg-accent/20" />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
                   {PAYMENT_METHODS.map((pm) => (
                     <button
                       key={pm.key}
                       onClick={() => selectMethod(pm.key)}
                       className={cn(
-                        "group relative flex flex-col items-center justify-center gap-4 p-8 rounded-4xl border-2 transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] shadow-soft hover:shadow-xl",
+                        "group relative flex flex-row lg:flex-col items-center justify-center gap-3 lg:gap-4 p-4 lg:p-8 rounded-2xl lg:rounded-4xl border-2 transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] shadow-soft hover:shadow-xl",
                         pm.color,
                       )}
                     >
-                      <div className="transition-transform duration-500 group-hover:scale-125 group-hover:-rotate-6">
+                      <div className="transition-transform duration-500 group-hover:scale-110 lg:group-hover:scale-125 lg:group-hover:-rotate-6 shrink-0">
                         {pm.icon}
                       </div>
-                      <span className="text-xs font-black tracking-[0.2em]">
+                      <span className="text-[9px] lg:text-xs font-black tracking-[0.1em] lg:tracking-[0.2em] truncate">
                         {pm.label}
                       </span>
                     </button>
