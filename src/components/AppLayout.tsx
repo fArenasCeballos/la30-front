@@ -32,6 +32,7 @@ import {
 import { useState } from "react";
 import { Logo } from "./ui/logo";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 const NAV_ITEMS: {
   to: string;
@@ -90,11 +91,11 @@ export function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Premium Glass Header */}
-      <header className="h-16 lg:h-24 border-b bg-white/70 backdrop-blur-xl flex items-center px-2 lg:px-10 gap-2 lg:gap-8 sticky top-0 z-50 transition-all duration-300">
+      <header className="h-16 lg:h-24 border-b bg-white/70 backdrop-blur-xl flex items-center px-4 lg:px-10 gap-4 lg:gap-8 sticky top-0 z-50 transition-all duration-300">
         {/* Brand & Store Selector */}
-        <div className="flex items-center gap-4 lg:gap-6">
+        <div className="flex items-center gap-3 lg:gap-6 flex-1 lg:flex-none">
           <div
-            className="flex items-center gap-3 lg:gap-4 group cursor-pointer"
+            className="flex items-center gap-2 lg:gap-4 group cursor-pointer shrink-0"
             onClick={() => navigate("/dashboard")}
           >
             <div className="w-10 h-10 lg:w-14 lg:h-14 rounded-xl lg:rounded-3xl bg-white border-2 shadow-soft flex items-center justify-center overflow-hidden group-hover:scale-105 group-hover:rotate-3 transition-all duration-500">
@@ -118,7 +119,7 @@ export function AppLayout() {
             <button
               onClick={() => (isAdmin ? navigate("/select-store") : undefined)}
               className={cn(
-                "flex items-center gap-2 lg:gap-3 px-3 lg:px-5 py-2 lg:py-2.5 rounded-xl lg:rounded-2xl text-[10px] lg:text-sm font-black transition-all border-2 shadow-soft",
+                "flex items-center gap-2 lg:gap-3 px-3 lg:px-5 py-2 lg:py-2.5 rounded-xl lg:rounded-2xl text-[10px] lg:text-sm font-black transition-all border-2 shadow-soft min-w-0",
                 isAdmin
                   ? "bg-white hover:border-primary/30 hover:shadow-medium cursor-pointer"
                   : "cursor-default bg-accent/30 border-transparent",
@@ -128,33 +129,33 @@ export function AppLayout() {
                 borderColor: isAdmin ? undefined : `${activeStore.color}20`,
               }}
             >
-              <div className="h-5 w-5 lg:h-6 lg:w-6 rounded-lg bg-current/10 flex items-center justify-center">
+              <div className="h-5 w-5 lg:h-6 lg:w-6 rounded-lg bg-current/10 flex items-center justify-center shrink-0">
                 <Store className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
               </div>
-              <span className="hidden sm:inline uppercase tracking-widest text-[11px]">
+              <span className="hidden sm:inline uppercase tracking-widest text-[11px] truncate">
                 {activeStore.name}
               </span>
               <span className="sm:hidden">{activeStore.icon}</span>
-              {isAdmin && <Wrench className="h-2.5 w-2.5 opacity-30 ml-0.5 lg:ml-1" />}
+              {isAdmin && <Wrench className="h-2.5 w-2.5 opacity-30 ml-0.5 lg:ml-1 shrink-0" />}
             </button>
           )}
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 flex items-center justify-start gap-1 lg:gap-2 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1 lg:px-4 min-w-0">
-          <div className="flex items-center gap-1 lg:gap-2 lg:mx-auto">
+        {/* Desktop Navigation */}
+        <nav className="hidden lg:flex flex-1 items-center justify-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-2 px-4">
+          <div className="flex items-center gap-2">
             {visibleNav.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
-                className="flex items-center gap-2 px-3 lg:px-5 py-2 lg:py-3 rounded-xl lg:rounded-2xl text-xs lg:text-sm font-black text-muted-foreground hover:bg-accent/50 hover:text-primary transition-all whitespace-nowrap group relative"
+                className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-black text-muted-foreground hover:bg-accent/50 hover:text-primary transition-all whitespace-nowrap group relative"
                 activeClassName="bg-primary/5 text-primary shadow-inner"
               >
                 {({ isActive }) => (
                   <>
                     <item.icon
                       className={cn(
-                        "h-5 w-5 lg:h-4 lg:w-4 transition-all duration-500",
+                        "h-4 w-4 transition-all duration-500",
                         isActive
                           ? "scale-110 rotate-3"
                           : "group-hover:scale-110",
@@ -188,11 +189,11 @@ export function AppLayout() {
             </p>
           </div>
 
-          <div className="flex items-center bg-accent/30 p-1.5 rounded-[1.25rem] border-2 border-accent/20">
+          <div className="flex items-center bg-accent/30 p-1 lg:p-1.5 rounded-[1.25rem] border-2 border-accent/20">
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-xl h-10 w-10 hover:bg-white hover:shadow-soft transition-all text-muted-foreground hover:text-primary"
+              className="rounded-xl h-9 w-9 lg:h-10 lg:w-10 hover:bg-white hover:shadow-soft transition-all text-muted-foreground hover:text-primary"
               onClick={() => setShowResetDialog(true)}
               title="Reparar conexión"
             >
@@ -201,7 +202,7 @@ export function AppLayout() {
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-xl h-10 w-10 hover:bg-white hover:shadow-soft text-muted-foreground hover:text-destructive transition-all"
+              className="rounded-xl h-9 w-9 lg:h-10 lg:w-10 hover:bg-white hover:shadow-soft text-muted-foreground hover:text-destructive transition-all"
               onClick={logout}
               title="Cerrar sesión"
             >
@@ -212,7 +213,7 @@ export function AppLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 relative">
+      <main className="flex-1 relative pb-24 lg:pb-0">
         {/* Subtle Background Pattern */}
         <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,var(--tw-gradient-stops))] from-primary/3 via-transparent to-transparent pointer-events-none" />
         <div className="relative z-10">
@@ -221,6 +222,45 @@ export function AppLayout() {
           </ErrorBoundary>
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-6 left-4 right-4 z-50 bg-white/80 backdrop-blur-2xl border-2 border-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[2.5rem] p-2 flex items-center justify-between">
+        {visibleNav.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className="flex flex-col items-center justify-center flex-1 py-3 rounded-[1.75rem] transition-all relative group"
+            activeClassName="text-white scale-105"
+          >
+            {({ isActive }) => (
+              <>
+                <item.icon
+                  className={cn(
+                    "h-5 w-5 transition-all duration-500 relative z-10",
+                    isActive ? "text-white scale-110" : "text-muted-foreground group-hover:text-primary",
+                  )}
+                  strokeWidth={isActive ? 3 : 2.5}
+                />
+                <span
+                  className={cn(
+                    "text-[8px] font-black uppercase tracking-widest mt-1.5 transition-all relative z-10",
+                    isActive ? "text-white" : "text-muted-foreground/60",
+                  )}
+                >
+                  {item.label.split(" ")[0]}
+                </span>
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-primary rounded-[1.75rem] shadow-strong shadow-primary/20"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
 
       {/* Repair Dialog */}
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
