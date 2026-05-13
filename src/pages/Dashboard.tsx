@@ -187,38 +187,54 @@ export default function Dashboard() {
               <div className="h-px w-8 bg-primary/30" />
               Vista General
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight">Panel de Control</h1>
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
+              Panel de Control
+            </h1>
             <p className="text-muted-foreground font-medium text-sm sm:text-base">
-              Bienvenido de nuevo, esto es lo que está pasando hoy en <span className="text-primary">{activeStore?.name}</span>.
+              Bienvenido de nuevo, esto es lo que está pasando hoy en{" "}
+              <span className="text-primary">{activeStore?.name}</span>.
             </p>
           </div>
-          
+
           <div className="flex items-center gap-2 bg-white/50 border p-1 rounded-2xl shadow-sm">
-             <Badge variant="secondary" className="px-3 py-1.5 rounded-xl font-bold gap-2 bg-white shadow-sm border-primary/10">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                Sincronizado en tiempo real
-             </Badge>
+            <Badge
+              variant="secondary"
+              className="px-3 py-1.5 rounded-xl font-bold gap-2 bg-white shadow-sm border-primary/10"
+            >
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              Sincronizado en tiempo real
+            </Badge>
           </div>
         </div>
 
         {/* Primary Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
           {statCards.map((card, idx) => (
             <div
               key={card.label}
-              className="pos-card pos-card-hover group relative overflow-hidden"
+              className="pos-card pos-card-hover group relative overflow-hidden p-3 lg:p-6"
               style={{ animationDelay: `${idx * 100}ms` }}
             >
               {/* Decorative Background Icon */}
-              <card.icon className={`absolute -right-4 -bottom-4 w-24 h-24 opacity-[0.03] ${card.color} group-hover:scale-110 transition-transform duration-500`} />
-              
-              <div className="relative z-10 space-y-3 sm:space-y-4">
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-accent/50 border border-white transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg`}>
-                  <card.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${card.color}`} />
+              <card.icon
+                className={`absolute -right-2 -bottom-2 w-16 h-16 lg:w-24 lg:h-24 opacity-[0.03] ${card.color} group-hover:scale-110 transition-transform duration-500`}
+              />
+
+              <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-2 lg:gap-4">
+                <div
+                  className={`w-8 h-8 lg:w-12 lg:h-12 rounded-lg lg:rounded-2xl flex items-center justify-center bg-accent/50 border border-white transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg shrink-0`}
+                >
+                  <card.icon
+                    className={`h-4 w-4 lg:h-6 lg:w-6 ${card.color}`}
+                  />
                 </div>
-                <div>
-                  <p className="text-[10px] sm:text-sm font-bold text-muted-foreground uppercase tracking-widest">{card.label}</p>
-                  <p className="text-2xl sm:text-3xl font-black mt-1 tracking-tight">{card.value}</p>
+                <div className="min-w-0">
+                  <p className="text-[8px] lg:text-sm font-bold text-muted-foreground uppercase tracking-widest truncate">
+                    {card.label}
+                  </p>
+                  <p className="text-sm lg:text-3xl font-black mt-0.5 lg:mt-1 tracking-tight truncate">
+                    {card.value}
+                  </p>
                 </div>
               </div>
             </div>
@@ -236,18 +252,26 @@ export default function Dashboard() {
               <div
                 key={card.label}
                 className={`pos-card pos-card-hover border-transparent bg-white/40 backdrop-blur-sm shadow-soft group p-2.5 sm:p-5`}
-                style={{ 
+                style={{
                   animationDelay: `${(idx + 4) * 100}ms`,
-                  borderLeft: `3px sm:border-l-4 solid ${card.color.replace('text-', '')}` 
+                  borderLeft: `3px sm:border-l-4 solid ${card.color.replace("text-", "")}`,
                 }}
               >
                 <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
-                  <div className={`w-8 h-8 sm:w-14 sm:h-14 rounded-full flex items-center justify-center ${card.bgColor} ${card.color} transition-all duration-500 group-hover:rotate-12`}>
+                  <div
+                    className={`w-8 h-8 sm:w-14 sm:h-14 rounded-full flex items-center justify-center ${card.bgColor} ${card.color} transition-all duration-500 group-hover:rotate-12`}
+                  >
                     <card.icon className="h-4 w-4 sm:h-7 sm:w-7" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[7px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em] sm:tracking-[0.2em] truncate">{card.label}</p>
-                    <p className={`text-[10px] sm:text-2xl font-black ${card.color} truncate`}>{card.value}</p>
+                    <p className="text-[7px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest sm:tracking-[0.2em] truncate">
+                      {card.label}
+                    </p>
+                    <p
+                      className={`text-[10px] sm:text-2xl font-black ${card.color} truncate`}
+                    >
+                      {card.value}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -260,22 +284,41 @@ export default function Dashboard() {
           {/* Main Chart Column */}
           <div className="lg:col-span-2 space-y-6 lg:space-y-8">
             <div className="pos-card bg-white p-4 lg:p-8">
-               <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h3 className="text-xl font-bold tracking-tight">Rendimiento de Productos</h3>
-                  <p className="text-sm text-muted-foreground">Top 6 artículos con mayor demanda</p>
+                  <h3 className="text-xl font-bold tracking-tight">
+                    Rendimiento de Productos
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Top 6 artículos con mayor demanda
+                  </p>
                 </div>
                 <div className="h-10 w-10 rounded-xl bg-accent flex items-center justify-center">
                   <BarChart3 className="h-5 w-5 text-primary" />
                 </div>
               </div>
-              
+
               <div className="h-[350px] w-full">
                 {productStats.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={productStats} layout="vertical" margin={{ left: 20, right: 30, top: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                      <XAxis type="number" fontSize={11} fontWeight={600} axisLine={false} tickLine={false} tick={{ fill: 'rgba(0,0,0,0.3)' }} />
+                    <BarChart
+                      data={productStats}
+                      layout="vertical"
+                      margin={{ left: 20, right: 30, top: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="rgba(0,0,0,0.05)"
+                      />
+                      <XAxis
+                        type="number"
+                        fontSize={11}
+                        fontWeight={600}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "rgba(0,0,0,0.3)" }}
+                      />
                       <YAxis
                         type="category"
                         dataKey="product_name"
@@ -284,16 +327,16 @@ export default function Dashboard() {
                         fontWeight={700}
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: 'rgba(0,0,0,0.6)' }}
+                        tick={{ fill: "rgba(0,0,0,0.6)" }}
                       />
                       <Tooltip
-                        cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                        cursor={{ fill: "rgba(0,0,0,0.02)" }}
                         contentStyle={{
-                          backgroundColor: '#fff',
-                          borderRadius: '16px',
-                          border: 'none',
-                          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                          padding: '12px 16px'
+                          backgroundColor: "#fff",
+                          borderRadius: "16px",
+                          border: "none",
+                          boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+                          padding: "12px 16px",
                         }}
                       />
                       <Bar
@@ -307,15 +350,19 @@ export default function Dashboard() {
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2 opacity-50">
                     <Package className="h-12 w-12" />
-                    <p className="text-sm font-bold uppercase tracking-widest">Sin datos suficientes</p>
+                    <p className="text-sm font-bold uppercase tracking-widest">
+                      Sin datos suficientes
+                    </p>
                   </div>
                 )}
               </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4 lg:gap-8">
-               <div className="pos-card bg-white p-6 lg:p-8">
-                <h3 className="text-lg font-bold mb-4 lg:mb-6">Distribución de Estados</h3>
+              <div className="pos-card bg-white p-6 lg:p-8">
+                <h3 className="text-lg font-bold mb-4 lg:mb-6">
+                  Distribución de Estados
+                </h3>
                 <div className="h-[200px] relative">
                   {statusDistribution.some((s) => s.value > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -330,9 +377,9 @@ export default function Dashboard() {
                           dataKey="value"
                         >
                           {statusDistribution.map((_, index) => (
-                            <Cell 
-                              key={index} 
-                              fill={COLORS[index % COLORS.length]} 
+                            <Cell
+                              key={index}
+                              fill={COLORS[index % COLORS.length]}
                               stroke="none"
                             />
                           ))}
@@ -347,9 +394,14 @@ export default function Dashboard() {
                   )}
                   {/* Central Statistic */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase leading-none">Total</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase leading-none">
+                      Total
+                    </p>
                     <p className="text-2xl font-black leading-tight">
-                      {statusDistribution.reduce((acc, curr) => acc + curr.value, 0)}
+                      {statusDistribution.reduce(
+                        (acc, curr) => acc + curr.value,
+                        0,
+                      )}
                     </p>
                   </div>
                 </div>
@@ -363,11 +415,13 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold">Crecimiento Diario</h3>
-                    <p className="text-sm text-white/70">Mantén el ritmo, las ventas van por buen camino.</p>
+                    <p className="text-sm text-white/70">
+                      Mantén el ritmo, las ventas van por buen camino.
+                    </p>
                   </div>
                   <div className="pt-4">
-                    <Button 
-                      variant="secondary" 
+                    <Button
+                      variant="secondary"
                       className="w-full bg-white text-primary font-bold rounded-xl hover:scale-105 transition-transform"
                       onClick={() => navigate("/reporteria")}
                     >
@@ -384,14 +438,18 @@ export default function Dashboard() {
             <div className="pos-card bg-white p-6 lg:p-8 h-full flex flex-col">
               <div className="flex items-center justify-between mb-6 lg:mb-8">
                 <h3 className="text-xl font-bold tracking-tight">Actividad</h3>
-                <Badge className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors border-none font-black text-[10px]">EN VIVO</Badge>
+                <Badge className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors border-none font-black text-[10px]">
+                  EN VIVO
+                </Badge>
               </div>
-              
+
               <div className="flex-1 space-y-6 overflow-y-auto pr-2 no-scrollbar">
                 {recentOrders.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground opacity-30 space-y-4">
                     <Clock className="h-12 w-12" />
-                    <p className="text-sm font-bold uppercase tracking-widest">Sin actividad</p>
+                    <p className="text-sm font-bold uppercase tracking-widest">
+                      Sin actividad
+                    </p>
                   </div>
                 )}
                 {recentOrders.map((order: OrderRow, idx: number) => (
@@ -401,25 +459,40 @@ export default function Dashboard() {
                     style={{ animationDelay: `${idx * 50}ms` }}
                   >
                     <div className="w-12 h-12 rounded-2xl bg-accent/50 border border-white flex flex-col items-center justify-center group-hover:bg-primary group-hover:border-primary transition-all duration-300">
-                      <span className="text-[10px] font-black text-primary group-hover:text-white leading-none">LOC</span>
-                      <span className="font-display font-black text-sm group-hover:text-white">{order.locator}</span>
+                      <span className="text-[10px] font-black text-primary group-hover:text-white leading-none">
+                        LOC
+                      </span>
+                      <span className="font-display font-black text-sm group-hover:text-white">
+                        {order.locator}
+                      </span>
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm truncate">Pedido #{order.id.slice(0, 4)}</span>
+                        <span className="font-bold text-sm truncate">
+                          Pedido #{order.id.slice(0, 4)}
+                        </span>
                         <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full">
                           {formatPrice(order.total)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                         <div className={`w-1.5 h-1.5 rounded-full ${
-                           order.status === 'entregado' ? 'bg-green-500' : 
-                           order.status === 'en_preparacion' ? 'bg-blue-500' : 'bg-orange-500'
-                         }`} />
-                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">
-                           {order.status.replace("_", " ")} • {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                         </span>
+                        <div
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            order.status === "entregado"
+                              ? "bg-green-500"
+                              : order.status === "en_preparacion"
+                                ? "bg-blue-500"
+                                : "bg-orange-500"
+                          }`}
+                        />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">
+                          {order.status.replace("_", " ")} •{" "}
+                          {new Date(order.created_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -427,8 +500,8 @@ export default function Dashboard() {
               </div>
 
               <div className="mt-8 pt-8 border-t">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full border-2 font-bold rounded-xl hover:bg-accent hover:border-primary/20 transition-all"
                   onClick={() => navigate("/reporteria")}
                 >

@@ -374,7 +374,7 @@ export function PaymentCalculator({
                       <div className="transition-transform duration-500 group-hover:scale-110 lg:group-hover:scale-125 lg:group-hover:-rotate-6 shrink-0">
                         {pm.icon}
                       </div>
-                      <span className="text-[9px] lg:text-xs font-black tracking-[0.1em] lg:tracking-[0.2em] truncate">
+                      <span className="text-[9px] lg:text-xs font-black tracking-widest lg:tracking-[0.2em] truncate">
                         {pm.label}
                       </span>
                     </button>
