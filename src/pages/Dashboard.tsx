@@ -258,8 +258,8 @@ export default function Dashboard() {
         {/* Analytics & Activity Section */}
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Chart Column */}
-          <div className="lg:col-span-2 space-y-8">
-            <div className="pos-card bg-white p-8">
+          <div className="lg:col-span-2 space-y-6 lg:space-y-8">
+            <div className="pos-card bg-white p-4 lg:p-8">
                <div className="flex items-center justify-between mb-8">
                 <div>
                   <h3 className="text-xl font-bold tracking-tight">Rendimiento de Productos</h3>
@@ -279,8 +279,8 @@ export default function Dashboard() {
                       <YAxis
                         type="category"
                         dataKey="product_name"
-                        width={120}
-                        fontSize={11}
+                        width={window.innerWidth < 640 ? 80 : 120}
+                        fontSize={10}
                         fontWeight={700}
                         axisLine={false}
                         tickLine={false}
@@ -313,9 +313,9 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
-               <div className="pos-card bg-white p-8">
-                <h3 className="text-lg font-bold mb-6">Distribución de Estados</h3>
+            <div className="grid md:grid-cols-2 gap-4 lg:gap-8">
+               <div className="pos-card bg-white p-6 lg:p-8">
+                <h3 className="text-lg font-bold mb-4 lg:mb-6">Distribución de Estados</h3>
                 <div className="h-[200px] relative">
                   {statusDistribution.some((s) => s.value > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -355,7 +355,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="pos-card bg-primary p-8 text-white relative overflow-hidden group">
+              <div className="pos-card bg-primary p-6 lg:p-8 text-white relative overflow-hidden group">
                 <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
                 <div className="relative z-10 space-y-4">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
@@ -380,9 +380,9 @@ export default function Dashboard() {
           </div>
 
           {/* Activity Column */}
-          <div className="space-y-6">
-            <div className="pos-card bg-white p-8 h-full flex flex-col">
-              <div className="flex items-center justify-between mb-8">
+          <div className="space-y-4 lg:space-y-6">
+            <div className="pos-card bg-white p-6 lg:p-8 h-full flex flex-col">
+              <div className="flex items-center justify-between mb-6 lg:mb-8">
                 <h3 className="text-xl font-bold tracking-tight">Actividad</h3>
                 <Badge className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors border-none font-black text-[10px]">EN VIVO</Badge>
               </div>

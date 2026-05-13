@@ -527,7 +527,7 @@ export default function Reporteria() {
                 className="rounded-[1.75rem] lg:rounded-[2.5rem] px-4 lg:px-12 py-3 lg:py-5 font-black uppercase tracking-[0.2em] text-[9px] lg:text-[11px] transition-all duration-500 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-strong data-[state=active]:scale-105 flex items-center gap-2 lg:gap-3"
               >
                 <tab.icon
-                  className="h-3.5 w-3.5 lg:h-4 lg:w4"
+                  className="h-3.5 w-3.5 lg:h-4 lg:w-4"
                   strokeWidth={3}
                 />
                 {tab.label}
@@ -541,7 +541,7 @@ export default function Reporteria() {
           value="resumen"
           className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-10">
             {[
               {
                 label: "VENTAS NETAS",
@@ -582,7 +582,7 @@ export default function Reporteria() {
             ].map((card, i) => (
               <div
                 key={i}
-                className="pos-card p-10 group overflow-hidden relative border-2 transition-all duration-500 hover:scale-[1.05] hover:shadow-2xl"
+                className="pos-card p-6 lg:p-10 group overflow-hidden relative border-2 transition-all duration-500 hover:scale-[1.05] hover:shadow-2xl"
               >
                 <div
                   className={cn(
@@ -599,15 +599,15 @@ export default function Reporteria() {
                   )}
                 />
 
-                <div className="flex items-center gap-5 mb-8">
+                <div className="flex items-center gap-4 lg:gap-5 mb-4 lg:mb-8">
                   <div
                     className={cn(
-                      "h-16 w-16 rounded-[1.75rem] flex items-center justify-center transition-all duration-500 group-hover:rotate-12 shadow-soft",
+                      "h-12 w-12 lg:h-16 lg:w-16 rounded-[1.25rem] lg:rounded-[1.75rem] flex items-center justify-center transition-all duration-500 group-hover:rotate-12 shadow-soft",
                       card.bg,
                       card.color,
                     )}
                   >
-                    <card.icon className="h-8 w-8" strokeWidth={3} />
+                    <card.icon className="h-6 w-6 lg:h-8 lg:w-8" strokeWidth={3} />
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 leading-none">
@@ -618,7 +618,7 @@ export default function Reporteria() {
                 </div>
                 <p
                   className={cn(
-                    "text-5xl font-black tracking-tighter transition-all duration-500 origin-left group-hover:scale-110",
+                    "text-3xl lg:text-5xl font-black tracking-tighter transition-all duration-500 origin-left group-hover:scale-110",
                     card.color,
                   )}
                 >
@@ -1014,14 +1014,14 @@ export default function Reporteria() {
                   ].map((stat, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-6 rounded-3xl hover:bg-white/50 transition-colors group"
+                      className="flex items-center justify-between p-4 lg:p-6 rounded-2xl lg:rounded-3xl hover:bg-white/50 transition-colors group"
                     >
-                      <span className="font-bold text-lg text-muted-foreground/70">
+                      <span className="font-bold text-base lg:text-lg text-muted-foreground/70">
                         {stat.label}
                       </span>
                       <div
                         className={cn(
-                          "px-6 py-2 rounded-2xl font-black text-xl shadow-inner group-hover:scale-110 transition-transform",
+                          "px-4 lg:px-6 py-1.5 lg:py-2 rounded-xl lg:rounded-2xl font-black text-lg lg:text-xl shadow-inner group-hover:scale-110 transition-transform",
                           stat.bg,
                           stat.color,
                         )}
@@ -1040,17 +1040,17 @@ export default function Reporteria() {
                     BALANCE FINAL
                   </h3>
                 </div>
-                <div className="bg-primary p-12 rounded-[2.5rem] shadow-strong shadow-primary/20 relative overflow-hidden group">
+                <div className="bg-primary p-8 lg:p-12 rounded-[2rem] lg:rounded-[2.5rem] shadow-strong shadow-primary/20 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-white/20 transition-all duration-700" />
-                  <p className="text-white/60 font-black text-[10px] tracking-[0.4em] uppercase mb-2">
+                  <p className="text-white/60 font-black text-[9px] lg:text-[10px] tracking-[0.4em] uppercase mb-2">
                     GRAN TOTAL PERÍODO
                   </p>
-                  <p className="text-6xl font-black text-white tracking-tighter mb-8 group-hover:scale-105 transition-transform origin-left">
+                  <p className="text-4xl lg:text-6xl font-black text-white tracking-tighter mb-6 lg:mb-8 group-hover:scale-105 transition-transform origin-left">
                     {formatPrice(cashSummary.totalSales)}
                   </p>
-                  <div className="flex items-center gap-4 py-4 px-6 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-md">
-                    <TrendingUp className="h-5 w-5 text-white/60" />
-                    <p className="text-white/80 font-bold text-sm">
+                  <div className="flex items-center gap-3 lg:gap-4 py-3 lg:py-4 px-4 lg:px-6 bg-white/10 rounded-xl lg:rounded-2xl border border-white/10 backdrop-blur-md">
+                    <TrendingUp className="h-4 w-4 lg:h-5 lg:w-5 text-white/60" />
+                    <p className="text-white/80 font-bold text-xs lg:text-sm">
                       Rendimiento óptimo del sistema de caja.
                     </p>
                   </div>
@@ -1059,12 +1059,12 @@ export default function Reporteria() {
             </div>
           </div>
 
-          <div className="bg-accent/10 rounded-[3rem] p-12 border-2 border-accent/20 relative group/section">
-            <div className="flex items-center gap-4 mb-10 relative">
-              <div className="h-10 w-10 rounded-xl bg-white border-2 shadow-soft flex items-center justify-center text-primary group-hover/section:scale-110 transition-transform">
-                <Banknote className="h-6 w-6" />
+          <div className="bg-accent/10 rounded-[2rem] lg:rounded-[3rem] p-6 lg:p-12 border-2 border-accent/20 relative group/section">
+            <div className="flex items-center gap-3 lg:gap-4 mb-6 lg:mb-10 relative">
+              <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-lg lg:rounded-xl bg-white border-2 shadow-soft flex items-center justify-center text-primary group-hover/section:scale-110 transition-transform">
+                <Banknote className="h-5 w-5 lg:h-6 lg:w-6" />
               </div>
-              <h4 className="text-2xl font-black tracking-tight text-foreground/80">
+              <h4 className="text-xl lg:text-2xl font-black tracking-tight text-foreground/80">
                 Liquidación por Medios de Pago
               </h4>
             </div>
@@ -1091,12 +1091,12 @@ export default function Reporteria() {
               ].map((p) => (
                 <div
                   key={p.label}
-                  className="bg-white/80 p-8 rounded-3xl shadow-strong border-2 border-transparent hover:border-primary/20 transition-all duration-500 group/item hover:scale-105"
+                  className="bg-white/80 p-6 lg:p-8 rounded-2xl lg:rounded-3xl shadow-strong border-2 border-transparent hover:border-primary/20 transition-all duration-500 group/item hover:scale-105"
                 >
-                  <div className="flex items-center gap-4 mb-6">
+                  <div className="flex items-center gap-3 lg:gap-4 mb-4 lg:mb-6">
                     <div
                       className={cn(
-                        "h-12 w-12 rounded-2xl flex items-center justify-center shadow-soft",
+                        "h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl flex items-center justify-center shadow-soft",
                         p.color === "emerald"
                           ? "bg-emerald-500/10 text-emerald-600"
                           : p.color === "blue"
@@ -1106,15 +1106,15 @@ export default function Reporteria() {
                               : "bg-primary/10 text-primary",
                       )}
                     >
-                      <p.icon className="h-6 w-6" strokeWidth={2.5} />
+                      <p.icon className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={2.5} />
                     </div>
-                    <p className="text-[11px] font-black uppercase text-muted-foreground/40 tracking-widest leading-tight">
+                    <p className="text-[10px] lg:text-[11px] font-black uppercase text-muted-foreground/40 tracking-widest leading-tight">
                       {p.label}
                     </p>
                   </div>
                   <p
                     className={cn(
-                      "text-3xl font-black tracking-tighter",
+                      "text-2xl lg:text-3xl font-black tracking-tighter",
                       p.color === "emerald"
                         ? "text-emerald-600"
                         : p.color === "blue"
@@ -1358,13 +1358,13 @@ export default function Reporteria() {
                               {hora}
                             </span>
                           </div>
-                          <div className="flex items-center gap-8">
-                            <p className="text-4xl font-black tracking-tighter text-foreground group-hover:text-primary transition-colors">
+                          <div className="flex items-center gap-4 lg:gap-8">
+                            <p className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground group-hover:text-primary transition-colors">
                               {formatPrice(order.total)}
                             </p>
-                            <div className="flex items-center gap-2.5 px-5 py-2 bg-primary/5 rounded-2xl border border-primary/10 shadow-inner">
-                              <User className="h-4 w-4 text-primary/60" />
-                              <span className="text-[10px] font-black text-primary uppercase tracking-widest">
+                            <div className="flex items-center gap-2 px-3 lg:px-5 py-1.5 lg:py-2 bg-primary/5 rounded-xl lg:rounded-2xl border border-primary/10 shadow-inner">
+                              <User className="h-3 w-3 lg:h-4 lg:w-4 text-primary/60" />
+                              <span className="text-[9px] lg:text-[10px] font-black text-primary uppercase tracking-widest">
                                 {order.profiles?.name || "SISTEMA"}
                               </span>
                             </div>
@@ -1400,38 +1400,38 @@ export default function Reporteria() {
                           transition={{ duration: 0.5, ease: "circOut" }}
                           className="overflow-hidden"
                         >
-                          <div className="p-12 bg-accent/5 border-t-4 border-dashed border-white/60">
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                              <div className="lg:col-span-7 space-y-8">
-                                <div className="flex items-center gap-4 px-2">
+                          <div className="p-6 lg:p-12 bg-accent/5 border-t-4 border-dashed border-white/60">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+                              <div className="lg:col-span-7 space-y-6 lg:space-y-8">
+                                <div className="flex items-center gap-3 lg:gap-4 px-2">
                                   <div className="h-2 w-2 rounded-full bg-primary" />
-                                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">
+                                  <h4 className="text-[10px] lg:text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">
                                     DESGLOSE DE CONSUMO
                                   </h4>
                                 </div>
-                                <div className="bg-white/80 backdrop-blur-md rounded-[3rem] p-10 border-4 border-white shadow-strong">
+                                <div className="bg-white/80 backdrop-blur-md rounded-[2rem] lg:rounded-[3rem] p-6 lg:p-10 border-4 border-white shadow-strong">
                                   <div className="divide-y divide-accent/30">
                                     {order.order_items?.map((item) => (
                                       <div
                                         key={item.id}
-                                        className="py-8 first:pt-0 last:pb-0 group/item"
+                                        className="py-4 lg:py-8 first:pt-0 last:pb-0 group/item"
                                       >
-                                        <div className="flex justify-between items-start mb-3">
-                                          <div className="flex gap-6">
-                                            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-lg border border-primary/5 shadow-inner">
+                                        <div className="flex justify-between items-start mb-2 lg:mb-3">
+                                          <div className="flex gap-4 lg:gap-6">
+                                            <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-base lg:text-lg border border-primary/5 shadow-inner">
                                               {item.quantity}
                                             </div>
-                                            <div className="space-y-1">
-                                              <p className="font-black text-xl text-foreground/80 group-hover/item:text-primary transition-colors">
+                                            <div className="space-y-0.5 lg:space-y-1">
+                                              <p className="font-black text-lg lg:text-xl text-foreground/80 group-hover/item:text-primary transition-colors">
                                                 {item.products?.name}
                                               </p>
-                                              <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                                              <p className="text-[9px] lg:text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
                                                 P. UNITARIO:{" "}
                                                 {formatPrice(item.unit_price)}
                                               </p>
                                             </div>
                                           </div>
-                                          <p className="font-black text-2xl tracking-tighter text-foreground/90">
+                                          <p className="font-black text-xl lg:text-2xl tracking-tighter text-foreground/90">
                                             {formatPrice(
                                               item.unit_price * item.quantity,
                                             )}

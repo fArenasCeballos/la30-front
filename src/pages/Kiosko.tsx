@@ -405,7 +405,7 @@ export default function Kiosko() {
                 value={locator}
                 onChange={(e) => setLocator(e.target.value.toUpperCase())}
                 placeholder="00"
-                className="h-20 sm:h-28 text-center text-4xl sm:text-6xl font-black rounded-3xl sm:rounded-4xl border-4 border-primary/10 shadow-soft focus-visible:ring-primary focus-visible:border-primary transition-all bg-white/50 backdrop-blur-sm"
+                className="h-16 lg:h-28 text-center text-4xl lg:text-6xl font-black rounded-2xl lg:rounded-4xl border-4 border-primary/10 shadow-soft focus-visible:ring-primary focus-visible:border-primary transition-all bg-white/50 backdrop-blur-sm"
                 autoFocus
               />
               <div className="absolute -bottom-3 sm:-bottom-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg opacity-0 group-focus-within:opacity-100 transition-opacity whitespace-nowrap">
@@ -415,7 +415,7 @@ export default function Kiosko() {
 
             <Button
               size="lg"
-              className="h-16 px-12 rounded-2xl text-lg font-black shadow-strong hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 group"
+              className="h-14 lg:h-16 px-8 lg:px-12 rounded-2xl text-base lg:text-lg font-black shadow-strong hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 group"
               disabled={!locator.trim()}
               onClick={() => setStep("menu")}
             >
@@ -960,7 +960,7 @@ function CartContent({
 
           <Button
             size="xl"
-            className="w-full h-16 rounded-2xl font-black text-lg shadow-strong hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 group"
+            className="w-full h-14 lg:h-16 rounded-2xl font-black text-base lg:text-lg shadow-strong hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 group"
             onClick={() => {
               setStep("confirm");
               setCartOpen(false);

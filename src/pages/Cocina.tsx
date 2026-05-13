@@ -151,12 +151,12 @@ export default function Cocina() {
               {confirmados.map((order, idx) => (
                 <div
                   key={order.id}
-                  className="pos-card overflow-hidden border-2 border-l-12 border-l-accent p-10 group animate-in fade-in slide-in-from-bottom-12 duration-1000 fill-mode-both"
+                  className="pos-card overflow-hidden border-2 border-l-8 lg:border-l-12 border-l-accent p-6 lg:p-10 group animate-in fade-in slide-in-from-bottom-12 duration-1000 fill-mode-both"
                   style={{ animationDelay: `${idx * 150}ms` }}
                 >
                   <div className="flex items-center justify-between mb-10">
                     <div className="flex items-center gap-6">
-                      <div className="h-20 w-20 rounded-4xl bg-accent/10 flex items-center justify-center text-primary font-black text-4xl shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500">
+                      <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-accent/10 flex items-center justify-center text-primary font-black text-2xl lg:text-4xl shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500">
                         {order.locator}
                       </div>
                       <div className="space-y-1.5">
@@ -169,7 +169,7 @@ export default function Cocina() {
                     </div>
                   </div>
 
-                  <div className="space-y-5 mb-12 bg-accent/5 p-8 rounded-[2.5rem] border-2 border-accent/10 shadow-inner">
+                  <div className="space-y-4 lg:space-y-5 mb-8 lg:mb-12 bg-accent/5 p-5 lg:p-8 rounded-2xl lg:rounded-[2.5rem] border-2 border-accent/10 shadow-inner">
                     <div className="flex items-center gap-3 mb-2 opacity-40">
                       <ListChecks className="h-4 w-4" />
                       <span className="text-[10px] font-black uppercase tracking-widest">
@@ -202,7 +202,7 @@ export default function Cocina() {
 
                   <Button
                     size="xl"
-                    className="w-full rounded-4xl h-20 bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-widest shadow-strong shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="w-full rounded-2xl lg:rounded-4xl h-14 lg:h-20 bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-widest shadow-strong shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                     onClick={() =>
                       handleUpdateStatus(order.id, "en_preparacion")
                     }
@@ -245,12 +245,12 @@ export default function Cocina() {
                 return (
                   <div
                     key={order.id}
-                    className="pos-card overflow-hidden border-2 border-l-12 border-l-preparing p-10 group animate-in fade-in slide-in-from-bottom-12 duration-1000 fill-mode-both"
+                    className="pos-card overflow-hidden border-2 border-l-8 lg:border-l-12 border-l-preparing p-6 lg:p-10 group animate-in fade-in slide-in-from-bottom-12 duration-1000 fill-mode-both"
                     style={{ animationDelay: `${idx * 150}ms` }}
                   >
                     <div className="flex items-center justify-between mb-10">
                       <div className="flex items-center gap-6">
-                        <div className="h-20 w-20 rounded-4xl bg-preparing/10 flex items-center justify-center text-preparing font-black text-4xl border-2 border-preparing/20 shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                        <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-preparing/10 flex items-center justify-center text-preparing font-black text-2xl lg:text-4xl border-2 border-preparing/20 shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
                           {order.locator}
                         </div>
                         <div className="space-y-1.5">
@@ -263,7 +263,7 @@ export default function Cocina() {
                       </div>
                     </div>
 
-                    <div className="space-y-5 mb-12 bg-preparing/5 p-8 rounded-[2.5rem] border-2 border-preparing/10 shadow-inner">
+                    <div className="space-y-4 lg:space-y-5 mb-8 lg:mb-12 bg-preparing/5 p-5 lg:p-8 rounded-2xl lg:rounded-[2.5rem] border-2 border-preparing/10 shadow-inner">
                       <div className="flex items-center gap-3 mb-2 opacity-40">
                         <Utensils className="h-4 w-4" />
                         <span className="text-[10px] font-black uppercase tracking-widest">
@@ -274,7 +274,7 @@ export default function Cocina() {
                         <div
                           key={item.id}
                           className={cn(
-                            "flex gap-5 text-lg items-center p-5 rounded-3xl transition-all cursor-pointer border-2 border-transparent",
+                            "flex gap-4 lg:gap-5 text-base lg:text-lg items-center p-3 lg:p-5 rounded-2xl lg:rounded-3xl transition-all cursor-pointer border-2 border-transparent",
                             item.is_completed
                               ? "bg-preparing/5 border-preparing/10 opacity-50"
                               : "hover:border-preparing/20 bg-white shadow-soft hover:shadow-lg",

@@ -310,7 +310,7 @@ export default function Caja() {
                     actions={
                       <div className="flex gap-4 w-full">
                         <Button
-                          className="flex-1 rounded-2xl h-14 font-black uppercase tracking-widest text-[10px] bg-primary hover:bg-primary/90 text-white shadow-strong shadow-primary/10 transition-all active:scale-95"
+                          className="flex-1 rounded-2xl h-12 lg:h-14 font-black uppercase tracking-widest text-[10px] bg-primary hover:bg-primary/90 text-white shadow-strong shadow-primary/10 transition-all active:scale-95"
                           onClick={() =>
                             updateOrderStatus(order.id, "confirmado")
                           }
@@ -328,7 +328,7 @@ export default function Caja() {
                         </Button>
                         <Button
                           variant="secondary"
-                          className="flex-1 rounded-2xl h-14 font-black uppercase tracking-widest text-[10px] bg-white border-2 border-accent/20 hover:bg-accent/5 transition-all"
+                          className="flex-1 rounded-2xl h-12 lg:h-14 font-black uppercase tracking-widest text-[10px] bg-white border-2 border-accent/20 hover:bg-accent/5 transition-all"
                           onClick={() => navigate(`/kiosko?edit=${order.id}`)}
                           disabled={order.isOptimistic}
                         >
@@ -337,7 +337,7 @@ export default function Caja() {
                         </Button>
                         <Button
                           variant="ghost"
-                          className="rounded-2xl h-14 w-14 text-destructive hover:bg-destructive/5 border-2 border-transparent hover:border-destructive/10 transition-all"
+                          className="rounded-2xl h-12 w-12 lg:h-14 lg:w-14 text-destructive hover:bg-destructive/5 border-2 border-transparent hover:border-destructive/10 transition-all"
                           onClick={() =>
                             updateOrderStatus(order.id, "cancelado")
                           }
@@ -357,9 +357,9 @@ export default function Caja() {
             value="confirmados"
             className="animate-in fade-in slide-in-from-bottom-6 duration-700 outline-none"
           >
-            <div className="grid gap-10 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 lg:gap-10 sm:grid-cols-2 xl:grid-cols-3">
               {confirmados.length === 0 ? (
-                <div className="col-span-full py-40 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-[3rem] border-2 border-dashed border-accent/20 opacity-60 space-y-6">
+                <div className="col-span-full py-20 lg:py-40 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-[2rem] lg:rounded-[3rem] border-2 border-dashed border-accent/20 opacity-60 space-y-6">
                   <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
                     <DollarSign className="h-10 w-10 text-muted-foreground/60" />
                   </div>
@@ -402,9 +402,9 @@ export default function Caja() {
             value="cocina"
             className="animate-in fade-in slide-in-from-bottom-6 duration-700 outline-none"
           >
-            <div className="grid gap-10 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 lg:gap-10 sm:grid-cols-2 xl:grid-cols-3">
               {enCocina.length === 0 ? (
-                <div className="col-span-full py-40 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-[3rem] border-2 border-dashed border-accent/20 opacity-60 space-y-6">
+                <div className="col-span-full py-20 lg:py-40 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-[2rem] lg:rounded-[3rem] border-2 border-dashed border-accent/20 opacity-60 space-y-6">
                   <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
                     <Loader2 className="h-10 w-10 text-muted-foreground/60 animate-spin" />
                   </div>
@@ -433,7 +433,7 @@ export default function Caja() {
                           <Button
                             size="lg"
                             className={cn(
-                              "w-full rounded-2xl h-16 font-black uppercase tracking-widest text-[11px] transition-all duration-500 shadow-strong active:scale-95",
+                              "w-full rounded-2xl h-14 lg:h-16 font-black uppercase tracking-widest text-[11px] transition-all duration-500 shadow-strong active:scale-95",
                               allChecked
                                 ? "bg-green-500 hover:bg-green-600 text-white shadow-green-500/20"
                                 : "bg-accent/10 text-muted-foreground/40 border-2 border-transparent cursor-not-allowed",
