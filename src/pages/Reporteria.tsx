@@ -389,19 +389,19 @@ export default function Reporteria() {
           </p>
         </div>
 
-        <div className="relative">
+        <div className="relative flex lg:block justify-center">
           <Button
             variant="outline"
             size="touch"
-            className="rounded-3xl lg:rounded-4xl h-14 lg:h-20 px-6 lg:px-10 border-2 border-primary/20 font-black shadow-strong hover:shadow-xl hover:scale-105 active:scale-95 transition-all group bg-white/80"
+            className="rounded-2xl lg:rounded-4xl h-12 lg:h-20 px-5 lg:px-10 border-2 border-primary/20 font-black shadow-strong hover:shadow-xl hover:scale-105 active:scale-95 transition-all group bg-white/80"
             onClick={exportCSV}
             disabled={isLoading || reportOrders.length === 0}
           >
             <Download
-              className="h-5 w-5 lg:h-7 lg:w-7 mr-3 lg:mr-4 text-primary group-hover:translate-y-1 transition-transform"
+              className="h-4 w-4 lg:h-7 lg:w-7 mr-2 lg:mr-4 text-primary group-hover:translate-y-1 transition-transform"
               strokeWidth={3}
             />
-            <span className="text-[10px] lg:text-xs tracking-[0.2em]">
+            <span className="text-[9px] lg:text-xs tracking-widest lg:tracking-[0.2em]">
               EXPORTAR CSV
             </span>
           </Button>
@@ -410,24 +410,26 @@ export default function Reporteria() {
 
       {/* Advanced Filters Bar */}
       <div className="bg-white/60 backdrop-blur-2xl p-4 lg:p-8 rounded-4xl lg:rounded-[3rem] border-2 border-white shadow-strong sticky top-20 lg:top-24 z-40 flex flex-wrap items-center justify-between gap-4 lg:gap-8 animate-in slide-in-from-top-4 duration-1000 fill-mode-both">
-        <div className="flex flex-wrap items-center gap-3 lg:gap-4">
-          <div className="flex bg-accent/20 p-1.5 rounded-3xl border border-accent/20 shadow-inner">
-            {QUICK_RANGES.map((r) => (
-              <Button
-                key={r.label}
-                variant={activeQuick === r.label ? "default" : "ghost"}
-                size="sm"
-                className={cn(
-                  "rounded-xl px-6 py-5 font-black text-[10px] tracking-widest uppercase transition-all duration-500",
-                  activeQuick === r.label
-                    ? "bg-white text-primary shadow-medium hover:bg-white scale-105"
-                    : "text-muted-foreground/60 hover:text-primary hover:bg-white/40",
-                )}
-                onClick={() => handleQuickRange(r.label)}
-              >
-                {r.label}
-              </Button>
-            ))}
+        <div className="flex flex-col sm:flex-row items-center gap-3 lg:gap-4 w-full lg:w-auto">
+          <div className="flex bg-accent/20 p-1 rounded-2xl border border-accent/20 shadow-inner w-full sm:w-auto overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1 min-w-max px-1">
+              {QUICK_RANGES.map((r) => (
+                <Button
+                  key={r.label}
+                  variant={activeQuick === r.label ? "default" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "rounded-xl px-4 py-2 sm:px-6 sm:py-5 font-black text-[9px] sm:text-[10px] tracking-widest uppercase transition-all duration-500",
+                    activeQuick === r.label
+                      ? "bg-white text-primary shadow-medium hover:bg-white scale-105"
+                      : "text-muted-foreground/60 hover:text-primary hover:bg-white/40",
+                  )}
+                  onClick={() => handleQuickRange(r.label)}
+                >
+                  {r.label}
+                </Button>
+              ))}
+            </div>
           </div>
 
           <Popover>
@@ -435,7 +437,7 @@ export default function Reporteria() {
               <Button
                 variant="outline"
                 className={cn(
-                  "h-12 lg:h-14 rounded-xl lg:rounded-2xl border-2 px-4 lg:px-8 font-black text-[10px] lg:text-xs tracking-widest uppercase shadow-soft transition-all hover:bg-white hover:border-primary/40 group bg-white/40",
+                  "h-12 lg:h-14 w-full sm:w-auto rounded-xl lg:rounded-2xl border-2 px-4 lg:px-8 font-black text-[10px] lg:text-xs tracking-widest uppercase shadow-soft transition-all hover:bg-white hover:border-primary/40 group bg-white/40",
                   !dateRange && "text-muted-foreground",
                 )}
               >
@@ -469,11 +471,14 @@ export default function Reporteria() {
           </Popover>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 w-full lg:w-auto">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-56 h-14 rounded-2xl border-2 font-black text-xs tracking-widest uppercase shadow-soft transition-all hover:bg-white hover:border-primary/40 bg-white/40">
+            <SelectTrigger className="w-full lg:w-56 h-12 lg:h-14 rounded-xl lg:rounded-2xl border-2 font-black text-[10px] lg:text-xs tracking-widest uppercase shadow-soft transition-all hover:bg-white hover:border-primary/40 bg-white/40">
               <div className="flex items-center gap-3">
-                <Filter className="h-5 w-5 text-primary" strokeWidth={2.5} />
+                <Filter
+                  className="h-4 w-4 lg:h-5 lg:w-5 text-primary"
+                  strokeWidth={2.5}
+                />
                 <SelectValue placeholder="Estado" />
               </div>
             </SelectTrigger>
@@ -514,7 +519,7 @@ export default function Reporteria() {
 
       <Tabs defaultValue="resumen" className="space-y-16">
         <div className="flex justify-center w-full overflow-x-auto no-scrollbar pb-2">
-          <TabsList className="bg-accent/10 p-1.5 rounded-4xl lg:rounded-[3rem] border-2 border-accent/20 shadow-inner inline-flex h-auto whitespace-nowrap">
+          <TabsList className="bg-accent/10 p-1 rounded-3xl lg:rounded-[3rem] border-2 border-accent/20 shadow-inner inline-flex h-auto whitespace-nowrap">
             {[
               { value: "resumen", label: "Resumen", icon: TrendingUp },
               { value: "caja", label: "Caja", icon: Banknote },
@@ -524,12 +529,9 @@ export default function Reporteria() {
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="rounded-[1.75rem] lg:rounded-[2.5rem] px-4 lg:px-12 py-3 lg:py-5 font-black uppercase tracking-[0.2em] text-[9px] lg:text-[11px] transition-all duration-500 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-strong data-[state=active]:scale-105 flex items-center gap-2 lg:gap-3"
+                className="rounded-2xl lg:rounded-[2.5rem] px-4 lg:px-12 py-2.5 lg:py-5 font-black uppercase tracking-widest lg:tracking-[0.2em] text-[8px] lg:text-[11px] transition-all duration-500 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-strong data-[state=active]:scale-105 flex items-center gap-2 lg:gap-3"
               >
-                <tab.icon
-                  className="h-3.5 w-3.5 lg:h-4 lg:w-4"
-                  strokeWidth={3}
-                />
+                <tab.icon className="h-3 w-3 lg:h-4 lg:w-4" strokeWidth={3} />
                 {tab.label}
               </TabsTrigger>
             ))}
@@ -541,7 +543,7 @@ export default function Reporteria() {
           value="resumen"
           className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-10">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-10">
             {[
               {
                 label: "VENTAS NETAS",
@@ -553,7 +555,7 @@ export default function Reporteria() {
                 accent: "primary",
               },
               {
-                label: "VOLUMEN ÓRDENES",
+                label: "ÓRDENES",
                 value: summary.count,
                 icon: ShoppingCart,
                 color: "text-amber-600",
@@ -562,7 +564,7 @@ export default function Reporteria() {
                 accent: "amber",
               },
               {
-                label: "TICKET PROMEDIO",
+                label: "PROMEDIO",
                 value: formatPrice(summary.avgTicket),
                 icon: Award,
                 color: "text-green-600",
@@ -571,7 +573,7 @@ export default function Reporteria() {
                 accent: "green",
               },
               {
-                label: "ITEMS VENDIDOS",
+                label: "ITEMS",
                 value: summary.itemsSold,
                 icon: ShoppingBag,
                 color: "text-purple-600",
@@ -582,11 +584,11 @@ export default function Reporteria() {
             ].map((card, i) => (
               <div
                 key={i}
-                className="pos-card p-6 lg:p-10 group overflow-hidden relative border-2 transition-all duration-500 hover:scale-[1.05] hover:shadow-2xl"
+                className="pos-card p-4 lg:p-10 group overflow-hidden relative border-2 transition-all duration-500 hover:scale-[1.05] hover:shadow-2xl"
               >
                 <div
                   className={cn(
-                    "absolute -right-8 -top-8 h-32 w-32 rounded-full blur-3xl opacity-20 transition-all duration-500 group-hover:scale-150 group-hover:opacity-40",
+                    "absolute -right-8 -top-8 h-24 w-24 lg:h-32 lg:w-32 rounded-full blur-3xl opacity-20 transition-all duration-500 group-hover:scale-150 group-hover:opacity-40",
                     card.accent === "primary"
                       ? "bg-primary"
                       : card.accent === "amber"
@@ -599,29 +601,29 @@ export default function Reporteria() {
                   )}
                 />
 
-                <div className="flex items-center gap-4 lg:gap-5 mb-4 lg:mb-8">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 lg:gap-5 mb-3 lg:mb-8 relative z-10">
                   <div
                     className={cn(
-                      "h-12 w-12 lg:h-16 lg:w-16 rounded-[1.25rem] lg:rounded-[1.75rem] flex items-center justify-center transition-all duration-500 group-hover:rotate-12 shadow-soft",
+                      "h-10 w-10 lg:h-16 lg:w-16 rounded-xl lg:rounded-[1.75rem] flex items-center justify-center transition-all duration-500 group-hover:rotate-12 shadow-soft shrink-0",
                       card.bg,
                       card.color,
                     )}
                   >
                     <card.icon
-                      className="h-6 w-6 lg:h-8 lg:w-8"
+                      className="h-5 w-5 lg:h-8 lg:w-8"
                       strokeWidth={3}
                     />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 leading-none">
+                    <p className="text-[8px] lg:text-[10px] font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] text-muted-foreground/40 leading-none">
                       {card.label}
                     </p>
-                    <div className="h-1 w-8 bg-accent/20 rounded-full" />
+                    <div className="h-0.5 w-6 lg:h-1 lg:w-8 bg-accent/20 rounded-full" />
                   </div>
                 </div>
                 <p
                   className={cn(
-                    "text-3xl lg:text-5xl font-black tracking-tighter transition-all duration-500 origin-left group-hover:scale-110",
+                    "text-lg lg:text-5xl font-black tracking-tighter transition-all duration-500 origin-left group-hover:scale-110 relative z-10",
                     card.color,
                   )}
                 >
@@ -1304,8 +1306,7 @@ export default function Reporteria() {
                   </p>
                 </div>
               </div>
-            ) : (
-              filteredOrders.map((order, idx) => {
+            ) : filteredOrders.map((order, idx) => {
                 const isExpanded = expandedDetailId === order.id;
                 const itemCount =
                   order.order_items?.reduce(
@@ -1567,8 +1568,7 @@ export default function Reporteria() {
                     </AnimatePresence>
                   </div>
                 );
-              })
-            )}
+              })}
           </div>
         </TabsContent>
       </Tabs>

@@ -59,15 +59,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Only update state if different to prevent unnecessary renders and infinite loops
-      if (storeToSet && activeStore?.id !== storeToSet.id) {
-        setActiveStoreState(storeToSet);
+      if (storeToSet) {
+        setActiveStoreState((prev) => (prev?.id !== storeToSet?.id ? storeToSet : prev));
       }
       
       setLoading(false);
     }
 
     initializeStores();
-  }, [user, activeStore]); // Depend on user and activeStore for strict compliance
+  }, [user]); // Depend only on user to initialize stores once per session
 
   const setActiveStore = useCallback(
     (store: Store) => {

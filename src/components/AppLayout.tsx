@@ -29,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "./ui/logo";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -62,9 +62,22 @@ const NAV_ITEMS: {
 
 export function AppLayout() {
   const { user, logout, forceReset, isAuthenticated, loading } = useAuth();
-  const { activeStore, isAdmin } = useStore();
+  const { activeStore, isAdmin, loading: storeLoading } = useStore();
   const navigate = useNavigate();
   const [showResetDialog, setShowResetDialog] = useState(false);
+
+  // Guard: Admin without store should go to selector
+  useEffect(() => {
+    if (
+      !loading &&
+      !storeLoading &&
+      isAuthenticated &&
+      isAdmin &&
+      !activeStore
+    ) {
+      navigate("/select-store", { replace: true });
+    }
+  }, [loading, storeLoading, isAuthenticated, isAdmin, activeStore, navigate]);
 
   if (loading) {
     return (
@@ -141,14 +154,16 @@ export function AppLayout() {
                 {activeStore.name}
               </span>
               <span className="sm:hidden">{activeStore.icon}</span>
-              {isAdmin && <Wrench className="h-2.5 w-2.5 opacity-30 ml-0.5 lg:ml-1 shrink-0" />}
+              {isAdmin && (
+                <Wrench className="h-2.5 w-2.5 opacity-30 ml-0.5 lg:ml-1 shrink-0" />
+              )}
             </button>
           )}
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex flex-1 items-center justify-start xl:justify-center gap-0.5 xl:gap-2 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1 xl:px-4">
-          <div className="flex items-center gap-0.5 xl:gap-2">
+        <nav className="hidden lg:flex flex-1 items-center justify-center gap-0.5 xl:gap-2 px-4 min-w-0 overflow-hidden">
+          <div className="flex items-center gap-0.5 xl:gap-1.5 2xl:gap-4 overflow-x-auto no-scrollbar scroll-smooth">
             {visibleNav.map((item) => (
               <NavLink
                 key={item.to}
@@ -229,32 +244,36 @@ export function AppLayout() {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-6 left-4 right-4 z-50 bg-white/90 backdrop-blur-3xl border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-[2.5rem] p-1.5 flex items-center justify-around overflow-hidden">
+      <nav className="lg:hidden fixed bottom-6 left-4 right-4 z-50 bg-white/95 backdrop-blur-3xl border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.3)] rounded-[2.5rem] p-1.5 flex items-center justify-around overflow-hidden">
         {visibleNav.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className="flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-500 relative group min-w-[40px]"
-            activeClassName="text-primary"
+            activeClassName="text-white"
           >
             {({ isActive }) => (
               <>
-                <div className={cn(
-                  "relative z-10 flex flex-col items-center transition-all duration-500",
-                  isActive ? "translate-y-0" : "translate-y-0"
-                )}>
+                <div
+                  className={cn(
+                    "relative z-10 flex flex-col items-center transition-all duration-500",
+                    isActive ? "scale-110" : "",
+                  )}
+                >
                   <item.icon
                     className={cn(
                       "h-5 w-5 transition-all duration-500",
-                      isActive ? "text-white scale-110" : "text-muted-foreground/60 group-hover:text-primary group-hover:scale-110",
+                      isActive
+                        ? "text-white"
+                        : "text-muted-foreground/40 group-hover:text-primary",
                     )}
                     strokeWidth={isActive ? 3 : 2.5}
                   />
                   {isActive && (
                     <motion.span
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-[7px] font-black uppercase tracking-[0.2em] mt-1.5 text-white whitespace-nowrap"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-[7px] font-black uppercase tracking-[0.15em] mt-1 text-white whitespace-nowrap"
                     >
                       {item.label.split(" ")[0]}
                     </motion.span>
