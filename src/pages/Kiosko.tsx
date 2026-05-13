@@ -625,7 +625,9 @@ export default function Kiosko() {
                     Menú Digital
                   </p>
                   <h2 className="text-lg lg:text-3xl font-black tracking-tight flex items-center gap-2 lg:gap-3 truncate">
-                    <span className="truncate hidden sm:inline">Mesa / Localizador:</span>
+                    <span className="truncate hidden sm:inline">
+                      Mesa / Localizador:
+                    </span>
                     <span className="sm:hidden">MES:</span>
                     <span className="text-primary truncate">{locator}</span>
                   </h2>
@@ -651,7 +653,7 @@ export default function Kiosko() {
                 </SheetTrigger>
                 <SheetContent
                   side="right"
-                  className="w-full sm:w-[450px] p-0 flex flex-col border-none shadow-strong"
+                  className="w-full sm:w-[450px] p-0 flex flex-col border-none shadow-strong h-dvh"
                 >
                   <SheetHeader className="p-4 sm:p-8 border-b bg-primary text-white shrink-0">
                     <SheetTitle className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-3 text-white">
@@ -672,7 +674,6 @@ export default function Kiosko() {
                       setCartOpen={setCartOpen}
                     />
                   </div>
-
                 </SheetContent>
               </Sheet>
             </div>
@@ -849,9 +850,8 @@ function CartContent({
   setCartOpen,
 }: CartContentProps) {
   return (
-    <div className="flex flex-col h-full min-h-0 bg-white/50 backdrop-blur-xl">
-
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+    <div className="flex flex-col flex-1 min-h-0 bg-white/50 backdrop-blur-xl">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 custom-scrollbar">
         {cart.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
             <div className="w-20 h-20 rounded-4xl bg-accent/30 flex items-center justify-center text-muted-foreground/30 border-2 border-dashed border-accent">
@@ -870,7 +870,7 @@ function CartContent({
           cart.map((item) => (
             <div
               key={item.id}
-              className="pos-card p-4 space-y-4 group border-2 border-transparent hover:border-primary/10 transition-all animate-in slide-in-from-right duration-300"
+              className="pos-card p-3 sm:p-4 space-y-3 sm:space-y-4 group border-2 border-transparent hover:border-primary/10 transition-all animate-in slide-in-from-right duration-300"
             >
               <div className="flex items-start gap-4">
                 <div className="relative">
@@ -942,7 +942,7 @@ function CartContent({
       </div>
 
       {cart.length > 0 && (
-        <div className="p-8 border-t-2 border-dashed border-accent space-y-6 bg-white/80 backdrop-blur-md">
+        <div className="p-4 sm:p-8 border-t-2 border-dashed border-accent space-y-4 sm:space-y-6 bg-white/80 backdrop-blur-md">
           <div className="space-y-2">
             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               <span>Subtotal Items</span>
@@ -953,7 +953,7 @@ function CartContent({
                 <p className="text-xs font-black uppercase tracking-widest text-primary leading-none mb-1">
                   Total del Pedido
                 </p>
-                <p className="text-3xl font-black tracking-tighter text-primary">
+                <p className="text-2xl sm:text-3xl font-black tracking-tighter text-primary">
                   {formatPrice(total)}
                 </p>
               </div>
@@ -965,7 +965,7 @@ function CartContent({
 
           <Button
             size="xl"
-            className="w-full h-14 lg:h-16 rounded-2xl font-black text-base lg:text-lg shadow-strong hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 group"
+            className="w-full h-12 sm:h-16 rounded-2xl font-black text-sm sm:text-lg shadow-strong hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 group"
             onClick={() => {
               setStep("confirm");
               setCartOpen(false);
