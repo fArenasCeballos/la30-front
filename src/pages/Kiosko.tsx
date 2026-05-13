@@ -405,10 +405,10 @@ export default function Kiosko() {
                 value={locator}
                 onChange={(e) => setLocator(e.target.value.toUpperCase())}
                 placeholder="00"
-                className="h-28 text-center text-6xl font-black rounded-4xl border-4 border-primary/10 shadow-soft focus-visible:ring-primary focus-visible:border-primary transition-all bg-white/50 backdrop-blur-sm"
+                className="h-20 sm:h-28 text-center text-4xl sm:text-6xl font-black rounded-3xl sm:rounded-4xl border-4 border-primary/10 shadow-soft focus-visible:ring-primary focus-visible:border-primary transition-all bg-white/50 backdrop-blur-sm"
                 autoFocus
               />
-              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg opacity-0 group-focus-within:opacity-100 transition-opacity">
+              <div className="absolute -bottom-3 sm:-bottom-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg opacity-0 group-focus-within:opacity-100 transition-opacity whitespace-nowrap">
                 Localizador
               </div>
             </div>
@@ -674,12 +674,12 @@ export default function Kiosko() {
             </div>
 
             {/* Categories Navigation */}
-            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar scroll-smooth">
+            <div className="flex gap-3 lg:gap-4 overflow-x-auto pb-4 no-scrollbar scroll-smooth">
               {loadingCats
                 ? [1, 2, 3, 4, 5].map((i) => (
                     <Skeleton
                       key={i}
-                      className="h-14 w-36 rounded-2xl shrink-0"
+                      className="h-12 lg:h-14 w-32 lg:w-36 rounded-xl lg:rounded-2xl shrink-0"
                     />
                   ))
                 : categories.map((cat) => {
@@ -690,17 +690,17 @@ export default function Kiosko() {
                         variant={isActive ? "default" : "outline"}
                         onClick={() => setActiveCategory(cat.name)}
                         className={cn(
-                          "h-14 px-8 rounded-2xl font-black text-sm transition-all shrink-0 border-2",
+                          "h-12 lg:h-14 px-5 lg:px-8 rounded-xl lg:rounded-2xl font-black text-xs lg:text-sm transition-all shrink-0 border-2",
                           isActive
                             ? "shadow-strong shadow-primary/20 scale-[1.05] z-10"
                             : "bg-white border-accent shadow-soft hover:border-primary/30 text-muted-foreground hover:text-primary",
                         )}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-xl group-hover:scale-125 transition-transform">
+                        <div className="flex items-center gap-2 lg:gap-3">
+                          <span className="text-lg lg:text-xl group-hover:scale-125 transition-transform">
                             {cat.icon}
                           </span>
-                          <span className="uppercase tracking-widest">
+                          <span className="uppercase tracking-widest text-[10px] lg:text-xs">
                             {cat.label}
                           </span>
                         </div>

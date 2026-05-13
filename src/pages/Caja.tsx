@@ -202,12 +202,12 @@ export default function Caja() {
                 <div className="flex items-center gap-2 text-primary font-black uppercase tracking-[0.3em] text-[10px]">
                   GESTIÓN DE PUNTO DE VENTA
                 </div>
-                <h1 className="text-6xl font-black tracking-tighter text-foreground">
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tighter text-foreground">
                   Caja & Pedidos
                 </h1>
               </div>
             </div>
-            <p className="text-muted-foreground font-medium text-xl leading-relaxed max-w-2xl">
+            <p className="text-muted-foreground font-medium text-base lg:text-xl leading-relaxed max-w-2xl">
               Control total del flujo de órdenes, cobros y cierres de turno en{" "}
               <span className="text-primary font-bold">
                 {activeStore?.name}
@@ -219,11 +219,11 @@ export default function Caja() {
           <div className="flex items-center gap-6">
             <Button
               size="lg"
-              className="rounded-3xl h-20 px-10 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-strong shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group"
+              className="rounded-2xl lg:rounded-3xl h-14 lg:h-20 px-6 lg:px-10 bg-primary hover:bg-primary/90 text-white font-black text-sm lg:text-lg shadow-strong shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group"
               onClick={() => navigate("/kiosko")}
             >
               <Plus
-                className="h-6 w-6 mr-3 group-hover:rotate-90 transition-transform duration-500"
+                className="h-5 w-5 lg:h-6 lg:w-6 mr-2 lg:mr-3 group-hover:rotate-90 transition-transform duration-500"
                 strokeWidth={3}
               />
               NUEVA VENTA
@@ -232,8 +232,8 @@ export default function Caja() {
         </div>
 
         <Tabs defaultValue="pendientes" className="w-full">
-          <div className="bg-white/60 backdrop-blur-xl p-3 rounded-[2.5rem] border-2 border-accent/20 shadow-soft mb-12 sticky top-24 z-40 overflow-x-auto no-scrollbar">
-            <TabsList className="bg-transparent h-auto p-0 flex-nowrap w-full justify-start lg:justify-between gap-3">
+          <div className="bg-white/60 backdrop-blur-xl p-2 lg:p-3 rounded-2xl lg:rounded-[2.5rem] border-2 border-accent/20 shadow-soft mb-8 lg:mb-12 sticky top-20 lg:top-24 z-40 overflow-x-auto no-scrollbar">
+            <TabsList className="bg-transparent h-auto p-0 flex-nowrap w-full justify-start lg:justify-between gap-2 lg:gap-3">
               {[
                 {
                   id: "pendientes",

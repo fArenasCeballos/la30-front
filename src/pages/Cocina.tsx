@@ -56,10 +56,10 @@ export default function Cocina() {
             <div className="h-[2px] w-12 bg-primary/30 rounded-full" />
             OPERACIONES DE COCINA
           </div>
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tighter flex items-center gap-4 sm:gap-6 text-foreground">
-            <div className="bg-primary/10 p-3 sm:p-4 rounded-2xl sm:rounded-3xl">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tighter flex items-center gap-4 sm:gap-6 text-foreground">
+            <div className="bg-primary/10 p-2 lg:p-4 rounded-xl lg:rounded-3xl">
               <ChefHat
-                className="h-10 w-10 sm:h-14 sm:w-14 text-primary"
+                className="h-8 w-8 lg:h-14 lg:w-14 text-primary"
                 strokeWidth={2.5}
               />
             </div>
@@ -98,19 +98,19 @@ export default function Cocina() {
             <div
               key={i}
               className={cn(
-                "bg-white/60 backdrop-blur-md px-6 py-4 sm:px-10 sm:py-8 rounded-4xl sm:rounded-[3rem] border-2 shadow-soft flex items-center gap-4 sm:gap-8 transition-all hover:scale-105 duration-500 group flex-1 min-w-[140px]",
+                "bg-white/60 backdrop-blur-md px-4 py-3 sm:px-10 sm:py-8 rounded-3xl sm:rounded-[3rem] border-2 shadow-soft flex items-center gap-3 sm:gap-8 transition-all hover:scale-105 duration-500 group flex-1 min-w-[120px]",
                 stat.border,
               )}
             >
               <div
                 className={cn(
-                  "h-12 w-12 sm:h-16 sm:w-16 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12",
+                  "h-10 w-10 sm:h-16 sm:w-16 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12",
                   stat.color,
                   stat.animate,
                 )}
               >
                 <stat.icon
-                  className="h-6 w-6 sm:h-8 sm:w-8"
+                  className="h-5 w-5 sm:h-8 sm:w-8"
                   strokeWidth={2.5}
                 />
               </div>
@@ -120,7 +120,7 @@ export default function Cocina() {
                 </p>
                 <p
                   className={cn(
-                    "text-2xl sm:text-4xl font-black leading-none tracking-tighter",
+                    "text-xl sm:text-4xl font-black leading-none tracking-tighter",
                     stat.color.split(" ")[1],
                   )}
                 >

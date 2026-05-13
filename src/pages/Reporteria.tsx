@@ -363,7 +363,7 @@ export default function Reporteria() {
   return (
     <div className="section-container space-y-12 pb-32 animate-in fade-in duration-700">
       {/* Premium Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-12 bg-white/40 backdrop-blur-xl p-12 rounded-[3.5rem] border border-white shadow-strong relative overflow-hidden">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-12 bg-white/40 backdrop-blur-xl p-6 lg:p-12 rounded-[2.5rem] lg:rounded-[3.5rem] border border-white shadow-strong relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
 
         <div className="relative space-y-4">
@@ -371,13 +371,16 @@ export default function Reporteria() {
             <div className="h-[2px] w-12 bg-primary/30 rounded-full" />
             BUSINESS INTELLIGENCE
           </div>
-          <h1 className="text-6xl font-black tracking-tighter flex items-center gap-6 text-foreground">
-            <div className="bg-primary/10 p-4 rounded-3xl">
-              <Activity className="h-14 w-14 text-primary" strokeWidth={2.5} />
+          <h1 className="text-3xl sm:text-4xl lg:text-6xl font-black tracking-tighter flex items-center gap-4 lg:gap-6 text-foreground">
+            <div className="bg-primary/10 p-3 lg:p-4 rounded-2xl lg:rounded-3xl">
+              <Activity
+                className="h-10 w-10 lg:h-14 lg:w-14 text-primary"
+                strokeWidth={2.5}
+              />
             </div>
             Reportería
           </h1>
-          <p className="text-muted-foreground font-medium text-xl max-w-lg leading-relaxed">
+          <p className="text-muted-foreground font-medium text-base lg:text-xl max-w-lg leading-relaxed">
             Análisis detallado de ventas y rendimiento en{" "}
             <span className="text-primary font-black underline decoration-primary/20 underline-offset-4">
               {activeStore?.name}
@@ -390,22 +393,24 @@ export default function Reporteria() {
           <Button
             variant="outline"
             size="touch"
-            className="rounded-4xl h-20 px-10 border-2 border-primary/20 font-black shadow-strong hover:shadow-xl hover:scale-105 active:scale-95 transition-all group bg-white/80"
+            className="rounded-3xl lg:rounded-4xl h-14 lg:h-20 px-6 lg:px-10 border-2 border-primary/20 font-black shadow-strong hover:shadow-xl hover:scale-105 active:scale-95 transition-all group bg-white/80"
             onClick={exportCSV}
             disabled={isLoading || reportOrders.length === 0}
           >
             <Download
-              className="h-7 w-7 mr-4 text-primary group-hover:translate-y-1 transition-transform"
+              className="h-5 w-5 lg:h-7 lg:w-7 mr-3 lg:mr-4 text-primary group-hover:translate-y-1 transition-transform"
               strokeWidth={3}
             />
-            <span className="text-xs tracking-[0.2em]">EXPORTAR CSV</span>
+            <span className="text-[10px] lg:text-xs tracking-[0.2em]">
+              EXPORTAR CSV
+            </span>
           </Button>
         </div>
       </div>
 
       {/* Advanced Filters Bar */}
-      <div className="bg-white/60 backdrop-blur-2xl p-8 rounded-[3rem] border-2 border-white shadow-strong sticky top-24 z-40 flex flex-wrap items-center justify-between gap-8 animate-in slide-in-from-top-4 duration-1000 fill-mode-both">
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="bg-white/60 backdrop-blur-2xl p-4 lg:p-8 rounded-4xl lg:rounded-[3rem] border-2 border-white shadow-strong sticky top-20 lg:top-24 z-40 flex flex-wrap items-center justify-between gap-4 lg:gap-8 animate-in slide-in-from-top-4 duration-1000 fill-mode-both">
+        <div className="flex flex-wrap items-center gap-3 lg:gap-4">
           <div className="flex bg-accent/20 p-1.5 rounded-3xl border border-accent/20 shadow-inner">
             {QUICK_RANGES.map((r) => (
               <Button
@@ -430,12 +435,12 @@ export default function Reporteria() {
               <Button
                 variant="outline"
                 className={cn(
-                  "h-14 rounded-2xl border-2 px-8 font-black text-xs tracking-widest uppercase shadow-soft transition-all hover:bg-white hover:border-primary/40 group bg-white/40",
+                  "h-12 lg:h-14 rounded-xl lg:rounded-2xl border-2 px-4 lg:px-8 font-black text-[10px] lg:text-xs tracking-widest uppercase shadow-soft transition-all hover:bg-white hover:border-primary/40 group bg-white/40",
                   !dateRange && "text-muted-foreground",
                 )}
               >
                 <CalendarIcon
-                  className="h-5 w-5 mr-4 text-primary group-hover:scale-110 transition-transform"
+                  className="h-4 w-4 lg:h-5 lg:w-5 mr-2 lg:mr-4 text-primary group-hover:scale-110 transition-transform"
                   strokeWidth={2.5}
                 />
                 {dateRange?.from
@@ -508,20 +513,23 @@ export default function Reporteria() {
       </div>
 
       <Tabs defaultValue="resumen" className="space-y-16">
-        <div className="flex justify-center">
-          <TabsList className="bg-accent/10 p-2 rounded-[3rem] border-2 border-accent/20 shadow-inner inline-flex h-auto">
+        <div className="flex justify-center w-full overflow-x-auto no-scrollbar pb-2">
+          <TabsList className="bg-accent/10 p-1.5 rounded-4xl lg:rounded-[3rem] border-2 border-accent/20 shadow-inner inline-flex h-auto whitespace-nowrap">
             {[
-              { value: "resumen", label: "Resumen General", icon: TrendingUp },
-              { value: "caja", label: "Cierre Contable", icon: Banknote },
-              { value: "meseros", label: "Ventas Personal", icon: User },
+              { value: "resumen", label: "Resumen", icon: TrendingUp },
+              { value: "caja", label: "Caja", icon: Banknote },
+              { value: "meseros", label: "Personal", icon: User },
               { value: "detalle", label: "Auditoría", icon: ListChecks },
             ].map((tab) => (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="rounded-[2.5rem] px-12 py-5 font-black uppercase tracking-[0.2em] text-[11px] transition-all duration-500 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-strong data-[state=active]:scale-105 flex items-center gap-3"
+                className="rounded-[1.75rem] lg:rounded-[2.5rem] px-4 lg:px-12 py-3 lg:py-5 font-black uppercase tracking-[0.2em] text-[9px] lg:text-[11px] transition-all duration-500 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-strong data-[state=active]:scale-105 flex items-center gap-2 lg:gap-3"
               >
-                <tab.icon className="h-4 w-4" strokeWidth={3} />
+                <tab.icon
+                  className="h-3.5 w-3.5 lg:h-4 lg:w4"
+                  strokeWidth={3}
+                />
                 {tab.label}
               </TabsTrigger>
             ))}
@@ -946,8 +954,11 @@ export default function Reporteria() {
                     <div
                       className={cn(
                         "h-12 w-12 rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12",
-                        m.color === "blue" ? "bg-blue-500/10 text-blue-600" : 
-                        m.color === "purple" ? "bg-purple-500/10 text-purple-600" : "bg-emerald-500/10 text-emerald-600"
+                        m.color === "blue"
+                          ? "bg-blue-500/10 text-blue-600"
+                          : m.color === "purple"
+                            ? "bg-purple-500/10 text-purple-600"
+                            : "bg-emerald-500/10 text-emerald-600",
                       )}
                     >
                       <m.icon className="h-6 w-6" strokeWidth={2.5} />
@@ -959,8 +970,11 @@ export default function Reporteria() {
                   <p
                     className={cn(
                       "text-3xl font-black tracking-tighter",
-                      m.color === "blue" ? "text-blue-600" : 
-                      m.color === "purple" ? "text-purple-600" : "text-emerald-600"
+                      m.color === "blue"
+                        ? "text-blue-600"
+                        : m.color === "purple"
+                          ? "text-purple-600"
+                          : "text-emerald-600",
                     )}
                   >
                     {formatPrice(m.amount)}
@@ -1083,9 +1097,13 @@ export default function Reporteria() {
                     <div
                       className={cn(
                         "h-12 w-12 rounded-2xl flex items-center justify-center shadow-soft",
-                        p.color === "emerald" ? "bg-emerald-500/10 text-emerald-600" : 
-                        p.color === "blue" ? "bg-blue-500/10 text-blue-600" : 
-                        p.color === "purple" ? "bg-purple-500/10 text-purple-600" : "bg-primary/10 text-primary"
+                        p.color === "emerald"
+                          ? "bg-emerald-500/10 text-emerald-600"
+                          : p.color === "blue"
+                            ? "bg-blue-500/10 text-blue-600"
+                            : p.color === "purple"
+                              ? "bg-purple-500/10 text-purple-600"
+                              : "bg-primary/10 text-primary",
                       )}
                     >
                       <p.icon className="h-6 w-6" strokeWidth={2.5} />
@@ -1097,9 +1115,13 @@ export default function Reporteria() {
                   <p
                     className={cn(
                       "text-3xl font-black tracking-tighter",
-                      p.color === "emerald" ? "text-emerald-600" : 
-                      p.color === "blue" ? "text-blue-600" : 
-                      p.color === "purple" ? "text-purple-600" : "text-primary"
+                      p.color === "emerald"
+                        ? "text-emerald-600"
+                        : p.color === "blue"
+                          ? "text-blue-600"
+                          : p.color === "purple"
+                            ? "text-purple-600"
+                            : "text-primary",
                     )}
                   >
                     {formatPrice(p.value)}

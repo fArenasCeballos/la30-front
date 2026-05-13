@@ -198,7 +198,7 @@
   }
 
   .pos-card {
-    @apply bg-white rounded-2xl border shadow-soft p-5 transition-all duration-300;
+    @apply bg-white rounded-2xl border shadow-soft p-4 sm:p-6 transition-all duration-300;
   }
 
   .pos-card-hover {
@@ -210,6 +210,6 @@
   }
   
   .section-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500;
+    @apply max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 animate-in fade-in slide-in-from-bottom-4 duration-500;
   }
 }

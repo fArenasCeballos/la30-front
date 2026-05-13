@@ -187,8 +187,8 @@ export default function Dashboard() {
               <div className="h-px w-8 bg-primary/30" />
               Vista General
             </div>
-            <h1 className="text-4xl font-black tracking-tight">Panel de Control</h1>
-            <p className="text-muted-foreground font-medium">
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight">Panel de Control</h1>
+            <p className="text-muted-foreground font-medium text-sm sm:text-base">
               Bienvenido de nuevo, esto es lo que está pasando hoy en <span className="text-primary">{activeStore?.name}</span>.
             </p>
           </div>
@@ -212,13 +212,13 @@ export default function Dashboard() {
               {/* Decorative Background Icon */}
               <card.icon className={`absolute -right-4 -bottom-4 w-24 h-24 opacity-[0.03] ${card.color} group-hover:scale-110 transition-transform duration-500`} />
               
-              <div className="relative z-10 space-y-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center bg-accent/50 border border-white transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg`}>
-                  <card.icon className={`h-6 w-6 ${card.color}`} />
+              <div className="relative z-10 space-y-3 sm:space-y-4">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-accent/50 border border-white transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg`}>
+                  <card.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${card.color}`} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{card.label}</p>
-                  <p className="text-3xl font-black mt-1 tracking-tight">{card.value}</p>
+                  <p className="text-[10px] sm:text-sm font-bold text-muted-foreground uppercase tracking-widest">{card.label}</p>
+                  <p className="text-2xl sm:text-3xl font-black mt-1 tracking-tight">{card.value}</p>
                 </div>
               </div>
             </div>
@@ -242,12 +242,12 @@ export default function Dashboard() {
                 }}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center ${card.bgColor} ${card.color} transition-all duration-500 group-hover:rotate-360`}>
-                    <card.icon className="h-7 w-7" />
+                  <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center ${card.bgColor} ${card.color} transition-all duration-500 group-hover:rotate-360`}>
+                    <card.icon className="h-5 w-5 sm:h-7 sm:w-7" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{card.label}</p>
-                    <p className={`text-2xl font-black ${card.color}`}>{card.value}</p>
+                    <p className="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{card.label}</p>
+                    <p className={`text-xl sm:text-2xl font-black ${card.color}`}>{card.value}</p>
                   </div>
                 </div>
               </div>
