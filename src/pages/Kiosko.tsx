@@ -601,13 +601,13 @@ export default function Kiosko() {
         {/* Main Menu Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-white shadow-2xl z-10 lg:rounded-tr-[3rem] lg:rounded-br-[3rem] overflow-hidden">
           {/* Menu Header */}
-          <div className="p-6 lg:p-8 space-y-8 border-b">
+          <div className="p-4 lg:p-8 space-y-4 lg:space-y-8 border-b bg-white/50 backdrop-blur-xl sticky top-0 z-30">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-5">
+              <div className="flex items-center gap-3 lg:gap-5 flex-1 min-w-0">
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-12 w-12 rounded-2xl border-2 shadow-soft group"
+                  className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl border-2 shadow-soft group shrink-0"
                   onClick={() => {
                     if (cart.length > 0) {
                       toast.info(
@@ -620,13 +620,14 @@ export default function Kiosko() {
                 >
                   <ArrowLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
                 </Button>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary leading-none mb-1">
+                <div className="min-w-0">
+                  <p className="text-[8px] lg:text-[10px] font-black uppercase tracking-[0.2em] text-primary leading-none mb-1">
                     Menú Digital
                   </p>
-                  <h2 className="text-3xl font-black tracking-tight flex items-center gap-3">
-                    Mesa / Localizador:{" "}
-                    <span className="text-primary">{locator}</span>
+                  <h2 className="text-lg lg:text-3xl font-black tracking-tight flex items-center gap-2 lg:gap-3 truncate">
+                    <span className="truncate hidden sm:inline">Mesa / Localizador:</span>
+                    <span className="sm:hidden">MES:</span>
+                    <span className="text-primary truncate">{locator}</span>
                   </h2>
                 </div>
               </div>
@@ -637,12 +638,12 @@ export default function Kiosko() {
                   <Button
                     variant="default"
                     size="lg"
-                    className="lg:hidden h-14 px-6 rounded-2xl font-black shadow-strong relative group"
+                    className="lg:hidden h-12 px-4 rounded-xl font-black shadow-strong relative group shrink-0"
                   >
-                    <ShoppingCart className="h-5 w-5 mr-3" />
-                    {formatPrice(total)}
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    <span className="text-xs">{formatPrice(total)}</span>
                     {itemCount > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-white text-primary border-2 border-primary rounded-lg min-w-6 h-6 text-[10px] font-black flex items-center justify-center shadow-lg">
+                      <span className="absolute -top-1.5 -right-1.5 bg-white text-primary border-2 border-primary rounded-lg min-w-5 h-5 text-[9px] font-black flex items-center justify-center shadow-lg">
                         {itemCount}
                       </span>
                     )}
@@ -711,8 +712,8 @@ export default function Kiosko() {
           </div>
 
           {/* Products Grid */}
-          <div className="flex-1 overflow-y-auto p-6 lg:p-10 custom-scrollbar bg-white">
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+          <div className="flex-1 overflow-y-auto p-4 lg:p-10 custom-scrollbar bg-white">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-6">
               {loadingProds
                 ? [1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                     <Skeleton key={i} className="aspect-square rounded-4xl" />
@@ -726,7 +727,7 @@ export default function Kiosko() {
                         key={product.id}
                         onClick={() => handleProductClick(product)}
                         className={cn(
-                          "pos-card group p-5 text-left border-2 transition-all duration-300 relative cursor-pointer",
+                          "pos-card group p-3 lg:p-5 text-left border-2 transition-all duration-300 relative cursor-pointer",
                           inCartCount > 0
                             ? "border-primary bg-primary/2 shadow-strong"
                             : "border-transparent hover:border-primary/20 hover:shadow-medium bg-white",
