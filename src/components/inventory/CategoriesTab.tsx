@@ -16,7 +16,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Edit, Trash2, LayoutGrid, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, LayoutGrid, Loader2, MoreVertical, Power } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -260,16 +266,56 @@ export function CategoriesTab() {
               </div>
               <div className="flex flex-col items-end gap-4">
                 <div className="flex items-center gap-3">
-                  {/* Mobile Quick Delete */}
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="lg:hidden h-10 w-10 rounded-xl text-muted-foreground/40 hover:text-destructive transition-colors active:scale-90"
-                    onClick={() => setCategoryToDelete(cat)}
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
-                  <div className="p-2 rounded-2xl bg-white/80 backdrop-blur-md shadow-soft border-2 border-accent/5 group-hover:border-primary/20 transition-colors">
+                  {/* Mobile Action Menu */}
+                  <div className="lg:hidden">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-11 w-11 rounded-2xl bg-white shadow-soft border border-accent/5 active:scale-95 transition-all"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="h-6 w-6" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 p-2 rounded-3xl border-4 border-white shadow-strong backdrop-blur-xl bg-white/95">
+                        <DropdownMenuItem
+                          className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 focus:bg-primary focus:text-white transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEdit(cat);
+                          }}
+                        >
+                          <Edit className="h-5 w-5" />
+                          EDITAR CATEGORÍA
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 focus:bg-primary focus:text-white transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleActive(cat.id, !!cat.is_active);
+                          }}
+                        >
+                          <Power className={cn("h-5 w-5", cat.is_active ? "text-primary" : "text-destructive")} />
+                          {cat.is_active ? "DESACTIVAR" : "ACTIVAR"}
+                        </DropdownMenuItem>
+                        <div className="h-px bg-accent/10 my-1 mx-2" />
+                        <DropdownMenuItem
+                          className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 text-destructive focus:bg-destructive focus:text-white transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCategoryToDelete(cat);
+                          }}
+                        >
+                          <Trash2 className="h-5 w-5" />
+                          ELIMINAR CATEGORÍA
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div className="hidden lg:block p-2 rounded-2xl bg-white/80 backdrop-blur-md shadow-soft border-2 border-accent/5 group-hover:border-primary/20 transition-colors">
                     <Switch
                       checked={cat.is_active}
                       onCheckedChange={() =>

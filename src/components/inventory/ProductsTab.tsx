@@ -33,7 +33,15 @@ import {
   Loader2,
   GripHorizontal,
   Package,
+  MoreVertical,
+  Power,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   DndContext,
   closestCenter,
@@ -880,38 +888,68 @@ function SortableProductCard({
       <div className="aspect-4/3 rounded-2xl lg:rounded-[2.5rem] bg-accent/10 m-2 lg:m-3 overflow-hidden relative border-2 lg:border-4 border-white shadow-soft group-hover:shadow-strong transition-all duration-700">
         <InventoryProductImage product={product} />
 
-        {/* Desktop Drag Handle Overlay */}
+        {/* Desktop Drag Handle (Hidden on mobile) */}
         <div
           {...attributes}
           {...listeners}
-          className="absolute top-3 left-3 z-30 h-10 w-10 lg:h-12 lg:w-12 rounded-xl bg-white/80 backdrop-blur-md shadow-lg border border-white/50 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 lg:group-hover:opacity-100 transition-all duration-500 hover:scale-110 hover:bg-primary hover:text-white group/drag"
+          className="absolute top-3 left-3 z-30 h-12 w-12 rounded-xl bg-white/90 backdrop-blur-md shadow-lg border-2 border-accent/10 items-center justify-center cursor-grab active:cursor-grabbing hidden lg:flex opacity-0 group-hover:opacity-100 transition-all duration-500 hover:scale-110 hover:bg-primary hover:text-white group/drag"
         >
           <GripHorizontal
-            className="h-5 w-5 lg:h-6 lg:w-6 text-primary group-hover/drag:text-white"
+            className="h-6 w-6 text-primary group-hover/drag:text-white"
             strokeWidth={3}
           />
         </div>
 
-        {/* Availability Toggle - Subtle Top Right */}
-        <div className="absolute top-3 right-3 z-30">
-          <div
-            className={cn(
-              "p-1.5 lg:p-2 rounded-xl bg-white/80 backdrop-blur-md shadow-lg border border-white/50 transition-all duration-500",
-              product.available ? "text-primary" : "text-destructive",
-              "opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:translate-x-4 lg:group-hover:translate-x-0",
-            )}
-          >
-            <Switch
-              checked={product.available}
-              onCheckedChange={() =>
-                toggleAvailability(product.id, product.available)
-              }
-              className="scale-[0.6] lg:scale-75 data-[state=checked]:bg-primary"
-            />
-          </div>
+        {/* Mobile Action Menu (Clean UI) */}
+        <div className="absolute top-3 right-3 z-40 lg:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-11 w-11 rounded-2xl bg-white/90 backdrop-blur-md shadow-lg border-2 border-white text-foreground active:scale-95 transition-all"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-6 w-6" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 p-2 rounded-3xl border-4 border-white shadow-strong backdrop-blur-xl bg-white/95">
+              <DropdownMenuItem
+                className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 focus:bg-primary focus:text-white transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEdit(product);
+                }}
+              >
+                <Edit className="h-5 w-5" />
+                EDITAR PRODUCTO
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 focus:bg-primary focus:text-white transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleAvailability(product.id, product.available);
+                }}
+              >
+                <Power className={cn("h-5 w-5", product.available ? "text-primary group-focus:text-white" : "text-destructive")} />
+                {product.available ? "MARCAR AGOTADO" : "MARCAR DISPONIBLE"}
+              </DropdownMenuItem>
+              <div className="h-px bg-accent/10 my-1 mx-2" />
+              <DropdownMenuItem
+                className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 text-destructive focus:bg-destructive focus:text-white transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProductToDelete(product);
+                }}
+              >
+                <Trash2 className="h-5 w-5" />
+                ELIMINAR PRODUCTO
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* Desktop Action Buttons Overlay (Hidden on mobile) */}
+        {/* Desktop Action Buttons Overlay */}
         <div className="absolute inset-x-3 bottom-3 hidden lg:flex gap-2 translate-y-20 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700 z-30">
           <Button
             size="sm"
@@ -924,6 +962,20 @@ function SortableProductCard({
             <Edit className="h-4 w-4 mr-2" />
             EDITAR
           </Button>
+          <div
+            className={cn(
+              "flex items-center px-4 rounded-xl bg-white/95 backdrop-blur-md shadow-xl border-2 transition-colors",
+              product.available ? "border-primary/20" : "border-destructive/20",
+            )}
+          >
+            <Switch
+              checked={product.available}
+              onCheckedChange={() =>
+                toggleAvailability(product.id, product.available)
+              }
+              className="scale-75 data-[state=checked]:bg-primary"
+            />
+          </div>
           <Button
             size="icon"
             variant="destructive"
@@ -976,31 +1028,6 @@ function SortableProductCard({
             </p>
           </div>
 
-          {/* Mobile Action Icons (Next to price) */}
-          <div className="lg:hidden flex items-center gap-1.5 bg-accent/5 p-1 rounded-xl border border-accent/10">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all active:scale-90"
-              onClick={(e) => {
-                e.stopPropagation();
-                openEdit(product);
-              }}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 rounded-lg text-muted-foreground/40 hover:text-destructive transition-all active:scale-90"
-              onClick={(e) => {
-                e.stopPropagation();
-                setProductToDelete(product);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
 
           <div className="hidden lg:flex -space-x-3 group/stores">
             {(product.store_ids || []).slice(0, 3).map((sid, i) => (

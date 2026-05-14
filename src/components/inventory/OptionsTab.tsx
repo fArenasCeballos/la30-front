@@ -40,7 +40,14 @@ import {
   Settings2,
   Loader2,
   CheckCircle2,
+  MoreVertical,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -452,24 +459,43 @@ export function OptionsTab() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  {/* Mobile Quick Actions */}
-                  <div className="lg:hidden flex items-center gap-1 p-1 bg-white shadow-soft rounded-xl border border-accent/5">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-9 w-9 rounded-lg text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                      onClick={() => openEditOption(option)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-9 w-9 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
-                      onClick={() => setOptionToDelete(option)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  {/* Mobile Action Menu */}
+                  <div className="lg:hidden">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-11 w-11 rounded-2xl bg-white shadow-soft border border-accent/5 active:scale-95 transition-all"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="h-6 w-6" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 p-2 rounded-3xl border-4 border-white shadow-strong backdrop-blur-xl bg-white/95">
+                        <DropdownMenuItem
+                          className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 focus:bg-primary focus:text-white transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditOption(option);
+                          }}
+                        >
+                          <Edit className="h-5 w-5" />
+                          EDITAR GRUPO
+                        </DropdownMenuItem>
+                        <div className="h-px bg-accent/10 my-1 mx-2" />
+                        <DropdownMenuItem
+                          className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 text-destructive focus:bg-destructive focus:text-white transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOptionToDelete(option);
+                          }}
+                        >
+                          <Trash2 className="h-5 w-5" />
+                          ELIMINAR GRUPO
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
 
                   {/* Desktop Actions */}
