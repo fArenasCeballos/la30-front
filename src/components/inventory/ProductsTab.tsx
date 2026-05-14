@@ -884,21 +884,20 @@ function SortableProductCard({
         <div
           {...attributes}
           {...listeners}
-          className="absolute top-3 left-3 z-30 h-12 w-12 rounded-xl bg-white/90 backdrop-blur-md shadow-lg border-2 border-accent/10 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 lg:group-hover:opacity-100 transition-all duration-500 hover:scale-110 hover:bg-primary hover:text-white group/drag"
+          className="absolute top-3 left-3 z-30 h-10 w-10 lg:h-12 lg:w-12 rounded-xl bg-white/80 backdrop-blur-md shadow-lg border border-white/50 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 lg:group-hover:opacity-100 transition-all duration-500 hover:scale-110 hover:bg-primary hover:text-white group/drag"
         >
           <GripHorizontal
-            className="h-6 w-6 text-primary group-hover/drag:text-white"
+            className="h-5 w-5 lg:h-6 lg:w-6 text-primary group-hover/drag:text-white"
             strokeWidth={3}
           />
         </div>
 
-        {/* Mobile & Desktop Action Bar */}
-        <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
-          {/* Availability Switch (Always visible on mobile, hover on desktop) */}
+        {/* Availability Toggle - Subtle Top Right */}
+        <div className="absolute top-3 right-3 z-30">
           <div
             className={cn(
-              "p-2 rounded-xl bg-white/90 backdrop-blur-md shadow-lg border-2 transition-all duration-500",
-              product.available ? "border-primary/20" : "border-destructive/20",
+              "p-1.5 lg:p-2 rounded-xl bg-white/80 backdrop-blur-md shadow-lg border border-white/50 transition-all duration-500",
+              product.available ? "text-primary" : "text-destructive",
               "opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:translate-x-4 lg:group-hover:translate-x-0",
             )}
           >
@@ -907,34 +906,8 @@ function SortableProductCard({
               onCheckedChange={() =>
                 toggleAvailability(product.id, product.available)
               }
-              className="scale-75 data-[state=checked]:bg-primary"
+              className="scale-[0.6] lg:scale-75 data-[state=checked]:bg-primary"
             />
-          </div>
-
-          {/* Mobile Quick Actions (Pencil/Trash) - Only visible on mobile */}
-          <div className="lg:hidden flex items-center gap-1.5 p-1.5 bg-white/90 backdrop-blur-md rounded-2xl border-2 border-white shadow-lg">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-9 w-9 rounded-xl text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                openEdit(product);
-              }}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-9 w-9 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setProductToDelete(product);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 
@@ -993,9 +966,9 @@ function SortableProductCard({
           {product.name}
         </h3>
 
-        <div className="flex items-center justify-between pt-6 border-t border-accent/20 mt-auto">
+        <div className="flex items-center justify-between pt-4 lg:pt-6 border-t border-accent/10 mt-auto">
           <div className="flex flex-col">
-            <p className="text-[9px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] mb-1">
+            <p className="text-[8px] lg:text-[9px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] mb-0.5 lg:mb-1">
               VALOR UNITARIO
             </p>
             <p className="font-black text-xl lg:text-4xl text-primary tracking-tighter group-hover:scale-110 transition-transform origin-left duration-700">
@@ -1003,7 +976,33 @@ function SortableProductCard({
             </p>
           </div>
 
-          <div className="flex -space-x-3 group/stores">
+          {/* Mobile Action Icons (Next to price) */}
+          <div className="lg:hidden flex items-center gap-1.5 bg-accent/5 p-1 rounded-xl border border-accent/10">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all active:scale-90"
+              onClick={(e) => {
+                e.stopPropagation();
+                openEdit(product);
+              }}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 rounded-lg text-muted-foreground/40 hover:text-destructive transition-all active:scale-90"
+              onClick={(e) => {
+                e.stopPropagation();
+                setProductToDelete(product);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="hidden lg:flex -space-x-3 group/stores">
             {(product.store_ids || []).slice(0, 3).map((sid, i) => (
               <div
                 key={sid}

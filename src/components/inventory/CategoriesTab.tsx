@@ -259,14 +259,25 @@ export function CategoriesTab() {
                 <span className="relative">{cat.icon || "📦"}</span>
               </div>
               <div className="flex flex-col items-end gap-4">
-                <div className="p-2 rounded-2xl bg-white/80 backdrop-blur-md shadow-soft border-2 border-accent/5 group-hover:border-primary/20 transition-colors">
-                  <Switch
-                    checked={cat.is_active}
-                    onCheckedChange={() =>
-                      toggleActive(cat.id, !!cat.is_active)
-                    }
-                    className="scale-90 data-[state=checked]:bg-primary"
-                  />
+                <div className="flex items-center gap-3">
+                  {/* Mobile Quick Delete */}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="lg:hidden h-10 w-10 rounded-xl text-muted-foreground/40 hover:text-destructive transition-colors active:scale-90"
+                    onClick={() => setCategoryToDelete(cat)}
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                  <div className="p-2 rounded-2xl bg-white/80 backdrop-blur-md shadow-soft border-2 border-accent/5 group-hover:border-primary/20 transition-colors">
+                    <Switch
+                      checked={cat.is_active}
+                      onCheckedChange={() =>
+                        toggleActive(cat.id, !!cat.is_active)
+                      }
+                      className="scale-90 data-[state=checked]:bg-primary"
+                    />
+                  </div>
                 </div>
                 <div
                   className={cn(
@@ -313,7 +324,7 @@ export function CategoriesTab() {
               <Button
                 size="icon"
                 variant="destructive"
-                className="h-16 w-16 rounded-2xl shadow-strong bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                className="hidden lg:flex h-16 w-16 rounded-2xl shadow-strong bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none opacity-0 group-hover:opacity-100"
                 onClick={() => setCategoryToDelete(cat)}
               >
                 <Trash2 className="h-6 w-6" />
