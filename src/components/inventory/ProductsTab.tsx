@@ -880,11 +880,11 @@ function SortableProductCard({
       <div className="aspect-4/3 rounded-2xl lg:rounded-[2.5rem] bg-accent/10 m-2 lg:m-3 overflow-hidden relative border-2 lg:border-4 border-white shadow-soft group-hover:shadow-strong transition-all duration-700">
         <InventoryProductImage product={product} />
 
-        {/* Drag Handle Overlay */}
+        {/* Desktop Drag Handle Overlay */}
         <div
           {...attributes}
           {...listeners}
-          className="absolute top-3 left-3 z-30 h-12 w-12 rounded-xl bg-white/90 backdrop-blur-md shadow-lg border-2 border-accent/10 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-500 hover:scale-110 hover:bg-primary hover:text-white group/drag"
+          className="absolute top-3 left-3 z-30 h-12 w-12 rounded-xl bg-white/90 backdrop-blur-md shadow-lg border-2 border-accent/10 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 lg:group-hover:opacity-100 transition-all duration-500 hover:scale-110 hover:bg-primary hover:text-white group/drag"
         >
           <GripHorizontal
             className="h-6 w-6 text-primary group-hover/drag:text-white"
@@ -892,12 +892,14 @@ function SortableProductCard({
           />
         </div>
 
-        {/* Availability Toggle Overlay */}
-        <div className="absolute top-3 right-3 z-30 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-500 translate-x-0 lg:translate-x-4 lg:group-hover:translate-x-0">
+        {/* Mobile & Desktop Action Bar */}
+        <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
+          {/* Availability Switch (Always visible on mobile, hover on desktop) */}
           <div
             className={cn(
-              "p-2 rounded-xl bg-white/90 backdrop-blur-md shadow-lg border-2 transition-colors",
+              "p-2 rounded-xl bg-white/90 backdrop-blur-md shadow-lg border-2 transition-all duration-500",
               product.available ? "border-primary/20" : "border-destructive/20",
+              "opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:translate-x-4 lg:group-hover:translate-x-0",
             )}
           >
             <Switch
@@ -908,10 +910,36 @@ function SortableProductCard({
               className="scale-75 data-[state=checked]:bg-primary"
             />
           </div>
+
+          {/* Mobile Quick Actions (Pencil/Trash) - Only visible on mobile */}
+          <div className="lg:hidden flex items-center gap-1.5 p-1.5 bg-white/90 backdrop-blur-md rounded-2xl border-2 border-white shadow-lg">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-9 w-9 rounded-xl text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                openEdit(product);
+              }}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-9 w-9 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setProductToDelete(product);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        {/* Action Buttons Overlay */}
-        <div className="absolute inset-x-3 bottom-3 flex gap-2 translate-y-0 opacity-100 lg:translate-y-20 lg:opacity-0 lg:group-hover:translate-y-0 lg:group-hover:opacity-100 transition-all duration-700 z-30">
+        {/* Desktop Action Buttons Overlay (Hidden on mobile) */}
+        <div className="absolute inset-x-3 bottom-3 hidden lg:flex gap-2 translate-y-20 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700 z-30">
           <Button
             size="sm"
             className="flex-1 h-12 rounded-xl font-black text-[9px] tracking-[0.2em] shadow-xl bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"

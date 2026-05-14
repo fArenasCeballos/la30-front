@@ -451,22 +451,45 @@ export function OptionsTab() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-3 lg:gap-4 opacity-100 translate-x-0 lg:opacity-0 lg:translate-x-10 lg:group-hover:opacity-100 lg:group-hover:translate-x-0 transition-all duration-700">
-                  <Button
-                    size="icon"
-                    className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl shadow-strong bg-white/90 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
-                    onClick={() => openEditOption(option)}
-                  >
-                    <Edit className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="destructive"
-                    className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl shadow-strong bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none"
-                    onClick={() => setOptionToDelete(option)}
-                  >
-                    <Trash2 className="h-6 w-6" />
-                  </Button>
+                <div className="flex gap-2">
+                  {/* Mobile Quick Actions */}
+                  <div className="lg:hidden flex items-center gap-1 p-1 bg-white shadow-soft rounded-xl border border-accent/5">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-9 w-9 rounded-lg text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                      onClick={() => openEditOption(option)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-9 w-9 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                      onClick={() => setOptionToDelete(option)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Desktop Actions */}
+                  <div className="hidden lg:flex gap-3 lg:gap-4 opacity-0 translate-x-10 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-700">
+                    <Button
+                      size="icon"
+                      className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl shadow-strong bg-white/90 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
+                      onClick={() => openEditOption(option)}
+                    >
+                      <Edit className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl shadow-strong bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none"
+                      onClick={() => setOptionToDelete(option)}
+                    >
+                      <Trash2 className="h-6 w-6" />
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -506,7 +529,7 @@ export function OptionsTab() {
                             {choice.label}
                           </span>
                         </div>
-                        <div className="flex gap-2 opacity-100 translate-x-0 lg:opacity-0 lg:translate-x-4 lg:group-hover/choice:opacity-100 lg:group-hover/choice:translate-x-0 transition-all duration-500">
+                        <div className="flex gap-1 lg:gap-2 opacity-100 lg:opacity-0 lg:translate-x-4 lg:group-hover/choice:opacity-100 lg:group-hover/choice:translate-x-0 transition-all duration-500">
                           <Button
                             size="icon"
                             variant="ghost"

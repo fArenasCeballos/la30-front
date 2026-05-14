@@ -323,6 +323,26 @@ export function ExtrasTab() {
                 <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 block">
                   VALOR ADICIONAL
                 </span>
+
+                {/* Mobile Quick Actions */}
+                <div className="lg:hidden flex items-center gap-1 p-1 bg-white/90 backdrop-blur-md rounded-xl border border-accent/5 shadow-soft mt-3 float-right">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-lg text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                    onClick={() => openEdit(extra)}
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                    onClick={() => setExtraToDelete(extra)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -378,7 +398,7 @@ export function ExtrasTab() {
               </div>
             </div>
 
-            <div className="p-4 lg:p-8 pt-0 flex items-center gap-4 translate-y-0 opacity-100 lg:translate-y-4 lg:opacity-0 lg:group-hover:translate-y-0 lg:group-hover:opacity-100 transition-all duration-700">
+            <div className="p-4 lg:p-8 pt-0 hidden lg:flex items-center gap-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
               <Button
                 size="lg"
                 className="flex-1 h-12 lg:h-16 rounded-xl lg:rounded-2xl font-black text-[10px] lg:text-[11px] tracking-widest shadow-strong bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
