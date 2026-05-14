@@ -35,6 +35,10 @@ import { formatPrice } from "@/lib/formatPrice";
 import type { Order, OrderItem, OrderStatus } from "@/types";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/StatusBadge";
+import {
+  shouldGenerateInvoice,
+  generateSiigoInvoice,
+} from "@/lib/siigoService";
 
 interface ReceiptState {
   order: Order;
@@ -125,6 +129,34 @@ export default function Caja() {
     if (!payingOrder) return;
     const change = Math.max(0, received - payingOrder.total);
     await processPayment(payingOrder.id, method, received, breakdown);
+
+    // Generar factura electrónica Siigo en background (no bloquea impresión)
+    // Feature flag: solo activo cuando VITE_SIIGO_ENABLED=true en .env
+    const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true";
+    if (siigoEnabled && shouldGenerateInvoice(method, breakdown)) {
+      generateSiigoInvoice({
+        orderId: payingOrder.id,
+        method,
+        breakdown,
+        items: payingOrder.order_items ?? [],
+        total: payingOrder.total,
+        locator: payingOrder.locator ?? "",
+      })
+        .then((result) => {
+          if (result.success) {
+            toast.success(
+              `Factura Siigo generada: ${result.invoiceNumber ?? "OK"}`,
+            );
+          } else {
+            toast.error(
+              `Error factura Siigo: ${result.error ?? "desconocido"}`,
+            );
+          }
+        })
+        .catch(() => {
+          toast.error("Error generando factura Siigo");
+        });
+    }
 
     // Auto-imprimir factura del cliente
     const receiptData: ReceiptData = {
