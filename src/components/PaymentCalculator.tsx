@@ -254,8 +254,12 @@ export function PaymentCalculator({
     setMethod(m);
     if (m === "mixto") {
       setStep("split_first");
+    } else if (m === "tarjeta" || m === "nequi") {
+      // Tarjeta/Nequi: monto exacto, confirmar directo sin calculadora
+      setReceived(String(order.total));
+      handleConfirmPayment(order.total);
     } else {
-      if (m !== "efectivo") setReceived(String(order.total));
+      // Efectivo: mostrar calculadora para ingresar monto recibido
       setStep("amount");
     }
   };
