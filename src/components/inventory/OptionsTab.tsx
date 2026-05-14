@@ -451,7 +451,7 @@ export function OptionsTab() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-3 lg:gap-4 opacity-0 translate-x-10 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-700">
+                <div className="flex gap-3 lg:gap-4 opacity-100 translate-x-0 lg:opacity-0 lg:translate-x-10 lg:group-hover:opacity-100 lg:group-hover:translate-x-0 transition-all duration-700">
                   <Button
                     size="icon"
                     className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl shadow-strong bg-white/90 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
@@ -506,7 +506,7 @@ export function OptionsTab() {
                             {choice.label}
                           </span>
                         </div>
-                        <div className="flex gap-2 opacity-0 translate-x-4 group-hover/choice:opacity-100 group-hover/choice:translate-x-0 transition-all duration-500">
+                        <div className="flex gap-2 opacity-100 translate-x-0 lg:opacity-0 lg:translate-x-4 lg:group-hover/choice:opacity-100 lg:group-hover/choice:translate-x-0 transition-all duration-500">
                           <Button
                             size="icon"
                             variant="ghost"

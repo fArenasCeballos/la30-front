@@ -884,7 +884,7 @@ function SortableProductCard({
         <div
           {...attributes}
           {...listeners}
-          className="absolute top-3 left-3 z-30 h-12 w-12 rounded-xl bg-white/90 backdrop-blur-md shadow-lg border-2 border-accent/10 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-all duration-500 hover:scale-110 hover:bg-primary hover:text-white group/drag"
+          className="absolute top-3 left-3 z-30 h-12 w-12 rounded-xl bg-white/90 backdrop-blur-md shadow-lg border-2 border-accent/10 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-500 hover:scale-110 hover:bg-primary hover:text-white group/drag"
         >
           <GripHorizontal
             className="h-6 w-6 text-primary group-hover/drag:text-white"
@@ -893,7 +893,7 @@ function SortableProductCard({
         </div>
 
         {/* Availability Toggle Overlay */}
-        <div className="absolute top-3 right-3 z-30 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
+        <div className="absolute top-3 right-3 z-30 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-500 translate-x-0 lg:translate-x-4 lg:group-hover:translate-x-0">
           <div
             className={cn(
               "p-2 rounded-xl bg-white/90 backdrop-blur-md shadow-lg border-2 transition-colors",
@@ -911,7 +911,7 @@ function SortableProductCard({
         </div>
 
         {/* Action Buttons Overlay */}
-        <div className="absolute inset-x-3 bottom-3 flex gap-2 translate-y-20 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700 z-30">
+        <div className="absolute inset-x-3 bottom-3 flex gap-2 translate-y-0 opacity-100 lg:translate-y-20 lg:opacity-0 lg:group-hover:translate-y-0 lg:group-hover:opacity-100 transition-all duration-700 z-30">
           <Button
             size="sm"
             className="flex-1 h-12 rounded-xl font-black text-[9px] tracking-[0.2em] shadow-xl bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"

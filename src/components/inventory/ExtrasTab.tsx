@@ -378,7 +378,7 @@ export function ExtrasTab() {
               </div>
             </div>
 
-            <div className="p-4 lg:p-8 pt-0 flex items-center gap-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
+            <div className="p-4 lg:p-8 pt-0 flex items-center gap-4 translate-y-0 opacity-100 lg:translate-y-4 lg:opacity-0 lg:group-hover:translate-y-0 lg:group-hover:opacity-100 transition-all duration-700">
               <Button
                 size="lg"
                 className="flex-1 h-12 lg:h-16 rounded-xl lg:rounded-2xl font-black text-[10px] lg:text-[11px] tracking-widest shadow-strong bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"

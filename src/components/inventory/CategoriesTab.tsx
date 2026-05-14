@@ -313,7 +313,7 @@ export function CategoriesTab() {
               <Button
                 size="icon"
                 variant="destructive"
-                className="h-16 w-16 rounded-2xl shadow-strong bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none opacity-0 group-hover:opacity-100"
+                className="h-16 w-16 rounded-2xl shadow-strong bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                 onClick={() => setCategoryToDelete(cat)}
               >
                 <Trash2 className="h-6 w-6" />
