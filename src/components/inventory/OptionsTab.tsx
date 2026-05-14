@@ -555,23 +555,64 @@ export function OptionsTab() {
                             {choice.label}
                           </span>
                         </div>
-                        <div className="flex gap-1 lg:gap-2 opacity-100 lg:opacity-0 lg:translate-x-4 lg:group-hover/choice:opacity-100 lg:group-hover/choice:translate-x-0 transition-all duration-500">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors"
-                            onClick={() => openEditChoice(choice)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-10 w-10 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors"
-                            onClick={() => setChoiceToDelete(choice)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div className="flex gap-1 lg:gap-2">
+                          {/* Mobile Action Menu for Choice */}
+                          <div className="lg:hidden">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-9 w-9 rounded-xl text-muted-foreground/40 active:scale-90 transition-all"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48 p-1.5 rounded-2xl border-2 border-accent/10 shadow-strong bg-white">
+                                <DropdownMenuItem
+                                  className="h-11 rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 px-3 focus:bg-primary focus:text-white transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditChoice(choice);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  EDITAR
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="h-11 rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 px-3 text-destructive focus:bg-destructive focus:text-white transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setChoiceToDelete(choice);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  ELIMINAR
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
+                          {/* Desktop Actions */}
+                          <div className="hidden lg:flex opacity-0 lg:group-hover/choice:opacity-100 lg:translate-x-4 lg:group-hover/choice:translate-x-0 transition-all duration-500">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors"
+                              onClick={() => openEditChoice(choice)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-10 w-10 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors"
+                              onClick={() => setChoiceToDelete(choice)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                         <div className="absolute -right-4 -bottom-4 w-12 h-12 bg-primary/5 rounded-full blur-xl opacity-0 group-hover/choice:opacity-100 transition-opacity" />
                       </div>
