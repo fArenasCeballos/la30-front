@@ -104,14 +104,14 @@ export function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Premium Glass Header */}
-      <header className="h-16 lg:h-20 2xl:h-24 border-b bg-white/70 backdrop-blur-xl flex items-center px-4 lg:px-4 2xl:px-10 gap-2 lg:gap-2 2xl:gap-8 sticky top-0 z-50 transition-all duration-300">
+      <header className="h-16 lg:h-20 2xl:h-24 border-b bg-white/90 backdrop-blur-md flex items-center px-4 lg:px-4 2xl:px-10 gap-2 lg:gap-2 2xl:gap-8 sticky top-0 z-50 transition-all duration-300">
         {/* Brand & Store Selector */}
         <div className="flex items-center gap-2 lg:gap-2 2xl:gap-6 flex-1 lg:flex-none">
           <div
             className="flex items-center gap-2 lg:gap-3 group cursor-pointer shrink-0"
             onClick={() => navigate("/dashboard")}
           >
-            <div className="w-10 h-10 lg:w-11 2xl:w-14 lg:h-11 2xl:h-14 rounded-xl lg:rounded-2xl 2xl:rounded-3xl bg-white border-2 shadow-soft flex items-center justify-center overflow-hidden group-hover:scale-105 group-hover:rotate-3 transition-all duration-500">
+            <div className="w-10 h-10 lg:w-11 2xl:w-14 lg:h-11 2xl:h-14 rounded-xl lg:rounded-2xl 2xl:rounded-3xl bg-white border-2 shadow-soft flex items-center justify-center overflow-hidden group-hover:scale-105 group-hover:rotate-3 transition-all duration-200">
               <Logo className="h-6 w-6 lg:h-7 2xl:h-10" />
             </div>
             <div className="hidden 2xl:block">
@@ -175,7 +175,7 @@ export function AppLayout() {
                   <>
                     <item.icon
                       className={cn(
-                        "h-3.5 w-3.5 xl:h-4 xl:w-4 transition-all duration-500",
+                        "h-3.5 w-3.5 xl:h-4 xl:w-4 transition-all duration-200",
                         isActive
                           ? "scale-110 rotate-3"
                           : "group-hover:scale-110",
@@ -185,7 +185,7 @@ export function AppLayout() {
                       {item.label}
                     </span>
                     {isActive && (
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(249,115,22,0.8)] animate-in zoom-in duration-500" />
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(249,115,22,0.8)] animate-in zoom-in duration-200" />
                     )}
                   </>
                 )}
@@ -244,25 +244,25 @@ export function AppLayout() {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-6 left-4 right-4 z-50 bg-white/95 backdrop-blur-3xl border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.3)] rounded-[2.5rem] p-1.5 flex items-center justify-around overflow-hidden">
+      <nav className="lg:hidden fixed bottom-6 left-4 right-4 z-50 bg-white border border-white/50 shadow-2xl rounded-[2.5rem] p-1.5 flex items-center justify-around overflow-hidden">
         {visibleNav.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
-            className="flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-500 relative group min-w-[40px]"
+            className="flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-200 relative group min-w-[40px]"
             activeClassName="text-white"
           >
             {({ isActive }) => (
               <>
                 <div
                   className={cn(
-                    "relative z-10 flex flex-col items-center transition-all duration-500",
+                    "relative z-10 flex flex-col items-center transition-all duration-200",
                     isActive ? "scale-110" : "",
                   )}
                 >
                   <item.icon
                     className={cn(
-                      "h-5 w-5 transition-all duration-500",
+                      "h-5 w-5 transition-all duration-200",
                       isActive
                         ? "text-white"
                         : "text-muted-foreground/40 group-hover:text-primary",

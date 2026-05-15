@@ -217,11 +217,11 @@ export function CategoriesTab() {
 
   return (
     <div className="space-y-8 lg:space-y-16 animate-in fade-in duration-1000 fill-mode-both">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-10 bg-white/40 backdrop-blur-xl p-6 lg:p-10 rounded-4xl lg:rounded-[3.5rem] border border-white shadow-strong relative overflow-hidden group">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-10 bg-white/40 backdrop-blur-xl p-6 lg:p-10 rounded-4xl lg:rounded-[3.5rem] border border-white shadow-md relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-primary/10 transition-all duration-1000" />
 
         <div className="flex items-center gap-8 relative">
-          <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-linear-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/5 group-hover:rotate-12 transition-transform duration-500">
+          <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-linear-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/5 group-hover:rotate-12 transition-transform duration-200">
             <LayoutGrid className="h-7 w-7 lg:h-10 lg:w-10" strokeWidth={2.5} />
           </div>
           <div className="space-y-1 lg:space-y-2">
@@ -237,10 +237,10 @@ export function CategoriesTab() {
 
         <Button
           onClick={openNew}
-          className="h-14 lg:h-20 px-8 lg:px-12 rounded-2xl lg:rounded-[2.5rem] font-black text-xs lg:text-sm tracking-widest shadow-strong shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-2 lg:border-4 border-white/20 relative"
+          className="h-14 lg:h-20 px-8 lg:px-12 rounded-2xl lg:rounded-[2.5rem] font-black text-xs lg:text-sm tracking-widest shadow-md shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-2 lg:border-4 border-white/20 relative"
         >
           <Plus
-            className="h-5 w-5 lg:h-7 lg:w-7 mr-3 lg:mr-4 group-hover:rotate-90 transition-transform duration-700"
+            className="h-5 w-5 lg:h-7 lg:w-7 mr-3 lg:mr-4 group-hover:rotate-90 transition-transform duration-300"
             strokeWidth={3}
           />
           NUEVA CATEGORÍA
@@ -252,7 +252,7 @@ export function CategoriesTab() {
           <div
             key={cat.id}
             className={cn(
-              "pos-card group flex flex-col h-full border-4 transition-all duration-700 relative overflow-hidden",
+              "pos-card group flex flex-col h-full border-4 transition-all duration-300 relative overflow-hidden",
               !cat.is_active
                 ? "opacity-60 grayscale-[0.4] bg-accent/5 border-accent/20"
                 : "bg-white/60 border-white hover:bg-white hover:border-primary/20 hover:shadow-2xl hover:scale-[1.03]",
@@ -260,8 +260,8 @@ export function CategoriesTab() {
             style={{ animationDelay: `${idx * 50}ms` }}
           >
             <div className="flex items-start justify-between p-8 pb-4">
-              <div className="h-24 w-24 rounded-4xl bg-white border-4 border-accent/5 flex items-center justify-center text-6xl shadow-strong group-hover:scale-110 transition-all duration-700 group-hover:rotate-6 relative">
-                <div className="absolute inset-0 bg-primary/5 rounded-full blur-xl scale-0 group-hover:scale-100 transition-transform duration-700" />
+              <div className="h-24 w-24 rounded-4xl bg-white border-4 border-accent/5 flex items-center justify-center text-6xl shadow-md group-hover:scale-110 transition-all duration-300 group-hover:rotate-6 relative">
+                <div className="absolute inset-0 bg-primary/5 rounded-full blur-xl scale-0 group-hover:scale-100 transition-transform duration-300" />
                 <span className="relative">{cat.icon || "📦"}</span>
               </div>
               <div className="flex flex-col items-end gap-4">
@@ -273,13 +273,13 @@ export function CategoriesTab() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-11 w-11 rounded-2xl bg-white shadow-soft border border-accent/5 active:scale-95 transition-all"
+                          className="h-11 w-11 rounded-2xl bg-white shadow-sm border border-accent/5 active:scale-95 transition-all"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <MoreVertical className="h-6 w-6" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 p-2 rounded-3xl border-4 border-white shadow-strong backdrop-blur-xl bg-white/95">
+                      <DropdownMenuContent align="end" className="w-56 p-2 rounded-3xl border-4 border-white shadow-md backdrop-blur-xl bg-white/95">
                         <DropdownMenuItem
                           className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 focus:bg-primary focus:text-white transition-colors"
                           onClick={(e) => {
@@ -315,7 +315,7 @@ export function CategoriesTab() {
                     </DropdownMenu>
                   </div>
 
-                  <div className="hidden lg:block p-2 rounded-2xl bg-white/80 backdrop-blur-md shadow-soft border-2 border-accent/5 group-hover:border-primary/20 transition-colors">
+                  <div className="hidden lg:block p-2 rounded-2xl bg-white/80 backdrop-blur-md shadow-sm border-2 border-accent/5 group-hover:border-primary/20 transition-colors">
                     <Switch
                       checked={cat.is_active}
                       onCheckedChange={() =>
@@ -343,7 +343,7 @@ export function CategoriesTab() {
                 <p className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] leading-none">
                   NOMBRE CLAVE: {cat.name}
                 </p>
-                <h3 className="font-black text-3xl tracking-tighter leading-none group-hover:text-primary transition-colors duration-500">
+                <h3 className="font-black text-3xl tracking-tighter leading-none group-hover:text-primary transition-colors duration-200">
                   {cat.label}
                 </h3>
               </div>
@@ -361,7 +361,7 @@ export function CategoriesTab() {
             <div className="p-8 pt-0 flex items-center gap-4">
               <Button
                 size="lg"
-                className="flex-1 h-16 rounded-2xl font-black text-[11px] tracking-widest shadow-strong bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
+                className="flex-1 h-16 rounded-2xl font-black text-[11px] tracking-widest shadow-md bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
                 onClick={() => openEdit(cat)}
               >
                 <Edit className="h-5 w-5 mr-3" />
@@ -370,7 +370,7 @@ export function CategoriesTab() {
               <Button
                 size="icon"
                 variant="destructive"
-                className="hidden lg:flex h-16 w-16 rounded-2xl shadow-strong bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none opacity-0 group-hover:opacity-100"
+                className="hidden lg:flex h-16 w-16 rounded-2xl shadow-md bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none opacity-0 group-hover:opacity-100"
                 onClick={() => setCategoryToDelete(cat)}
               >
                 <Trash2 className="h-6 w-6" />
@@ -383,8 +383,8 @@ export function CategoriesTab() {
         ))}
 
         {categories.length === 0 && (
-          <div className="col-span-full py-48 flex flex-col items-center justify-center space-y-10 bg-white/40 rounded-[4rem] border-4 border-white shadow-soft group">
-            <div className="h-32 w-32 rounded-[3rem] bg-accent/5 flex items-center justify-center text-muted-foreground/20 group-hover:scale-110 transition-transform duration-700">
+          <div className="col-span-full py-48 flex flex-col items-center justify-center space-y-10 bg-white/40 rounded-[4rem] border-4 border-white shadow-sm group">
+            <div className="h-32 w-32 rounded-[3rem] bg-accent/5 flex items-center justify-center text-muted-foreground/20 group-hover:scale-110 transition-transform duration-300">
               <LayoutGrid
                 className="h-16 w-16 animate-pulse"
                 strokeWidth={1.5}
@@ -405,7 +405,7 @@ export function CategoriesTab() {
 
       {/* Editor Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[95vh] overflow-y-auto rounded-[3.5rem] p-12 border-none shadow-strong bg-white/95 backdrop-blur-2xl">
+        <DialogContent className="max-w-xl max-h-[95vh] overflow-y-auto rounded-[3.5rem] p-12 border-none shadow-md bg-white/95 backdrop-blur-2xl">
           <DialogHeader className="space-y-6 mb-12">
             <div className="h-20 w-20 rounded-4xl bg-primary/10 flex items-center justify-center text-primary mb-2 shadow-inner group-hover:rotate-12 transition-transform">
               {editCategory ? (
@@ -430,7 +430,7 @@ export function CategoriesTab() {
               <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
                 Identificador Visual (Emoji)
               </Label>
-              <div className="bg-white/50 backdrop-blur-md p-10 rounded-[3rem] border-4 border-white shadow-soft flex justify-center group-focus-within:border-primary/20 transition-all">
+              <div className="bg-white/50 backdrop-blur-md p-10 rounded-[3rem] border-4 border-white shadow-sm flex justify-center group-focus-within:border-primary/20 transition-all">
                 <EmojiPicker
                   value={form.icon}
                   onChange={(emoji) => setForm((f) => ({ ...f, icon: emoji }))}
@@ -455,7 +455,7 @@ export function CategoriesTab() {
                       }));
                     }}
                     placeholder="Ej: Parrilla & Brasas"
-                    className="h-16 px-8 rounded-2xl border-4 border-white shadow-soft bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
+                    className="h-16 px-8 rounded-2xl border-4 border-white shadow-sm bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
                   />
                   {form.name && (
                     <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-3">
@@ -478,7 +478,7 @@ export function CategoriesTab() {
                     setForm((f) => ({ ...f, sort_order: e.target.value }))
                   }
                   placeholder="0"
-                  className="h-16 px-8 rounded-2xl border-4 border-white shadow-soft bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
+                  className="h-16 px-8 rounded-2xl border-4 border-white shadow-sm bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
                 />
                 <p className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.2em] px-2 italic">
                   * Define el orden de aparición de izquierda a derecha en el
@@ -491,7 +491,7 @@ export function CategoriesTab() {
               <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
                 Alcance de Tiendas
               </Label>
-              <div className="bg-white/50 backdrop-blur-md p-8 rounded-[2.5rem] border-4 border-white shadow-soft">
+              <div className="bg-white/50 backdrop-blur-md p-8 rounded-[2.5rem] border-4 border-white shadow-sm">
                 <StoreMultiSelect
                   selectedStoreIds={form.store_ids}
                   onChange={(ids) => setForm((f) => ({ ...f, store_ids: ids }))}
@@ -512,7 +512,7 @@ export function CategoriesTab() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="h-16 px-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-[0.2em] text-[11px] shadow-strong shadow-primary/20 relative overflow-hidden group/save"
+              className="h-16 px-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-[0.2em] text-[11px] shadow-md shadow-primary/20 relative overflow-hidden group/save"
             >
               {saving ? (
                 <>
@@ -521,7 +521,7 @@ export function CategoriesTab() {
                 </>
               ) : (
                 <>
-                  <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/save:translate-y-0 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/save:translate-y-0 transition-transform duration-200" />
                   <span className="relative">
                     {editCategory ? "ACTUALIZAR CATEGORÍA" : "CREAR CATEGORÍA"}
                   </span>
@@ -536,7 +536,7 @@ export function CategoriesTab() {
         open={!!categoryToDelete}
         onOpenChange={(open) => !open && setCategoryToDelete(null)}
       >
-        <AlertDialogContent className="rounded-[3.5rem] border-4 border-white p-12 max-w-lg bg-white/95 backdrop-blur-2xl shadow-strong">
+        <AlertDialogContent className="rounded-[3.5rem] border-4 border-white p-12 max-w-lg bg-white/95 backdrop-blur-2xl shadow-md">
           <AlertDialogHeader className="space-y-6">
             <div className="h-24 w-24 rounded-[2.5rem] bg-destructive/10 flex items-center justify-center text-destructive mb-2 shadow-inner group-hover:rotate-12 transition-transform">
               <Trash2 className="h-12 w-12" />
@@ -562,12 +562,12 @@ export function CategoriesTab() {
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-12 gap-4">
-            <AlertDialogCancel className="h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] border-4 border-white bg-white/50 px-8 shadow-soft">
+            <AlertDialogCancel className="h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] border-4 border-white bg-white/50 px-8 shadow-sm">
               CANCELAR
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="h-16 px-10 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] bg-destructive text-white hover:bg-destructive/90 shadow-strong shadow-destructive/20 border-4 border-white/20"
+              className="h-16 px-10 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] bg-destructive text-white hover:bg-destructive/90 shadow-md shadow-destructive/20 border-4 border-white/20"
             >
               ELIMINAR DEFINITIVAMENTE
             </AlertDialogAction>

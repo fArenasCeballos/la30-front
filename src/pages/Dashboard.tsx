@@ -217,7 +217,7 @@ export default function Dashboard() {
             >
               {/* Decorative Background Icon */}
               <card.icon
-                className={`absolute -right-2 -bottom-2 w-16 h-16 lg:w-24 lg:h-24 opacity-[0.03] ${card.color} group-hover:scale-110 transition-transform duration-500`}
+                className={`absolute -right-2 -bottom-2 w-16 h-16 lg:w-24 lg:h-24 opacity-[0.03] ${card.color} group-hover:scale-110 transition-transform duration-200`}
               />
 
               <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-2 lg:gap-4">
@@ -251,7 +251,7 @@ export default function Dashboard() {
             {paymentCards.map((card, idx) => (
               <div
                 key={card.label}
-                className={`pos-card pos-card-hover border-transparent bg-white/40 backdrop-blur-sm shadow-soft group p-2.5 sm:p-5`}
+                className={`pos-card pos-card-hover border-transparent bg-white/40 shadow-sm group p-2.5 sm:p-5`}
                 style={{
                   animationDelay: `${(idx + 4) * 100}ms`,
                   borderLeft: `3px sm:border-l-4 solid ${card.color.replace("text-", "")}`,
@@ -259,7 +259,7 @@ export default function Dashboard() {
               >
                 <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
                   <div
-                    className={`w-8 h-8 sm:w-14 sm:h-14 rounded-full flex items-center justify-center ${card.bgColor} ${card.color} transition-all duration-500 group-hover:rotate-12`}
+                    className={`w-8 h-8 sm:w-14 sm:h-14 rounded-full flex items-center justify-center ${card.bgColor} ${card.color} transition-all duration-200 group-hover:rotate-12`}
                   >
                     <card.icon className="h-4 w-4 sm:h-7 sm:w-7" />
                   </div>
@@ -408,7 +408,7 @@ export default function Dashboard() {
               </div>
 
               <div className="pos-card bg-primary p-6 lg:p-8 text-white relative overflow-hidden group">
-                <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
+                <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-300" />
                 <div className="relative z-10 space-y-4">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
                     <TrendingUp className="h-5 w-5 text-white" />

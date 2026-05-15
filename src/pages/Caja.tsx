@@ -222,9 +222,9 @@ export default function Caja() {
 
   return (
     <ErrorBoundary>
-      <div className="section-container space-y-8 lg:space-y-16 pb-32 animate-in fade-in duration-700">
+      <div className="section-container space-y-8 lg:space-y-16 pb-32 animate-in fade-in duration-300">
         {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-10 bg-white/40 backdrop-blur-md p-6 lg:p-10 rounded-[2.5rem] lg:rounded-[3.5rem] border-2 border-accent/20 shadow-soft">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-10 bg-white/40 backdrop-blur-md p-6 lg:p-10 rounded-[2.5rem] lg:rounded-[3.5rem] border-2 border-accent/20 shadow-sm">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="bg-primary/10 p-3 rounded-2xl">
@@ -251,11 +251,11 @@ export default function Caja() {
           <div className="flex items-center gap-6">
             <Button
               size="lg"
-              className="rounded-xl lg:rounded-3xl h-12 lg:h-20 px-5 lg:px-10 bg-primary hover:bg-primary/90 text-white font-black text-xs lg:text-lg shadow-strong shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group"
+              className="rounded-xl lg:rounded-3xl h-12 lg:h-20 px-5 lg:px-10 bg-primary hover:bg-primary/90 text-white font-black text-xs lg:text-lg shadow-md shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group"
               onClick={() => navigate("/kiosko")}
             >
               <Plus
-                className="h-4 w-4 lg:h-6 lg:w-6 mr-2 lg:mr-3 group-hover:rotate-90 transition-transform duration-500"
+                className="h-4 w-4 lg:h-6 lg:w-6 mr-2 lg:mr-3 group-hover:rotate-90 transition-transform duration-200"
                 strokeWidth={3}
               />
               NUEVA VENTA
@@ -264,7 +264,7 @@ export default function Caja() {
         </div>
 
         <Tabs defaultValue="pendientes" className="w-full">
-          <div className="bg-white/60 backdrop-blur-xl p-1.5 lg:p-3 rounded-xl lg:rounded-[2.5rem] border-2 border-accent/20 shadow-soft mb-6 lg:mb-12 sticky top-16 lg:top-24 z-40 overflow-x-auto no-scrollbar">
+          <div className="bg-white/60 backdrop-blur-xl p-1.5 lg:p-3 rounded-xl lg:rounded-[2.5rem] border-2 border-accent/20 shadow-sm mb-6 lg:mb-12 sticky top-16 lg:top-24 z-40 overflow-x-auto no-scrollbar">
             <TabsList className="bg-transparent h-auto p-0 flex-nowrap w-full justify-start lg:justify-between gap-1.5 lg:gap-3">
               {[
                 {
@@ -301,7 +301,7 @@ export default function Caja() {
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
-                  className="rounded-lg lg:rounded-2xl px-4 lg:px-8 py-2.5 lg:py-5 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-strong transition-all font-black text-[9px] lg:text-[11px] uppercase tracking-widest flex items-center gap-2 lg:gap-3 border-2 border-transparent data-[state=active]:border-primary/5 min-w-[120px] lg:min-w-[180px]"
+                  className="rounded-lg lg:rounded-2xl px-4 lg:px-8 py-2.5 lg:py-5 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all font-black text-[9px] lg:text-[11px] uppercase tracking-widest flex items-center gap-2 lg:gap-3 border-2 border-transparent data-[state=active]:border-primary/5 min-w-[120px] lg:min-w-[180px]"
                 >
                   <tab.icon
                     className={cn(
@@ -321,7 +321,7 @@ export default function Caja() {
 
           <TabsContent
             value="pendientes"
-            className="animate-in fade-in slide-in-from-bottom-6 duration-700 outline-none"
+            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
           >
             <div className="grid gap-10 sm:grid-cols-2 xl:grid-cols-3">
               {pendientes.length === 0 ? (
@@ -342,7 +342,7 @@ export default function Caja() {
                     actions={
                       <div className="flex gap-4 w-full">
                         <Button
-                          className="flex-1 rounded-2xl h-12 lg:h-14 font-black uppercase tracking-widest text-[10px] bg-primary hover:bg-primary/90 text-white shadow-strong shadow-primary/10 transition-all active:scale-95"
+                          className="flex-1 rounded-2xl h-12 lg:h-14 font-black uppercase tracking-widest text-[10px] bg-primary hover:bg-primary/90 text-white shadow-md shadow-primary/10 transition-all active:scale-95"
                           onClick={() =>
                             updateOrderStatus(order.id, "confirmado")
                           }
@@ -387,7 +387,7 @@ export default function Caja() {
 
           <TabsContent
             value="confirmados"
-            className="animate-in fade-in slide-in-from-bottom-6 duration-700 outline-none"
+            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
           >
             <div className="grid gap-4 lg:gap-10 sm:grid-cols-2 xl:grid-cols-3">
               {confirmados.length === 0 ? (
@@ -408,7 +408,7 @@ export default function Caja() {
                     actions={
                       <Button
                         size="lg"
-                        className="w-full rounded-2xl h-16 font-black text-xs uppercase tracking-[0.2em] bg-primary hover:bg-primary/90 text-white shadow-strong shadow-primary/20 group relative overflow-hidden transition-all active:scale-95"
+                        className="w-full rounded-2xl h-16 font-black text-xs uppercase tracking-[0.2em] bg-primary hover:bg-primary/90 text-white shadow-md shadow-primary/20 group relative overflow-hidden transition-all active:scale-95"
                         onClick={() => setPayingOrder(order)}
                         disabled={order.isOptimistic}
                       >
@@ -417,7 +417,7 @@ export default function Caja() {
                           <Loader2 className="h-5 w-5 mr-3 animate-spin" />
                         ) : (
                           <DollarSign
-                            className="h-5 w-5 mr-3 group-hover:scale-125 transition-transform duration-500"
+                            className="h-5 w-5 mr-3 group-hover:scale-125 transition-transform duration-200"
                             strokeWidth={3}
                           />
                         )}
@@ -432,7 +432,7 @@ export default function Caja() {
 
           <TabsContent
             value="cocina"
-            className="animate-in fade-in slide-in-from-bottom-6 duration-700 outline-none"
+            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
           >
             <div className="grid gap-4 lg:gap-10 sm:grid-cols-2 xl:grid-cols-3">
               {enCocina.length === 0 ? (
@@ -465,7 +465,7 @@ export default function Caja() {
                           <Button
                             size="lg"
                             className={cn(
-                              "w-full rounded-2xl h-14 lg:h-16 font-black uppercase tracking-widest text-[11px] transition-all duration-500 shadow-strong active:scale-95",
+                              "w-full rounded-2xl h-14 lg:h-16 font-black uppercase tracking-widest text-[11px] transition-all duration-200 shadow-md active:scale-95",
                               allChecked
                                 ? "bg-green-500 hover:bg-green-600 text-white shadow-green-500/20"
                                 : "bg-accent/10 text-muted-foreground/40 border-2 border-transparent cursor-not-allowed",
@@ -504,7 +504,7 @@ export default function Caja() {
 
           <TabsContent
             value="listos"
-            className="animate-in fade-in slide-in-from-bottom-6 duration-700 outline-none"
+            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
           >
             <div className="grid gap-10 sm:grid-cols-2 xl:grid-cols-3">
               {listos.length === 0 ? (
@@ -526,7 +526,7 @@ export default function Caja() {
                     actions={
                       <Button
                         size="lg"
-                        className="w-full rounded-2xl h-16 font-black uppercase tracking-widest text-[11px] bg-green-500 hover:bg-green-600 text-white shadow-strong shadow-green-500/20 transition-all active:scale-95"
+                        className="w-full rounded-2xl h-16 font-black uppercase tracking-widest text-[11px] bg-green-500 hover:bg-green-600 text-white shadow-md shadow-green-500/20 transition-all active:scale-95"
                         onClick={() => updateOrderStatus(order.id, "entregado")}
                       >
                         <CheckCircle className="h-5 w-5 mr-3" strokeWidth={3} />{" "}
@@ -541,11 +541,11 @@ export default function Caja() {
 
           <TabsContent
             value="historial"
-            className="animate-in fade-in slide-in-from-bottom-6 duration-700 outline-none"
+            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
           >
             <div className="space-y-12">
               {/* Cash Closing Section */}
-              <div className="bg-linear-to-br from-primary/5 via-white/40 to-accent/20 backdrop-blur-md border-2 border-primary/20 p-12 rounded-[3.5rem] flex flex-col lg:flex-row items-center justify-between gap-12 group shadow-strong relative overflow-hidden">
+              <div className="bg-linear-to-br from-primary/5 via-white/40 to-accent/20 backdrop-blur-md border-2 border-primary/20 p-12 rounded-[3.5rem] flex flex-col lg:flex-row items-center justify-between gap-12 group shadow-md relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-150 transition-transform duration-1000">
                   <DollarSign
                     className="h-48 w-48 text-primary"
@@ -571,13 +571,13 @@ export default function Caja() {
                   size="lg"
                   onClick={handleGenerateClosing}
                   disabled={isClosing || completados.length === 0}
-                  className="rounded-3xl h-20 px-12 bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-widest shadow-strong shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all relative z-10 group"
+                  className="rounded-3xl h-20 px-12 bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-widest shadow-md shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all relative z-10 group"
                 >
                   {isClosing ? (
                     <Loader2 className="h-6 w-6 animate-spin mr-4" />
                   ) : (
                     <DollarSign
-                      className="h-6 w-6 mr-4 group-hover:scale-125 transition-transform duration-500"
+                      className="h-6 w-6 mr-4 group-hover:scale-125 transition-transform duration-200"
                       strokeWidth={3}
                     />
                   )}
@@ -611,13 +611,13 @@ export default function Caja() {
                     return (
                       <div
                         key={order.id}
-                        className="bg-white/40 backdrop-blur-md border-2 border-accent/10 hover:border-primary/20 p-8 rounded-[2.5rem] flex flex-col sm:flex-row sm:items-center justify-between gap-8 group transition-all duration-500 shadow-soft hover:shadow-xl"
+                        className="bg-white/40 backdrop-blur-md border-2 border-accent/10 hover:border-primary/20 p-8 rounded-[2.5rem] flex flex-col sm:flex-row sm:items-center justify-between gap-8 group transition-all duration-200 shadow-sm hover:shadow-xl"
                         style={{ animationDelay: `${idx * 50}ms` }}
                       >
                         <div className="flex items-center gap-8">
                           <div
                             className={cn(
-                              "w-20 h-20 rounded-3xl flex flex-col items-center justify-center border-2 shadow-inner transition-all duration-500 group-hover:scale-110",
+                              "w-20 h-20 rounded-3xl flex flex-col items-center justify-center border-2 shadow-inner transition-all duration-200 group-hover:scale-110",
                               isEntregado
                                 ? "bg-accent/10 text-primary border-primary/5"
                                 : "bg-destructive/5 text-destructive border-destructive/10",
@@ -653,7 +653,7 @@ export default function Caja() {
                         {isEntregado && (
                           <Button
                             variant="outline"
-                            className="rounded-2xl h-14 border-2 border-accent/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-accent/5 transition-all active:scale-95 shadow-soft"
+                            className="rounded-2xl h-14 border-2 border-accent/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-accent/5 transition-all active:scale-95 shadow-sm"
                             onClick={() => handleReprintCustomer(order)}
                           >
                             <RotateCcw

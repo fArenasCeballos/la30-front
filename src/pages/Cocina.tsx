@@ -46,9 +46,9 @@ export default function Cocina() {
   };
 
   return (
-    <div className="section-container min-h-[calc(100vh-6rem)] pb-32 animate-in fade-in duration-700">
+    <div className="section-container min-h-[calc(100vh-6rem)] pb-32 animate-in fade-in duration-300">
       {/* Premium Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 lg:gap-12 mb-10 lg:mb-20 bg-white/40 backdrop-blur-xl p-6 lg:p-12 rounded-[2.5rem] lg:rounded-[3.5rem] border border-white shadow-strong relative overflow-hidden">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 lg:gap-12 mb-10 lg:mb-20 bg-white/40 backdrop-blur-xl p-6 lg:p-12 rounded-[2.5rem] lg:rounded-[3.5rem] border border-white shadow-md relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
 
         <div className="relative space-y-4">
@@ -98,7 +98,7 @@ export default function Cocina() {
             <div
               key={i}
               className={cn(
-                "bg-white/60 backdrop-blur-md px-4 py-3 sm:px-10 sm:py-8 rounded-3xl sm:rounded-[3rem] border-2 shadow-soft flex items-center gap-3 sm:gap-8 transition-all hover:scale-105 duration-500 group flex-1 min-w-[120px]",
+                "bg-white/60 backdrop-blur-md px-4 py-3 sm:px-10 sm:py-8 rounded-3xl sm:rounded-[3rem] border-2 shadow-sm flex items-center gap-3 sm:gap-8 transition-all hover:scale-105 duration-200 group flex-1 min-w-[120px]",
                 stat.border,
               )}
             >
@@ -156,7 +156,7 @@ export default function Cocina() {
                 >
                   <div className="flex items-center justify-between mb-10">
                     <div className="flex items-center gap-6">
-                      <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-accent/10 flex items-center justify-center text-primary font-black text-2xl lg:text-4xl shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500">
+                      <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-accent/10 flex items-center justify-center text-primary font-black text-2xl lg:text-4xl shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-all duration-200">
                         {order.locator}
                       </div>
                       <div className="space-y-1.5">
@@ -181,7 +181,7 @@ export default function Cocina() {
                         key={item.id}
                         className="flex gap-5 text-lg items-start"
                       >
-                        <span className="font-black text-primary bg-white h-10 min-w-10 px-2 rounded-xl flex items-center justify-center shadow-soft border border-accent/10 text-base mt-0.5">
+                        <span className="font-black text-primary bg-white h-10 min-w-10 px-2 rounded-xl flex items-center justify-center shadow-sm border border-accent/10 text-base mt-0.5">
                           {item.quantity}
                         </span>
                         <div className="space-y-2 flex-1">
@@ -202,7 +202,7 @@ export default function Cocina() {
 
                   <Button
                     size="xl"
-                    className="w-full rounded-2xl lg:rounded-4xl h-14 lg:h-20 bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-widest shadow-strong shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="w-full rounded-2xl lg:rounded-4xl h-14 lg:h-20 bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-widest shadow-md shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                     onClick={() =>
                       handleUpdateStatus(order.id, "en_preparacion")
                     }
@@ -250,7 +250,7 @@ export default function Cocina() {
                   >
                     <div className="flex items-center justify-between mb-10">
                       <div className="flex items-center gap-6">
-                        <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-preparing/10 flex items-center justify-center text-preparing font-black text-2xl lg:text-4xl border-2 border-preparing/20 shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                        <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-preparing/10 flex items-center justify-center text-preparing font-black text-2xl lg:text-4xl border-2 border-preparing/20 shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-all duration-200">
                           {order.locator}
                         </div>
                         <div className="space-y-1.5">
@@ -277,7 +277,7 @@ export default function Cocina() {
                             "flex gap-4 lg:gap-5 text-base lg:text-lg items-center p-3 lg:p-5 rounded-2xl lg:rounded-3xl transition-all cursor-pointer border-2 border-transparent",
                             item.is_completed
                               ? "bg-preparing/5 border-preparing/10 opacity-50"
-                              : "hover:border-preparing/20 bg-white shadow-soft hover:shadow-lg",
+                              : "hover:border-preparing/20 bg-white shadow-sm hover:shadow-lg",
                           )}
                           onClick={() =>
                             toggleOrderItem(item.id, !item.is_completed)
@@ -286,7 +286,7 @@ export default function Cocina() {
                           <div className="relative flex items-center justify-center shrink-0">
                             <div
                               className={cn(
-                                "h-10 w-10 rounded-2xl border-2 transition-all duration-500 flex items-center justify-center shadow-soft",
+                                "h-10 w-10 rounded-2xl border-2 transition-all duration-200 flex items-center justify-center shadow-sm",
                                 item.is_completed
                                   ? "bg-preparing border-transparent rotate-0 scale-100"
                                   : "bg-white border-preparing/20 rotate-12 group-hover:rotate-0",
@@ -328,7 +328,7 @@ export default function Cocina() {
                     <Button
                       size="xl"
                       className={cn(
-                        "w-full rounded-4xl h-20 font-black text-xs uppercase tracking-widest shadow-xl transition-all duration-500 hover:scale-[1.02] active:scale-[0.98]",
+                        "w-full rounded-4xl h-20 font-black text-xs uppercase tracking-widest shadow-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]",
                         allChecked
                           ? "bg-green-500 hover:bg-green-600 text-white shadow-green-500/30"
                           : "bg-accent/20 text-muted-foreground/30 cursor-not-allowed grayscale",
@@ -379,7 +379,7 @@ export default function Cocina() {
                 >
                   <div className="flex items-center justify-between mb-10">
                     <div className="flex items-center gap-6">
-                      <div className="h-20 w-20 rounded-4xl bg-green-500 text-white flex items-center justify-center font-black text-4xl shadow-strong shadow-green-500/30 group-hover:scale-110 group-hover:-rotate-6 transition-all duration-500">
+                      <div className="h-20 w-20 rounded-4xl bg-green-500 text-white flex items-center justify-center font-black text-4xl shadow-md shadow-green-500/30 group-hover:scale-110 group-hover:-rotate-6 transition-all duration-200">
                         {order.locator}
                       </div>
                       <div className="space-y-1.5">
@@ -396,7 +396,7 @@ export default function Cocina() {
                     <div className="relative mb-6">
                       <div className="absolute inset-0 bg-green-500/20 rounded-full blur-2xl animate-pulse scale-75" />
                       <BellRing
-                        className="h-14 w-14 text-green-500 mx-auto relative transition-transform group-hover:rotate-12 duration-500"
+                        className="h-14 w-14 text-green-500 mx-auto relative transition-transform group-hover:rotate-12 duration-200"
                         strokeWidth={2.5}
                       />
                     </div>
@@ -410,7 +410,7 @@ export default function Cocina() {
 
                   <Button
                     size="xl"
-                    className="w-full rounded-4xl h-20 bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] shadow-strong shadow-green-500/20"
+                    className="w-full rounded-4xl h-20 bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md shadow-green-500/20"
                     onClick={() => handleUpdateStatus(order.id, "entregado")}
                     disabled={updatingIds.has(order.id)}
                   >

@@ -251,11 +251,11 @@ export function ExtrasTab() {
 
   return (
     <div className="space-y-8 lg:space-y-16 animate-in fade-in duration-1000 fill-mode-both">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-10 bg-white/40 backdrop-blur-xl p-6 lg:p-10 rounded-4xl lg:rounded-[3.5rem] border border-white shadow-strong relative overflow-hidden group">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-10 bg-white/40 backdrop-blur-xl p-6 lg:p-10 rounded-4xl lg:rounded-[3.5rem] border border-white shadow-md relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-primary/10 transition-all duration-1000" />
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-10 relative">
-          <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-linear-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/5 group-hover:rotate-12 transition-transform duration-500">
+          <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-linear-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/5 group-hover:rotate-12 transition-transform duration-200">
             <Sparkles className="h-7 w-7 lg:h-10 lg:w-10" strokeWidth={2.5} />
           </div>
           <div className="space-y-6 sm:space-y-2">
@@ -270,10 +270,10 @@ export function ExtrasTab() {
               <div className="h-12 w-[3px] bg-primary/10 hidden sm:block rounded-full" />
               <div className="relative group/select min-w-[280px]">
                 <Select value={filterCat} onValueChange={setFilterCat}>
-                  <SelectTrigger className="h-14 lg:h-16 px-6 lg:px-8 rounded-xl lg:rounded-2xl border-2 lg:border-4 border-white bg-white/60 backdrop-blur-md shadow-soft font-black text-[10px] lg:text-xs uppercase tracking-widest transition-all focus:border-primary/40 focus:ring-0 group-hover/select:shadow-strong group-hover/select:scale-105">
+                  <SelectTrigger className="h-14 lg:h-16 px-6 lg:px-8 rounded-xl lg:rounded-2xl border-2 lg:border-4 border-white bg-white/60 backdrop-blur-md shadow-sm font-black text-[10px] lg:text-xs uppercase tracking-widest transition-all focus:border-primary/40 focus:ring-0 group-hover/select:shadow-md group-hover/select:scale-105">
                     <SelectValue placeholder="Filtrar por grupo" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-[2.5rem] border-none shadow-strong p-3 bg-white/95 backdrop-blur-xl">
+                  <SelectContent className="rounded-[2.5rem] border-none shadow-md p-3 bg-white/95 backdrop-blur-xl">
                     <SelectItem
                       value="all"
                       className="font-black uppercase tracking-widest text-[10px] rounded-2xl py-4 transition-colors"
@@ -301,10 +301,10 @@ export function ExtrasTab() {
 
         <Button
           onClick={openNew}
-          className="h-14 lg:h-20 px-8 lg:px-12 rounded-2xl lg:rounded-[2.5rem] font-black text-xs lg:text-sm tracking-widest shadow-strong shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-2 lg:border-4 border-white/20 relative"
+          className="h-14 lg:h-20 px-8 lg:px-12 rounded-2xl lg:rounded-[2.5rem] font-black text-xs lg:text-sm tracking-widest shadow-md shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-2 lg:border-4 border-white/20 relative"
         >
           <Plus
-            className="h-5 w-5 lg:h-7 lg:w-7 mr-3 lg:mr-4 group-hover:rotate-90 transition-transform duration-700"
+            className="h-5 w-5 lg:h-7 lg:w-7 mr-3 lg:mr-4 group-hover:rotate-90 transition-transform duration-300"
             strokeWidth={3}
           />
           NUEVO INGREDIENTE
@@ -315,16 +315,16 @@ export function ExtrasTab() {
         {filtered.map((extra, idx) => (
           <div
             key={extra.id}
-            className="pos-card group flex flex-col h-full border-4 transition-all duration-700 relative overflow-hidden bg-white/60 border-white hover:bg-white hover:border-primary/20 hover:shadow-2xl hover:scale-[1.03]"
+            className="pos-card group flex flex-col h-full border-4 transition-all duration-300 relative overflow-hidden bg-white/60 border-white hover:bg-white hover:border-primary/20 hover:shadow-2xl hover:scale-[1.03]"
             style={{ animationDelay: `${idx * 50}ms` }}
           >
             <div className="flex items-start justify-between p-4 lg:p-8 pb-4">
-              <div className="h-16 w-16 lg:h-24 lg:w-24 rounded-2xl lg:rounded-4xl bg-white border-2 lg:border-4 border-accent/5 flex items-center justify-center text-4xl lg:text-6xl shadow-strong group-hover:scale-110 transition-all duration-700 group-hover:rotate-6 relative">
-                <div className="absolute inset-0 bg-primary/5 rounded-full blur-xl scale-0 group-hover:scale-100 transition-transform duration-700" />
+              <div className="h-16 w-16 lg:h-24 lg:w-24 rounded-2xl lg:rounded-4xl bg-white border-2 lg:border-4 border-accent/5 flex items-center justify-center text-4xl lg:text-6xl shadow-md group-hover:scale-110 transition-all duration-300 group-hover:rotate-6 relative">
+                <div className="absolute inset-0 bg-primary/5 rounded-full blur-xl scale-0 group-hover:scale-100 transition-transform duration-300" />
                 <span className="relative">{extra.icon || "➕"}</span>
               </div>
               <div className="text-right space-y-1 lg:space-y-2">
-                <p className="font-black text-xl lg:text-4xl text-primary tracking-tighter group-hover:scale-110 transition-transform duration-500 origin-right">
+                <p className="font-black text-xl lg:text-4xl text-primary tracking-tighter group-hover:scale-110 transition-transform duration-200 origin-right">
                   {formatPrice(extra.price_per_unit)}
                 </p>
                 <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 block">
@@ -338,7 +338,7 @@ export function ExtrasTab() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-11 w-11 rounded-2xl bg-white shadow-soft border border-accent/5 active:scale-95 transition-all"
+                        className="h-11 w-11 rounded-2xl bg-white shadow-sm border border-accent/5 active:scale-95 transition-all"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <MoreVertical className="h-6 w-6" />
@@ -346,7 +346,7 @@ export function ExtrasTab() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
-                      className="w-56 p-2 rounded-3xl border-4 border-white shadow-strong backdrop-blur-xl bg-white/95"
+                      className="w-56 p-2 rounded-3xl border-4 border-white shadow-md backdrop-blur-xl bg-white/95"
                     >
                       <DropdownMenuItem
                         className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 focus:bg-primary focus:text-white transition-colors"
@@ -380,7 +380,7 @@ export function ExtrasTab() {
                 <p className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] leading-none">
                   IDENTIFICADOR: {extra.extra_key}
                 </p>
-                <h3 className="font-black text-xl lg:text-3xl tracking-tighter leading-[1.1] group-hover:text-primary transition-colors duration-500 min-h-[2.2em]">
+                <h3 className="font-black text-xl lg:text-3xl tracking-tighter leading-[1.1] group-hover:text-primary transition-colors duration-200 min-h-[2.2em]">
                   {extra.label}
                 </h3>
               </div>
@@ -391,19 +391,19 @@ export function ExtrasTab() {
                     extra.category_ids.map((cid) => (
                       <div
                         key={cid}
-                        className="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 bg-primary/5 text-primary border-primary/10 shadow-soft"
+                        className="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 bg-primary/5 text-primary border-primary/10 shadow-sm"
                       >
                         {getCatLabel(cid)}
                       </div>
                     ))
                   ) : (
-                    <div className="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 bg-primary/5 text-primary border-primary/10 shadow-soft">
+                    <div className="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 bg-primary/5 text-primary border-primary/10 shadow-sm">
                       {getCatLabel(extra.category_id)}
                     </div>
                   )}
                 </div>
 
-                <div className="bg-accent/5 backdrop-blur-md rounded-[1.75rem] p-5 border-2 border-white shadow-inner flex items-center justify-between group-hover:bg-white transition-colors duration-700">
+                <div className="bg-accent/5 backdrop-blur-md rounded-[1.75rem] p-5 border-2 border-white shadow-inner flex items-center justify-between group-hover:bg-white transition-colors duration-300">
                   <div className="flex items-center gap-4">
                     <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/5 group-hover:rotate-12 transition-transform">
                       <CheckCircle2
@@ -427,10 +427,10 @@ export function ExtrasTab() {
               </div>
             </div>
 
-            <div className="p-4 lg:p-8 pt-0 hidden lg:flex items-center gap-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
+            <div className="p-4 lg:p-8 pt-0 hidden lg:flex items-center gap-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
               <Button
                 size="lg"
-                className="flex-1 h-12 lg:h-16 rounded-xl lg:rounded-2xl font-black text-[10px] lg:text-[11px] tracking-widest shadow-strong bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
+                className="flex-1 h-12 lg:h-16 rounded-xl lg:rounded-2xl font-black text-[10px] lg:text-[11px] tracking-widest shadow-md bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
                 onClick={() => openEdit(extra)}
               >
                 <Edit className="h-4 w-4 lg:h-5 lg:w-5 mr-2 lg:mr-3" />
@@ -439,7 +439,7 @@ export function ExtrasTab() {
               <Button
                 size="icon"
                 variant="destructive"
-                className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl shadow-strong bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none"
+                className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl shadow-md bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none"
                 onClick={() => setExtraToDelete(extra)}
               >
                 <Trash2 className="h-5 w-5 lg:h-6 lg:w-6" />
@@ -453,7 +453,7 @@ export function ExtrasTab() {
 
         {filtered.length === 0 && (
           <div className="col-span-full py-40 flex flex-col items-center justify-center space-y-8 bg-accent/5 rounded-[3.5rem] border-4 border-dashed border-accent/20">
-            <div className="h-28 w-28 rounded-[2.5rem] bg-white border-2 shadow-soft flex items-center justify-center text-muted-foreground/20">
+            <div className="h-28 w-28 rounded-[2.5rem] bg-white border-2 shadow-sm flex items-center justify-center text-muted-foreground/20">
               <Sparkles className="h-12 w-12 animate-pulse" strokeWidth={3} />
             </div>
             <p className="font-black uppercase tracking-[0.4em] text-sm text-center text-muted-foreground/40">
@@ -465,7 +465,7 @@ export function ExtrasTab() {
 
       {/* Editor Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[95vh] overflow-y-auto rounded-[3.5rem] p-12 border-none shadow-strong bg-white/95 backdrop-blur-2xl">
+        <DialogContent className="max-w-xl max-h-[95vh] overflow-y-auto rounded-[3.5rem] p-12 border-none shadow-md bg-white/95 backdrop-blur-2xl">
           <DialogHeader className="space-y-6 mb-12">
             <div className="h-20 w-20 rounded-4xl bg-primary/10 flex items-center justify-center text-primary mb-2 shadow-inner group-hover:rotate-12 transition-transform">
               {editExtra ? (
@@ -494,7 +494,7 @@ export function ExtrasTab() {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full justify-between h-auto min-h-20 py-4 px-6 rounded-4xl border-4 border-white shadow-soft bg-white/50 focus:border-primary/40 transition-all font-black"
+                    className="w-full justify-between h-auto min-h-20 py-4 px-6 rounded-4xl border-4 border-white shadow-sm bg-white/50 focus:border-primary/40 transition-all font-black"
                   >
                     {form.category_ids.length > 0 ? (
                       <div className="flex flex-wrap gap-2.5">
@@ -503,7 +503,7 @@ export function ExtrasTab() {
                           return (
                             <div
                               key={catId}
-                              className="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-white border border-accent/10 shadow-soft text-primary"
+                              className="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-white border border-accent/10 shadow-sm text-primary"
                             >
                               {cat?.icon} {cat?.label}
                             </div>
@@ -519,7 +519,7 @@ export function ExtrasTab() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="w-[340px] p-4 rounded-[2.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl"
+                  className="w-[340px] p-4 rounded-[2.5rem] border-none shadow-md bg-white/95 backdrop-blur-xl"
                   align="start"
                 >
                   <div className="max-h-[360px] overflow-y-auto space-y-2 p-2 no-scrollbar">
@@ -566,7 +566,7 @@ export function ExtrasTab() {
               <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
                 Identificador Visual (Emoji)
               </Label>
-              <div className="bg-white/50 backdrop-blur-md p-10 rounded-[3rem] border-4 border-white shadow-soft flex justify-center group-focus-within:border-primary/20 transition-all">
+              <div className="bg-white/50 backdrop-blur-md p-10 rounded-[3rem] border-4 border-white shadow-sm flex justify-center group-focus-within:border-primary/20 transition-all">
                 <EmojiPicker
                   value={form.icon}
                   onChange={(emoji) => setForm((f) => ({ ...f, icon: emoji }))}
@@ -593,7 +593,7 @@ export function ExtrasTab() {
                       }));
                     }}
                     placeholder="Ej: Tocino Ahumado Premium"
-                    className="h-16 px-8 rounded-2xl border-4 border-white shadow-soft bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
+                    className="h-16 px-8 rounded-2xl border-4 border-white shadow-sm bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
                   />
                   {form.extra_key && (
                     <div className="absolute right-6 top-1/2 -translate-y-1/2">
@@ -624,7 +624,7 @@ export function ExtrasTab() {
                         }))
                       }
                       placeholder="0.00"
-                      className="h-16 pl-12 rounded-2xl border-4 border-white shadow-soft bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-2xl font-black transition-all"
+                      className="h-16 pl-12 rounded-2xl border-4 border-white shadow-sm bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-2xl font-black transition-all"
                     />
                   </div>
                   {form.price_per_unit && (
@@ -645,7 +645,7 @@ export function ExtrasTab() {
                       setForm((f) => ({ ...f, max_qty: e.target.value }))
                     }
                     placeholder="1"
-                    className="h-16 px-8 rounded-2xl border-4 border-white shadow-soft bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
+                    className="h-16 px-8 rounded-2xl border-4 border-white shadow-sm bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
                   />
                 </div>
               </div>
@@ -655,7 +655,7 @@ export function ExtrasTab() {
               <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
                 Alcance de Tiendas
               </Label>
-              <div className="bg-white/50 backdrop-blur-md p-8 rounded-[2.5rem] border-4 border-white shadow-soft">
+              <div className="bg-white/50 backdrop-blur-md p-8 rounded-[2.5rem] border-4 border-white shadow-sm">
                 <StoreMultiSelect
                   selectedStoreIds={form.store_ids}
                   onChange={(ids) => setForm((f) => ({ ...f, store_ids: ids }))}
@@ -676,7 +676,7 @@ export function ExtrasTab() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="h-16 px-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-[0.2em] text-[11px] shadow-strong shadow-primary/20 relative overflow-hidden group/save"
+              className="h-16 px-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-[0.2em] text-[11px] shadow-md shadow-primary/20 relative overflow-hidden group/save"
             >
               {saving ? (
                 <>
@@ -685,7 +685,7 @@ export function ExtrasTab() {
                 </>
               ) : (
                 <>
-                  <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/save:translate-y-0 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/save:translate-y-0 transition-transform duration-200" />
                   <span className="relative">
                     {editExtra ? "ACTUALIZAR EXTRA" : "CREAR EXTRA"}
                   </span>
@@ -700,7 +700,7 @@ export function ExtrasTab() {
         open={!!extraToDelete}
         onOpenChange={(open) => !open && setExtraToDelete(null)}
       >
-        <AlertDialogContent className="rounded-[3.5rem] border-4 border-white p-12 max-w-lg bg-white/95 backdrop-blur-2xl shadow-strong">
+        <AlertDialogContent className="rounded-[3.5rem] border-4 border-white p-12 max-w-lg bg-white/95 backdrop-blur-2xl shadow-md">
           <AlertDialogHeader className="space-y-6">
             <div className="h-24 w-24 rounded-[2.5rem] bg-destructive/10 flex items-center justify-center text-destructive mb-2 shadow-inner group-hover:rotate-12 transition-transform">
               <Trash2 className="h-12 w-12" />
@@ -727,12 +727,12 @@ export function ExtrasTab() {
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-12 gap-4">
-            <AlertDialogCancel className="h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] border-4 border-white bg-white/50 px-8 shadow-soft">
+            <AlertDialogCancel className="h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] border-4 border-white bg-white/50 px-8 shadow-sm">
               CANCELAR
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="h-16 px-10 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] bg-destructive text-white hover:bg-destructive/90 shadow-strong shadow-destructive/20 border-4 border-white/20"
+              className="h-16 px-10 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] bg-destructive text-white hover:bg-destructive/90 shadow-md shadow-destructive/20 border-4 border-white/20"
             >
               CONFIRMAR ELIMINACIÓN
             </AlertDialogAction>

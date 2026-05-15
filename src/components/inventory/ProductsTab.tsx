@@ -427,12 +427,12 @@ export function ProductsTab() {
   }
 
   return (
-    <div className="space-y-16 animate-in fade-in duration-1000 fill-mode-both">
+    <div className="space-y-16 animate-in fade-in duration-300 fill-mode-both">
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-10">
         <div className="relative flex-1 max-w-3xl group">
           <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
             <Search
-              className="h-7 w-7 text-muted-foreground/40 group-focus-within:text-primary transition-all duration-500 group-focus-within:scale-110"
+              className="h-7 w-7 text-muted-foreground/40 group-focus-within:text-primary transition-all duration-200 group-focus-within:scale-110"
               strokeWidth={2.5}
             />
           </div>
@@ -440,12 +440,12 @@ export function ProductsTab() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar en el catálogo maestro..."
-            className="pl-16 h-20 rounded-[2.5rem] border-4 border-white shadow-strong focus-visible:ring-primary/20 bg-white/60 backdrop-blur-xl transition-all text-xl font-bold placeholder:text-muted-foreground/30 focus-visible:border-primary/40 focus-visible:scale-[1.02]"
+            className="pl-16 h-20 rounded-[2.5rem] border-4 border-white shadow-md focus-visible:ring-primary/20 bg-white/60 backdrop-blur-xl transition-all text-xl font-bold placeholder:text-muted-foreground/30 focus-visible:border-primary/40 focus-visible:scale-[1.02]"
           />
         </div>
 
         <div className="flex items-center gap-6">
-          <div className="bg-white/60 backdrop-blur-xl px-8 py-4 rounded-4xl border-4 border-white shadow-strong hidden md:flex items-center gap-5 group/stats hover:scale-105 transition-all duration-500">
+          <div className="bg-white/60 backdrop-blur-xl px-8 py-4 rounded-4xl border-4 border-white shadow-md hidden md:flex items-center gap-5 group/stats hover:scale-105 transition-all duration-200">
             <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover/stats:rotate-12 transition-transform">
               <Package className="h-6 w-6" strokeWidth={2.5} />
             </div>
@@ -463,10 +463,10 @@ export function ProductsTab() {
           </div>
           <Button
             onClick={openNew}
-            className="h-20 px-12 rounded-[2.5rem] font-black text-sm tracking-widest shadow-strong shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-4 border-white/20"
+            className="h-20 px-12 rounded-[2.5rem] font-black text-sm tracking-widest shadow-md shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-4 border-white/20"
           >
             <Plus
-              className="h-7 w-7 mr-4 group-hover:rotate-90 transition-transform duration-700"
+              className="h-7 w-7 mr-4 group-hover:rotate-90 transition-transform duration-300"
               strokeWidth={3}
             />
             AGREGAR PRODUCTO
@@ -489,7 +489,7 @@ export function ProductsTab() {
             className={cn(
               "h-16 px-12 rounded-3xl font-black text-[11px] uppercase tracking-widest transition-all shrink-0 border-4",
               categoryFilter === "all"
-                ? "shadow-strong shadow-primary/20 scale-110 z-10 border-white bg-primary text-white"
+                ? "shadow-md shadow-primary/20 scale-110 z-10 border-white bg-primary text-white"
                 : "bg-white/60 border-white shadow-soft hover:border-primary/40 text-muted-foreground/40 hover:text-primary hover:bg-white",
             )}
           >
@@ -503,7 +503,7 @@ export function ProductsTab() {
               className={cn(
                 "h-16 px-12 rounded-3xl font-black text-[11px] uppercase tracking-widest transition-all shrink-0 border-4 group/cat",
                 categoryFilter === cat.id
-                  ? "shadow-strong shadow-primary/20 scale-110 z-10 border-white bg-primary text-white"
+                  ? "shadow-md shadow-primary/20 scale-110 z-10 border-white bg-primary text-white"
                   : "bg-white/60 border-white shadow-soft hover:border-primary/40 text-muted-foreground/40 hover:text-primary hover:bg-white",
               )}
             >
@@ -540,7 +540,7 @@ export function ProductsTab() {
       </DndContext>
 
       {filtered.length === 0 && (
-        <div className="py-40 flex flex-col items-center justify-center space-y-8 bg-accent/5 rounded-[3.5rem] border-4 border-dashed border-accent/20 animate-in fade-in duration-700">
+        <div className="py-40 flex flex-col items-center justify-center space-y-8 bg-accent/5 rounded-[3.5rem] border-4 border-dashed border-accent/20 animate-in fade-in duration-300">
           <div className="h-28 w-28 rounded-[2.5rem] bg-white border-2 shadow-soft flex items-center justify-center text-muted-foreground/20">
             <Search className="h-12 w-12 animate-pulse" strokeWidth={3} />
           </div>
@@ -557,7 +557,7 @@ export function ProductsTab() {
 
       {/* Editor Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[95vh] overflow-y-auto rounded-[2.5rem] p-10 border-none shadow-strong">
+        <DialogContent className="max-w-xl max-h-[95vh] overflow-y-auto rounded-[2.5rem] p-10 border-none shadow-md">
           <DialogHeader className="space-y-4 mb-8">
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-2">
               {editProduct ? (
@@ -584,9 +584,9 @@ export function ProductsTab() {
               </Label>
               <div
                 className={cn(
-                  "relative aspect-video rounded-4xl border-4 border-dashed transition-all duration-500 flex flex-col items-center justify-center cursor-pointer overflow-hidden group",
+                  "relative aspect-video rounded-4xl border-4 border-dashed transition-all duration-200 flex flex-col items-center justify-center cursor-pointer overflow-hidden group",
                   isDragging
-                    ? "border-primary bg-primary/10 scale-[1.02] shadow-strong"
+                    ? "border-primary bg-primary/10 scale-[1.02] shadow-md"
                     : "border-accent/40 bg-accent/10 hover:border-primary/40 hover:bg-accent/20 shadow-soft",
                 )}
                 onClick={() => fileInputRef.current?.click()}
@@ -603,7 +603,7 @@ export function ProductsTab() {
                           : getOptimizedImageUrl(imagePreview, 800)
                       }
                       alt="Preview"
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
                       <div className="bg-white p-4 rounded-full shadow-xl">
@@ -613,7 +613,7 @@ export function ProductsTab() {
                     <Button
                       size="icon"
                       variant="destructive"
-                      className="absolute top-6 right-6 h-12 w-12 rounded-2xl shadow-strong border-2 border-white/20"
+                      className="absolute top-6 right-6 h-12 w-12 rounded-2xl shadow-md border-2 border-white/20"
                       onClick={(e) => {
                         e.stopPropagation();
                         if (imagePreview.startsWith("blob:"))
@@ -685,7 +685,7 @@ export function ProductsTab() {
                   <SelectTrigger className="h-14 rounded-2xl border-2 bg-accent/10 border-transparent font-bold">
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-2xl border-none shadow-strong">
+                  <SelectContent className="rounded-2xl border-none shadow-md">
                     {categories.map((cat) => (
                       <SelectItem
                         key={cat.id}
@@ -808,7 +808,7 @@ export function ProductsTab() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] bg-destructive text-white hover:bg-destructive/90 shadow-strong shadow-destructive/20"
+              className="h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] bg-destructive text-white hover:bg-destructive/90 shadow-md shadow-destructive/20"
             >
               CONFIRMAR ELIMINACIÓN
             </AlertDialogAction>
@@ -839,7 +839,7 @@ function InventoryProductImage({ product }: { product: ProductWithCategory }) {
     <img
       src={getOptimizedImageUrl(product.image_url, 400)}
       alt={product.name}
-      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+      className="w-full h-full object-cover transition-all duration-300"
       onError={() => setError(true)}
     />
   );
@@ -877,22 +877,22 @@ function SortableProductCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "pos-card group flex flex-col h-full border-4 transition-all duration-700 relative overflow-hidden",
+        "pos-card group flex flex-col h-full border-4 transition-all duration-300 relative overflow-hidden",
         isDragging
-          ? "shadow-2xl scale-105 z-50 border-primary bg-white ring-8 ring-primary/5"
-          : "shadow-strong hover:shadow-2xl hover:scale-[1.03] border-white bg-white/60 hover:bg-white hover:border-primary/20",
+          ? "shadow-lg border-primary bg-white ring-4 ring-primary/5"
+          : "shadow-md border-white bg-white/60",
         !product.available && "opacity-60 grayscale-[0.4]",
       )}
     >
       {/* Product Image Section */}
-      <div className="aspect-4/3 rounded-2xl lg:rounded-[2.5rem] bg-accent/10 m-2 lg:m-3 overflow-hidden relative border-2 lg:border-4 border-white shadow-soft group-hover:shadow-strong transition-all duration-700">
+      <div className="aspect-4/3 rounded-2xl bg-accent/10 m-2 overflow-hidden relative border-2 border-white transition-all duration-300">
         <InventoryProductImage product={product} />
 
         {/* Desktop Drag Handle (Hidden on mobile) */}
         <div
           {...attributes}
           {...listeners}
-          className="absolute top-3 left-3 z-30 h-12 w-12 rounded-xl bg-white/90 backdrop-blur-md shadow-lg border-2 border-accent/10 items-center justify-center cursor-grab active:cursor-grabbing hidden lg:flex opacity-0 group-hover:opacity-100 transition-all duration-500 hover:scale-110 hover:bg-primary hover:text-white group/drag"
+          className="absolute top-3 left-3 z-30 h-12 w-12 rounded-xl bg-white shadow-sm border-2 border-accent/10 items-center justify-center cursor-grab active:cursor-grabbing hidden lg:flex opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-primary hover:text-white group/drag"
         >
           <GripHorizontal
             className="h-6 w-6 text-primary group-hover/drag:text-white"
@@ -907,13 +907,13 @@ function SortableProductCard({
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-11 w-11 rounded-2xl bg-white/90 backdrop-blur-md shadow-lg border-2 border-white text-foreground active:scale-95 transition-all"
+                className="h-11 w-11 rounded-2xl bg-white/95 shadow-md border-2 border-white text-foreground active:scale-95 transition-all"
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreVertical className="h-6 w-6" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 p-2 rounded-3xl border-4 border-white shadow-strong backdrop-blur-xl bg-white/95">
+            <DropdownMenuContent align="end" className="w-56 p-2 rounded-3xl border-4 border-white shadow-md backdrop-blur-xl bg-white/95">
               <DropdownMenuItem
                 className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 focus:bg-primary focus:text-white transition-colors"
                 onClick={(e) => {
@@ -950,7 +950,7 @@ function SortableProductCard({
         </div>
 
         {/* Desktop Action Buttons Overlay */}
-        <div className="absolute inset-x-3 bottom-3 hidden lg:flex gap-2 translate-y-20 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700 z-30">
+        <div className="absolute inset-x-3 bottom-3 hidden lg:flex gap-2 translate-y-20 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 z-30">
           <Button
             size="sm"
             className="flex-1 h-12 rounded-xl font-black text-[9px] tracking-[0.2em] shadow-xl bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
@@ -990,7 +990,7 @@ function SortableProductCard({
         </div>
 
         {/* Gradient Overlay for bottom text readability */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
       </div>
 
       {/* Content Info */}
@@ -1014,7 +1014,7 @@ function SortableProductCard({
           )}
         </div>
 
-        <h3 className="font-black text-base lg:text-2xl tracking-tighter text-foreground group-hover:text-primary transition-colors duration-500 leading-[1.1] min-h-[2.2em]">
+        <h3 className="font-black text-base lg:text-2xl tracking-tighter text-foreground group-hover:text-primary transition-colors duration-200 leading-[1.1] min-h-[2.2em]">
           {product.name}
         </h3>
 
@@ -1023,7 +1023,7 @@ function SortableProductCard({
             <p className="text-[8px] lg:text-[9px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] mb-0.5 lg:mb-1">
               VALOR UNITARIO
             </p>
-            <p className="font-black text-xl lg:text-4xl text-primary tracking-tighter group-hover:scale-110 transition-transform origin-left duration-700">
+            <p className="font-black text-xl lg:text-4xl text-primary tracking-tighter group-hover:scale-110 transition-transform origin-left duration-300">
               {formatPrice(product.price)}
             </p>
           </div>
