@@ -60,9 +60,9 @@ export default function Inventario() {
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="rounded-xl lg:rounded-2xl px-6 lg:px-12 py-3 lg:py-5 font-black uppercase tracking-[0.2em] text-[9px] lg:text-[10px] transition-all duration-500 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-strong data-[state=active]:scale-105 flex items-center gap-2 lg:gap-4 group/tab shrink-0"
+                  className="rounded-xl lg:rounded-2xl px-4 lg:px-12 py-2 lg:py-5 font-black uppercase tracking-[0.2em] text-[8px] lg:text-[10px] transition-all duration-500 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-strong data-[state=active]:scale-105 flex items-center gap-2 lg:gap-4 group/tab shrink-0"
                 >
-                  <tab.icon className="h-4 w-4 lg:h-5 lg:w-5 transition-transform group-hover/tab:rotate-12" />
+                  <tab.icon className="h-3.5 w-3.5 lg:h-5 lg:w-5 transition-transform group-hover/tab:rotate-12" />
                   {tab.label}
                 </TabsTrigger>
               ))}

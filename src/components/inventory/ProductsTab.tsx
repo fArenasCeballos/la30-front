@@ -439,8 +439,8 @@ export function ProductsTab() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar en el catálogo maestro..."
-            className="pl-16 h-20 rounded-[2.5rem] border-4 border-white shadow-md focus-visible:ring-primary/20 bg-white/60 backdrop-blur-xl transition-all text-xl font-bold placeholder:text-muted-foreground/30 focus-visible:border-primary/40 focus-visible:scale-[1.02]"
+            placeholder="Buscar en el catálogo..."
+            className="pl-14 h-14 lg:h-20 rounded-2xl lg:rounded-[2.5rem] border-4 border-white shadow-md focus-visible:ring-primary/20 bg-white/60 backdrop-blur-xl transition-all text-base lg:text-xl font-bold placeholder:text-muted-foreground/30 focus-visible:border-primary/40 focus-visible:scale-[1.02]"
           />
         </div>
 
@@ -463,10 +463,10 @@ export function ProductsTab() {
           </div>
           <Button
             onClick={openNew}
-            className="h-20 px-12 rounded-[2.5rem] font-black text-sm tracking-widest shadow-md shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-4 border-white/20"
+            className="h-14 lg:h-20 px-6 lg:px-12 rounded-2xl lg:rounded-[2.5rem] font-black text-[10px] lg:text-sm tracking-widest shadow-md shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-4 border-white/20 w-full lg:w-auto"
           >
             <Plus
-              className="h-7 w-7 mr-4 group-hover:rotate-90 transition-transform duration-300"
+              className="h-5 w-5 lg:h-7 lg:w-7 mr-2 lg:mr-4 group-hover:rotate-90 transition-transform duration-300"
               strokeWidth={3}
             />
             AGREGAR PRODUCTO
@@ -487,9 +487,9 @@ export function ProductsTab() {
             variant={categoryFilter === "all" ? "default" : "outline"}
             onClick={() => setCategoryFilter("all")}
             className={cn(
-              "h-16 px-12 rounded-3xl font-black text-[11px] uppercase tracking-widest transition-all shrink-0 border-4",
+              "h-12 lg:h-16 px-6 lg:px-12 rounded-2xl lg:rounded-3xl font-black text-[9px] lg:text-[11px] uppercase tracking-widest transition-all shrink-0 border-4",
               categoryFilter === "all"
-                ? "shadow-md shadow-primary/20 scale-110 z-10 border-white bg-primary text-white"
+                ? "shadow-md shadow-primary/20 scale-105 lg:scale-110 z-10 border-white bg-primary text-white"
                 : "bg-white/60 border-white shadow-soft hover:border-primary/40 text-muted-foreground/40 hover:text-primary hover:bg-white",
             )}
           >
@@ -501,13 +501,13 @@ export function ProductsTab() {
               variant={categoryFilter === cat.id ? "default" : "outline"}
               onClick={() => setCategoryFilter(cat.id)}
               className={cn(
-                "h-16 px-12 rounded-3xl font-black text-[11px] uppercase tracking-widest transition-all shrink-0 border-4 group/cat",
+                "h-12 lg:h-16 px-6 lg:px-12 rounded-2xl lg:rounded-3xl font-black text-[9px] lg:text-[11px] uppercase tracking-widest transition-all shrink-0 border-4 group/cat",
                 categoryFilter === cat.id
-                  ? "shadow-md shadow-primary/20 scale-110 z-10 border-white bg-primary text-white"
+                  ? "shadow-md shadow-primary/20 scale-105 lg:scale-110 z-10 border-white bg-primary text-white"
                   : "bg-white/60 border-white shadow-soft hover:border-primary/40 text-muted-foreground/40 hover:text-primary hover:bg-white",
               )}
             >
-              <span className="text-2xl mr-4 scale-110 group-hover/cat:scale-125 transition-transform">
+              <span className="text-lg lg:text-2xl mr-2 lg:mr-4 scale-110 group-hover/cat:scale-125 transition-transform">
                 {cat.icon}
               </span>
               {cat.label}
