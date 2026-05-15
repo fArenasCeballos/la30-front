@@ -728,18 +728,18 @@ export default function Reporteria() {
                       </div>
                     </div>
 
-                    <div className="space-y-1 lg:space-y-3">
+                    <div className="space-y-2 lg:space-y-3">
                       <div className="flex justify-between items-center px-0.5 lg:px-1">
-                        <span className="lg:hidden text-[7px] font-black text-muted-foreground/40">
+                        <span className="lg:hidden text-[8px] font-black text-muted-foreground/40">
                           {paymentSummary.total > 0 ? Math.round((p.amount / paymentSummary.total) * 100) : 0}%
                         </span>
                         <div className="h-1 lg:h-1.5 w-1 lg:w-1.5 rounded-full bg-accent/20 hidden lg:block" />
                         <div className="h-1 lg:h-1.5 w-1 lg:w-1.5 rounded-full bg-accent/20" />
                       </div>
-                      <div className="w-full h-1.5 lg:h-4 bg-accent/5 rounded-full overflow-hidden border border-white p-0.5 shadow-inner">
+                      <div className="w-full h-2.5 lg:h-4 bg-accent/10 rounded-full overflow-hidden border border-white shadow-inner">
                         <div
                           className={cn(
-                            "h-full rounded-full transition-all duration-1000 ease-out shadow-lg",
+                            "h-full rounded-full transition-all duration-1000 ease-out shadow-sm",
                             p.color === "emerald"
                               ? "bg-emerald-500"
                               : p.color === "blue"

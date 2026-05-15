@@ -11,7 +11,6 @@ import {
   CheckCircle,
   TrendingUp,
   BarChart3,
-  Loader2,
   Banknote,
   CreditCard,
   Smartphone,
@@ -69,10 +68,11 @@ export default function Dashboard() {
         nequi_total: number;
       };
     },
-    refetchInterval: 30000, // Cada 30 seg
+    refetchInterval: 30000,
+    staleTime: 1000 * 60 * 5, // Mantener en caché 5 min para cambios rápidos de local
   });
 
-  const { data: productStats = [] } = useQuery({
+  const { data: productStats = [], isLoading: loadingProducts } = useQuery({
     queryKey: ["top-products", storeId, getShiftStart().toISOString()],
     queryFn: async () => {
       const shiftStart = getShiftStart().toISOString();
@@ -84,11 +84,12 @@ export default function Dashboard() {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 30000, // Sincronizar con el resto de los stats
+    refetchInterval: 30000,
+    staleTime: 1000 * 60 * 5,
   });
 
   // Query ligera para actividad reciente (solo los del turno actual)
-  const { data: recentOrders = [] } = useQuery({
+  const { data: recentOrders = [], isLoading: loadingRecent } = useQuery({
     queryKey: ["recent-activity", storeId],
     queryFn: async () => {
       const shiftStart = getShiftStart().toISOString();
@@ -104,6 +105,7 @@ export default function Dashboard() {
       return data;
     },
     refetchInterval: 10000,
+    staleTime: 1000 * 30,
   });
 
   const statusDistribution = useMemo(() => {
@@ -118,64 +120,63 @@ export default function Dashboard() {
   const statCards = [
     {
       label: "Ventas del día",
-      value: formatPrice(stats?.total_revenue ?? 0),
+      value: stats ? formatPrice(stats.total_revenue) : "---",
       icon: DollarSign,
       color: "text-green-500",
+      loading: loadingStats,
     },
     {
       label: "Pedidos activos",
-      value: stats?.active_orders ?? 0,
+      value: stats ? stats.active_orders : "---",
       icon: Clock,
       color: "text-orange-500",
+      loading: loadingStats,
     },
     {
       label: "Completados",
-      value: stats?.completed_today ?? 0,
+      value: stats ? stats.completed_today : "---",
       icon: CheckCircle,
       color: "text-green-500",
+      loading: loadingStats,
     },
     {
       label: "Ticket promedio",
-      value: formatPrice(stats?.avg_ticket ?? 0),
+      value: stats ? formatPrice(stats.avg_ticket) : "---",
       icon: TrendingUp,
       color: "text-blue-500",
+      loading: loadingStats,
     },
   ];
 
   const paymentCards = [
     {
       label: "Efectivo",
-      value: formatPrice(stats?.cash_total ?? 0),
+      value: stats ? formatPrice(stats.cash_total) : "---",
       icon: Banknote,
       color: "text-emerald-500",
       bgColor: "bg-emerald-500/10",
       borderColor: "border-emerald-500/30",
+      loading: loadingStats,
     },
     {
       label: "Tarjeta",
-      value: formatPrice(stats?.card_total ?? 0),
+      value: stats ? formatPrice(stats.card_total) : "---",
       icon: CreditCard,
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",
       borderColor: "border-blue-500/30",
+      loading: loadingStats,
     },
     {
       label: "Nequi / Transferencia",
-      value: formatPrice(stats?.nequi_total ?? 0),
+      value: stats ? formatPrice(stats.nequi_total) : "---",
       icon: Smartphone,
       color: "text-purple-500",
       bgColor: "bg-purple-500/10",
       borderColor: "border-purple-500/30",
+      loading: loadingStats,
     },
   ];
-
-  if (loadingStats) {
-    return (
-      <div className="h-[80vh] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <ErrorBoundary>
@@ -232,9 +233,13 @@ export default function Dashboard() {
                   <p className="text-[8px] lg:text-sm font-bold text-muted-foreground uppercase tracking-widest truncate">
                     {card.label}
                   </p>
-                  <p className="text-sm lg:text-3xl font-black mt-0.5 lg:mt-1 tracking-tight truncate">
-                    {card.value}
-                  </p>
+                  {card.loading ? (
+                    <div className="h-6 w-24 bg-accent/30 animate-pulse rounded-md mt-1" />
+                  ) : (
+                    <p className="text-sm lg:text-3xl font-black mt-0.5 lg:mt-1 tracking-tight truncate">
+                      {card.value}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -267,11 +272,15 @@ export default function Dashboard() {
                     <p className="text-[7px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest sm:tracking-[0.2em] truncate">
                       {card.label}
                     </p>
-                    <p
-                      className={`text-[10px] sm:text-2xl font-black ${card.color} truncate`}
-                    >
-                      {card.value}
-                    </p>
+                    {card.loading ? (
+                      <div className="h-5 w-20 bg-accent/20 animate-pulse rounded-md mt-1" />
+                    ) : (
+                      <p
+                        className={`text-[10px] sm:text-2xl font-black ${card.color} truncate`}
+                      >
+                        {card.value}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -299,7 +308,17 @@ export default function Dashboard() {
               </div>
 
               <div className="h-[350px] w-full">
-                {productStats.length > 0 ? (
+                {loadingProducts ? (
+                  <div className="h-full w-full space-y-4 flex flex-col justify-center">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div
+                        key={i}
+                        className="h-8 bg-accent/20 animate-pulse rounded-xl w-full"
+                        style={{ opacity: 1 - i * 0.15 }}
+                      />
+                    ))}
+                  </div>
+                ) : productStats.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={productStats}
@@ -364,7 +383,11 @@ export default function Dashboard() {
                   Distribución de Estados
                 </h3>
                 <div className="h-[200px] relative">
-                  {statusDistribution.some((s) => s.value > 0) ? (
+                  {loadingStats ? (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-32 w-32 rounded-full border-8 border-accent/20 border-t-primary animate-spin" />
+                    </div>
+                  ) : statusDistribution.some((s) => s.value > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -444,13 +467,27 @@ export default function Dashboard() {
               </div>
 
               <div className="flex-1 space-y-6 overflow-y-auto pr-2 no-scrollbar">
-                {recentOrders.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground opacity-30 space-y-4">
-                    <Clock className="h-12 w-12" />
-                    <p className="text-sm font-bold uppercase tracking-widest">
-                      Sin actividad
-                    </p>
+                {loadingRecent ? (
+                  <div className="space-y-6">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="flex gap-4 animate-pulse">
+                        <div className="w-12 h-12 rounded-2xl bg-accent/30" />
+                        <div className="flex-1 space-y-2 py-1">
+                          <div className="h-3 bg-accent/30 rounded w-1/2" />
+                          <div className="h-2 bg-accent/20 rounded w-3/4" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                ) : (
+                  recentOrders.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground opacity-30 space-y-4">
+                      <Clock className="h-12 w-12" />
+                      <p className="text-sm font-bold uppercase tracking-widest">
+                        Sin actividad
+                      </p>
+                    </div>
+                  )
                 )}
                 {recentOrders.map((order: OrderRow, idx: number) => (
                   <div
