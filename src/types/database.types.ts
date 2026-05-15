@@ -202,23 +202,28 @@ export type Database = {
           sort_order: number;
           id: string;
           option_id: string;
-          name: string;
           price_adjustment: number;
           is_active: boolean;
           created_at: string;
         };
         Insert: {
           id?: string;
-          option_id?: string | null;
-          name: string;
+          option_id: string;
+          label: string;
+          value: string;
+          icon?: string | null;
+          sort_order?: number;
           price_adjustment?: number;
           is_active?: boolean;
           created_at?: string;
         };
         Update: {
           id?: string;
-          option_id?: string | null;
-          name?: string;
+          option_id?: string;
+          label?: string;
+          value?: string;
+          icon?: string | null;
+          sort_order?: number;
           price_adjustment?: number;
           is_active?: boolean;
           created_at?: string;

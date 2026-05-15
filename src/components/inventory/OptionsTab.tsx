@@ -293,7 +293,6 @@ export function OptionsTab() {
       }
       const choiceData = {
         option_id: editChoice.optionId,
-        name: choiceForm.label,
         value: choiceForm.value.toLowerCase().replace(/\s+/g, "_"),
         label: choiceForm.label,
         icon: choiceForm.icon || null,
