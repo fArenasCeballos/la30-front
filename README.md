@@ -11,6 +11,18 @@ Currently, two official plugins are available:
 
 The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
+## Guía de Desarrollo (pnpm)
+
+Este proyecto ha sido migrado a **pnpm** para un manejo de dependencias más rápido y eficiente.
+
+### Comandos principales
+
+- **Instalar dependencias**: `pnpm install`
+- **Iniciar servidor de desarrollo**: `pnpm dev`
+- **Generar build de producción**: `pnpm build`
+- **Previsualizar producción**: `pnpm preview`
+- **Linter**: `pnpm lint`
+
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
