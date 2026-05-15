@@ -31,6 +31,8 @@ import {
 import { getShiftStart } from "@/lib/shiftUtils";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useStore } from "@/context/StoreContext";
+
+type RecentOrder = OrderRow & { profiles: { name: string } | null };
 import { Button } from "@/components/ui/button";
 
 const COLORS = [
@@ -95,7 +97,7 @@ export default function Dashboard() {
       const shiftStart = getShiftStart().toISOString();
       let query = supabase
         .from("orders")
-        .select("*")
+        .select("*, profiles(name)")
         .gte("created_at", shiftStart)
         .order("created_at", { ascending: false })
         .limit(8);
@@ -489,7 +491,7 @@ export default function Dashboard() {
                     </div>
                   )
                 )}
-                {recentOrders.map((order: OrderRow, idx: number) => (
+                {recentOrders.map((order: RecentOrder, idx: number) => (
                   <div
                     key={order.id}
                     className="flex items-center gap-4 group animate-in fade-in slide-in-from-right-4"
@@ -507,7 +509,7 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-sm truncate">
-                          Pedido #{order.id.slice(0, 4)}
+                          {order.profiles?.name || "Kiosko"} {order.locator ? `• LOC ${order.locator}` : ""}
                         </span>
                         <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full">
                           {formatPrice(order.total)}

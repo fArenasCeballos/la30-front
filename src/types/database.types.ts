@@ -526,7 +526,12 @@ export type Database = {
         Returns: undefined;
       };
       create_order: {
-        Args: { p_locator: string; p_items: Json; p_notes: string | null; p_store_id?: string | null };
+        Args: {
+          p_locator: string;
+          p_items: Json;
+          p_notes: string | null;
+          p_store_id?: string | null;
+        };
         Returns: Json;
       };
       update_order: {
