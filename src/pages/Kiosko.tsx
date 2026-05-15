@@ -376,12 +376,12 @@ export default function Kiosko() {
   if (step === "locator") {
     return (
       <ErrorBoundary>
-        <div className="section-container flex flex-col items-center justify-center min-h-[85vh] animate-in fade-in duration-700">
+        <div className="section-container flex flex-col items-center justify-center min-h-[85vh] animate-in fade-in duration-300">
           <div className="w-full max-w-xl space-y-12 text-center">
             <div className="relative inline-block">
               <div className="absolute inset-0 bg-primary/20 blur-[100px] rounded-full animate-pulse" />
               <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-[2.5rem] bg-white border shadow-strong flex items-center justify-center mx-auto group">
-                <ShoppingCart className="h-10 w-10 sm:h-14 sm:w-14 text-primary group-hover:scale-110 transition-transform duration-500" />
+                <ShoppingCart className="h-10 w-10 sm:h-14 sm:w-14 text-primary group-hover:scale-110 transition-transform duration-200" />
               </div>
             </div>
 
@@ -432,7 +432,7 @@ export default function Kiosko() {
   if (step === "confirm") {
     return (
       <ErrorBoundary>
-        <div className="section-container max-w-4xl mx-auto py-6 sm:py-10 space-y-8 sm:space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="section-container max-w-4xl mx-auto py-6 sm:py-10 space-y-8 sm:space-y-10 animate-in fade-in duration-300">
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
@@ -546,7 +546,7 @@ export default function Kiosko() {
             <div className="lg:col-span-2">
               <div className="sticky top-24 space-y-6">
                 <div className="pos-card p-8 bg-primary text-white shadow-strong shadow-primary/20 overflow-hidden relative group">
-                  <div className="absolute -right-10 -top-10 h-40 w-40 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
+                  <div className="absolute -right-10 -top-10 h-40 w-40 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-300" />
                   <div className="relative z-10 space-y-6">
                     <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
                       <CheckCircle className="h-7 w-7 text-white" />
@@ -729,42 +729,42 @@ export default function Kiosko() {
                         key={product.id}
                         onClick={() => handleProductClick(product)}
                         className={cn(
-                          "pos-card group p-3 lg:p-5 text-left border-2 transition-all duration-300 relative cursor-pointer",
+                          "pos-card group p-3 lg:p-4 text-left border-2 transition-all relative cursor-pointer flex flex-col",
                           inCartCount > 0
-                            ? "border-primary bg-primary/2 shadow-strong"
-                            : "border-transparent hover:border-primary/20 hover:shadow-medium bg-white",
+                            ? "border-primary bg-primary/2 shadow-medium"
+                            : "border-transparent hover:border-primary/20 hover:shadow-soft bg-white",
                         )}
                       >
                         {/* Count Badge */}
                         {inCartCount > 0 && (
-                          <div className="absolute -top-3 -right-3 h-10 w-10 rounded-2xl bg-primary text-white border-4 border-white shadow-strong flex items-center justify-center font-black z-20 animate-in zoom-in">
+                          <div className="absolute -top-2 -right-2 h-9 w-9 rounded-2xl bg-primary text-white border-2 border-white shadow-strong flex items-center justify-center font-black z-20 animate-in zoom-in duration-200">
                             {inCartCount}
                           </div>
                         )}
 
-                        <div className="aspect-square rounded-3xl bg-accent/30 mb-5 overflow-hidden flex items-center justify-center relative group-hover:scale-[1.02] transition-transform">
-                          <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="aspect-square rounded-2xl bg-accent/30 mb-4 overflow-hidden flex items-center justify-center relative">
                           <ProductImage product={product} />
-                          <div className="absolute bottom-4 left-4 right-4 translate-y-10 group-hover:translate-y-0 transition-transform">
-                            <Button
-                              size="sm"
-                              className="w-full h-10 rounded-xl font-black shadow-strong"
-                            >
-                              AGREGAR
-                            </Button>
-                          </div>
                         </div>
 
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">
+                        <div className="flex-1 space-y-1">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-40">
                             {product.categories?.name}
                           </p>
-                          <h3 className="font-black text-sm lg:text-base leading-tight group-hover:text-primary transition-colors">
+                          <h3 className="font-black text-xs lg:text-sm leading-tight group-hover:text-primary transition-colors line-clamp-2">
                             {product.name}
                           </h3>
-                          <p className="font-black text-lg text-primary tracking-tight">
+                        </div>
+
+                        <div className="mt-3 pt-3 border-t border-dashed border-accent/50 space-y-3">
+                          <p className="font-black text-base lg:text-lg text-primary tracking-tight">
                             {formatPrice(product.price)}
                           </p>
+                          <Button
+                            size="sm"
+                            className="w-full h-10 rounded-xl font-black shadow-soft bg-primary text-white hover:bg-primary/90 transition-all active:scale-95"
+                          >
+                            AGREGAR
+                          </Button>
                         </div>
                       </div>
                     );
@@ -784,7 +784,7 @@ export default function Kiosko() {
         </div>
 
         {/* Desktop Cart Sidebar */}
-        <aside className="hidden lg:flex w-[400px] bg-accent/20 flex-col overflow-hidden animate-in slide-in-from-right duration-500">
+        <aside className="hidden lg:flex w-[400px] bg-accent/20 flex-col overflow-hidden">
           <div className="p-8 border-b flex items-center justify-between bg-white/50 backdrop-blur-md">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
