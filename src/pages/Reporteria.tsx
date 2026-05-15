@@ -642,7 +642,7 @@ export default function Reporteria() {
                   MIX DE PAGOS
                 </h3>
               </div>
-              <div className="space-y-8">
+              <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 lg:gap-8">
                 {[
                   {
                     label: "Efectivo",
@@ -665,7 +665,7 @@ export default function Reporteria() {
                 ].map((p) => (
                   <div
                     key={p.label}
-                    className="pos-card p-10 group border-2 relative overflow-hidden transition-all duration-500 hover:scale-[1.02]"
+                    className="pos-card p-2.5 lg:p-10 group border-2 relative overflow-hidden transition-all duration-500 hover:scale-[1.02]"
                   >
                     <div
                       className={cn(
@@ -680,11 +680,11 @@ export default function Reporteria() {
                       )}
                     />
 
-                    <div className="flex items-center justify-between mb-8">
-                      <div className="flex items-center gap-6">
+                    <div className="flex flex-col lg:flex-row items-center justify-between gap-2 lg:gap-6 mb-2 lg:mb-8">
+                      <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-6 text-center lg:text-left">
                         <div
                           className={cn(
-                            "h-16 w-16 rounded-2xl flex items-center justify-center transition-all group-hover:rotate-12 duration-500 shadow-soft",
+                            "h-8 w-8 lg:h-16 lg:w-16 rounded-lg lg:rounded-2xl flex items-center justify-center transition-all group-hover:rotate-12 duration-500 shadow-soft shrink-0",
                             p.color === "emerald"
                               ? "bg-emerald-500/10 text-emerald-600"
                               : p.color === "blue"
@@ -694,15 +694,15 @@ export default function Reporteria() {
                                   : "bg-primary/10 text-primary",
                           )}
                         >
-                          <p.icon className="h-8 w-8" strokeWidth={2.5} />
+                          <p.icon className="h-4 w-4 lg:h-8 lg:w-8" strokeWidth={2.5} />
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none">
+                        <div className="space-y-0.5 lg:space-y-1 min-w-0">
+                          <p className="text-[7px] lg:text-[10px] font-black uppercase tracking-widest lg:tracking-[0.2em] text-muted-foreground/40 leading-none truncate">
                             {p.label}
                           </p>
                           <p
                             className={cn(
-                              "text-3xl font-black tracking-tighter",
+                              "text-[9px] lg:text-3xl font-black tracking-tighter truncate",
                               p.color === "emerald"
                                 ? "text-emerald-600"
                                 : p.color === "blue"
@@ -716,7 +716,7 @@ export default function Reporteria() {
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right hidden lg:block">
                         <p className="text-2xl font-black text-muted-foreground/20 italic">
                           {paymentSummary.total > 0
                             ? Math.round(
@@ -728,12 +728,15 @@ export default function Reporteria() {
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center px-1">
-                        <div className="h-1.5 w-1.5 rounded-full bg-accent/20" />
-                        <div className="h-1.5 w-1.5 rounded-full bg-accent/20" />
+                    <div className="space-y-1 lg:space-y-3">
+                      <div className="flex justify-between items-center px-0.5 lg:px-1">
+                        <span className="lg:hidden text-[7px] font-black text-muted-foreground/40">
+                          {paymentSummary.total > 0 ? Math.round((p.amount / paymentSummary.total) * 100) : 0}%
+                        </span>
+                        <div className="h-1 lg:h-1.5 w-1 lg:w-1.5 rounded-full bg-accent/20 hidden lg:block" />
+                        <div className="h-1 lg:h-1.5 w-1 lg:w-1.5 rounded-full bg-accent/20" />
                       </div>
-                      <div className="w-full h-4 bg-accent/5 rounded-full overflow-hidden border border-white p-0.5 shadow-inner">
+                      <div className="w-full h-1.5 lg:h-4 bg-accent/5 rounded-full overflow-hidden border border-white p-0.5 shadow-inner">
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-1000 ease-out shadow-lg",
