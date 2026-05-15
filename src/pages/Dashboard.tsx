@@ -509,7 +509,7 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-sm truncate">
-                          {order.profiles?.name || "Kiosko"} {order.locator ? `• LOC ${order.locator}` : ""}
+                          {order.profiles?.name || "Kiosko"}
                         </span>
                         <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full">
                           {formatPrice(order.total)}
