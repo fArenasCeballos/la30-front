@@ -40,7 +40,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const loadedStores = data || [];
+      const loadedStores = (data || []).map((s: Store) => ({
+        ...s,
+        name: s.name === "Carrito Móvil" ? "Tráiler" : s.name,
+      }));
       setStores(loadedStores);
 
       // Resolve active store
