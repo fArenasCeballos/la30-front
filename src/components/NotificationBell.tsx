@@ -11,24 +11,28 @@ function formatNotifTime(dateStr: string | undefined | null): string {
   if (!dateStr) return "--";
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return "--";
-  return date.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString("es-CO", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export interface NotificationBellProps {
   ecosystem?: "restaurant" | "kiosk";
 }
 
-export function NotificationBell({ ecosystem = "restaurant" }: NotificationBellProps) {
-  const { notifications, unreadCount, markAllRead, clearNotifications } =
-    useNotifications();
+export function NotificationBell({
+  ecosystem = "restaurant",
+}: NotificationBellProps) {
+  const { notifications, markAllRead, clearNotifications } = useNotifications();
 
   const filteredNotifications = notifications.filter((n) => {
     const text = (n.title + " " + n.message).toLowerCase();
-    
+
     // Heurística de filtrado por ecosistema
-    const isKioskRelated = 
-      text.includes("tu pedido") || 
-      text.includes("está listo") || 
+    const isKioskRelated =
+      text.includes("tu pedido") ||
+      text.includes("está listo") ||
       text.includes("en preparación") ||
       text.includes("entregado") ||
       text.includes("cancelado");
@@ -36,20 +40,22 @@ export function NotificationBell({ ecosystem = "restaurant" }: NotificationBellP
     if (ecosystem === "kiosk") {
       return isKioskRelated;
     } else {
-      // Para el restaurante, mostramos todo lo que NO sea exclusivo de cliente 
+      // Para el restaurante, mostramos todo lo que NO sea exclusivo de cliente
       // o que sea explícitamente de gestión (nueva orden, stock, etc)
-      const isRestaurantRelated = 
-        text.includes("nueva orden") || 
-        text.includes("pago") || 
-        text.includes("stock") || 
-        text.includes("usuario") || 
+      const isRestaurantRelated =
+        text.includes("nueva orden") ||
+        text.includes("pago") ||
+        text.includes("stock") ||
+        text.includes("usuario") ||
         text.includes("cierre");
-        
+
       return isRestaurantRelated || !isKioskRelated;
     }
   });
 
-  const filteredUnreadCount = filteredNotifications.filter(n => !n.read).length;
+  const filteredUnreadCount = filteredNotifications.filter(
+    (n) => !n.read,
+  ).length;
 
   return (
     <Popover>
