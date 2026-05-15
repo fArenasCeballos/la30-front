@@ -1,6 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
-import { Navigate, Outlet, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   LogOut,
@@ -64,6 +64,8 @@ export function AppLayout() {
   const { user, logout, forceReset, isAuthenticated, loading } = useAuth();
   const { activeStore, isAdmin, loading: storeLoading } = useStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const ecosystem = location.pathname.startsWith("/kiosko") ? "kiosk" : "restaurant";
   const [showResetDialog, setShowResetDialog] = useState(false);
 
   // Guard: Admin without store should go to selector
@@ -196,7 +198,7 @@ export function AppLayout() {
 
         {/* User & Actions */}
         <div className="flex items-center gap-1.5 lg:gap-2 2xl:gap-4">
-          <NotificationBell />
+          <NotificationBell ecosystem={ecosystem} />
 
           <div className="h-8 w-px bg-accent/60 mx-1 hidden lg:block" />
 
