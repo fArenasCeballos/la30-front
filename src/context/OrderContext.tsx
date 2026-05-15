@@ -138,14 +138,16 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     enabled: !!user?.id,
   });
 
-  // Query quirúrgica para Cocina/Caja (solo pedidos activos)
+  // Query quirúrgica para Cocina/Caja (solo pedidos activos del turno actual)
   const { data: activeOrders = [], isLoading: loadingActive } = useQuery({
     queryKey: ["active-orders", user?.id, storeId],
     queryFn: async () => {
+      const shiftStart = getShiftStart().toISOString();
       let query = supabase
         .from("orders")
         .select("*, order_items(*, products(*, categories(*))), payments(*)")
         .in("status", ["pendiente", "confirmado", "en_preparacion", "listo"])
+        .gte("created_at", shiftStart)
         .order("created_at", { ascending: true });
       if (storeId) query = query.eq("store_id", storeId);
       const { data, error } = await query;
