@@ -297,7 +297,7 @@ export default function Caja() {
             value="pendientes"
             className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
           >
-            <div className="grid gap-3 lg:gap-4 sm:grid-cols-2 xl:grid-cols-3 items-start">
+            <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
               {pendientes.length === 0 ? (
                 <div className="col-span-full py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
                   <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
@@ -363,7 +363,7 @@ export default function Caja() {
             value="confirmados"
             className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
           >
-            <div className="grid gap-3 lg:gap-4 sm:grid-cols-2 xl:grid-cols-3 items-start">
+            <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
               {confirmados.length === 0 ? (
                 <div className="col-span-full py-10 lg:py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
                   <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
@@ -408,7 +408,7 @@ export default function Caja() {
             value="cocina"
             className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
           >
-            <div className="grid gap-3 lg:gap-4 sm:grid-cols-2 xl:grid-cols-3 items-start">
+            <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
               {enCocina.length === 0 ? (
                 <div className="col-span-full py-10 lg:py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
                   <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
@@ -480,7 +480,7 @@ export default function Caja() {
             value="listos"
             className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
           >
-            <div className="grid gap-3 lg:gap-4 sm:grid-cols-2 xl:grid-cols-3 items-start">
+            <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
               {listos.length === 0 ? (
                 <div className="col-span-full py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
                   <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">

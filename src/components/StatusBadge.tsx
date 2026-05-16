@@ -35,7 +35,13 @@ const statusConfig: Record<
   },
 };
 
-export function StatusBadge({ status }: { status: OrderStatus }) {
+export function StatusBadge({
+  status,
+  className,
+}: {
+  status: OrderStatus;
+  className?: string;
+}) {
   const config = statusConfig[status];
   return (
     <Badge
@@ -43,6 +49,7 @@ export function StatusBadge({ status }: { status: OrderStatus }) {
       className={cn(
         "font-black text-[10px] uppercase tracking-widest px-3 py-1 border-2 rounded-lg shadow-inner",
         config.className,
+        className,
       )}
     >
       {config.label}
