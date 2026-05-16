@@ -427,70 +427,63 @@ export function ProductsTab() {
   }
 
   return (
-    <div className="space-y-16 animate-in fade-in duration-300 fill-mode-both">
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-10">
-        <div className="relative flex-1 max-w-3xl group">
-          <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-            <Search
-              className="h-7 w-7 text-muted-foreground/40 group-focus-within:text-primary transition-all duration-200 group-focus-within:scale-110"
-              strokeWidth={2.5}
-            />
-          </div>
+    <div className="space-y-6 animate-in fade-in duration-300 fill-mode-both relative">
+      <div className="sticky top-[112px] lg:top-[128px] 2xl:top-[160px] z-40 bg-slate-50/95 backdrop-blur-md py-4 -mx-2 px-2 flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all duration-300">
+        <div className="relative flex-1 max-w-xl group">
+          <Search
+            className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/30 group-focus-within:text-primary transition-all duration-300"
+            strokeWidth={3}
+          />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar en el catálogo..."
-            className="pl-14 h-14 lg:h-20 rounded-2xl lg:rounded-[2.5rem] border-4 border-white shadow-md focus-visible:ring-primary/20 bg-white/60 backdrop-blur-xl transition-all text-base lg:text-xl font-bold placeholder:text-muted-foreground/30 focus-visible:border-primary/40 focus-visible:scale-[1.02]"
+            className="pl-10 h-11 rounded-xl border-2 focus-visible:ring-primary/20 bg-white shadow-soft transition-all font-bold border-transparent focus:border-primary/30"
           />
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="bg-white/60 backdrop-blur-xl px-8 py-4 rounded-4xl border-4 border-white shadow-md hidden md:flex items-center gap-5 group/stats hover:scale-105 transition-all duration-200">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover/stats:rotate-12 transition-transform">
-              <Package className="h-6 w-6" strokeWidth={2.5} />
+        <div className="flex items-center gap-3">
+          <div className="bg-white px-4 py-2 rounded-xl border-2 border-accent/10 shadow-soft hidden xl:flex items-center gap-3">
+            <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <Package className="h-4 w-4" strokeWidth={2.5} />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/50 leading-none mb-1.5">
-                CATÁLOGO TOTAL
-              </p>
-              <p className="text-lg font-black text-foreground">
-                {products.length}{" "}
-                <span className="text-primary/40 font-bold ml-1">
-                  Productos
-                </span>
+              <p className="text-[10px] font-black text-foreground">
+                {products.length} Items
               </p>
             </div>
           </div>
+          
           <Button
             onClick={openNew}
-            className="h-14 lg:h-20 px-6 lg:px-12 rounded-2xl lg:rounded-[2.5rem] font-black text-[10px] lg:text-sm tracking-widest shadow-md shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-4 border-white/20 w-full lg:w-auto"
+            className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/90 text-white font-black shadow-strong hover:scale-[1.02] active:scale-[0.98] transition-all group text-xs uppercase tracking-widest"
           >
             <Plus
-              className="h-5 w-5 lg:h-7 lg:w-7 mr-2 lg:mr-4 group-hover:rotate-90 transition-transform duration-300"
+              className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-500"
               strokeWidth={3}
             />
-            AGREGAR PRODUCTO
+            Nuevo Producto
           </Button>
         </div>
       </div>
 
       {/* Premium Category Filter */}
-      <div className="space-y-8">
-        <div className="flex items-center gap-4 px-2">
-          <div className="h-[3px] w-16 bg-primary/30 rounded-full" />
-          <h3 className="text-[11px] font-black uppercase tracking-[0.5em] text-muted-foreground/40">
-            FILTRADO TEMÁTICO
-          </h3>
-        </div>
-        <div className="flex gap-6 overflow-x-auto pb-8 pt-2 no-scrollbar scroll-smooth -mx-4 px-4">
+      <div className="sticky top-[176px] lg:top-[188px] 2xl:top-[220px] z-30 bg-slate-50/95 backdrop-blur-md py-2 -mx-4 px-4 border-y border-slate-200/40 transition-all duration-300">
+        <div className="flex gap-3 overflow-x-auto pb-1 pt-1 no-scrollbar scroll-smooth items-center">
+          <div className="flex items-center gap-3 shrink-0 mr-2">
+            <div className="h-[2px] w-8 bg-primary/30 rounded-full" />
+            <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">
+              Categorías
+            </h3>
+          </div>
           <Button
             variant={categoryFilter === "all" ? "default" : "outline"}
             onClick={() => setCategoryFilter("all")}
             className={cn(
-              "h-12 lg:h-16 px-6 lg:px-12 rounded-2xl lg:rounded-3xl font-black text-[9px] lg:text-[11px] uppercase tracking-widest transition-all shrink-0 border-4",
+              "h-10 px-6 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shrink-0 border-2",
               categoryFilter === "all"
-                ? "shadow-md shadow-primary/20 scale-105 lg:scale-110 z-10 border-white bg-primary text-white"
-                : "bg-white/60 border-white shadow-soft hover:border-primary/40 text-muted-foreground/40 hover:text-primary hover:bg-white",
+                ? "shadow-md shadow-primary/20 z-10 border-white bg-primary text-white"
+                : "bg-white border-white shadow-soft hover:border-primary/40 text-muted-foreground/40 hover:text-primary hover:bg-white",
             )}
           >
             TODOS
@@ -501,13 +494,13 @@ export function ProductsTab() {
               variant={categoryFilter === cat.id ? "default" : "outline"}
               onClick={() => setCategoryFilter(cat.id)}
               className={cn(
-                "h-12 lg:h-16 px-6 lg:px-12 rounded-2xl lg:rounded-3xl font-black text-[9px] lg:text-[11px] uppercase tracking-widest transition-all shrink-0 border-4 group/cat",
+                "h-10 px-6 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shrink-0 border-2 group/cat",
                 categoryFilter === cat.id
-                  ? "shadow-md shadow-primary/20 scale-105 lg:scale-110 z-10 border-white bg-primary text-white"
-                  : "bg-white/60 border-white shadow-soft hover:border-primary/40 text-muted-foreground/40 hover:text-primary hover:bg-white",
+                  ? "shadow-md shadow-primary/20 z-10 border-white bg-primary text-white"
+                  : "bg-white border-white shadow-soft hover:border-primary/40 text-muted-foreground/40 hover:text-primary hover:bg-white",
               )}
             >
-              <span className="text-lg lg:text-2xl mr-2 lg:mr-4 scale-110 group-hover/cat:scale-125 transition-transform">
+              <span className="text-base mr-2 transition-transform group-hover/cat:scale-125">
                 {cat.icon}
               </span>
               {cat.label}
@@ -521,7 +514,7 @@ export function ProductsTab() {
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 lg:gap-6">
           <SortableContext
             items={filtered.map((p) => p.id)}
             strategy={rectSortingStrategy}
@@ -950,7 +943,7 @@ function SortableProductCard({
         </div>
 
         {/* Desktop Action Buttons Overlay */}
-        <div className="absolute inset-x-3 bottom-3 hidden lg:flex gap-2 translate-y-20 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 z-30">
+        <div className="absolute inset-x-2 bottom-2 hidden lg:flex gap-1.5 z-30 transition-all duration-300">
           <Button
             size="sm"
             className="flex-1 h-12 rounded-xl font-black text-[9px] tracking-[0.2em] shadow-xl bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
@@ -990,11 +983,11 @@ function SortableProductCard({
         </div>
 
         {/* Gradient Overlay for bottom text readability */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-80 pointer-events-none" />
       </div>
 
       {/* Content Info */}
-      <div className="flex-1 flex flex-col space-y-2 lg:space-y-5 p-4 lg:p-8 pt-2 relative">
+      <div className="flex-1 flex flex-col space-y-1 lg:space-y-3 p-3 lg:p-5 pt-1 relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 px-3 py-1 bg-primary/5 rounded-full border border-primary/10">
             <span className="text-[10px] mr-1.5">
@@ -1014,16 +1007,16 @@ function SortableProductCard({
           )}
         </div>
 
-        <h3 className="font-black text-base lg:text-2xl tracking-tighter text-foreground group-hover:text-primary transition-colors duration-200 leading-[1.1] min-h-[2.2em]">
+        <h3 className="font-black text-sm lg:text-lg tracking-tighter text-foreground group-hover:text-primary transition-colors duration-200 leading-[1.1] min-h-[2.2em]">
           {product.name}
         </h3>
 
         <div className="flex items-center justify-between pt-4 lg:pt-6 border-t border-accent/10 mt-auto">
           <div className="flex flex-col">
-            <p className="text-[8px] lg:text-[9px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] mb-0.5 lg:mb-1">
+            <p className="text-[7px] lg:text-[8px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] mb-0.5">
               VALOR UNITARIO
             </p>
-            <p className="font-black text-xl lg:text-4xl text-primary tracking-tighter group-hover:scale-110 transition-transform origin-left duration-300">
+            <p className="font-black text-lg lg:text-2xl text-primary tracking-tighter group-hover:scale-110 transition-transform origin-left duration-300">
               {formatPrice(product.price)}
             </p>
           </div>

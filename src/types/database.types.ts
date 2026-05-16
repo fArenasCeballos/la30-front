@@ -97,6 +97,9 @@ export type Database = {
         Insert: {
           id?: string;
           name: string;
+          label: string;
+          icon?: string | null;
+          sort_order?: number;
           description?: string | null;
           is_active?: boolean;
           store_ids?: string[];
@@ -105,6 +108,9 @@ export type Database = {
         Update: {
           id?: string;
           name?: string;
+          label?: string;
+          icon?: string | null;
+          sort_order?: number;
           description?: string | null;
           is_active?: boolean;
           store_ids?: string[];

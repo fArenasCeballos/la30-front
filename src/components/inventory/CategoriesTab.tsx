@@ -216,38 +216,35 @@ export function CategoriesTab() {
   }
 
   return (
-    <div className="space-y-8 lg:space-y-16 animate-in fade-in duration-1000 fill-mode-both">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-10 bg-white/40 backdrop-blur-xl p-6 lg:p-10 rounded-4xl lg:rounded-[3.5rem] border border-white shadow-md relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-primary/10 transition-all duration-1000" />
-
-        <div className="flex items-center gap-8 relative">
-          <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-linear-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/5 group-hover:rotate-12 transition-transform duration-200">
-            <LayoutGrid className="h-7 w-7 lg:h-10 lg:w-10" strokeWidth={2.5} />
+    <div className="space-y-6 animate-in fade-in duration-1000 fill-mode-both relative">
+      <div className="sticky top-[112px] lg:top-[128px] 2xl:top-[160px] z-40 bg-slate-50/95 backdrop-blur-md py-4 -mx-2 px-2 flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all duration-300">
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner shrink-0">
+            <LayoutGrid className="h-5 w-5" strokeWidth={3} />
           </div>
-          <div className="space-y-1 lg:space-y-2">
-            <p className="text-[9px] lg:text-[11px] font-black uppercase tracking-[0.5em] text-primary/40 leading-none">
-              ARQUITECTURA DE MENÚ
-            </p>
-            <p className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground">
-              {categories.length}{" "}
-              <span className="text-primary/40 font-bold">Categorías</span>
+          <div>
+            <h2 className="text-lg font-black tracking-tight text-foreground leading-none">
+              Arquitectura de Menú
+            </h2>
+            <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest mt-1">
+              {categories.length} Categorías Definidas
             </p>
           </div>
         </div>
 
         <Button
           onClick={openNew}
-          className="h-14 lg:h-20 px-8 lg:px-12 rounded-2xl lg:rounded-[2.5rem] font-black text-xs lg:text-sm tracking-widest shadow-md shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-2 lg:border-4 border-white/20 relative"
+          className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/90 text-white font-black shadow-strong hover:scale-[1.02] active:scale-[0.98] transition-all group text-[10px] uppercase tracking-widest"
         >
           <Plus
-            className="h-5 w-5 lg:h-7 lg:w-7 mr-3 lg:mr-4 group-hover:rotate-90 transition-transform duration-300"
+            className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-500"
             strokeWidth={3}
           />
-          NUEVA CATEGORÍA
+          Nueva Categoría
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-10">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 lg:gap-6">
         {categories.map((cat, idx) => (
           <div
             key={cat.id}
@@ -259,8 +256,8 @@ export function CategoriesTab() {
             )}
             style={{ animationDelay: `${idx * 50}ms` }}
           >
-            <div className="flex items-start justify-between p-8 pb-4">
-              <div className="h-24 w-24 rounded-4xl bg-white border-4 border-accent/5 flex items-center justify-center text-6xl shadow-md group-hover:scale-110 transition-all duration-300 group-hover:rotate-6 relative">
+            <div className="flex items-start justify-between p-6 pb-2">
+              <div className="h-20 w-20 rounded-3xl bg-white border-4 border-accent/5 flex items-center justify-center text-5xl shadow-md group-hover:scale-110 transition-all duration-300 group-hover:rotate-6 relative">
                 <div className="absolute inset-0 bg-primary/5 rounded-full blur-xl scale-0 group-hover:scale-100 transition-transform duration-300" />
                 <span className="relative">{cat.icon || "📦"}</span>
               </div>
@@ -338,12 +335,12 @@ export function CategoriesTab() {
               </div>
             </div>
 
-            <div className="flex-1 p-8 pt-4 space-y-6">
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] leading-none">
+            <div className="flex-1 p-4 lg:p-6 pt-2 space-y-4">
+              <div className="space-y-1">
+                <p className="text-[9px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] leading-none">
                   NOMBRE CLAVE: {cat.name}
                 </p>
-                <h3 className="font-black text-3xl tracking-tighter leading-none group-hover:text-primary transition-colors duration-200">
+                <h3 className="font-black text-xl tracking-tighter leading-none group-hover:text-primary transition-colors duration-200">
                   {cat.label}
                 </h3>
               </div>
@@ -358,22 +355,22 @@ export function CategoriesTab() {
               </div>
             </div>
 
-            <div className="p-8 pt-0 flex items-center gap-4">
+            <div className="p-4 lg:p-6 pt-0 flex items-center gap-3">
               <Button
                 size="lg"
-                className="flex-1 h-16 rounded-2xl font-black text-[11px] tracking-widest shadow-md bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
+                className="flex-1 h-12 rounded-xl font-black text-[10px] tracking-widest shadow-md bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
                 onClick={() => openEdit(cat)}
               >
-                <Edit className="h-5 w-5 mr-3" />
+                <Edit className="h-4 w-4 mr-2" />
                 EDITAR
               </Button>
               <Button
                 size="icon"
                 variant="destructive"
-                className="hidden lg:flex h-16 w-16 rounded-2xl shadow-md bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none opacity-0 group-hover:opacity-100"
+                className="h-12 w-12 rounded-xl shadow-md bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none"
                 onClick={() => setCategoryToDelete(cat)}
               >
-                <Trash2 className="h-6 w-6" />
+                <Trash2 className="h-5 w-5" />
               </Button>
             </div>
 

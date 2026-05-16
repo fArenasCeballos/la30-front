@@ -357,64 +357,58 @@ export function OptionsTab() {
   }
 
   return (
-    <div className="space-y-8 lg:space-y-16 animate-in fade-in duration-1000 fill-mode-both">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-10 bg-white/40 backdrop-blur-xl p-6 lg:p-10 rounded-4xl lg:rounded-[3.5rem] border border-white shadow-md relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-primary/10 transition-all duration-1000" />
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-10 relative">
-          <div className="h-14 w-14 lg:h-20 lg:w-20 rounded-2xl lg:rounded-4xl bg-linear-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/5 group-hover:rotate-12 transition-transform duration-200">
-            <ListChecks className="h-7 w-7 lg:h-10 lg:w-10" strokeWidth={2.5} />
+    <div className="space-y-6 animate-in fade-in duration-1000 fill-mode-both relative">
+      <div className="sticky top-[112px] lg:top-[128px] 2xl:top-[160px] z-40 bg-slate-50/95 backdrop-blur-md py-4 -mx-2 px-2 flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all duration-300">
+        <div className="flex items-center gap-4 flex-1">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner shrink-0">
+            <ListChecks className="h-5 w-5" strokeWidth={3} />
           </div>
-          <div className="space-y-6 sm:space-y-2">
-            <p className="text-[9px] lg:text-[11px] font-black uppercase tracking-[0.5em] text-primary/40 leading-none">
-              PERSONALIZACIÓN POR SELECCIÓN
+          <div>
+            <h2 className="text-lg font-black tracking-tight text-foreground leading-none">
+              Variaciones
+            </h2>
+            <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest mt-1">
+              {options.length} Grupos de Selección
             </p>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-              <p className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground whitespace-nowrap">
-                {options.length}{" "}
-                <span className="text-primary/40 font-bold">Variaciones</span>
-              </p>
-              <div className="h-12 w-[3px] bg-primary/10 hidden sm:block rounded-full" />
-              <div className="relative group/select min-w-[280px]">
-                <Select value={filterCat} onValueChange={setFilterCat}>
-                  <SelectTrigger className="h-14 lg:h-16 px-6 lg:px-8 rounded-xl lg:rounded-2xl border-2 lg:border-4 border-white bg-white/60 backdrop-blur-md shadow-sm font-black text-[10px] lg:text-xs uppercase tracking-widest transition-all focus:border-primary/40 focus:ring-0 group-hover/select:shadow-md group-hover/select:scale-105">
-                    <SelectValue placeholder="Filtrar por grupo" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-[2.5rem] border-none shadow-md p-3 bg-white/95 backdrop-blur-xl">
-                    <SelectItem
-                      value="all"
-                      className="font-black uppercase tracking-widest text-[10px] rounded-2xl py-4 transition-colors"
-                    >
-                      🚀 TODOS LOS GRUPOS
-                    </SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem
-                        key={cat.id}
-                        value={cat.id}
-                        className="font-black uppercase tracking-widest text-[10px] rounded-2xl py-4 transition-colors"
-                      >
-                        <span className="mr-3 text-xl scale-125">
-                          {cat.icon}
-                        </span>{" "}
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+          </div>
+
+          <div className="h-8 w-px bg-accent/20 hidden sm:block mx-2" />
+
+          <div className="relative group/select min-w-[200px]">
+            <Select value={filterCat} onValueChange={setFilterCat}>
+              <SelectTrigger className="h-10 px-4 rounded-xl border-2 focus-visible:ring-primary/20 bg-white shadow-soft transition-all font-bold border-transparent focus:border-primary/30 text-[10px] uppercase tracking-widest">
+                <SelectValue placeholder="Filtrar grupo" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-none shadow-strong p-1">
+                <SelectItem
+                  value="all"
+                  className="font-black uppercase tracking-widest text-[9px] rounded-lg py-2"
+                >
+                  🚀 TODOS LOS GRUPOS
+                </SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem
+                    key={cat.id}
+                    value={cat.id}
+                    className="font-black uppercase tracking-widest text-[9px] rounded-lg py-2"
+                  >
+                    <span className="mr-2 text-sm">{cat.icon}</span> {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         <Button
           onClick={openNewOption}
-          className="h-14 lg:h-20 px-8 lg:px-12 rounded-2xl lg:rounded-[2.5rem] font-black text-xs lg:text-sm tracking-widest shadow-md shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group bg-primary hover:bg-primary/90 text-white border-2 lg:border-4 border-white/20 relative"
+          className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/90 text-white font-black shadow-strong hover:scale-[1.02] active:scale-[0.98] transition-all group text-[10px] uppercase tracking-widest shrink-0"
         >
           <Plus
-            className="h-5 w-5 lg:h-7 lg:w-7 mr-3 lg:mr-4 group-hover:rotate-90 transition-transform duration-300"
+            className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-500"
             strokeWidth={3}
           />
-          NUEVA VARIACIÓN
+          Nueva Variación
         </Button>
       </div>
 
@@ -428,30 +422,29 @@ export function OptionsTab() {
               style={{ animationDelay: `${idx * 100}ms` }}
             >
               {/* Header Section */}
-              <div className="bg-linear-to-br from-accent/5 to-accent/10 p-6 lg:p-12 border-b-2 lg:border-b-4 border-white flex flex-col md:flex-row md:items-center justify-between gap-6 lg:gap-10">
-                <div className="flex items-center gap-8">
-                  <div className="h-16 w-16 lg:h-24 lg:w-24 rounded-2xl lg:rounded-4xl bg-white flex items-center justify-center text-4xl lg:text-6xl shadow-md group-hover:scale-110 transition-all duration-300 group-hover:rotate-6 relative">
+              <div className="bg-linear-to-br from-accent/5 to-accent/10 p-4 border-b-2 border-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-xl bg-white flex items-center justify-center text-2xl shadow-md group-hover:scale-110 transition-all duration-300 group-hover:rotate-6 relative shrink-0">
                     <div className="absolute inset-0 bg-primary/5 rounded-full blur-xl scale-0 group-hover:scale-100 transition-transform duration-300" />
                     <span className="relative">{option.icon || "🛠️"}</span>
                   </div>
-                  <div className="space-y-2 lg:space-y-4">
-                    <h3 className="font-black text-xl lg:text-4xl tracking-tighter text-foreground group-hover:text-primary transition-colors leading-none">
+                  <div className="space-y-1">
+                    <h3 className="font-black text-xl tracking-tighter text-foreground group-hover:text-primary transition-colors leading-none">
                       {option.label}
                     </h3>
-                    <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
                       {(
                         option.category_ids ||
                         (option.category_id ? [option.category_id] : [])
                       ).map((cid) => (
                         <div
                           key={cid}
-                          className="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 bg-primary/5 text-primary border-primary/10 shadow-sm"
+                          className="px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border-2 bg-primary/5 text-primary border-primary/10 shadow-sm"
                         >
                           {getCatLabel(cid)}
                         </div>
                       ))}
-                      <div className="h-10 w-[2px] bg-primary/10 hidden sm:block rounded-full mx-2" />
-                      <span className="text-[10px] font-black text-primary/40 tracking-[0.3em] uppercase bg-primary/5 px-4 py-1.5 rounded-full border border-primary/10">
+                      <span className="text-[8px] font-black text-primary/40 tracking-[0.2em] uppercase bg-primary/5 px-3 py-1 rounded-lg border border-primary/10">
                         KEY: {option.option_key}
                       </span>
                     </div>
@@ -471,7 +464,10 @@ export function OptionsTab() {
                           <MoreVertical className="h-6 w-6" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 p-2 rounded-3xl border-4 border-white shadow-md backdrop-blur-xl bg-white/95">
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-56 p-2 rounded-3xl border-4 border-white shadow-md backdrop-blur-xl bg-white/95"
+                      >
                         <DropdownMenuItem
                           className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 focus:bg-primary focus:text-white transition-colors"
                           onClick={(e) => {
@@ -498,41 +494,41 @@ export function OptionsTab() {
                   </div>
 
                   {/* Desktop Actions */}
-                  <div className="hidden lg:flex gap-3 lg:gap-4 opacity-0 translate-x-10 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                  <div className="hidden lg:flex gap-2 opacity-0 translate-x-10 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
                     <Button
                       size="icon"
-                      className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl shadow-md bg-white/90 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
+                      className="h-11 w-11 rounded-xl shadow-md bg-white/90 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
                       onClick={() => openEditOption(option)}
                     >
-                      <Edit className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
+                      <Edit className="h-5 w-5" strokeWidth={3} />
                     </Button>
                     <Button
                       size="icon"
                       variant="destructive"
-                      className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl shadow-md bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none"
+                      className="h-11 w-11 rounded-xl shadow-md bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none"
                       onClick={() => setOptionToDelete(option)}
                     >
-                      <Trash2 className="h-6 w-6" />
+                      <Trash2 className="h-5 w-5" />
                     </Button>
                   </div>
                 </div>
               </div>
 
               {/* Choices Section */}
-              <div className="p-12 space-y-10">
+              <div className="p-6 lg:p-8 space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="h-2 w-12 bg-primary/20 rounded-full" />
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-muted-foreground/40">
-                      OPCIONES DISPONIBLES ({optChoices.length})
+                    <div className="h-1 w-8 bg-primary/20 rounded-full" />
+                    <h4 className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/40">
+                      Variables ({optChoices.length})
                     </h4>
                   </div>
                   <Button
                     onClick={() => openNewChoice(option.id)}
-                    className="h-12 lg:h-14 px-6 lg:px-8 rounded-xl lg:rounded-2xl font-black text-[9px] lg:text-[10px] uppercase tracking-widest border-2 lg:border-4 border-white shadow-sm bg-white hover:bg-primary hover:text-white hover:scale-105 transition-all"
+                    className="h-10 lg:h-11 px-5 lg:px-6 rounded-xl font-black text-[9px] lg:text-[10px] uppercase tracking-widest bg-primary text-white shadow-md hover:bg-primary/90 hover:scale-105 transition-all"
                   >
                     <Plus
-                      className="h-4 w-4 lg:h-5 lg:w-5 mr-2 lg:mr-3"
+                      className="h-4 w-4 lg:h-5 lg:w-5 mr-2"
                       strokeWidth={3}
                     />{" "}
                     AÑADIR
@@ -540,17 +536,17 @@ export function OptionsTab() {
                 </div>
 
                 {optChoices.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3 lg:gap-4">
                     {optChoices.map((choice) => (
                       <div
                         key={choice.id}
-                        className="flex items-center justify-between p-4 lg:p-6 rounded-3xl lg:rounded-4xl border-2 border-accent/5 bg-accent/5 hover:bg-white hover:border-primary/20 hover:shadow-md transition-all duration-200 group/choice relative overflow-hidden"
+                        className="flex items-center justify-between p-3 lg:p-4 rounded-2xl border-2 border-accent/5 bg-accent/5 hover:bg-white hover:border-primary/20 hover:shadow-md transition-all duration-200 group/choice relative overflow-hidden"
                       >
-                        <div className="flex items-center gap-3 lg:gap-5">
-                          <span className="text-xl lg:text-3xl group-hover/choice:scale-125 group-hover/choice:rotate-12 transition-transform duration-200">
+                        <div className="flex items-center gap-2 lg:gap-3">
+                          <span className="text-lg group-hover/choice:scale-125 transition-transform duration-200">
                             {choice.icon || "🔹"}
                           </span>
-                          <span className="text-xs lg:text-sm font-black tracking-tighter text-foreground/80 group-hover/choice:text-primary transition-colors">
+                          <span className="text-[10px] font-black tracking-tight text-foreground/80 group-hover/choice:text-primary transition-colors">
                             {choice.label}
                           </span>
                         </div>
@@ -568,7 +564,10 @@ export function OptionsTab() {
                                   <MoreVertical className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48 p-1.5 rounded-2xl border-2 border-accent/10 shadow-md bg-white">
+                              <DropdownMenuContent
+                                align="end"
+                                className="w-48 p-1.5 rounded-2xl border-2 border-accent/10 shadow-md bg-white"
+                              >
                                 <DropdownMenuItem
                                   className="h-11 rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2 px-3 focus:bg-primary focus:text-white transition-colors"
                                   onClick={(e) => {
@@ -594,7 +593,7 @@ export function OptionsTab() {
                           </div>
 
                           {/* Desktop Actions */}
-                          <div className="hidden lg:flex opacity-0 lg:group-hover/choice:opacity-100 lg:translate-x-4 lg:group-hover/choice:translate-x-0 transition-all duration-200">
+                          <div className="hidden lg:flex items-center gap-1">
                             <Button
                               size="icon"
                               variant="ghost"
