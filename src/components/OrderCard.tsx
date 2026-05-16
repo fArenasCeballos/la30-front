@@ -37,17 +37,17 @@ export function OrderCard({
   return (
     <div
       className={cn(
-        "pos-card group animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden border-2 border-transparent hover:border-primary/10 transition-all shadow-strong hover:shadow-2xl",
+        "pos-card group animate-in fade-in slide-in-from-bottom-4 duration-500 border-2 border-transparent hover:border-primary/10 transition-all shadow-strong hover:shadow-2xl p-3 lg:p-4",
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-4 mb-6">
+      <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-4">
-          <div className="flex flex-col items-center justify-center h-16 w-16 rounded-2xl bg-accent/20 border-2 border-accent/10 shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+          <div className="flex flex-col items-center justify-center h-12 w-12 rounded-2xl bg-accent/20 border-2 border-accent/10 shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
             <span className="text-[10px] font-black leading-none opacity-40 uppercase tracking-widest mb-1">
               #LOC
             </span>
-            <span className="font-black text-2xl tracking-tighter text-foreground">
+            <span className="font-black text-xl tracking-tighter text-foreground">
               {order.locator}
             </span>
           </div>
@@ -65,7 +65,7 @@ export function OrderCard({
       </div>
 
       {!compact && validItems.length > 0 && (
-        <div className="space-y-4 mb-8 bg-accent/5 -mx-8 px-8 py-6 border-y-2 border-dashed border-accent/10">
+        <div className="space-y-1 mb-3 bg-accent/5 -mx-8 px-6 py-2 border-y-2 border-dashed border-accent/10">
           {validItems.map((item) => (
             <div
               key={item.id}
@@ -85,7 +85,7 @@ export function OrderCard({
                 <div className="space-y-1 min-w-0">
                   <p
                     className={cn(
-                      "text-lg font-bold leading-tight tracking-tight",
+                      "text-sm font-bold leading-tight tracking-tight",
                       item.is_completed && checkable
                         ? "line-through text-muted-foreground/40"
                         : "text-foreground",
@@ -97,7 +97,7 @@ export function OrderCard({
                     {item.products?.name ?? "Producto"}
                   </p>
                   {item.notes && (
-                    <p className="text-xs font-medium text-muted-foreground/60 italic bg-white/50 px-3 py-1 rounded-lg border border-accent/10 inline-block">
+                    <p className="text-[10px] font-medium text-muted-foreground/60 italic bg-white/50 px-2 py-0.5 rounded-md border border-accent/10 inline-block">
                       "{item.notes}"
                     </p>
                   )}
@@ -108,7 +108,7 @@ export function OrderCard({
                         (choice: { label: string; icon?: string }, idx: number) => (
                           <span
                             key={idx}
-                            className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-white border border-accent/10 text-muted-foreground/60 shadow-soft"
+                            className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-white border border-accent/10 text-muted-foreground/60 shadow-soft"
                           >
                             {choice.icon} {choice.label}
                           </span>
@@ -118,7 +118,7 @@ export function OrderCard({
                   )}
                 </div>
               </div>
-              <span className="font-black text-base text-muted-foreground/40 tracking-tighter shrink-0 pt-0.5">
+              <span className="font-black text-sm text-muted-foreground/40 tracking-tighter shrink-0 pt-0.5">
                 {formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}
               </span>
             </div>
@@ -126,12 +126,12 @@ export function OrderCard({
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-6 border-t-2 border-accent/10">
-        <div className="flex flex-col">
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
+      <div className="flex items-center justify-between pt-4 border-t-2 border-accent/10">
+        <div className="flex flex-col -space-y-1">
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
             Total de Orden
           </span>
-          <span className="font-black text-3xl tracking-tighter text-primary group-hover:scale-110 origin-left transition-transform duration-500">
+          <span className="font-black text-xl tracking-tighter text-primary group-hover:scale-110 origin-left transition-all duration-500">
             {formatPrice(order.total ?? 0)}
           </span>
         </div>
@@ -144,7 +144,7 @@ export function OrderCard({
       </div>
 
       {actions && (
-        <div className="flex gap-4 mt-8 pt-4 border-t-2 border-accent/5">
+        <div className="flex gap-4 mt-4 pt-3 border-t-2 border-accent/5">
           {actions}
         </div>
       )}

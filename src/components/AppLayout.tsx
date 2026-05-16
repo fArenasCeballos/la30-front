@@ -106,18 +106,18 @@ export function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Premium Glass Header */}
-      <header className="h-16 lg:h-20 2xl:h-24 border-b bg-white/90 backdrop-blur-md flex items-center px-4 lg:px-4 2xl:px-10 gap-2 lg:gap-2 2xl:gap-8 sticky top-0 z-50 transition-all duration-300">
+      <header className="h-14 lg:h-16 2xl:h-20 border-b bg-white/90 backdrop-blur-md flex items-center px-4 lg:px-4 2xl:px-10 gap-2 lg:gap-2 2xl:gap-8 sticky top-0 z-50 transition-all duration-300">
         {/* Brand & Store Selector */}
         <div className="flex items-center gap-2 lg:gap-2 2xl:gap-6 flex-1 lg:flex-none">
           <div
             className="flex items-center gap-2 lg:gap-3 group cursor-pointer shrink-0"
             onClick={() => navigate("/dashboard")}
           >
-            <div className="w-10 h-10 lg:w-11 2xl:w-14 lg:h-11 2xl:h-14 rounded-xl lg:rounded-2xl 2xl:rounded-3xl bg-white border-2 shadow-soft flex items-center justify-center overflow-hidden group-hover:scale-105 group-hover:rotate-3 transition-all duration-200">
-              <Logo className="h-6 w-6 lg:h-7 2xl:h-10" />
+            <div className="w-9 h-9 lg:w-10 2xl:w-12 lg:h-10 2xl:h-12 rounded-xl lg:rounded-2xl 2xl:rounded-3xl bg-white border-2 shadow-soft flex items-center justify-center overflow-hidden group-hover:scale-105 group-hover:rotate-3 transition-all duration-200">
+              <Logo className="h-5 w-5 lg:h-6 2xl:h-8" />
             </div>
             <div className="hidden 2xl:block">
-              <span className="font-black text-2xl tracking-tighter block leading-none">
+              <span className="font-black text-xl 2xl:text-2xl tracking-tighter block leading-none">
                 La 30
               </span>
               <span className="text-[9px] text-primary uppercase font-black tracking-[0.2em] mt-1 block">
@@ -125,7 +125,7 @@ export function AppLayout() {
               </span>
             </div>
             <div className="hidden xl:block 2xl:hidden">
-              <span className="font-black text-xl tracking-tighter block leading-none">
+              <span className="font-black text-lg tracking-tighter block leading-none">
                 La 30
               </span>
             </div>
@@ -170,7 +170,7 @@ export function AppLayout() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                className="flex items-center gap-1.5 xl:gap-2 px-2 xl:px-5 py-2.5 rounded-xl xl:rounded-2xl text-[9px] xl:text-sm font-black text-muted-foreground hover:bg-accent/50 hover:text-primary transition-all whitespace-nowrap group relative"
+                className="flex items-center gap-1.5 xl:gap-2 px-2 xl:px-5 py-1.5 rounded-xl xl:rounded-2xl text-[9px] xl:text-sm font-black text-muted-foreground hover:bg-accent/50 hover:text-primary transition-all whitespace-nowrap group relative"
                 activeClassName="bg-primary/5 text-primary shadow-inner"
               >
                 {({ isActive }) => (
