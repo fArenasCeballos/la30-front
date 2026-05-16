@@ -1,16 +1,16 @@
-export const SHIFT_START_HOUR = 16; // 4 PM
+export const SHIFT_START_HOUR = 12; // 12 PM (Mediodía)
 
 /**
  * Obtiene el inicio del turno para una fecha dada (por defecto ahora).
- * Si la hora de la fecha es antes de las 16:00, el turno empezó ayer a las 16:00.
- * Si la hora de la fecha es después de las 16:00, el turno empezó hoy a las 16:00.
+ * Si la hora de la fecha es antes de las 12:00, el turno empezó ayer a las 12:00.
+ * Si la hora de la fecha es después de las 12:00, el turno empezó hoy a las 12:00.
  */
 export function getShiftStart(date = new Date()): Date {
   const currentHour = date.getHours();
   const shiftStart = new Date(date);
   
   if (currentHour < SHIFT_START_HOUR) {
-    // Si es antes de las 4pm, el turno empezó ayer
+    // Si es antes de las 12pm, el turno empezó ayer
     shiftStart.setDate(shiftStart.getDate() - 1);
   }
   
@@ -19,13 +19,13 @@ export function getShiftStart(date = new Date()): Date {
 }
 
 /**
- * Obtiene el fin del turno (12 horas después del inicio, es decir, 4 AM del día siguiente).
+ * Obtiene el fin del turno (24 horas después del inicio, es decir, 12 PM del día siguiente).
  */
 export function getShiftEnd(date = new Date()): Date {
   const shiftStart = getShiftStart(date);
   const shiftEnd = new Date(shiftStart);
   shiftEnd.setDate(shiftEnd.getDate() + 1);
-  shiftEnd.setHours(4, 0, 0, 0);
+  shiftEnd.setHours(SHIFT_START_HOUR, 0, 0, 0);
   return shiftEnd;
 }
 
@@ -55,7 +55,7 @@ export function getCalendarShiftRange(from: Date, to?: Date): { from: Date; to: 
   
   const shiftTo = to ? new Date(to) : new Date(from);
   shiftTo.setDate(shiftTo.getDate() + 1);
-  shiftTo.setHours(4, 0, 0, 0);
+  shiftTo.setHours(SHIFT_START_HOUR, 0, 0, 0);
   
   return { from: shiftFrom, to: shiftTo };
 }
