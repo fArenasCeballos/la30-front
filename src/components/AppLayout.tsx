@@ -14,6 +14,7 @@ import {
   Wrench,
   ClipboardList,
   Store,
+  Search,
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { NavLink } from "@/components/NavLink";
@@ -58,6 +59,7 @@ const NAV_ITEMS: {
     icon: ClipboardList,
     roles: ["mesero", "caja", "admin"],
   },
+  { to: "/consultas", label: "Consultas", icon: Search, roles: ["admin"] },
 ];
 
 export function AppLayout() {

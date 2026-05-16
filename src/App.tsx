@@ -21,6 +21,7 @@ const Reporteria = lazy(() => import("./pages/Reporteria"));
 const Inventario = lazy(() => import("./pages/Inventario"));
 const Usuarios = lazy(() => import("./pages/Usuarios"));
 const MisPedidos = lazy(() => import("./pages/MisPedidos"));
+const Consultas = lazy(() => import("./pages/Consultas"));
 const StoreSelector = lazy(() => import("./pages/StoreSelector"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -70,6 +71,7 @@ const App = () => (
                         <Route path="/inventario" element={<Inventario />} />
                         <Route path="/usuarios" element={<Usuarios />} />
                         <Route path="/mis-pedidos" element={<MisPedidos />} />
+                        <Route path="/consultas" element={<Consultas />} />
                       </Route>
                       <Route path="*" element={<NotFound />} />
                     </Routes>

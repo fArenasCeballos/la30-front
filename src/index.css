@@ -237,3 +237,28 @@
     scrollbar-width: none;
   }
 }
+
+@media print {
+  body {
+    background-color: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .no-print, 
+  nav, 
+  aside, 
+  header {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+    position: relative;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
