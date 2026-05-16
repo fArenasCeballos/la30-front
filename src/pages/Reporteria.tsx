@@ -408,58 +408,58 @@ export default function Reporteria() {
     <Tabs defaultValue="resumen" className="w-full">
       <div className="section-container space-y-4 pb-32 animate-in fade-in duration-700 relative">
         {/* Modern Integrated Header */}
-        <div className="sticky top-14 lg:top-16 2xl:top-20 z-40 bg-white/80 backdrop-blur-xl -mx-4 lg:-mx-8 px-4 lg:px-8 py-4 border-b border-accent/10 shadow-sm transition-all duration-300 rounded-b-4xl">
-          <div className="flex flex-col gap-4">
+        {/* Modern Integrated Header */}
+        <div className="sticky top-14 lg:top-16 z-40 bg-white/95 backdrop-blur-xl -mx-3 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8 py-3 lg:py-4 border-b border-accent/10 shadow-sm transition-all duration-300 rounded-b-3xl lg:rounded-b-4xl">
+          <div className="flex flex-col gap-3 lg:gap-4">
             {/* Top Row: Brand & Main Actions */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="bg-primary/10 p-2.5 rounded-2xl shrink-0">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+                <div className="bg-primary/10 p-2 lg:p-2.5 rounded-xl lg:rounded-2xl shrink-0">
                   <Activity
-                    className="h-6 w-6 text-primary"
+                    className="h-5 w-5 lg:h-6 lg:w-6 text-primary"
                     strokeWidth={2.5}
                   />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-xl font-black tracking-tight text-foreground leading-none">
+                  <h1 className="text-lg lg:text-xl font-black tracking-tight text-foreground leading-none truncate">
                     Reportería
                   </h1>
-                  <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest mt-1">
+                  <p className="text-[8px] lg:text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest mt-0.5 lg:mt-1 truncate">
                     {activeStore?.name}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="rounded-xl h-10 px-6 font-black shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all group bg-primary border-0"
-                  onClick={exportToExcel}
-                  disabled={isLoading || reportOrders.length === 0}
-                >
-                  <Download
-                    className="h-4 w-4 mr-2 group-hover:animate-bounce transition-transform"
-                    strokeWidth={3}
-                  />
-                  <span className="text-[10px] tracking-widest uppercase">
-                    Exportar XLSX
-                  </span>
-                </Button>
-              </div>
+              <Button
+                variant="default"
+                size="sm"
+                className="rounded-xl h-9 lg:h-10 px-3 lg:px-6 font-black shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all group bg-primary border-0 shrink-0"
+                onClick={exportToExcel}
+                disabled={isLoading || reportOrders.length === 0}
+              >
+                <Download
+                  className="h-3.5 w-3.5 lg:h-4 lg:w-4 lg:mr-2 group-hover:animate-bounce transition-transform"
+                  strokeWidth={3}
+                />
+                <span className="hidden lg:inline text-[10px] tracking-widest uppercase">
+                  Exportar XLSX
+                </span>
+                <span className="lg:hidden text-[9px] ml-1.5 font-black">XLSX</span>
+              </Button>
             </div>
 
             {/* Bottom Row: Controls & Navigation */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-2 border-t border-accent/5">
-              <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2 border-t border-accent/5 overflow-hidden">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-3 px-3 pb-1 lg:pb-0 lg:mx-0 lg:px-0">
                 {/* Date Selection */}
-                <div className="flex items-center gap-2 bg-accent/5 p-1 rounded-2xl border border-accent/10">
-                  <div className="flex no-scrollbar overflow-x-auto">
+                <div className="flex items-center gap-1 bg-accent/5 p-1 rounded-xl lg:rounded-2xl border border-accent/10 shrink-0">
+                  <div className="flex">
                     {QUICK_RANGES.map((r) => (
                       <button
                         key={r.label}
                         onClick={() => handleQuickRange(r.label)}
                         className={cn(
-                          "px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all whitespace-nowrap",
+                          "px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg lg:rounded-xl font-black text-[8px] lg:text-[9px] uppercase tracking-widest transition-all whitespace-nowrap",
                           activeQuick === r.label
                             ? "bg-white text-primary shadow-sm"
                             : "text-muted-foreground/40 hover:text-primary",
@@ -470,13 +470,13 @@ export default function Reporteria() {
                     ))}
                   </div>
 
-                  <div className="w-px h-4 bg-accent/20 mx-1" />
+                  <div className="w-px h-3 lg:h-4 bg-accent/20 mx-1" />
 
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className="flex items-center gap-2 px-4 py-2 hover:bg-white rounded-xl transition-all group">
-                        <CalendarIcon className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 group-hover:text-primary">
+                      <button className="flex items-center gap-1.5 px-3 py-1.5 lg:px-4 lg:py-2 hover:bg-white rounded-lg lg:rounded-xl transition-all group whitespace-nowrap">
+                        <CalendarIcon className="h-3.5 w-3.5 text-primary group-hover:scale-110 transition-transform" />
+                        <span className="text-[8px] lg:text-[10px] font-black uppercase tracking-widest text-primary/60 group-hover:text-primary">
                           {dateRange?.from
                             ? dateRange.to
                               ? `${format(dateRange.from, "dd MMM", { locale: es })} - ${format(dateRange.to, "dd MMM", { locale: es })}`
@@ -496,7 +496,7 @@ export default function Reporteria() {
                           setDateRange(range);
                           setActiveQuick("");
                         }}
-                        numberOfMonths={2}
+                        numberOfMonths={window.innerWidth > 768 ? 2 : 1}
                         locale={es}
                         className="p-4"
                       />
@@ -506,10 +506,10 @@ export default function Reporteria() {
 
                 {/* Status Filter */}
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-44 h-10 rounded-2xl border-none bg-accent/5 font-black text-[10px] tracking-widest uppercase shadow-none hover:bg-accent/10 transition-colors">
-                    <div className="flex items-center gap-2">
+                  <SelectTrigger className="w-32 lg:w-44 h-8 lg:h-10 rounded-xl lg:rounded-2xl border-none bg-accent/5 font-black text-[8px] lg:text-[10px] tracking-widest uppercase shadow-none hover:bg-accent/10 transition-colors shrink-0">
+                    <div className="flex items-center gap-1.5">
                       <Filter
-                        className="h-4 w-4 text-primary/40"
+                        className="h-3.5 w-3.5 text-primary/40"
                         strokeWidth={2.5}
                       />
                       <SelectValue placeholder="Estado" />
@@ -518,7 +518,7 @@ export default function Reporteria() {
                   <SelectContent className="rounded-2xl border-none shadow-strong p-1">
                     <SelectItem
                       value="all"
-                      className="font-black text-[10px] tracking-widest uppercase py-3 rounded-xl"
+                      className="font-black text-[9px] lg:text-[10px] tracking-widest uppercase py-3 rounded-xl"
                     >
                       Todos los Estados
                     </SelectItem>
@@ -533,7 +533,7 @@ export default function Reporteria() {
                       <SelectItem
                         key={status}
                         value={status}
-                        className="font-black text-[10px] tracking-widest uppercase py-3 rounded-xl"
+                        className="font-black text-[9px] lg:text-[10px] tracking-widest uppercase py-3 rounded-xl"
                       >
                         {status.replace("_", " ")}
                       </SelectItem>
@@ -542,24 +542,26 @@ export default function Reporteria() {
                 </Select>
               </div>
 
-              {/* Tabs Integration */}
-              <TabsList className="bg-accent/5 p-1 rounded-2xl border border-accent/10 h-auto gap-1">
-                {[
-                  { value: "resumen", label: "Resumen", icon: TrendingUp },
-                  { value: "caja", label: "Caja", icon: Banknote },
-                  { value: "meseros", label: "Personal", icon: User },
-                  { value: "detalle", label: "Auditoría", icon: ListChecks },
-                ].map((tab) => (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    className="rounded-xl px-5 py-2 font-black uppercase tracking-widest text-[9px] transition-all duration-300 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-2"
-                  >
-                    <tab.icon className="h-3.5 w-3.5" strokeWidth={3} />
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+              {/* Tabs Integration - Scrollable on Mobile */}
+              <div className="overflow-x-auto no-scrollbar -mx-3 px-3 pb-1 lg:pb-0 lg:mx-0 lg:px-0 shrink-0">
+                <TabsList className="bg-accent/5 p-1 rounded-xl lg:rounded-2xl border border-accent/10 h-auto gap-1 inline-flex whitespace-nowrap">
+                  {[
+                    { value: "resumen", label: "Resumen", icon: TrendingUp },
+                    { value: "caja", label: "Caja", icon: Banknote },
+                    { value: "meseros", label: "Personal", icon: User },
+                    { value: "detalle", label: "Auditoría", icon: ListChecks },
+                  ].map((tab) => (
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className="rounded-lg lg:rounded-xl px-3 lg:px-5 py-1.5 lg:py-2 font-black uppercase tracking-widest text-[8px] lg:text-[9px] transition-all duration-300 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-1.5"
+                    >
+                      <tab.icon className="h-3 w-3 lg:h-3.5 lg:w-3.5" strokeWidth={3} />
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
             </div>
           </div>
         </div>
@@ -648,7 +650,7 @@ export default function Reporteria() {
                     MIX DE PAGOS
                   </h3>
                 </div>
-                <div className="grid grid-cols-3 lg:grid-cols-1 gap-3 lg:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3 lg:gap-4">
                   {[
                     {
                       label: "Efectivo",
