@@ -37,78 +37,78 @@ export function OrderCard({
   return (
     <div
       className={cn(
-        "pos-card group animate-in fade-in slide-in-from-bottom-4 duration-500 border-2 border-transparent hover:border-primary/10 transition-all shadow-strong hover:shadow-2xl p-3 lg:p-4",
+        "pos-card group animate-in fade-in slide-in-from-bottom-4 duration-500 border-2 border-transparent hover:border-primary/10 transition-all shadow-md hover:shadow-xl p-2.5 lg:p-3",
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col items-center justify-center h-12 w-12 rounded-2xl bg-accent/20 border-2 border-accent/10 shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-            <span className="text-[10px] font-black leading-none opacity-40 uppercase tracking-widest mb-1">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col items-center justify-center h-10 w-10 rounded-xl bg-accent/20 border border-accent/10 shadow-inner group-hover:rotate-3 transition-all duration-500">
+            <span className="text-[7px] font-black leading-none opacity-40 uppercase tracking-widest mb-0.5">
               #LOC
             </span>
-            <span className="font-black text-xl tracking-tighter text-foreground">
+            <span className="font-black text-lg tracking-tighter text-foreground">
               {order.locator}
             </span>
           </div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground/40 font-black uppercase tracking-widest text-[9px]">
-              <Clock className="h-3 w-3" />
-              <span>RECIBIDO {timeAgo(order.created_at)}</span>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5 text-muted-foreground/40 font-black uppercase tracking-widest text-[8px]">
+              <Clock className="h-2.5 w-2.5" />
+              <span>{timeAgo(order.created_at)}</span>
             </div>
-            <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest">
-              MESERO: {order.profiles?.name || "Kiosko"}
+            <p className="text-[8px] font-black text-primary/60 uppercase tracking-widest truncate max-w-[80px]">
+              {order.profiles?.name || "Kiosko"}
             </p>
           </div>
         </div>
-        <StatusBadge status={order.status} />
+        <StatusBadge status={order.status} className="scale-90 origin-right" />
       </div>
 
       {!compact && validItems.length > 0 && (
-        <div className="space-y-1 mb-3 bg-accent/5 -mx-8 px-6 py-2 border-y-2 border-dashed border-accent/10">
+        <div className="space-y-1 mb-2 bg-accent/5 -mx-3 px-3 py-1.5 border-y border-dashed border-accent/10">
           {validItems.map((item) => (
             <div
               key={item.id}
-              className="flex justify-between items-start gap-4"
+              className="flex justify-between items-start gap-2"
             >
-              <div className="flex items-start gap-4 flex-1 min-w-0">
+              <div className="flex items-start gap-2 flex-1 min-w-0">
                 {checkable && onToggleItem && (
                   <div className="pt-0.5">
                     <input
                       type="checkbox"
                       checked={!!item.is_completed}
                       onChange={(e) => onToggleItem(item.id, e.target.checked)}
-                      className="h-6 w-6 rounded-lg border-2 border-accent/30 text-primary focus:ring-primary/20 cursor-pointer transition-all checked:scale-110"
+                      className="h-4 w-4 rounded border-2 border-accent/30 text-primary focus:ring-primary/20 cursor-pointer transition-all checked:scale-110"
                     />
                   </div>
                 )}
-                <div className="space-y-1 min-w-0">
+                <div className="space-y-0.5 min-w-0">
                   <p
                     className={cn(
-                      "text-sm font-bold leading-tight tracking-tight",
+                      "text-xs font-bold leading-tight tracking-tight",
                       item.is_completed && checkable
                         ? "line-through text-muted-foreground/40"
                         : "text-foreground",
                     )}
                   >
-                    <span className="text-primary font-black mr-2">
+                    <span className="text-primary font-black mr-1">
                       {item.quantity}x
                     </span>{" "}
                     {item.products?.name ?? "Producto"}
                   </p>
                   {item.notes && (
-                    <p className="text-[10px] font-medium text-muted-foreground/60 italic bg-white/50 px-2 py-0.5 rounded-md border border-accent/10 inline-block">
+                    <p className="text-[9px] font-medium text-muted-foreground/60 italic leading-none">
                       "{item.notes}"
                     </p>
                   )}
                   {/* Variaciones si existen */}
                   {item.choices && Object.keys(item.choices).length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
+                    <div className="flex flex-wrap gap-1 mt-1">
                       {Object.values(item.choices).map(
                         (choice: { label: string; icon?: string }, idx: number) => (
                           <span
                             key={idx}
-                            className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-white border border-accent/10 text-muted-foreground/60 shadow-soft"
+                            className="text-[7px] font-black uppercase tracking-widest px-1 py-0.5 rounded-sm bg-white border border-accent/10 text-muted-foreground/60 shadow-sm"
                           >
                             {choice.icon} {choice.label}
                           </span>
@@ -118,7 +118,7 @@ export function OrderCard({
                   )}
                 </div>
               </div>
-              <span className="font-black text-sm text-muted-foreground/40 tracking-tighter shrink-0 pt-0.5">
+              <span className="font-black text-[11px] text-muted-foreground/40 tracking-tighter shrink-0 pt-0.5">
                 {formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}
               </span>
             </div>
@@ -126,25 +126,25 @@ export function OrderCard({
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-4 border-t-2 border-accent/10">
+      <div className="flex items-center justify-between pt-2">
         <div className="flex flex-col -space-y-1">
-          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
-            Total de Orden
+          <span className="text-[7px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
+            TOTAL
           </span>
-          <span className="font-black text-xl tracking-tighter text-primary group-hover:scale-110 origin-left transition-all duration-500">
+          <span className="font-black text-base lg:text-lg tracking-tighter text-primary group-hover:scale-105 origin-left transition-all duration-500">
             {formatPrice(order.total ?? 0)}
           </span>
         </div>
         {compact && (
-          <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest bg-accent/10 px-3 py-1.5 rounded-full">
-            <ShoppingCart className="h-3 w-3" />
-            {validItems.length} items
+          <div className="flex items-center gap-1.5 text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest bg-accent/10 px-2 py-1 rounded-full">
+            <ShoppingCart className="h-2.5 w-2.5" />
+            {validItems.length}
           </div>
         )}
       </div>
 
       {actions && (
-        <div className="flex gap-4 mt-4 pt-3 border-t-2 border-accent/5">
+        <div className="flex gap-2 mt-2 pt-2 border-t border-accent/5">
           {actions}
         </div>
       )}

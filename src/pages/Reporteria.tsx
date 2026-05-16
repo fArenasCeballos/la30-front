@@ -63,6 +63,7 @@ import { getCalendarShiftRange } from "@/lib/shiftUtils";
 import type { DateRange } from "react-day-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
+import * as XLSX from "xlsx";
 
 const QUICK_RANGES = [
   {
@@ -343,410 +344,388 @@ export default function Reporteria() {
     }
   };
 
-  const exportCSV = () => {
-    const header = "Localizador,Estado,Items,Total,Fecha,Creado Por\n";
-    const rows = filteredOrders
-      .map(
-        (o) =>
-          `${o.locator},${o.status},${o.order_items?.length || 0},${o.total},${new Date(o.created_at).toLocaleString("es-CO")},${o.profiles?.name || "Sistema"}`,
-      )
-      .join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `reporte_la30_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const exportToExcel = () => {
+    // 1. Sheet for Orders Summary
+    const ordersData = filteredOrders.map((o) => ({
+      ID: o.id,
+      Localizador: o.locator,
+      Estado: o.status.toUpperCase(),
+      Total: o.total,
+      "Items Qty": o.order_items?.length || 0,
+      Fecha: format(new Date(o.created_at), "PPP pp", { locale: es }),
+      "Creado Por": o.profiles?.name || "Sistema",
+    }));
+
+    // 2. Sheet for Detailed Items
+    interface ExcelItemRow {
+      "Order Loc": string;
+      Producto: string | undefined;
+      Cantidad: number;
+      "Precio Unit": number;
+      Extras: number;
+      "Total Item": number;
+      Opciones: string;
+      Adicionales: string;
+      Notas: string;
+      Fecha: string;
+    }
+    const itemsData: ExcelItemRow[] = [];
+    filteredOrders.forEach((o) => {
+      o.order_items?.forEach((item) => {
+        itemsData.push({
+          "Order Loc": o.locator,
+          Producto: item.products?.name,
+          Cantidad: item.quantity,
+          "Precio Unit": item.unit_price,
+          Extras: item.extras_total,
+          "Total Item": (item.unit_price + item.extras_total) * item.quantity,
+          Opciones: item.selected_options
+            ? JSON.stringify(item.selected_options)
+            : "",
+          Adicionales: item.selected_extras
+            ? item.selected_extras.join(", ")
+            : "",
+          Notas: item.notes || "",
+          Fecha: format(new Date(o.created_at), "PPP pp", { locale: es }),
+        });
+      });
+    });
+
+    const wb = XLSX.utils.book_new();
+    const wsOrders = XLSX.utils.json_to_sheet(ordersData);
+    const wsItems = XLSX.utils.json_to_sheet(itemsData);
+
+    XLSX.utils.book_append_sheet(wb, wsOrders, "Ordenes");
+    XLSX.utils.book_append_sheet(wb, wsItems, "Detalle Productos");
+
+    XLSX.writeFile(
+      wb,
+      `Reporte_La30_${format(new Date(), "yyyy-MM-dd_HHmm")}.xlsx`,
+    );
   };
 
   return (
-    <div className="section-container space-y-12 pb-32 animate-in fade-in duration-700">
-      {/* Premium Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-12 bg-white/40 backdrop-blur-xl p-6 lg:p-12 rounded-[2.5rem] lg:rounded-[3.5rem] border border-white shadow-strong relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
-
-        <div className="relative space-y-4">
-          <div className="flex items-center gap-3 text-primary/60 font-black uppercase tracking-[0.4em] text-[10px]">
-            <div className="h-[2px] w-12 bg-primary/30 rounded-full" />
-            BUSINESS INTELLIGENCE
-          </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-6xl font-black tracking-tighter flex items-center gap-4 lg:gap-6 text-foreground">
-            <div className="bg-primary/10 p-3 lg:p-4 rounded-2xl lg:rounded-3xl">
-              <Activity
-                className="h-10 w-10 lg:h-14 lg:w-14 text-primary"
-                strokeWidth={2.5}
-              />
-            </div>
-            Reportería
-          </h1>
-          <p className="text-muted-foreground font-medium text-base lg:text-xl max-w-lg leading-relaxed">
-            Análisis detallado de ventas y rendimiento en{" "}
-            <span className="text-primary font-black underline decoration-primary/20 underline-offset-4">
-              {activeStore?.name}
-            </span>
-            .
-          </p>
-        </div>
-
-        <div className="relative flex lg:block justify-center">
-          <Button
-            variant="outline"
-            size="touch"
-            className="rounded-2xl lg:rounded-4xl h-12 lg:h-20 px-5 lg:px-10 border-2 border-primary/20 font-black shadow-strong hover:shadow-xl hover:scale-105 active:scale-95 transition-all group bg-white/80"
-            onClick={exportCSV}
-            disabled={isLoading || reportOrders.length === 0}
-          >
-            <Download
-              className="h-4 w-4 lg:h-7 lg:w-7 mr-2 lg:mr-4 text-primary group-hover:translate-y-1 transition-transform"
-              strokeWidth={3}
-            />
-            <span className="text-[9px] lg:text-xs tracking-widest lg:tracking-[0.2em]">
-              EXPORTAR CSV
-            </span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Advanced Filters Bar */}
-      <div className="bg-white/60 backdrop-blur-2xl p-4 lg:p-8 rounded-4xl lg:rounded-[3rem] border-2 border-white shadow-strong sticky top-20 lg:top-24 z-40 flex flex-wrap items-center justify-between gap-4 lg:gap-8 animate-in slide-in-from-top-4 duration-1000 fill-mode-both">
-        <div className="flex flex-col sm:flex-row items-center gap-3 lg:gap-4 w-full lg:w-auto">
-          <div className="flex bg-accent/20 p-1 rounded-2xl border border-accent/20 shadow-inner w-full sm:w-auto overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-1 min-w-max px-1">
-              {QUICK_RANGES.map((r) => (
-                <Button
-                  key={r.label}
-                  variant={activeQuick === r.label ? "default" : "ghost"}
-                  size="sm"
-                  className={cn(
-                    "rounded-xl px-4 py-2 sm:px-6 sm:py-5 font-black text-[9px] sm:text-[10px] tracking-widest uppercase transition-all duration-500",
-                    activeQuick === r.label
-                      ? "bg-white text-primary shadow-medium hover:bg-white scale-105"
-                      : "text-muted-foreground/60 hover:text-primary hover:bg-white/40",
-                  )}
-                  onClick={() => handleQuickRange(r.label)}
-                >
-                  {r.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "h-12 lg:h-14 w-full sm:w-auto rounded-xl lg:rounded-2xl border-2 px-4 lg:px-8 font-black text-[10px] lg:text-xs tracking-widest uppercase shadow-soft transition-all hover:bg-white hover:border-primary/40 group bg-white/40",
-                  !dateRange && "text-muted-foreground",
-                )}
-              >
-                <CalendarIcon
-                  className="h-4 w-4 lg:h-5 lg:w-5 mr-2 lg:mr-4 text-primary group-hover:scale-110 transition-transform"
-                  strokeWidth={2.5}
-                />
-                {dateRange?.from
-                  ? dateRange.to
-                    ? `${format(dateRange.from, "dd MMM", { locale: es })} - ${format(dateRange.to, "dd MMM", { locale: es })}`
-                    : format(dateRange.from, "dd MMM yyyy", { locale: es })
-                  : "Rango personalizado"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-auto p-0 rounded-[2.5rem] border-none shadow-strong overflow-hidden animate-in zoom-in-95 duration-300"
-              align="start"
-            >
-              <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={(range) => {
-                  setDateRange(range);
-                  setActiveQuick("");
-                }}
-                numberOfMonths={2}
-                locale={es}
-                className="p-6"
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        <div className="flex items-center gap-4 w-full lg:w-auto">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full lg:w-56 h-12 lg:h-14 rounded-xl lg:rounded-2xl border-2 font-black text-[10px] lg:text-xs tracking-widest uppercase shadow-soft transition-all hover:bg-white hover:border-primary/40 bg-white/40">
+    <Tabs defaultValue="resumen" className="w-full">
+      <div className="section-container space-y-4 pb-32 animate-in fade-in duration-700 relative">
+        {/* Modern Integrated Header */}
+        <div className="sticky top-14 lg:top-16 2xl:top-20 z-40 bg-white/80 backdrop-blur-xl -mx-4 lg:-mx-8 px-4 lg:px-8 py-4 border-b border-accent/10 shadow-sm transition-all duration-300 rounded-b-4xl">
+          <div className="flex flex-col gap-4">
+            {/* Top Row: Brand & Main Actions */}
+            <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <Filter
-                  className="h-4 w-4 lg:h-5 lg:w-5 text-primary"
-                  strokeWidth={2.5}
-                />
-                <SelectValue placeholder="Estado" />
+                <div className="bg-primary/10 p-2.5 rounded-2xl shrink-0">
+                  <Activity
+                    className="h-6 w-6 text-primary"
+                    strokeWidth={2.5}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-xl font-black tracking-tight text-foreground leading-none">
+                    Reportería
+                  </h1>
+                  <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest mt-1">
+                    {activeStore?.name}
+                  </p>
+                </div>
               </div>
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl border-none shadow-strong p-2 overflow-hidden">
-              <SelectItem
-                value="all"
-                className="font-black text-[10px] tracking-widest uppercase py-4 rounded-xl"
-              >
-                TODOS LOS ESTADOS
-              </SelectItem>
-              {[
-                "pendiente",
-                "confirmado",
-                "en_preparacion",
-                "listo",
-                "entregado",
-                "cancelado",
-              ].map((status) => (
-                <SelectItem
-                  key={status}
-                  value={status}
-                  className={cn(
-                    "font-black text-[10px] tracking-widest uppercase py-4 rounded-xl",
-                    status === "entregado"
-                      ? "text-green-600 hover:bg-green-50"
-                      : status === "cancelado"
-                        ? "text-destructive hover:bg-red-50"
-                        : "",
-                  )}
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="rounded-xl h-10 px-6 font-black shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all group bg-primary border-0"
+                  onClick={exportToExcel}
+                  disabled={isLoading || reportOrders.length === 0}
                 >
-                  {status.replace("_", " ")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+                  <Download
+                    className="h-4 w-4 mr-2 group-hover:animate-bounce transition-transform"
+                    strokeWidth={3}
+                  />
+                  <span className="text-[10px] tracking-widest uppercase">
+                    Exportar XLSX
+                  </span>
+                </Button>
+              </div>
+            </div>
 
-      <Tabs defaultValue="resumen" className="space-y-16">
-        <div className="flex justify-center w-full overflow-x-auto no-scrollbar pb-2">
-          <TabsList className="bg-accent/10 p-1 rounded-3xl lg:rounded-[3rem] border-2 border-accent/20 shadow-inner inline-flex h-auto whitespace-nowrap">
-            {[
-              { value: "resumen", label: "Resumen", icon: TrendingUp },
-              { value: "caja", label: "Caja", icon: Banknote },
-              { value: "meseros", label: "Personal", icon: User },
-              { value: "detalle", label: "Auditoría", icon: ListChecks },
-            ].map((tab) => (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="rounded-2xl lg:rounded-[2.5rem] px-4 lg:px-12 py-2.5 lg:py-5 font-black uppercase tracking-widest lg:tracking-[0.2em] text-[8px] lg:text-[11px] transition-all duration-500 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-strong data-[state=active]:scale-105 flex items-center gap-2 lg:gap-3"
-              >
-                <tab.icon className="h-3 w-3 lg:h-4 lg:w-4" strokeWidth={3} />
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+            {/* Bottom Row: Controls & Navigation */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-2 border-t border-accent/5">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Date Selection */}
+                <div className="flex items-center gap-2 bg-accent/5 p-1 rounded-2xl border border-accent/10">
+                  <div className="flex no-scrollbar overflow-x-auto">
+                    {QUICK_RANGES.map((r) => (
+                      <button
+                        key={r.label}
+                        onClick={() => handleQuickRange(r.label)}
+                        className={cn(
+                          "px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all whitespace-nowrap",
+                          activeQuick === r.label
+                            ? "bg-white text-primary shadow-sm"
+                            : "text-muted-foreground/40 hover:text-primary",
+                        )}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="w-px h-4 bg-accent/20 mx-1" />
+
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="flex items-center gap-2 px-4 py-2 hover:bg-white rounded-xl transition-all group">
+                        <CalendarIcon className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 group-hover:text-primary">
+                          {dateRange?.from
+                            ? dateRange.to
+                              ? `${format(dateRange.from, "dd MMM", { locale: es })} - ${format(dateRange.to, "dd MMM", { locale: es })}`
+                              : format(dateRange.from, "dd MMM", { locale: es })
+                            : "Calendario"}
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-auto p-0 rounded-3xl border-none shadow-strong overflow-hidden"
+                      align="start"
+                    >
+                      <Calendar
+                        mode="range"
+                        selected={dateRange}
+                        onSelect={(range) => {
+                          setDateRange(range);
+                          setActiveQuick("");
+                        }}
+                        numberOfMonths={2}
+                        locale={es}
+                        className="p-4"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Status Filter */}
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-44 h-10 rounded-2xl border-none bg-accent/5 font-black text-[10px] tracking-widest uppercase shadow-none hover:bg-accent/10 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <Filter
+                        className="h-4 w-4 text-primary/40"
+                        strokeWidth={2.5}
+                      />
+                      <SelectValue placeholder="Estado" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-none shadow-strong p-1">
+                    <SelectItem
+                      value="all"
+                      className="font-black text-[10px] tracking-widest uppercase py-3 rounded-xl"
+                    >
+                      Todos los Estados
+                    </SelectItem>
+                    {[
+                      "pendiente",
+                      "confirmado",
+                      "en_preparacion",
+                      "listo",
+                      "entregado",
+                      "cancelado",
+                    ].map((status) => (
+                      <SelectItem
+                        key={status}
+                        value={status}
+                        className="font-black text-[10px] tracking-widest uppercase py-3 rounded-xl"
+                      >
+                        {status.replace("_", " ")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tabs Integration */}
+              <TabsList className="bg-accent/5 p-1 rounded-2xl border border-accent/10 h-auto gap-1">
+                {[
+                  { value: "resumen", label: "Resumen", icon: TrendingUp },
+                  { value: "caja", label: "Caja", icon: Banknote },
+                  { value: "meseros", label: "Personal", icon: User },
+                  { value: "detalle", label: "Auditoría", icon: ListChecks },
+                ].map((tab) => (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className="rounded-xl px-5 py-2 font-black uppercase tracking-widest text-[9px] transition-all duration-300 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-2"
+                  >
+                    <tab.icon className="h-3.5 w-3.5" strokeWidth={3} />
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+          </div>
         </div>
 
-        {/* ===== RESUMEN ===== */}
-        <TabsContent
-          value="resumen"
-          className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
-        >
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-10">
-            {[
-              {
-                label: "VENTAS NETAS",
-                value: formatPrice(summary.total),
-                icon: DollarSign,
-                color: "text-primary",
-                bg: "bg-primary/10",
-                shadow: "shadow-primary/10",
-                accent: "primary",
-              },
-              {
-                label: "ÓRDENES",
-                value: summary.count,
-                icon: ShoppingCart,
-                color: "text-amber-600",
-                bg: "bg-amber-500/10",
-                shadow: "shadow-amber-500/10",
-                accent: "amber",
-              },
-              {
-                label: "PROMEDIO",
-                value: formatPrice(summary.avgTicket),
-                icon: Award,
-                color: "text-green-600",
-                bg: "bg-green-500/10",
-                shadow: "shadow-green-500/10",
-                accent: "green",
-              },
-              {
-                label: "ITEMS",
-                value: summary.itemsSold,
-                icon: ShoppingBag,
-                color: "text-purple-600",
-                bg: "bg-purple-500/10",
-                shadow: "shadow-purple-500/10",
-                accent: "purple",
-              },
-            ].map((card, i) => (
-              <div
-                key={i}
-                className="pos-card p-4 lg:p-10 group overflow-hidden relative border-2 transition-all duration-500 hover:scale-[1.05] hover:shadow-2xl"
-              >
+        {/* ===== CONTENT AREA ===== */}
+        <div className="space-y-8">
+          {/* ===== RESUMEN ===== */}
+          <TabsContent
+            value="resumen"
+            className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
+          >
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+              {[
+                {
+                  label: "VENTAS NETAS",
+                  value: formatPrice(summary.total),
+                  icon: DollarSign,
+                  color: "text-primary",
+                  bg: "bg-primary/10",
+                  accent: "primary",
+                },
+                {
+                  label: "ÓRDENES",
+                  value: summary.count,
+                  icon: ShoppingCart,
+                  color: "text-amber-600",
+                  bg: "bg-amber-500/10",
+                  accent: "amber",
+                },
+                {
+                  label: "PROMEDIO",
+                  value: formatPrice(summary.avgTicket),
+                  icon: Award,
+                  color: "text-green-600",
+                  bg: "bg-green-500/10",
+                  accent: "green",
+                },
+                {
+                  label: "ITEMS",
+                  value: summary.itemsSold,
+                  icon: ShoppingBag,
+                  color: "text-purple-600",
+                  bg: "bg-purple-500/10",
+                  accent: "purple",
+                },
+              ].map((card, i) => (
                 <div
-                  className={cn(
-                    "absolute -right-8 -top-8 h-24 w-24 lg:h-32 lg:w-32 rounded-full blur-3xl opacity-20 transition-all duration-500 group-hover:scale-150 group-hover:opacity-40",
-                    card.accent === "primary"
-                      ? "bg-primary"
-                      : card.accent === "amber"
-                        ? "bg-amber-500"
-                        : card.accent === "green"
-                          ? "bg-green-500"
-                          : card.accent === "purple"
-                            ? "bg-purple-500"
-                            : "bg-primary",
-                  )}
-                />
-
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 lg:gap-5 mb-3 lg:mb-8 relative z-10">
-                  <div
+                  key={i}
+                  className="pos-card p-4 lg:p-6 group overflow-hidden relative border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-white/60"
+                >
+                  <div className="flex items-center gap-3 mb-3 relative z-10">
+                    <div
+                      className={cn(
+                        "h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:rotate-12 shadow-soft shrink-0",
+                        card.bg,
+                        card.color,
+                      )}
+                    >
+                      <card.icon className="h-5 w-5" strokeWidth={3} />
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none">
+                        {card.label}
+                      </p>
+                      <div className="h-0.5 w-6 bg-accent/20 rounded-full" />
+                    </div>
+                  </div>
+                  <p
                     className={cn(
-                      "h-10 w-10 lg:h-16 lg:w-16 rounded-xl lg:rounded-[1.75rem] flex items-center justify-center transition-all duration-500 group-hover:rotate-12 shadow-soft shrink-0",
-                      card.bg,
+                      "text-lg lg:text-2xl font-black tracking-tighter transition-all duration-500 origin-left group-hover:scale-105 relative z-10",
                       card.color,
                     )}
                   >
-                    <card.icon
-                      className="h-5 w-5 lg:h-8 lg:w-8"
-                      strokeWidth={3}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[8px] lg:text-[10px] font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] text-muted-foreground/40 leading-none">
-                      {card.label}
-                    </p>
-                    <div className="h-0.5 w-6 lg:h-1 lg:w-8 bg-accent/20 rounded-full" />
-                  </div>
+                    {card.value}
+                  </p>
                 </div>
-                <p
-                  className={cn(
-                    "text-lg lg:text-5xl font-black tracking-tighter transition-all duration-500 origin-left group-hover:scale-110 relative z-10",
-                    card.color,
-                  )}
-                >
-                  {card.value}
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-            {/* Payment Methods Visual Breakdown */}
-            <div className="lg:col-span-1 space-y-10">
-              <div className="flex items-center gap-3 px-3">
-                <div className="h-4 w-4 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)]" />
-                <h3 className="text-[12px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">
-                  MIX DE PAGOS
-                </h3>
-              </div>
-              <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 lg:gap-8">
-                {[
-                  {
-                    label: "Efectivo",
-                    amount: paymentSummary.efectivo,
-                    icon: Banknote,
-                    color: "emerald",
-                  },
-                  {
-                    label: "Datáfono",
-                    amount: paymentSummary.tarjeta,
-                    icon: CreditCard,
-                    color: "blue",
-                  },
-                  {
-                    label: "Digital",
-                    amount: paymentSummary.nequi,
-                    icon: Smartphone,
-                    color: "purple",
-                  },
-                ].map((p) => (
-                  <div
-                    key={p.label}
-                    className="pos-card p-2.5 lg:p-10 group border-2 relative overflow-hidden transition-all duration-500 hover:scale-[1.02]"
-                  >
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+              {/* Payment Methods Visual Breakdown */}
+              <div className="lg:col-span-1 space-y-10">
+                <div className="flex items-center gap-3 px-3">
+                  <div className="h-2 w-2 rounded-full bg-primary" />
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40">
+                    MIX DE PAGOS
+                  </h3>
+                </div>
+                <div className="grid grid-cols-3 lg:grid-cols-1 gap-3 lg:gap-4">
+                  {[
+                    {
+                      label: "Efectivo",
+                      amount: paymentSummary.efectivo,
+                      icon: Banknote,
+                      color: "emerald",
+                    },
+                    {
+                      label: "Datáfono",
+                      amount: paymentSummary.tarjeta,
+                      icon: CreditCard,
+                      color: "blue",
+                    },
+                    {
+                      label: "Digital",
+                      amount: paymentSummary.nequi,
+                      icon: Smartphone,
+                      color: "purple",
+                    },
+                  ].map((p) => (
                     <div
-                      className={cn(
-                        "absolute right-0 top-0 w-24 h-24 blur-3xl opacity-5 transition-all duration-500 group-hover:opacity-10",
-                        p.color === "emerald"
-                          ? "bg-emerald-500"
-                          : p.color === "blue"
-                            ? "bg-blue-500"
-                            : p.color === "purple"
-                              ? "bg-purple-500"
-                              : "bg-primary",
-                      )}
-                    />
-
-                    <div className="flex flex-col lg:flex-row items-center justify-between gap-2 lg:gap-6 mb-2 lg:mb-8">
-                      <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-6 text-center lg:text-left">
-                        <div
-                          className={cn(
-                            "h-8 w-8 lg:h-16 lg:w-16 rounded-lg lg:rounded-2xl flex items-center justify-center transition-all group-hover:rotate-12 duration-500 shadow-soft shrink-0",
-                            p.color === "emerald"
-                              ? "bg-emerald-500/10 text-emerald-600"
-                              : p.color === "blue"
-                                ? "bg-blue-500/10 text-blue-600"
-                                : p.color === "purple"
-                                  ? "bg-purple-500/10 text-purple-600"
-                                  : "bg-primary/10 text-primary",
-                          )}
-                        >
-                          <p.icon className="h-4 w-4 lg:h-8 lg:w-8" strokeWidth={2.5} />
-                        </div>
-                        <div className="space-y-0.5 lg:space-y-1 min-w-0">
-                          <p className="text-[7px] lg:text-[10px] font-black uppercase tracking-widest lg:tracking-[0.2em] text-muted-foreground/40 leading-none truncate">
-                            {p.label}
-                          </p>
-                          <p
+                      key={p.label}
+                      className="pos-card p-3 lg:p-4 group border-2 relative overflow-hidden transition-all duration-300 hover:scale-[1.02] bg-white/60"
+                    >
+                      <div className="flex flex-col lg:flex-row items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <div
                             className={cn(
-                              "text-[9px] lg:text-3xl font-black tracking-tighter truncate",
+                              "h-8 w-8 rounded-lg flex items-center justify-center transition-all group-hover:rotate-12 duration-500 shadow-soft shrink-0",
                               p.color === "emerald"
-                                ? "text-emerald-600"
+                                ? "bg-emerald-500/10 text-emerald-600"
                                 : p.color === "blue"
-                                  ? "text-blue-600"
-                                  : p.color === "purple"
-                                    ? "text-purple-600"
-                                    : "text-primary",
+                                  ? "bg-blue-500/10 text-blue-600"
+                                  : "bg-purple-500/10 text-purple-600",
                             )}
                           >
-                            {formatPrice(p.amount)}
+                            <p.icon className="h-4 w-4" strokeWidth={2.5} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none truncate">
+                              {p.label}
+                            </p>
+                            <p
+                              className={cn(
+                                "text-xs lg:text-xl font-black tracking-tighter truncate",
+                                p.color === "emerald"
+                                  ? "text-emerald-600"
+                                  : p.color === "blue"
+                                    ? "text-blue-600"
+                                    : "text-purple-600",
+                              )}
+                            >
+                              {formatPrice(p.amount)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right hidden xl:block">
+                          <p className="text-xl font-black text-muted-foreground/20 italic">
+                            {paymentSummary.total > 0
+                              ? Math.round(
+                                  (p.amount / paymentSummary.total) * 100,
+                                )
+                              : 0}
+                            %
                           </p>
                         </div>
                       </div>
-                      <div className="text-right hidden lg:block">
-                        <p className="text-2xl font-black text-muted-foreground/20 italic">
-                          {paymentSummary.total > 0
-                            ? Math.round(
-                                (p.amount / paymentSummary.total) * 100,
-                              )
-                            : 0}
-                          %
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="space-y-2 lg:space-y-3">
-                      <div className="flex justify-between items-center px-0.5 lg:px-1">
-                        <span className="lg:hidden text-[8px] font-black text-muted-foreground/40">
-                          {paymentSummary.total > 0 ? Math.round((p.amount / paymentSummary.total) * 100) : 0}%
-                        </span>
-                        <div className="h-1 lg:h-1.5 w-1 lg:w-1.5 rounded-full bg-accent/20 hidden lg:block" />
-                        <div className="h-1 lg:h-1.5 w-1 lg:w-1.5 rounded-full bg-accent/20" />
-                      </div>
-                      <div className="w-full h-2.5 lg:h-4 bg-accent/10 rounded-full overflow-hidden border border-white shadow-inner">
+                      <div className="w-full h-2 bg-accent/10 rounded-full overflow-hidden border border-white">
                         <div
                           className={cn(
-                            "h-full rounded-full transition-all duration-1000 ease-out shadow-sm",
+                            "h-full rounded-full transition-all duration-1000",
                             p.color === "emerald"
                               ? "bg-emerald-500"
                               : p.color === "blue"
                                 ? "bg-blue-500"
-                                : p.color === "purple"
-                                  ? "bg-purple-500"
-                                  : "bg-primary",
+                                : "bg-purple-500",
                           )}
                           style={{
                             width: `${paymentSummary.total > 0 ? (p.amount / paymentSummary.total) * 100 : 0}%`,
@@ -754,827 +733,821 @@ export default function Reporteria() {
                         />
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Hourly Chart */}
-            <div className="lg:col-span-2 space-y-10">
-              <div className="flex items-center gap-3 px-3">
-                <div className="h-4 w-4 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)]" />
-                <h3 className="text-[12px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">
-                  CURVA DE VENTAS POR HORA
-                </h3>
-              </div>
-              <div className="pos-card p-12 h-[580px] border-2 bg-white/80 backdrop-blur-xl relative overflow-hidden group shadow-strong">
-                <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary/20 to-transparent" />
-
-                <div className="flex items-center justify-between mb-12">
-                  <div>
-                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-2">
-                      RENDIMIENTO TEMPORAL
-                    </p>
-                    <h4 className="text-2xl font-black tracking-tight">
-                      Distribución de Ingresos
-                    </h4>
-                  </div>
-                  <div className="bg-primary/5 px-6 py-3 rounded-2xl border border-primary/10">
-                    <p className="text-xs font-black text-primary tracking-widest">
-                      REAL TIME
-                    </p>
-                  </div>
-                </div>
-
-                <ResponsiveContainer width="100%" height="75%">
-                  <LineChart
-                    data={hourlyData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient
-                        id="colorSales"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="hsl(var(--primary))"
-                          stopOpacity={0.15}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="hsl(var(--primary))"
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="8 8"
-                      stroke="hsl(var(--border))"
-                      vertical={false}
-                      opacity={0.3}
-                    />
-                    <XAxis
-                      dataKey="hora"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={11}
-                      fontWeight={900}
-                      axisLine={false}
-                      tickLine={false}
-                      dy={20}
-                    />
-                    <YAxis
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={11}
-                      fontWeight={900}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v) => `$${v / 1000}k`}
-                      dx={-15}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: "rgba(255, 255, 255, 0.95)",
-                        backdropFilter: "blur(20px)",
-                        border: "1px solid white",
-                        borderRadius: "32px",
-                        boxShadow: "0 25px 60px -12px rgba(0,0,0,0.2)",
-                        padding: "24px",
-                      }}
-                      itemStyle={{
-                        color: "hsl(var(--primary))",
-                        fontWeight: 900,
-                        fontSize: "18px",
-                      }}
-                      labelStyle={{
-                        fontWeight: 900,
-                        color: "hsl(var(--muted-foreground))",
-                        marginBottom: "8px",
-                        fontSize: "11px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.2em",
-                      }}
-                      formatter={(value: number) => [
-                        formatPrice(value),
-                        "Ventas",
-                      ]}
-                      cursor={{
-                        stroke: "hsl(var(--primary))",
-                        strokeWidth: 3,
-                        strokeDasharray: "10 10",
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="ventas"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={8}
-                      dot={{
-                        r: 10,
-                        fill: "white",
-                        stroke: "hsl(var(--primary))",
-                        strokeWidth: 4,
-                      }}
-                      activeDot={{
-                        r: 14,
-                        strokeWidth: 0,
-                        fill: "hsl(var(--primary))",
-                      }}
-                      animationDuration={2500}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* ===== CIERRE DE CAJA ===== */}
-        <TabsContent
-          value="caja"
-          className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
-        >
-          <div className="pos-card bg-white/60 backdrop-blur-3xl p-16 border-4 border-white rounded-[4rem] shadow-strong relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-all duration-1000" />
-
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-12 mb-20 relative">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 text-primary/60 font-black uppercase tracking-[0.4em] text-[10px]">
-                  <div className="h-[2px] w-12 bg-primary/30 rounded-full" />
-                  CIERRE DE OPERACIONES
-                </div>
-                <h2 className="text-5xl font-black tracking-tighter">
-                  Estado de Caja
-                </h2>
-                <p className="text-muted-foreground/60 font-bold flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Período:{" "}
-                  {dateRange?.from
-                    ? format(dateRange.from, "PPP", { locale: es })
-                    : "Hoy"}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-6 bg-primary/5 p-8 rounded-[2.5rem] border border-primary/10 shadow-inner">
-                <div className="h-20 w-20 rounded-3xl bg-primary flex items-center justify-center text-white shadow-strong shadow-primary/20">
-                  <DollarSign className="h-10 w-10" strokeWidth={3} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-primary/40 tracking-[0.3em] uppercase mb-1">
-                    VENTAS TOTALES
-                  </p>
-                  <p className="text-4xl font-black tracking-tighter text-primary">
-                    {formatPrice(cashSummary.totalSales)}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-20">
-              {[
-                {
-                  label: "EFECTIVO",
-                  amount: paymentSummary.efectivo,
-                  icon: Banknote,
-                  color: "emerald",
-                },
-                {
-                  label: "DATÁFONO",
-                  amount: paymentSummary.tarjeta,
-                  icon: CreditCard,
-                  color: "blue",
-                },
-                {
-                  label: "DIGITAL",
-                  amount: paymentSummary.nequi,
-                  icon: Smartphone,
-                  color: "purple",
-                },
-              ].map((m) => (
-                <div
-                  key={m.label}
-                  className="bg-white/40 p-10 rounded-[2.5rem] border-2 border-white shadow-soft group hover:scale-[1.02] transition-all duration-500"
-                >
-                  <div className="flex items-center gap-4 mb-6">
-                    <div
-                      className={cn(
-                        "h-12 w-12 rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12",
-                        m.color === "blue"
-                          ? "bg-blue-500/10 text-blue-600"
-                          : m.color === "purple"
-                            ? "bg-purple-500/10 text-purple-600"
-                            : "bg-emerald-500/10 text-emerald-600",
-                      )}
-                    >
-                      <m.icon className="h-6 w-6" strokeWidth={2.5} />
-                    </div>
-                    <span className="text-[10px] font-black text-muted-foreground/40 tracking-[0.2em] uppercase">
-                      {m.label}
-                    </span>
-                  </div>
-                  <p
-                    className={cn(
-                      "text-3xl font-black tracking-tighter",
-                      m.color === "blue"
-                        ? "text-blue-600"
-                        : m.color === "purple"
-                          ? "text-purple-600"
-                          : "text-emerald-600",
-                    )}
-                  >
-                    {formatPrice(m.amount)}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 relative">
-              <div className="space-y-8">
-                <div className="flex items-center gap-3 px-3">
-                  <div className="h-4 w-4 rounded-full bg-accent/30" />
-                  <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">
-                    DESGLOSE OPERATIVO
-                  </h3>
-                </div>
-                <div className="bg-white/40 rounded-[2.5rem] border-2 border-white shadow-soft p-10 space-y-6">
-                  {[
-                    {
-                      label: "Pedidos Entregados",
-                      count: cashSummary.deliveredCount,
-                      color: "text-green-600",
-                      bg: "bg-green-500/10",
-                    },
-                    {
-                      label: "Pedidos Pendientes",
-                      count: cashSummary.pendingCount,
-                      color: "text-amber-600",
-                      bg: "bg-amber-500/10",
-                    },
-                    {
-                      label: "Pedidos Cancelados",
-                      count: cashSummary.cancelledCount,
-                      color: "text-destructive",
-                      bg: "bg-red-500/10",
-                    },
-                  ].map((stat, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-4 lg:p-6 rounded-2xl lg:rounded-3xl hover:bg-white/50 transition-colors group"
-                    >
-                      <span className="font-bold text-base lg:text-lg text-muted-foreground/70">
-                        {stat.label}
-                      </span>
-                      <div
-                        className={cn(
-                          "px-4 lg:px-6 py-1.5 lg:py-2 rounded-xl lg:rounded-2xl font-black text-lg lg:text-xl shadow-inner group-hover:scale-110 transition-transform",
-                          stat.bg,
-                          stat.color,
-                        )}
-                      >
-                        {stat.count}
-                      </div>
-                    </div>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-8">
+              {/* Hourly Chart */}
+              <div className="lg:col-span-2 space-y-6">
                 <div className="flex items-center gap-3 px-3">
-                  <div className="h-4 w-4 rounded-full bg-primary/20" />
-                  <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">
-                    BALANCE FINAL
+                  <div className="h-2 w-2 rounded-full bg-primary" />
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40">
+                    CURVA DE VENTAS
                   </h3>
                 </div>
-                <div className="bg-primary p-8 lg:p-12 rounded-4xl lg:rounded-[2.5rem] shadow-strong shadow-primary/20 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-white/20 transition-all duration-700" />
-                  <p className="text-white/60 font-black text-[9px] lg:text-[10px] tracking-[0.4em] uppercase mb-2">
-                    GRAN TOTAL PERÍODO
-                  </p>
-                  <p className="text-4xl lg:text-6xl font-black text-white tracking-tighter mb-6 lg:mb-8 group-hover:scale-105 transition-transform origin-left">
-                    {formatPrice(cashSummary.totalSales)}
-                  </p>
-                  <div className="flex items-center gap-3 lg:gap-4 py-3 lg:py-4 px-4 lg:px-6 bg-white/10 rounded-xl lg:rounded-2xl border border-white/10 backdrop-blur-md">
-                    <TrendingUp className="h-4 w-4 lg:h-5 lg:w-5 text-white/60" />
-                    <p className="text-white/80 font-bold text-xs lg:text-sm">
-                      Rendimiento óptimo del sistema de caja.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                <div className="pos-card p-6 lg:p-8 h-[380px] border-2 bg-white/80 backdrop-blur-xl relative overflow-hidden group shadow-md">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary/20 to-transparent" />
 
-          <div className="bg-accent/10 rounded-4xl lg:rounded-[3rem] p-6 lg:p-12 border-2 border-accent/20 relative group/section">
-            <div className="flex items-center gap-3 lg:gap-4 mb-6 lg:mb-10 relative">
-              <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-lg lg:rounded-xl bg-white border-2 shadow-soft flex items-center justify-center text-primary group-hover/section:scale-110 transition-transform">
-                <Banknote className="h-5 w-5 lg:h-6 lg:w-6" />
-              </div>
-              <h4 className="text-xl lg:text-2xl font-black tracking-tight text-foreground/80">
-                Liquidación por Medios de Pago
-              </h4>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-              {[
-                {
-                  label: "Caja (Efectivo)",
-                  value: paymentSummary.efectivo,
-                  icon: Banknote,
-                  color: "emerald",
-                },
-                {
-                  label: "Datáfono (Tarjetas)",
-                  value: paymentSummary.tarjeta,
-                  icon: CreditCard,
-                  color: "blue",
-                },
-                {
-                  label: "Digital (Nequi/Transferencia)",
-                  value: paymentSummary.nequi,
-                  icon: Smartphone,
-                  color: "purple",
-                },
-              ].map((p) => (
-                <div
-                  key={p.label}
-                  className="bg-white/80 p-6 lg:p-8 rounded-2xl lg:rounded-3xl shadow-strong border-2 border-transparent hover:border-primary/20 transition-all duration-500 group/item hover:scale-105"
-                >
-                  <div className="flex items-center gap-3 lg:gap-4 mb-4 lg:mb-6">
-                    <div
-                      className={cn(
-                        "h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl flex items-center justify-center shadow-soft",
-                        p.color === "emerald"
-                          ? "bg-emerald-500/10 text-emerald-600"
-                          : p.color === "blue"
-                            ? "bg-blue-500/10 text-blue-600"
-                            : p.color === "purple"
-                              ? "bg-purple-500/10 text-purple-600"
-                              : "bg-primary/10 text-primary",
-                      )}
-                    >
-                      <p.icon
-                        className="h-5 w-5 lg:h-6 lg:w-6"
-                        strokeWidth={2.5}
-                      />
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <h4 className="text-xl font-black tracking-tight uppercase">
+                        Distribución Horaria
+                      </h4>
                     </div>
-                    <p className="text-[10px] lg:text-[11px] font-black uppercase text-muted-foreground/40 tracking-widest leading-tight">
-                      {p.label}
-                    </p>
+                    <div className="bg-primary/5 px-4 py-2 rounded-xl border border-primary/10">
+                      <p className="text-[8px] font-black text-primary tracking-widest">
+                        REAL TIME
+                      </p>
+                    </div>
                   </div>
-                  <p
-                    className={cn(
-                      "text-2xl lg:text-3xl font-black tracking-tighter",
-                      p.color === "emerald"
-                        ? "text-emerald-600"
-                        : p.color === "blue"
-                          ? "text-blue-600"
-                          : p.color === "purple"
-                            ? "text-purple-600"
-                            : "text-primary",
-                    )}
-                  >
-                    {formatPrice(p.value)}
+
+                  <ResponsiveContainer width="100%" height="75%">
+                    <LineChart
+                      data={hourlyData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="colorSales"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="hsl(var(--primary))"
+                            stopOpacity={0.15}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="hsl(var(--primary))"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="8 8"
+                        stroke="hsl(var(--border))"
+                        vertical={false}
+                        opacity={0.3}
+                      />
+                      <XAxis
+                        dataKey="hora"
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={11}
+                        fontWeight={900}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={20}
+                      />
+                      <YAxis
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={11}
+                        fontWeight={900}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => `$${v / 1000}k`}
+                        dx={-15}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          background: "rgba(255, 255, 255, 0.95)",
+                          backdropFilter: "blur(20px)",
+                          border: "1px solid white",
+                          borderRadius: "32px",
+                          boxShadow: "0 25px 60px -12px rgba(0,0,0,0.2)",
+                          padding: "24px",
+                        }}
+                        itemStyle={{
+                          color: "hsl(var(--primary))",
+                          fontWeight: 900,
+                          fontSize: "18px",
+                        }}
+                        labelStyle={{
+                          fontWeight: 900,
+                          color: "hsl(var(--muted-foreground))",
+                          marginBottom: "8px",
+                          fontSize: "11px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.2em",
+                        }}
+                        formatter={(value: number) => [
+                          formatPrice(value),
+                          "Ventas",
+                        ]}
+                        cursor={{
+                          stroke: "hsl(var(--primary))",
+                          strokeWidth: 3,
+                          strokeDasharray: "10 10",
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="ventas"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={8}
+                        dot={{
+                          r: 10,
+                          fill: "white",
+                          stroke: "hsl(var(--primary))",
+                          strokeWidth: 4,
+                        }}
+                        activeDot={{
+                          r: 14,
+                          strokeWidth: 0,
+                          fill: "hsl(var(--primary))",
+                        }}
+                        animationDuration={2500}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* ===== CIERRE DE CAJA ===== */}
+          <TabsContent
+            value="caja"
+            className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
+          >
+            <div className="pos-card bg-white/60 backdrop-blur-3xl p-6 lg:p-10 border-4 border-white rounded-3xl lg:rounded-[2.5rem] shadow-strong relative overflow-hidden group">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10 relative">
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-black tracking-tighter uppercase">
+                    Estado de Caja
+                  </h2>
+                  <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest flex items-center gap-2">
+                    <Clock className="h-3 w-3" />
+                    Período:{" "}
+                    {dateRange?.from
+                      ? format(dateRange.from, "PPP", { locale: es })
+                      : "Hoy"}
                   </p>
                 </div>
-              ))}
-            </div>
-          </div>
-        </TabsContent>
 
-        {/* ===== VENTAS POR PERSONAL ===== */}
-        <TabsContent
-          value="meseros"
-          className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
-            {waiterData.map((w, idx) => (
-              <div
-                key={w.name}
-                className="pos-card p-10 group overflow-hidden relative border-4 border-white shadow-strong hover:scale-[1.05] transition-all duration-700"
-                style={{ animationDelay: `${idx * 100}ms` }}
-              >
-                <div className="absolute -right-8 -top-8 h-40 w-40 bg-primary/5 rounded-full blur-[60px] group-hover:bg-primary/15 transition-all duration-1000" />
-
-                <div className="flex flex-col items-center text-center space-y-6 mb-10 relative">
-                  <div className="w-24 h-24 rounded-4xl bg-linear-to-br from-primary/80 to-primary flex items-center justify-center text-white font-black text-4xl shadow-strong shadow-primary/20 group-hover:rotate-12 transition-all duration-500">
-                    {w.name.charAt(0)}
+                <div className="flex items-center gap-4 bg-primary/5 p-4 lg:p-6 rounded-2xl border border-primary/10">
+                  <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center text-white shadow-md">
+                    <DollarSign className="h-6 w-6" strokeWidth={3} />
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="font-black text-2xl tracking-tighter text-foreground group-hover:text-primary transition-colors">
-                      {w.name}
-                    </h3>
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/5 rounded-full border border-primary/10">
-                      <Award className="h-4 w-4 text-primary" />
-                      <span className="text-[10px] font-black text-primary/60 uppercase tracking-widest">
-                        {w.orders} SERVICIOS
+                  <div>
+                    <p className="text-[9px] font-black text-primary/40 tracking-[0.2em] uppercase leading-none mb-1">
+                      VENTAS TOTALES
+                    </p>
+                    <p className="text-2xl lg:text-3xl font-black tracking-tighter text-primary leading-none">
+                      {formatPrice(cashSummary.totalSales)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                {[
+                  {
+                    label: "EFECTIVO",
+                    amount: paymentSummary.efectivo,
+                    icon: Banknote,
+                    color: "emerald",
+                  },
+                  {
+                    label: "DATÁFONO",
+                    amount: paymentSummary.tarjeta,
+                    icon: CreditCard,
+                    color: "blue",
+                  },
+                  {
+                    label: "DIGITAL",
+                    amount: paymentSummary.nequi,
+                    icon: Smartphone,
+                    color: "purple",
+                  },
+                ].map((m) => (
+                  <div
+                    key={m.label}
+                    className="bg-white/40 p-6 rounded-2xl border-2 border-white shadow-soft group hover:scale-[1.02] transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <div
+                        className={cn(
+                          "h-10 w-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-12",
+                          m.color === "blue"
+                            ? "bg-blue-500/10 text-blue-600"
+                            : m.color === "purple"
+                              ? "bg-purple-500/10 text-purple-600"
+                              : "bg-emerald-500/10 text-emerald-600",
+                        )}
+                      >
+                        <m.icon className="h-5 w-5" strokeWidth={2.5} />
+                      </div>
+                      <span className="text-[9px] font-black text-muted-foreground/40 tracking-widest uppercase">
+                        {m.label}
                       </span>
                     </div>
+                    <p
+                      className={cn(
+                        "text-2xl font-black tracking-tighter",
+                        m.color === "blue"
+                          ? "text-blue-600"
+                          : m.color === "purple"
+                            ? "text-purple-600"
+                            : "text-emerald-600",
+                      )}
+                    >
+                      {formatPrice(m.amount)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 px-3">
+                    <div className="h-2 w-2 rounded-full bg-accent/30" />
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">
+                      DESGLOSE OPERATIVO
+                    </h3>
+                  </div>
+                  <div className="bg-white/40 rounded-2xl border-2 border-white shadow-soft p-6 lg:p-8 space-y-4">
+                    {[
+                      {
+                        label: "Pedidos Entregados",
+                        count: cashSummary.deliveredCount,
+                        color: "text-green-600",
+                        bg: "bg-green-500/10",
+                      },
+                      {
+                        label: "Pedidos Pendientes",
+                        count: cashSummary.pendingCount,
+                        color: "text-amber-600",
+                        bg: "bg-amber-500/10",
+                      },
+                      {
+                        label: "Pedidos Cancelados",
+                        count: cashSummary.cancelledCount,
+                        color: "text-destructive",
+                        bg: "bg-red-500/10",
+                      },
+                    ].map((stat, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between p-3 lg:p-4 rounded-xl hover:bg-white/50 transition-colors group"
+                      >
+                        <span className="font-bold text-sm lg:text-base text-muted-foreground/70">
+                          {stat.label}
+                        </span>
+                        <div
+                          className={cn(
+                            "px-4 py-1.5 rounded-xl font-black text-base shadow-inner group-hover:scale-110 transition-transform",
+                            stat.bg,
+                            stat.color,
+                          )}
+                        >
+                          {stat.count}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                <div className="bg-white/40 p-8 rounded-4xl border-2 border-white shadow-soft relative group/amount">
-                  <p className="text-[10px] font-black uppercase text-muted-foreground/30 tracking-[0.3em] mb-2">
-                    VENTAS ACUMULADAS
-                  </p>
-                  <p className="text-3xl font-black text-primary tracking-tighter">
-                    {formatPrice(w.total)}
-                  </p>
-                  <div className="absolute right-6 bottom-6 h-2 w-2 rounded-full bg-primary/20 animate-pulse" />
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 px-3">
+                    <div className="h-2 w-2 rounded-full bg-primary/20" />
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">
+                      BALANCE FINAL
+                    </h3>
+                  </div>
+                  <div className="bg-primary p-8 lg:p-10 rounded-2xl lg:rounded-4xl shadow-lg shadow-primary/20 relative overflow-hidden group">
+                    <p className="text-white/60 font-black text-[9px] tracking-[0.4em] uppercase mb-1">
+                      GRAN TOTAL
+                    </p>
+                    <p className="text-4xl lg:text-5xl font-black text-white tracking-tighter mb-4 group-hover:scale-105 transition-transform origin-left">
+                      {formatPrice(cashSummary.totalSales)}
+                    </p>
+                    <div className="flex items-center gap-3 py-2 px-4 bg-white/10 rounded-xl border border-white/10 backdrop-blur-md">
+                      <TrendingUp className="h-4 w-4 text-white/60" />
+                      <p className="text-white/80 font-bold text-[10px] lg:text-xs">
+                        Liquidación de caja consolidada.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
 
-            {waiterData.length === 0 && (
-              <div className="col-span-full py-48 flex flex-col items-center justify-center space-y-8 bg-white/40 rounded-[4rem] border-4 border-white shadow-soft border-dashed animate-pulse">
-                <div className="h-28 w-28 rounded-[2.5rem] bg-accent/10 flex items-center justify-center text-muted-foreground/20">
-                  <User className="h-14 w-14" strokeWidth={2.5} />
+            <div className="bg-accent/10 rounded-4xl lg:rounded-[3rem] p-6 lg:p-12 border-2 border-accent/20 relative group/section">
+              <div className="flex items-center gap-3 lg:gap-4 mb-6 lg:mb-10 relative">
+                <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-lg lg:rounded-xl bg-white border-2 shadow-soft flex items-center justify-center text-primary group-hover/section:scale-110 transition-transform">
+                  <Banknote className="h-5 w-5 lg:h-6 lg:w-6" />
                 </div>
-                <div className="text-center space-y-2">
-                  <p className="font-black uppercase tracking-[0.5em] text-sm text-muted-foreground/40">
-                    SIN REGISTROS DE PERSONAL
-                  </p>
-                  <p className="text-xs font-bold text-muted-foreground/30 italic">
-                    No hay actividad detectada en el periodo seleccionado
-                  </p>
+                <h4 className="text-xl lg:text-2xl font-black tracking-tight text-foreground/80">
+                  Liquidación por Medios de Pago
+                </h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                {[
+                  {
+                    label: "Caja (Efectivo)",
+                    value: paymentSummary.efectivo,
+                    icon: Banknote,
+                    color: "emerald",
+                  },
+                  {
+                    label: "Datáfono (Tarjetas)",
+                    value: paymentSummary.tarjeta,
+                    icon: CreditCard,
+                    color: "blue",
+                  },
+                  {
+                    label: "Digital (Nequi/Transferencia)",
+                    value: paymentSummary.nequi,
+                    icon: Smartphone,
+                    color: "purple",
+                  },
+                ].map((p) => (
+                  <div
+                    key={p.label}
+                    className="bg-white/80 p-6 lg:p-8 rounded-2xl lg:rounded-3xl shadow-strong border-2 border-transparent hover:border-primary/20 transition-all duration-500 group/item hover:scale-105"
+                  >
+                    <div className="flex items-center gap-3 lg:gap-4 mb-4 lg:mb-6">
+                      <div
+                        className={cn(
+                          "h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl flex items-center justify-center shadow-soft",
+                          p.color === "emerald"
+                            ? "bg-emerald-500/10 text-emerald-600"
+                            : p.color === "blue"
+                              ? "bg-blue-500/10 text-blue-600"
+                              : p.color === "purple"
+                                ? "bg-purple-500/10 text-purple-600"
+                                : "bg-primary/10 text-primary",
+                        )}
+                      >
+                        <p.icon
+                          className="h-5 w-5 lg:h-6 lg:w-6"
+                          strokeWidth={2.5}
+                        />
+                      </div>
+                      <p className="text-[10px] lg:text-[11px] font-black uppercase text-muted-foreground/40 tracking-widest leading-tight">
+                        {p.label}
+                      </p>
+                    </div>
+                    <p
+                      className={cn(
+                        "text-2xl lg:text-3xl font-black tracking-tighter",
+                        p.color === "emerald"
+                          ? "text-emerald-600"
+                          : p.color === "blue"
+                            ? "text-blue-600"
+                            : p.color === "purple"
+                              ? "text-purple-600"
+                              : "text-primary",
+                      )}
+                    >
+                      {formatPrice(p.value)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* ===== VENTAS POR PERSONAL ===== */}
+          <TabsContent
+            value="meseros"
+            className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
+              {waiterData.map((w, idx) => (
+                <div
+                  key={w.name}
+                  className="pos-card p-10 group overflow-hidden relative border-4 border-white shadow-strong hover:scale-[1.05] transition-all duration-700"
+                  style={{ animationDelay: `${idx * 100}ms` }}
+                >
+                  <div className="absolute -right-8 -top-8 h-40 w-40 bg-primary/5 rounded-full blur-[60px] group-hover:bg-primary/15 transition-all duration-1000" />
+
+                  <div className="flex flex-col items-center text-center space-y-6 mb-10 relative">
+                    <div className="w-24 h-24 rounded-4xl bg-linear-to-br from-primary/80 to-primary flex items-center justify-center text-white font-black text-4xl shadow-strong shadow-primary/20 group-hover:rotate-12 transition-all duration-500">
+                      {w.name.charAt(0)}
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="font-black text-2xl tracking-tighter text-foreground group-hover:text-primary transition-colors">
+                        {w.name}
+                      </h3>
+                      <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/5 rounded-full border border-primary/10">
+                        <Award className="h-4 w-4 text-primary" />
+                        <span className="text-[10px] font-black text-primary/60 uppercase tracking-widest">
+                          {w.orders} SERVICIOS
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/40 p-8 rounded-4xl border-2 border-white shadow-soft relative group/amount">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground/30 tracking-[0.3em] mb-2">
+                      VENTAS ACUMULADAS
+                    </p>
+                    <p className="text-3xl font-black text-primary tracking-tighter">
+                      {formatPrice(w.total)}
+                    </p>
+                    <div className="absolute right-6 bottom-6 h-2 w-2 rounded-full bg-primary/20 animate-pulse" />
+                  </div>
+                </div>
+              ))}
+
+              {waiterData.length === 0 && (
+                <div className="col-span-full py-48 flex flex-col items-center justify-center space-y-8 bg-white/40 rounded-[4rem] border-4 border-white shadow-soft border-dashed animate-pulse">
+                  <div className="h-28 w-28 rounded-[2.5rem] bg-accent/10 flex items-center justify-center text-muted-foreground/20">
+                    <User className="h-14 w-14" strokeWidth={2.5} />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <p className="font-black uppercase tracking-[0.5em] text-sm text-muted-foreground/40">
+                      SIN REGISTROS DE PERSONAL
+                    </p>
+                    <p className="text-xs font-bold text-muted-foreground/30 italic">
+                      No hay actividad detectada en el periodo seleccionado
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {waiterData.length > 0 && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 px-3">
+                  <div className="h-2 w-2 rounded-full bg-primary" />
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40">
+                    DESEMPEÑO POR PERSONAL
+                  </h3>
+                </div>
+                <div className="pos-card p-4 lg:p-6 h-[300px] border-2 shadow-md bg-white/80 backdrop-blur-md relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary/20 to-transparent" />
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={waiterData}
+                      margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="4 4"
+                        stroke="hsl(var(--border))"
+                        vertical={false}
+                        opacity={0.5}
+                      />
+                      <XAxis
+                        dataKey="name"
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12}
+                        fontWeight={900}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={20}
+                      />
+                      <YAxis
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12}
+                        fontWeight={900}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => `$${v / 1000}k`}
+                        dx={-15}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          background: "rgba(255, 255, 255, 0.9)",
+                          backdropFilter: "blur(10px)",
+                          border: "2px solid hsl(var(--primary)/10%)",
+                          borderRadius: "24px",
+                          boxShadow: "0 20px 50px -10px rgba(0,0,0,0.15)",
+                          padding: "20px",
+                        }}
+                        itemStyle={{
+                          color: "hsl(var(--primary))",
+                          fontWeight: 900,
+                          fontSize: "16px",
+                        }}
+                        labelStyle={{
+                          fontWeight: 900,
+                          color: "hsl(var(--muted-foreground))",
+                          marginBottom: "6px",
+                          fontSize: "12px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.1em",
+                        }}
+                        cursor={{
+                          fill: "hsl(var(--primary))",
+                          opacity: 0.05,
+                          radius: 20,
+                        }}
+                        formatter={(value: number) => [
+                          formatPrice(value),
+                          "Total Vendido",
+                        ]}
+                      />
+                      <Bar
+                        dataKey="total"
+                        fill="hsl(var(--primary))"
+                        radius={[16, 16, 8, 8]}
+                        barSize={60}
+                        animationDuration={1500}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             )}
-          </div>
+          </TabsContent>
 
-          {waiterData.length > 0 && (
-            <div className="space-y-10">
-              <div className="flex items-center gap-4 px-3">
-                <div className="h-[2px] w-12 bg-primary/20 rounded-full" />
-                <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">
-                  COMPARATIVA DE DESEMPEÑO
-                </h3>
-              </div>
-              <div className="pos-card p-12 h-[550px] border-2 shadow-strong bg-white/80 backdrop-blur-md relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary/20 to-transparent" />
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={waiterData}
-                    margin={{ top: 30, right: 30, left: 30, bottom: 30 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="4 4"
-                      stroke="hsl(var(--border))"
-                      vertical={false}
-                      opacity={0.5}
-                    />
-                    <XAxis
-                      dataKey="name"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      fontWeight={900}
-                      axisLine={false}
-                      tickLine={false}
-                      dy={20}
-                    />
-                    <YAxis
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      fontWeight={900}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v) => `$${v / 1000}k`}
-                      dx={-15}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: "rgba(255, 255, 255, 0.9)",
-                        backdropFilter: "blur(10px)",
-                        border: "2px solid hsl(var(--primary)/10%)",
-                        borderRadius: "24px",
-                        boxShadow: "0 20px 50px -10px rgba(0,0,0,0.15)",
-                        padding: "20px",
-                      }}
-                      itemStyle={{
-                        color: "hsl(var(--primary))",
-                        fontWeight: 900,
-                        fontSize: "16px",
-                      }}
-                      labelStyle={{
-                        fontWeight: 900,
-                        color: "hsl(var(--muted-foreground))",
-                        marginBottom: "6px",
-                        fontSize: "12px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.1em",
-                      }}
-                      cursor={{
-                        fill: "hsl(var(--primary))",
-                        opacity: 0.05,
-                        radius: 20,
-                      }}
-                      formatter={(value: number) => [
-                        formatPrice(value),
-                        "Total Vendido",
-                      ]}
-                    />
-                    <Bar
-                      dataKey="total"
-                      fill="hsl(var(--primary))"
-                      radius={[16, 16, 8, 8]}
-                      barSize={60}
-                      animationDuration={1500}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* ===== DETALLE HISTORICO ===== */}
-        <TabsContent
-          value="detalle"
-          className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
-        >
-          <div className="space-y-8 pb-20">
-            {filteredOrders.length === 0 ? (
-              <div className="py-48 flex flex-col items-center justify-center space-y-10 bg-white/40 rounded-[4rem] border-4 border-white shadow-soft group">
-                <div className="h-32 w-32 rounded-[2.5rem] bg-accent/5 flex items-center justify-center text-muted-foreground/20 group-hover:scale-110 transition-transform duration-700">
-                  <ShoppingCart className="h-16 w-16" strokeWidth={1.5} />
+          {/* ===== DETALLE HISTORICO ===== */}
+          <TabsContent
+            value="detalle"
+            className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
+          >
+            <div className="space-y-8 pb-20">
+              {filteredOrders.length === 0 ? (
+                <div className="py-48 flex flex-col items-center justify-center space-y-10 bg-white/40 rounded-[4rem] border-4 border-white shadow-soft group">
+                  <div className="h-32 w-32 rounded-[2.5rem] bg-accent/5 flex items-center justify-center text-muted-foreground/20 group-hover:scale-110 transition-transform duration-700">
+                    <ShoppingCart className="h-16 w-16" strokeWidth={1.5} />
+                  </div>
+                  <div className="text-center space-y-3">
+                    <p className="font-black uppercase tracking-[0.5em] text-sm text-muted-foreground/40">
+                      ARCHIVO VACÍO
+                    </p>
+                    <p className="text-xs font-bold text-muted-foreground/20 italic max-w-xs mx-auto">
+                      Ajusta los filtros para explorar el historial de
+                      transacciones.
+                    </p>
+                  </div>
                 </div>
-                <div className="text-center space-y-3">
-                  <p className="font-black uppercase tracking-[0.5em] text-sm text-muted-foreground/40">
-                    ARCHIVO VACÍO
-                  </p>
-                  <p className="text-xs font-bold text-muted-foreground/20 italic max-w-xs mx-auto">
-                    Ajusta los filtros para explorar el historial de
-                    transacciones.
-                  </p>
-                </div>
-              </div>
-            ) : filteredOrders.map((order, idx) => {
-                const isExpanded = expandedDetailId === order.id;
-                const itemCount =
-                  order.order_items?.reduce(
-                    (s: number, i) => s + i.quantity,
-                    0,
-                  ) || 0;
-                const hora = new Date(order.created_at).toLocaleTimeString(
-                  "es-CO",
-                  { hour: "2-digit", minute: "2-digit", hour12: true },
-                );
+              ) : (
+                filteredOrders.map((order, idx) => {
+                  const isExpanded = expandedDetailId === order.id;
+                  const itemCount =
+                    order.order_items?.reduce(
+                      (s: number, i) => s + i.quantity,
+                      0,
+                    ) || 0;
+                  const hora = new Date(order.created_at).toLocaleTimeString(
+                    "es-CO",
+                    { hour: "2-digit", minute: "2-digit", hour12: true },
+                  );
 
-                return (
-                  <div
-                    key={order.id}
-                    className={cn(
-                      "pos-card overflow-hidden transition-all duration-500 border-4 relative group",
-                      isExpanded
-                        ? "border-primary/40 shadow-strong bg-white scale-[1.02] z-10"
-                        : "border-white bg-white/60 hover:bg-white hover:border-primary/20 hover:shadow-xl cursor-pointer",
-                    )}
-                    style={{ animationDelay: `${idx * 40}ms` }}
-                  >
-                    {/* Header — clickable */}
-                    <button
-                      onClick={() =>
-                        setExpandedDetailId((prev) =>
-                          prev === order.id ? null : order.id,
-                        )
-                      }
-                      className="w-full flex items-center justify-between gap-10 p-12 text-left"
+                  return (
+                    <div
+                      key={order.id}
+                      className={cn(
+                        "pos-card overflow-hidden transition-all duration-500 border-4 relative group",
+                        isExpanded
+                          ? "border-primary/40 shadow-strong bg-white scale-[1.02] z-10"
+                          : "border-white bg-white/60 hover:bg-white hover:border-primary/20 hover:shadow-xl cursor-pointer",
+                      )}
+                      style={{ animationDelay: `${idx * 40}ms` }}
                     >
-                      <div className="flex items-center gap-10 min-w-0">
-                        <div
-                          className={cn(
-                            "w-24 h-24 rounded-3xl flex flex-col items-center justify-center border-4 shadow-strong transition-all duration-500 group-hover:rotate-6",
-                            isExpanded
-                              ? "bg-primary text-white border-primary/20 shadow-primary/20"
-                              : "bg-white border-white text-primary",
-                          )}
-                        >
-                          <span className="text-[10px] font-black opacity-40 uppercase leading-none mb-1">
-                            ORD
-                          </span>
-                          <span className="text-3xl font-black">
-                            {order.locator}
-                          </span>
-                        </div>
-
-                        <div className="min-w-0 space-y-3">
-                          <div className="flex items-center gap-4 flex-wrap">
-                            <StatusBadge status={order.status} />
-                            <div className="h-1 w-1 rounded-full bg-accent/40" />
-                            <span className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] bg-white/80 px-4 py-1.5 rounded-full border border-white shadow-soft">
-                              {itemCount}{" "}
-                              {itemCount === 1 ? "ARTÍCULO" : "ARTÍCULOS"} •{" "}
-                              {hora}
+                      {/* Header — clickable */}
+                      <button
+                        onClick={() =>
+                          setExpandedDetailId((prev) =>
+                            prev === order.id ? null : order.id,
+                          )
+                        }
+                        className="w-full flex items-center justify-between gap-6 p-4 lg:p-6 text-left"
+                      >
+                        <div className="flex items-center gap-6 min-w-0">
+                          <div
+                            className={cn(
+                              "w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 shadow-md transition-all duration-300",
+                              isExpanded
+                                ? "bg-primary text-white border-primary/10"
+                                : "bg-white border-white text-primary",
+                            )}
+                          >
+                            <span className="text-[8px] font-black opacity-40 uppercase leading-none mb-1">
+                              ORD
+                            </span>
+                            <span className="text-xl font-black">
+                              {order.locator}
                             </span>
                           </div>
-                          <div className="flex items-center gap-4 lg:gap-8">
-                            <p className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground group-hover:text-primary transition-colors">
-                              {formatPrice(order.total)}
-                            </p>
-                            <div className="flex items-center gap-2 px-3 lg:px-5 py-1.5 lg:py-2 bg-primary/5 rounded-xl lg:rounded-2xl border border-primary/10 shadow-inner">
-                              <User className="h-3 w-3 lg:h-4 lg:w-4 text-primary/60" />
-                              <span className="text-[9px] lg:text-[10px] font-black text-primary uppercase tracking-widest">
-                                {order.profiles?.name || "SISTEMA"}
+
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <StatusBadge
+                                status={order.status}
+                                className="scale-75 origin-left"
+                              />
+                              <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest bg-white/80 px-3 py-1 rounded-full border border-white">
+                                {itemCount} {itemCount === 1 ? "ART" : "ARTS"} •{" "}
+                                {hora}
                               </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <p className="text-xl lg:text-2xl font-black tracking-tighter text-foreground">
+                                {formatPrice(order.total)}
+                              </p>
+                              <div className="flex items-center gap-2 px-3 py-1 bg-primary/5 rounded-lg border border-primary/10">
+                                <User className="h-3 w-3 text-primary/40" />
+                                <span className="text-[8px] font-black text-primary uppercase tracking-widest">
+                                  {order.profiles?.name || "SISTEMA"}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div
-                        className={cn(
-                          "h-16 w-16 rounded-full flex items-center justify-center border-2 transition-all duration-500",
-                          isExpanded
-                            ? "bg-primary border-primary/20 text-white shadow-strong shadow-primary/20"
-                            : "bg-white border-white text-muted-foreground shadow-soft group-hover:scale-110",
-                        )}
-                      >
-                        <ChevronDown
+                        <div
                           className={cn(
-                            "h-8 w-8 transition-transform duration-500",
-                            isExpanded && "rotate-180",
+                            "h-10 w-10 rounded-full flex items-center justify-center border transition-all duration-300",
+                            isExpanded
+                              ? "bg-primary text-white"
+                              : "bg-white text-muted-foreground",
                           )}
-                          strokeWidth={3}
-                        />
-                      </div>
-                    </button>
-
-                    {/* Detailed Content */}
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.5, ease: "circOut" }}
-                          className="overflow-hidden"
                         >
-                          <div className="p-6 lg:p-12 bg-accent/5 border-t-4 border-dashed border-white/60">
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-                              <div className="lg:col-span-7 space-y-6 lg:space-y-8">
-                                <div className="flex items-center gap-3 lg:gap-4 px-2">
-                                  <div className="h-2 w-2 rounded-full bg-primary" />
-                                  <h4 className="text-[10px] lg:text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">
-                                    DESGLOSE DE CONSUMO
-                                  </h4>
-                                </div>
-                                <div className="bg-white/80 backdrop-blur-md rounded-4xl lg:rounded-[3rem] p-6 lg:p-10 border-4 border-white shadow-strong">
-                                  <div className="divide-y divide-accent/30">
-                                    {order.order_items?.map((item) => (
-                                      <div
-                                        key={item.id}
-                                        className="py-4 lg:py-8 first:pt-0 last:pb-0 group/item"
-                                      >
-                                        <div className="flex justify-between items-start mb-2 lg:mb-3">
-                                          <div className="flex gap-4 lg:gap-6">
-                                            <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-base lg:text-lg border border-primary/5 shadow-inner">
-                                              {item.quantity}
-                                            </div>
-                                            <div className="space-y-0.5 lg:space-y-1">
-                                              <p className="font-black text-lg lg:text-xl text-foreground/80 group-hover/item:text-primary transition-colors">
-                                                {item.products?.name}
-                                              </p>
-                                              <p className="text-[9px] lg:text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
-                                                P. UNITARIO:{" "}
-                                                {formatPrice(item.unit_price)}
-                                              </p>
-                                            </div>
-                                          </div>
-                                          <p className="font-black text-xl lg:text-2xl tracking-tighter text-foreground/90">
-                                            {formatPrice(
-                                              item.unit_price * item.quantity,
-                                            )}
-                                          </p>
-                                        </div>
+                          <ChevronDown
+                            className={cn(
+                              "h-5 w-5 transition-transform duration-300",
+                              isExpanded && "rotate-180",
+                            )}
+                            strokeWidth={3}
+                          />
+                        </div>
+                      </button>
 
-                                        {(item.selected_options ||
-                                          item.selected_extras ||
-                                          item.notes) && (
-                                          <div className="ml-16 mt-4 p-5 bg-accent/5 rounded-2xl border border-accent/10 space-y-2">
-                                            {item.selected_options &&
-                                              Object.entries(
-                                                item.selected_options,
-                                              ).map(([key, val]) => (
-                                                <p
-                                                  key={key}
-                                                  className="text-xs text-muted-foreground/60 font-bold uppercase tracking-wider flex items-center gap-2"
-                                                >
-                                                  <div className="h-1 w-1 rounded-full bg-primary/40" />
-                                                  <span className="opacity-40">
-                                                    {key}:
-                                                  </span>{" "}
-                                                  {val}
-                                                </p>
-                                              ))}
-                                            {item.selected_extras &&
-                                              item.selected_extras.length >
-                                                0 && (
-                                                <p className="text-xs text-muted-foreground/60 font-bold uppercase tracking-wider flex items-center gap-2">
-                                                  <div className="h-1 w-1 rounded-full bg-primary/40" />
-                                                  <span className="opacity-40">
-                                                    Extras:
-                                                  </span>{" "}
-                                                  {item.selected_extras.join(
-                                                    ", ",
-                                                  )}
-                                                </p>
-                                              )}
-                                            {item.notes && (
-                                              <p className="text-xs text-primary font-black italic flex items-center gap-3 mt-3 bg-white/50 p-3 rounded-xl border border-primary/10">
-                                                <ListChecks className="h-4 w-4" />
-                                                "{item.notes}"
-                                              </p>
-                                            )}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="lg:col-span-5 space-y-12">
-                                <div className="space-y-8">
-                                  <div className="flex items-center gap-4 px-2">
+                      {/* Detailed Content */}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.5, ease: "circOut" }}
+                            className="overflow-hidden"
+                          >
+                            <div className="p-6 lg:p-12 bg-accent/5 border-t-4 border-dashed border-white/60">
+                              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+                                <div className="lg:col-span-7 space-y-6 lg:space-y-8">
+                                  <div className="flex items-center gap-3 lg:gap-4 px-2">
                                     <div className="h-2 w-2 rounded-full bg-primary" />
-                                    <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">
-                                      TRAZABILIDAD LOGÍSTICA
+                                    <h4 className="text-[10px] lg:text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">
+                                      DESGLOSE DE CONSUMO
                                     </h4>
                                   </div>
-                                  <div className="bg-white/80 backdrop-blur-md rounded-[3rem] p-10 border-4 border-white shadow-strong grid grid-cols-2 gap-10">
-                                    {[
-                                      {
-                                        label: "REGISTRO",
-                                        val: format(
-                                          new Date(order.created_at),
-                                          "PPP",
-                                          { locale: es },
-                                        ),
-                                        icon: CalendarIcon,
-                                      },
-                                      {
-                                        label: "CANAL",
-                                        val: "TERMINAL POS",
-                                        icon: Smartphone,
-                                      },
-                                      {
-                                        label: "OPERADOR",
-                                        val: order.profiles?.name || "SISTEMA",
-                                        icon: User,
-                                      },
-                                      {
-                                        label: "UBICACIÓN",
-                                        val: activeStore?.name,
-                                        icon: MapPin,
-                                      },
-                                    ].map((info, i) => (
-                                      <div key={i} className="space-y-2">
-                                        <div className="flex items-center gap-2 opacity-30">
-                                          <info.icon className="h-3 w-3" />
-                                          <p className="text-[9px] font-black uppercase tracking-[0.3em]">
-                                            {info.label}
-                                          </p>
+                                  <div className="bg-white/80 backdrop-blur-md rounded-4xl lg:rounded-[3rem] p-6 lg:p-10 border-4 border-white shadow-strong">
+                                    <div className="divide-y divide-accent/30">
+                                      {order.order_items?.map((item) => (
+                                        <div
+                                          key={item.id}
+                                          className="py-4 lg:py-8 first:pt-0 last:pb-0 group/item"
+                                        >
+                                          <div className="flex justify-between items-start mb-2 lg:mb-3">
+                                            <div className="flex gap-4 lg:gap-6">
+                                              <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-base lg:text-lg border border-primary/5 shadow-inner">
+                                                {item.quantity}
+                                              </div>
+                                              <div className="space-y-0.5 lg:space-y-1">
+                                                <p className="font-black text-lg lg:text-xl text-foreground/80 group-hover/item:text-primary transition-colors">
+                                                  {item.products?.name}
+                                                </p>
+                                                <p className="text-[9px] lg:text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                                                  P. UNITARIO:{" "}
+                                                  {formatPrice(item.unit_price)}
+                                                </p>
+                                              </div>
+                                            </div>
+                                            <p className="font-black text-xl lg:text-2xl tracking-tighter text-foreground/90">
+                                              {formatPrice(
+                                                item.unit_price * item.quantity,
+                                              )}
+                                            </p>
+                                          </div>
+
+                                          {(item.selected_options ||
+                                            item.selected_extras ||
+                                            item.notes) && (
+                                            <div className="ml-16 mt-4 p-5 bg-accent/5 rounded-2xl border border-accent/10 space-y-2">
+                                              {item.selected_options &&
+                                                Object.entries(
+                                                  item.selected_options,
+                                                ).map(([key, val]) => (
+                                                  <p
+                                                    key={key}
+                                                    className="text-xs text-muted-foreground/60 font-bold uppercase tracking-wider flex items-center gap-2"
+                                                  >
+                                                    <div className="h-1 w-1 rounded-full bg-primary/40" />
+                                                    <span className="opacity-40">
+                                                      {key}:
+                                                    </span>{" "}
+                                                    {val}
+                                                  </p>
+                                                ))}
+                                              {item.selected_extras &&
+                                                item.selected_extras.length >
+                                                  0 && (
+                                                  <p className="text-xs text-muted-foreground/60 font-bold uppercase tracking-wider flex items-center gap-2">
+                                                    <div className="h-1 w-1 rounded-full bg-primary/40" />
+                                                    <span className="opacity-40">
+                                                      Extras:
+                                                    </span>{" "}
+                                                    {item.selected_extras.join(
+                                                      ", ",
+                                                    )}
+                                                  </p>
+                                                )}
+                                              {item.notes && (
+                                                <p className="text-xs text-primary font-black italic flex items-center gap-3 mt-3 bg-white/50 p-3 rounded-xl border border-primary/10">
+                                                  <ListChecks className="h-4 w-4" />
+                                                  "{item.notes}"
+                                                </p>
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
-                                        <p className="text-sm font-black text-foreground/80 leading-tight">
-                                          {info.val}
-                                        </p>
-                                      </div>
-                                    ))}
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
 
-                                <div className="bg-primary p-12 rounded-[3.5rem] shadow-strong shadow-primary/20 relative overflow-hidden group/total">
-                                  <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-24 -mt-24 transition-all duration-1000 group-hover/total:bg-white/20" />
-                                  <div className="flex justify-between items-center relative">
-                                    <div className="space-y-2">
-                                      <p className="text-[11px] font-black uppercase tracking-[0.5em] text-white/50 leading-none">
-                                        TOTAL NETO
-                                      </p>
-                                      <p className="text-6xl font-black text-white tracking-tighter group-hover/total:scale-110 transition-transform origin-left duration-700">
-                                        {formatPrice(order.total)}
-                                      </p>
+                                <div className="lg:col-span-5 space-y-12">
+                                  <div className="space-y-8">
+                                    <div className="flex items-center gap-4 px-2">
+                                      <div className="h-2 w-2 rounded-full bg-primary" />
+                                      <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">
+                                        TRAZABILIDAD LOGÍSTICA
+                                      </h4>
                                     </div>
-                                    <div className="h-20 w-20 rounded-3xl bg-white/10 flex items-center justify-center border-2 border-white/10 shadow-inner group-hover/total:rotate-12 transition-transform duration-700">
-                                      <DollarSign
-                                        className="h-10 w-10 text-white"
-                                        strokeWidth={3}
-                                      />
+                                    <div className="bg-white/80 backdrop-blur-md rounded-[3rem] p-10 border-4 border-white shadow-strong grid grid-cols-2 gap-10">
+                                      {[
+                                        {
+                                          label: "REGISTRO",
+                                          val: format(
+                                            new Date(order.created_at),
+                                            "PPP",
+                                            { locale: es },
+                                          ),
+                                          icon: CalendarIcon,
+                                        },
+                                        {
+                                          label: "CANAL",
+                                          val: "TERMINAL POS",
+                                          icon: Smartphone,
+                                        },
+                                        {
+                                          label: "OPERADOR",
+                                          val:
+                                            order.profiles?.name || "SISTEMA",
+                                          icon: User,
+                                        },
+                                        {
+                                          label: "UBICACIÓN",
+                                          val: activeStore?.name,
+                                          icon: MapPin,
+                                        },
+                                      ].map((info, i) => (
+                                        <div key={i} className="space-y-2">
+                                          <div className="flex items-center gap-2 opacity-30">
+                                            <info.icon className="h-3 w-3" />
+                                            <p className="text-[9px] font-black uppercase tracking-[0.3em]">
+                                              {info.label}
+                                            </p>
+                                          </div>
+                                          <p className="text-sm font-black text-foreground/80 leading-tight">
+                                            {info.val}
+                                          </p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  <div className="bg-primary p-12 rounded-[3.5rem] shadow-strong shadow-primary/20 relative overflow-hidden group/total">
+                                    <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-24 -mt-24 transition-all duration-1000 group-hover/total:bg-white/20" />
+                                    <div className="flex justify-between items-center relative">
+                                      <div className="space-y-2">
+                                        <p className="text-[11px] font-black uppercase tracking-[0.5em] text-white/50 leading-none">
+                                          TOTAL NETO
+                                        </p>
+                                        <p className="text-6xl font-black text-white tracking-tighter group-hover/total:scale-110 transition-transform origin-left duration-700">
+                                          {formatPrice(order.total)}
+                                        </p>
+                                      </div>
+                                      <div className="h-20 w-20 rounded-3xl bg-white/10 flex items-center justify-center border-2 border-white/10 shadow-inner group-hover/total:rotate-12 transition-transform duration-700">
+                                        <DollarSign
+                                          className="h-10 w-10 text-white"
+                                          strokeWidth={3}
+                                        />
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                );
-              })}
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </TabsContent>
+        </div>
+      </div>
+    </Tabs>
   );
 }

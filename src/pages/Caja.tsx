@@ -314,43 +314,41 @@ export default function Caja() {
                     order={order}
                     className="bg-white/60 backdrop-blur-md"
                     actions={
-                      <div className="flex gap-4 w-full">
-                        <Button
-                          className="flex-1 rounded-2xl h-10 lg:h-11 font-black uppercase tracking-widest text-[10px] bg-primary hover:bg-primary/90 text-white shadow-md shadow-primary/10 transition-all active:scale-95"
+                      <div className="flex gap-2 w-full">
+                        <button
+                          className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-primary hover:bg-primary/90 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
                           onClick={() =>
                             updateOrderStatus(order.id, "confirmado")
                           }
                           disabled={order.isOptimistic}
                         >
                           {order.isOptimistic ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                           ) : (
                             <CheckCircle
-                              className="h-4 w-4 mr-2"
+                              className="h-3 w-3 mr-1.5"
                               strokeWidth={3}
                             />
                           )}
                           CONFIRMAR
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          className="flex-1 rounded-2xl h-10 lg:h-11 font-black uppercase tracking-widest text-[10px] bg-white border-2 border-accent/20 hover:bg-accent/5 transition-all"
+                        </button>
+                        <button
+                          className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-white border border-accent/20 hover:bg-accent/5 transition-all flex items-center justify-center disabled:opacity-50"
                           onClick={() => navigate(`/kiosko?edit=${order.id}`)}
                           disabled={order.isOptimistic}
                         >
-                          <Edit className="h-4 w-4 mr-2" strokeWidth={3} />{" "}
+                          <Edit className="h-3 w-3 mr-1.5" strokeWidth={3} />{" "}
                           EDITAR
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className="rounded-2xl h-10 w-10 lg:h-11 lg:w-11 text-destructive hover:bg-destructive/5 border-2 border-transparent hover:border-destructive/10 transition-all"
+                        </button>
+                        <button
+                          className="rounded-xl h-9 w-9 text-destructive hover:bg-destructive/5 border border-transparent hover:border-destructive/10 transition-all flex items-center justify-center disabled:opacity-50"
                           onClick={() =>
                             updateOrderStatus(order.id, "cancelado")
                           }
                           disabled={order.isOptimistic}
                         >
-                          <XCircle className="h-5 w-5" strokeWidth={3} />
-                        </Button>
+                          <XCircle className="h-4 w-4" strokeWidth={3} />
+                        </button>
                       </div>
                     }
                   />
@@ -380,23 +378,22 @@ export default function Caja() {
                     order={order}
                     className="bg-white/80 backdrop-blur-md border-primary/20 shadow-xl shadow-primary/5"
                     actions={
-                      <Button
-                        size="lg"
-                        className="w-full rounded-2xl h-12 font-black text-xs uppercase tracking-[0.2em] bg-primary hover:bg-primary/90 text-white shadow-md shadow-primary/20 group relative overflow-hidden transition-all active:scale-95"
+                      <button
+                        className="w-full rounded-xl h-10 font-black text-[10px] uppercase tracking-[0.2em] bg-primary hover:bg-primary/90 text-white shadow-sm group relative overflow-hidden transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
                         onClick={() => setPayingOrder(order)}
                         disabled={order.isOptimistic}
                       >
                         <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                         {order.isOptimistic ? (
-                          <Loader2 className="h-5 w-5 mr-3 animate-spin" />
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
                           <DollarSign
-                            className="h-5 w-5 mr-3 group-hover:scale-125 transition-transform duration-200"
+                            className="h-4 w-4 mr-2 group-hover:scale-125 transition-transform duration-200"
                             strokeWidth={3}
                           />
                         )}
-                        REGISTRAR PAGO & ENVIAR
-                      </Button>
+                        COBRAR Y ENVIAR
+                      </button>
                     }
                   />
                 ))
@@ -435,14 +432,13 @@ export default function Caja() {
                       onToggleItem={toggleOrderItem}
                       className="bg-white/60 backdrop-blur-md border-blue-500/10"
                       actions={
-                        <div className="flex flex-col gap-4 w-full">
-                          <Button
-                            size="lg"
+                        <div className="flex flex-col gap-2 w-full">
+                          <button
                             className={cn(
-                              "w-full rounded-2xl h-11 lg:h-12 font-black uppercase tracking-widest text-[11px] transition-all duration-200 shadow-md active:scale-95",
+                              "w-full rounded-xl h-10 font-black uppercase tracking-widest text-[10px] transition-all duration-200 shadow-sm active:scale-95 flex items-center justify-center",
                               allChecked
-                                ? "bg-green-500 hover:bg-green-600 text-white shadow-green-500/20"
-                                : "bg-accent/10 text-muted-foreground/40 border-2 border-transparent cursor-not-allowed",
+                                ? "bg-green-500 hover:bg-green-600 text-white"
+                                : "bg-accent/10 text-muted-foreground/40 cursor-not-allowed",
                             )}
                             onClick={() =>
                               handleUpdateStatus(order.id, "listo")
@@ -450,23 +446,22 @@ export default function Caja() {
                             disabled={updatingIds.has(order.id) || !allChecked}
                           >
                             {updatingIds.has(order.id) ? (
-                              <Loader2 className="h-5 w-5 mr-3 animate-spin" />
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             ) : (
                               <CheckCircle
-                                className="h-5 w-5 mr-3"
+                                className="h-4 w-4 mr-2"
                                 strokeWidth={3}
                               />
                             )}
-                            MARCAR COMO LISTO
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className="w-full rounded-2xl h-10 border-2 border-accent/20 font-black uppercase tracking-widest text-[10px] hover:bg-accent/5 transition-all"
+                            LISTO
+                          </button>
+                          <button
+                            className="w-full rounded-xl h-8 border border-accent/20 font-black uppercase tracking-widest text-[8px] hover:bg-accent/5 transition-all flex items-center justify-center"
                             onClick={() => handleShowKitchenReceipt(order)}
                           >
-                            <Printer className="h-4 w-4 mr-2" strokeWidth={3} />{" "}
-                            REIMPRIMIR COMANDA
-                          </Button>
+                            <Printer className="h-3 w-3 mr-1.5" strokeWidth={3} />{" "}
+                            REIMPRIMIR
+                          </button>
                         </div>
                       }
                     />
@@ -498,14 +493,13 @@ export default function Caja() {
                     compact
                     className="bg-white/80 backdrop-blur-md border-green-500/20 shadow-xl shadow-green-500/5"
                     actions={
-                      <Button
-                        size="lg"
-                        className="w-full rounded-2xl h-12 font-black uppercase tracking-widest text-[11px] bg-green-500 hover:bg-green-600 text-white shadow-md shadow-green-500/20 transition-all active:scale-95"
+                      <button
+                        className="w-full rounded-xl h-10 font-black uppercase tracking-widest text-[10px] bg-green-500 hover:bg-green-600 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center"
                         onClick={() => updateOrderStatus(order.id, "entregado")}
                       >
-                        <CheckCircle className="h-5 w-5 mr-3" strokeWidth={3} />{" "}
-                        ENTREGAR PEDIDO
-                      </Button>
+                        <CheckCircle className="h-4 w-4 mr-2" strokeWidth={3} />{" "}
+                        ENTREGAR
+                      </button>
                     }
                   />
                 ))
