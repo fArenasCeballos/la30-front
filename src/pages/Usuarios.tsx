@@ -2,18 +2,15 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useOrders } from "@/context/OrderContext";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
-import { formatPrice } from "@/lib/formatPrice";
 import type { Profile, UserRole } from "@/types";
 import {
   Users,
   Pencil,
-  ShoppingCart,
   Eye,
   EyeOff,
   MapPin,
   Search,
   PlusCircle,
-  ShieldCheck,
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,7 +52,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 export default function Usuarios() {
-  const { orders } = useOrders();
+  useOrders();
   const { user: currentUser } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,8 +66,7 @@ export default function Usuarios() {
   const [formPassword, setFormPassword] = useState("");
   const [formRole, setFormRole] = useState<UserRole>("mesero");
   const [formStoreId, setFormStoreId] = useState<string>("all");
-  const { stores, activeStore } = useStore();
-  const currentStoreId = activeStore?.id;
+  const { stores } = useStore();
   const [newPassword, setNewPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -230,141 +226,47 @@ export default function Usuarios() {
   return (
     <ErrorBoundary>
       <div className="section-container space-y-16 pb-32 animate-in fade-in duration-700">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 bg-white/40 backdrop-blur-md p-10 rounded-[3.5rem] border-2 border-accent/20 shadow-soft">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 text-primary/60 font-black uppercase tracking-[0.4em] text-[11px]">
-              <div className="h-[3px] w-12 bg-primary/20 rounded-full" />
-              TALENTO HUMANO
-            </div>
-            <h1 className="text-6xl font-black tracking-tighter text-foreground flex items-center gap-6">
-              <div className="h-20 w-20 rounded-4xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                <Users className="h-10 w-10" strokeWidth={3} />
+        <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 px-4">
+            <div className="flex items-center gap-6">
+              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                <Users className="h-7 w-7" strokeWidth={3} />
               </div>
-              El Equipo
-            </h1>
-            <p className="text-muted-foreground font-medium text-xl max-w-xl leading-relaxed">
-              Gestiona los accesos, roles y rendimiento de tu equipo de trabajo
-              en tiempo real con métricas detalladas.
-            </p>
-          </div>
-
-          <Button
-            size="xl"
-            className="rounded-4xl h-20 px-12 bg-primary hover:bg-primary/90 text-white font-black shadow-strong hover:scale-[1.05] active:scale-[0.95] transition-all group text-lg"
-            onClick={openCreate}
-          >
-            <PlusCircle
-              className="h-7 w-7 mr-4 group-hover:rotate-90 transition-transform duration-500"
-              strokeWidth={2.5}
-            />
-            REGISTRAR COLABORADOR
-          </Button>
-        </div>
-
-        <div className="space-y-10">
-          <div className="flex items-center gap-4 px-2">
-            <div className="h-4 w-4 rounded-full bg-primary animate-pulse shadow-lg shadow-primary/40" />
-            <h3 className="text-sm font-black uppercase tracking-[0.4em] text-muted-foreground/60">
-              Rendimiento en {activeStore?.name || "la tienda"}
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
-            {profiles
-              .filter((u) => u.role === "mesero")
-              .map((u, idx) => {
-                const uStats = (orders || []).reduce(
-                  (acc, o) => {
-                    if (
-                      o &&
-                      o.user_id === u.id &&
-                      (!currentStoreId || o.store_id === currentStoreId)
-                    ) {
-                      acc.orders++;
-                      acc.total += o.total || 0;
-                    }
-                    return acc;
-                  },
-                  { orders: 0, total: 0 },
-                );
-
-                return (
-                  <div
-                    key={u.id}
-                    className="pos-card group p-10 flex flex-col border-2 transition-all duration-500 shadow-strong hover:shadow-2xl hover:scale-[1.02] border-transparent hover:border-primary/20"
-                    style={{ animationDelay: `${idx * 80}ms` }}
-                  >
-                    <div className="flex items-center gap-6 mb-10">
-                      <div className="w-20 h-20 rounded-4xl bg-linear-to-br from-primary via-primary/90 to-primary/70 flex items-center justify-center text-white font-black text-4xl shadow-xl shadow-primary/30 group-hover:scale-110 transition-all duration-700 group-hover:rotate-6">
-                        {u.name?.charAt(0) || "U"}
-                      </div>
-                      <div className="min-w-0 space-y-2">
-                        <p className="font-black truncate text-2xl leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors">
-                          {u.name}
-                        </p>
-                        <Badge className="font-black text-[10px] uppercase px-3 py-1 bg-primary/10 text-primary border-none rounded-lg">
-                          MESERO/A
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-6">
-                      <div className="bg-accent/10 p-6 rounded-4xl border-2 border-accent/10 shadow-inner group-hover:bg-white group-hover:border-primary/10 transition-all duration-500">
-                        <div className="flex items-center justify-between mb-4">
-                          <p className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-[0.2em]">
-                            PEDIDOS COMPLETADOS
-                          </p>
-                          <ShoppingCart className="h-5 w-5 text-primary opacity-20" />
-                        </div>
-                        <div className="flex items-baseline gap-2">
-                          <span className="font-black text-4xl tracking-tighter text-foreground">
-                            {uStats.orders}
-                          </span>
-                          <span className="text-xs font-black text-muted-foreground/40 uppercase">
-                            ORDENES
-                          </span>
-                        </div>
-                      </div>
-                      <div className="bg-primary/5 p-6 rounded-4xl border-2 border-primary/10 group-hover:bg-primary/10 transition-all duration-500">
-                        <div className="flex items-center justify-between mb-4">
-                          <p className="text-[10px] font-black uppercase text-primary/40 tracking-[0.2em]">
-                            VENTAS GENERADAS
-                          </p>
-                          <Badge className="bg-primary text-white border-none text-[9px] font-black px-2 py-0.5">
-                            TOP
-                          </Badge>
-                        </div>
-                        <p className="font-black text-3xl text-primary truncate tracking-tighter">
-                          {formatPrice(uStats.total)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-
-        <div className="space-y-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-10 px-2">
-            <div className="flex items-center gap-4">
-              <ShieldCheck className="h-6 w-6 text-primary/40" />
-              <h3 className="text-sm font-black uppercase tracking-[0.4em] text-muted-foreground/60">
-                Listado Maestro de Perfiles
-              </h3>
+              <div>
+                <h1 className="text-3xl font-black tracking-tight text-foreground">
+                  Equipo de Trabajo
+                </h1>
+                <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
+                  {profiles.length} Colaboradores Registrados
+                </p>
+              </div>
             </div>
 
-            <div className="relative w-full md:w-[450px] group">
-              <Search
-                className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground/30 group-focus-within:text-primary transition-all duration-300"
-                strokeWidth={3}
-              />
-              <Input
-                placeholder="Buscar por nombre, correo o rol..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-16 h-16 rounded-3xl border-2 focus-visible:ring-primary/20 bg-white/60 backdrop-blur-md shadow-soft transition-all font-bold text-lg border-transparent focus:border-primary/30"
-              />
+            <div className="flex flex-col sm:flex-row items-center gap-4 flex-1 lg:max-w-3xl justify-end">
+              <div className="relative w-full sm:max-w-md group">
+                <Search
+                  className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/30 group-focus-within:text-primary transition-all duration-300"
+                  strokeWidth={3}
+                />
+                <Input
+                  placeholder="Buscar colaborador..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-12 h-14 rounded-2xl border-2 focus-visible:ring-primary/20 bg-white/60 backdrop-blur-md shadow-soft transition-all font-bold border-transparent focus:border-primary/30"
+                />
+              </div>
+
+              <Button
+                size="lg"
+                className="w-full sm:w-auto h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black shadow-strong hover:scale-[1.02] active:scale-[0.98] transition-all group px-8"
+                onClick={openCreate}
+              >
+                <PlusCircle
+                  className="h-5 w-5 mr-3 group-hover:rotate-90 transition-transform duration-500"
+                  strokeWidth={2.5}
+                />
+                REGISTRAR
+              </Button>
             </div>
           </div>
 
