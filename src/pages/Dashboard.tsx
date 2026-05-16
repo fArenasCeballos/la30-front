@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -31,9 +31,10 @@ import {
 import { getShiftStart } from "@/lib/shiftUtils";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useStore } from "@/context/StoreContext";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
 
 type RecentOrder = OrderRow & { profiles: { name: string } | null };
-import { Button } from "@/components/ui/button";
 
 const COLORS = [
   "hsl(24, 90%, 50%)",
@@ -46,14 +47,29 @@ const COLORS = [
 
 export default function Dashboard() {
   const { activeStore } = useStore();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const storeId = activeStore?.id || null;
+
+  // Guard: Solo administradores pueden ver el dashboard
+  useEffect(() => {
+    if (user && user.role !== "admin") {
+      const defaultPaths: Record<string, string> = {
+        caja: "/caja",
+        cocina: "/cocina",
+        mesero: "/kiosko",
+      };
+      navigate(defaultPaths[user.role] || "/", { replace: true });
+    }
+  }, [user, navigate]);
 
   // Velocidad exponencial: Usamos RPCs del backend en lugar de calcular en el cliente
   const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ["dashboard-stats", storeId, getShiftStart().toISOString()],
     queryFn: async () => {
       const shiftStart = getShiftStart().toISOString();
+      // IMPORTANTE: El RPC debe soportar p_shift_start para filtrar por el turno actual
+      // Si el RPC no lo soporta en el esquema de tipos, se pasa igual por si la definición está desactualizada
       const { data, error } = await supabase.rpc("get_dashboard_stats", {
         p_store_id: storeId,
         p_shift_start: shiftStart,
@@ -71,7 +87,7 @@ export default function Dashboard() {
       };
     },
     refetchInterval: 30000,
-    staleTime: 1000 * 60 * 5, // Mantener en caché 5 min para cambios rápidos de local
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: productStats = [], isLoading: loadingProducts } = useQuery({
@@ -90,7 +106,6 @@ export default function Dashboard() {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Query ligera para actividad reciente (solo los del turno actual)
   const { data: recentOrders = [], isLoading: loadingRecent } = useQuery({
     queryKey: ["recent-activity", storeId],
     queryFn: async () => {
@@ -180,6 +195,8 @@ export default function Dashboard() {
     },
   ];
 
+  if (user && user.role !== "admin") return null;
+
   return (
     <ErrorBoundary>
       <div className="section-container space-y-8 pb-12">
@@ -195,7 +212,10 @@ export default function Dashboard() {
             </h1>
             <p className="text-muted-foreground font-medium text-sm sm:text-base">
               Bienvenido de nuevo, esto es lo que está pasando hoy en{" "}
-              <span className="text-primary">{activeStore?.name}</span>.
+              <span className="text-primary">
+                {activeStore?.name || "Todas las sedes"}
+              </span>
+              .
             </p>
           </div>
 
@@ -218,7 +238,6 @@ export default function Dashboard() {
               className="pos-card pos-card-hover group relative overflow-hidden p-3 lg:p-6"
               style={{ animationDelay: `${idx * 100}ms` }}
             >
-              {/* Decorative Background Icon */}
               <card.icon
                 className={`absolute -right-2 -bottom-2 w-16 h-16 lg:w-24 lg:h-24 opacity-[0.03] ${card.color} group-hover:scale-110 transition-transform duration-200`}
               />
@@ -231,7 +250,7 @@ export default function Dashboard() {
                     className={`h-4 w-4 lg:h-6 lg:w-6 ${card.color}`}
                   />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-[8px] lg:text-sm font-bold text-muted-foreground uppercase tracking-widest truncate">
                     {card.label}
                   </p>
@@ -292,7 +311,6 @@ export default function Dashboard() {
 
         {/* Analytics & Activity Section */}
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Chart Column */}
           <div className="lg:col-span-2 space-y-6 lg:space-y-8">
             <div className="pos-card bg-white p-4 lg:p-8">
               <div className="flex items-center justify-between mb-8">
@@ -417,7 +435,6 @@ export default function Dashboard() {
                       Sin pedidos hoy
                     </div>
                   )}
-                  {/* Central Statistic */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <p className="text-[10px] font-black text-muted-foreground uppercase leading-none">
                       Total
@@ -458,7 +475,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Activity Column */}
           <div className="space-y-4 lg:space-y-6">
             <div className="pos-card bg-white p-6 lg:p-8 h-full flex flex-col">
               <div className="flex items-center justify-between mb-6 lg:mb-8">
@@ -526,7 +542,7 @@ export default function Dashboard() {
                           }`}
                         />
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">
-                          {order.status.replace("_", " ")} •{" "}
+                          {(order.status || "").replace("_", " ")} •{" "}
                           {new Date(order.created_at).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",

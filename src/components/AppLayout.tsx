@@ -111,7 +111,13 @@ export function AppLayout() {
         <div className="flex items-center gap-2 lg:gap-2 2xl:gap-6 flex-1 lg:flex-none">
           <div
             className="flex items-center gap-2 lg:gap-3 group cursor-pointer shrink-0"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => {
+              if (user?.role === "admin") navigate("/dashboard");
+              else if (user?.role === "caja") navigate("/caja");
+              else if (user?.role === "cocina") navigate("/cocina");
+              else if (user?.role === "mesero") navigate("/kiosko");
+              else navigate("/");
+            }}
           >
             <div className="w-9 h-9 lg:w-10 2xl:w-12 lg:h-10 2xl:h-12 rounded-xl lg:rounded-2xl 2xl:rounded-3xl bg-white border-2 shadow-soft flex items-center justify-center overflow-hidden group-hover:scale-105 group-hover:rotate-3 transition-all duration-200">
               <Logo className="h-5 w-5 lg:h-6 2xl:h-8" />
