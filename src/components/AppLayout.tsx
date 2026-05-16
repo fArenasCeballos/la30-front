@@ -106,9 +106,9 @@ export function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Premium Glass Header */}
-      <header className="h-14 lg:h-16 2xl:h-20 border-b bg-white/90 backdrop-blur-md flex items-center px-4 lg:px-4 2xl:px-10 gap-2 lg:gap-2 2xl:gap-8 sticky top-0 z-50 transition-all duration-300">
+      <header className="h-14 lg:h-16 2xl:h-20 border-b bg-white/90 backdrop-blur-md flex items-center px-4 lg:px-6 2xl:px-10 gap-2 lg:gap-4 2xl:gap-8 sticky top-0 z-50 transition-all duration-300">
         {/* Brand & Store Selector */}
-        <div className="flex items-center gap-2 lg:gap-2 2xl:gap-6 flex-1 lg:flex-none">
+        <div className="flex items-center gap-2 lg:gap-4 2xl:gap-6 flex-1 lg:flex-none">
           <div
             className="flex items-center gap-2 lg:gap-3 group cursor-pointer shrink-0"
             onClick={() => {
@@ -170,13 +170,13 @@ export function AppLayout() {
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex flex-1 items-center justify-center gap-0.5 xl:gap-2 px-4 min-w-0 overflow-hidden">
-          <div className="flex items-center gap-0.5 xl:gap-1.5 2xl:gap-4 overflow-x-auto no-scrollbar scroll-smooth">
+        <nav className="hidden lg:flex flex-1 items-center justify-center px-4 min-w-0">
+          <div className="flex items-center gap-1 xl:gap-2 2xl:gap-4 overflow-x-auto overflow-y-hidden premium-scrollbar scroll-smooth py-2">
             {visibleNav.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
-                className="flex items-center gap-1.5 xl:gap-2 px-2 xl:px-5 py-1.5 rounded-xl xl:rounded-2xl text-[9px] xl:text-sm font-black text-muted-foreground hover:bg-accent/50 hover:text-primary transition-all whitespace-nowrap group relative"
+                className="flex items-center gap-1.5 xl:gap-2 px-3 xl:px-4 2xl:px-6 py-2 rounded-xl xl:rounded-2xl text-[10px] xl:text-xs 2xl:text-sm font-black text-muted-foreground hover:bg-accent/50 hover:text-primary transition-all whitespace-nowrap group relative"
                 activeClassName="bg-primary/5 text-primary shadow-inner"
               >
                 {({ isActive }) => (
@@ -189,7 +189,7 @@ export function AppLayout() {
                           : "group-hover:scale-110",
                       )}
                     />
-                    <span className="hidden lg:inline uppercase tracking-widest text-[9px] xl:text-[10px]">
+                    <span className="hidden lg:inline uppercase tracking-[0.15em] text-[9px] xl:text-[10px] 2xl:text-[11px]">
                       {item.label}
                     </span>
                     {isActive && (
