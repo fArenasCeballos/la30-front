@@ -4,18 +4,18 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/formatPrice";
 import { Badge } from "@/components/ui/badge";
-import type { OrderRow } from "@/types";
+import type { OrderRow, Payment } from "@/types";
 import {
   DollarSign,
   Clock,
   CheckCircle,
   TrendingUp,
-  BarChart3,
   Banknote,
   CreditCard,
   Smartphone,
-  Package,
 } from "lucide-react";
+
+type DashboardOrder = OrderRow & { profiles: { name: string } | null };
 import {
   BarChart,
   Bar,
@@ -28,13 +28,11 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { getShiftStart } from "@/lib/shiftUtils";
+import { getShiftStart, getShiftEnd } from "@/lib/shiftUtils";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-
-type RecentOrder = OrderRow & { profiles: { name: string } | null };
 
 const COLORS = [
   "hsl(24, 90%, 50%)",
@@ -51,7 +49,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const storeId = activeStore?.id || null;
 
-  // Guard: Solo administradores pueden ver el dashboard
+  // Role Guard
   useEffect(() => {
     if (user && user.role !== "admin") {
       const defaultPaths: Record<string, string> = {
@@ -63,135 +61,170 @@ export default function Dashboard() {
     }
   }, [user, navigate]);
 
-  // Velocidad exponencial: Usamos RPCs del backend en lugar de calcular en el cliente
-  const { data: stats, isLoading: loadingStats } = useQuery({
-    queryKey: ["dashboard-stats", storeId, getShiftStart().toISOString()],
+  const shiftStart = useMemo(() => getShiftStart().toISOString(), []);
+  const shiftEnd = useMemo(() => getShiftEnd().toISOString(), []);
+
+  // Fetch all orders for the current shift to calculate metrics locally
+  // This ensures logical consistency with the "Today" (current shift) definition
+  const { data: shiftOrders = [], isLoading: loadingOrders } = useQuery({
+    queryKey: ["dashboard-orders", storeId, shiftStart],
     queryFn: async () => {
-      const shiftStart = getShiftStart().toISOString();
-      // IMPORTANTE: El RPC debe soportar p_shift_start para filtrar por el turno actual
-      // Si el RPC no lo soporta en el esquema de tipos, se pasa igual por si la definición está desactualizada
-      const { data, error } = await supabase.rpc("get_dashboard_stats", {
-        p_store_id: storeId,
-        p_shift_start: shiftStart,
+      let query = supabase
+        .from("orders")
+        .select("*, profiles(name)")
+        .gte("created_at", shiftStart)
+        .lte("created_at", shiftEnd);
+
+      if (storeId) query = query.eq("store_id", storeId);
+
+      const { data, error } = await query.order("created_at", {
+        ascending: false,
       });
       if (error) throw error;
-      return data as {
-        total_revenue: number;
-        active_orders: number;
-        completed_today: number;
-        cancelled_today: number;
-        avg_ticket: number;
-        cash_total: number;
-        card_total: number;
-        nequi_total: number;
-      };
+      return (data as DashboardOrder[]) || [];
     },
     refetchInterval: 30000,
-    staleTime: 1000 * 60 * 5,
   });
 
-  const { data: productStats = [], isLoading: loadingProducts } = useQuery({
-    queryKey: ["top-products", storeId, getShiftStart().toISOString()],
+  // Fetch payments to get accurate totals by method
+  const { data: shiftPayments = [] } = useQuery({
+    queryKey: ["dashboard-payments", storeId, shiftStart],
     queryFn: async () => {
-      const shiftStart = getShiftStart().toISOString();
+      // Since payments table doesn't have store_id directly, we join or filter by order_ids
+      const orderIds = shiftOrders.map((o) => o.id);
+      if (orderIds.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from("payments")
+        .select("*")
+        .in("order_id", orderIds);
+
+      if (error) throw error;
+      return (data as Payment[]) || [];
+    },
+    enabled: shiftOrders.length > 0,
+  });
+
+  // Top Products from RPC (this one is okay as it's more complex to calculate locally)
+  const { data: productStats = [], isLoading: loadingProducts } = useQuery({
+    queryKey: ["top-products", storeId, shiftStart],
+    queryFn: async () => {
       const { data, error } = await supabase.rpc("get_top_products", {
         p_limit: 6,
         p_store_id: storeId,
         p_shift_start: shiftStart,
       });
       if (error) throw error;
-      return data;
+      return (data as { product_name: string; quantity: number }[]) || [];
     },
-    refetchInterval: 30000,
-    staleTime: 1000 * 60 * 5,
+    refetchInterval: 60000,
   });
 
-  const { data: recentOrders = [], isLoading: loadingRecent } = useQuery({
-    queryKey: ["recent-activity", storeId],
-    queryFn: async () => {
-      const shiftStart = getShiftStart().toISOString();
-      let query = supabase
-        .from("orders")
-        .select("*, profiles(name)")
-        .gte("created_at", shiftStart)
-        .order("created_at", { ascending: false })
-        .limit(8);
-      if (storeId) query = query.eq("store_id", storeId);
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
-    refetchInterval: 10000,
-    staleTime: 1000 * 30,
-  });
+  // Logic calculation: Only "entregado" orders count for revenue
+  const stats = useMemo(() => {
+    const delivered = shiftOrders.filter((o) => o.status === "entregado");
+    const active = shiftOrders.filter((o) =>
+      ["pendiente", "confirmado", "en_preparacion", "listo"].includes(o.status),
+    );
+    const cancelled = shiftOrders.filter((o) => o.status === "cancelado");
 
-  const statusDistribution = useMemo(() => {
-    if (!stats) return [];
-    return [
-      { name: "Activos", value: stats.active_orders },
-      { name: "Completados", value: stats.completed_today },
-      { name: "Cancelados", value: stats.cancelled_today },
-    ];
-  }, [stats]);
+    const revenue = delivered.reduce((acc, o) => acc + (o.total || 0), 0);
+    const avgTicket = delivered.length > 0 ? revenue / delivered.length : 0;
+
+    // Payment breakdown
+    let cash = 0;
+    let card = 0;
+    let nequi = 0;
+
+    const deliveredIds = new Set(delivered.map((o) => o.id));
+    shiftPayments
+      .filter((p) => deliveredIds.has(p.order_id))
+      .forEach((p) => {
+        if (p.method === "mixto") {
+          cash += p.amount_efectivo || 0;
+          card += p.amount_tarjeta || 0;
+          nequi += p.amount_nequi || 0;
+        } else {
+          if (p.method === "efectivo") cash += p.amount_total;
+          else if (p.method === "tarjeta") card += p.amount_total;
+          else if (p.method === "nequi") nequi += p.amount_total;
+        }
+      });
+
+    return {
+      revenue,
+      activeCount: active.length,
+      completedCount: delivered.length,
+      cancelledCount: cancelled.length,
+      avgTicket,
+      cash,
+      card,
+      nequi,
+      recentOrders: shiftOrders.slice(0, 8),
+    };
+  }, [shiftOrders, shiftPayments]);
+
+  const statusDistribution = useMemo(
+    () => [
+      { name: "Activos", value: stats.activeCount },
+      { name: "Completados", value: stats.completedCount },
+      { name: "Cancelados", value: stats.cancelledCount },
+    ],
+    [stats],
+  );
 
   const statCards = [
     {
       label: "Ventas del día",
-      value: stats ? formatPrice(stats.total_revenue) : "---",
+      value: formatPrice(stats.revenue),
       icon: DollarSign,
       color: "text-green-500",
-      loading: loadingStats,
+      loading: loadingOrders,
     },
     {
       label: "Pedidos activos",
-      value: stats ? stats.active_orders : "---",
+      value: stats.activeCount,
       icon: Clock,
       color: "text-orange-500",
-      loading: loadingStats,
+      loading: loadingOrders,
     },
     {
       label: "Completados",
-      value: stats ? stats.completed_today : "---",
+      value: stats.completedCount,
       icon: CheckCircle,
       color: "text-green-500",
-      loading: loadingStats,
+      loading: loadingOrders,
     },
     {
       label: "Ticket promedio",
-      value: stats ? formatPrice(stats.avg_ticket) : "---",
+      value: formatPrice(stats.avgTicket),
       icon: TrendingUp,
       color: "text-blue-500",
-      loading: loadingStats,
+      loading: loadingOrders,
     },
   ];
 
   const paymentCards = [
     {
       label: "Efectivo",
-      value: stats ? formatPrice(stats.cash_total) : "---",
+      value: formatPrice(stats.cash),
       icon: Banknote,
       color: "text-emerald-500",
       bgColor: "bg-emerald-500/10",
-      borderColor: "border-emerald-500/30",
-      loading: loadingStats,
     },
     {
       label: "Tarjeta",
-      value: stats ? formatPrice(stats.card_total) : "---",
+      value: formatPrice(stats.card),
       icon: CreditCard,
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",
-      borderColor: "border-blue-500/30",
-      loading: loadingStats,
     },
     {
       label: "Nequi / Transferencia",
-      value: stats ? formatPrice(stats.nequi_total) : "---",
+      value: formatPrice(stats.nequi),
       icon: Smartphone,
       color: "text-purple-500",
       bgColor: "bg-purple-500/10",
-      borderColor: "border-purple-500/30",
-      loading: loadingStats,
     },
   ];
 
@@ -211,11 +244,10 @@ export default function Dashboard() {
               Panel de Control
             </h1>
             <p className="text-muted-foreground font-medium text-sm sm:text-base">
-              Bienvenido de nuevo, esto es lo que está pasando hoy en{" "}
+              Hoy en{" "}
               <span className="text-primary">
                 {activeStore?.name || "Todas las sedes"}
               </span>
-              .
             </p>
           </div>
 
@@ -225,39 +257,37 @@ export default function Dashboard() {
               className="px-3 py-1.5 rounded-xl font-bold gap-2 bg-white shadow-sm border-primary/10"
             >
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Sincronizado en tiempo real
+              Sincronizado
             </Badge>
           </div>
         </div>
 
         {/* Primary Metrics Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
-          {statCards.map((card, idx) => (
+          {statCards.map((card) => (
             <div
               key={card.label}
-              className="pos-card pos-card-hover group relative overflow-hidden p-3 lg:p-6"
-              style={{ animationDelay: `${idx * 100}ms` }}
+              className="pos-card group relative overflow-hidden p-4 lg:p-6"
             >
               <card.icon
                 className={`absolute -right-2 -bottom-2 w-16 h-16 lg:w-24 lg:h-24 opacity-[0.03] ${card.color} group-hover:scale-110 transition-transform duration-200`}
               />
-
               <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-2 lg:gap-4">
                 <div
-                  className={`w-8 h-8 lg:w-12 lg:h-12 rounded-lg lg:rounded-2xl flex items-center justify-center bg-accent/50 border border-white transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg shrink-0`}
+                  className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center bg-accent/50 border border-white shrink-0`}
                 >
                   <card.icon
-                    className={`h-4 w-4 lg:h-6 lg:w-6 ${card.color}`}
+                    className={`h-5 w-5 lg:h-6 lg:w-6 ${card.color}`}
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[8px] lg:text-sm font-bold text-muted-foreground uppercase tracking-widest truncate">
+                  <p className="text-[9px] lg:text-sm font-bold text-muted-foreground uppercase tracking-widest truncate">
                     {card.label}
                   </p>
                   {card.loading ? (
-                    <div className="h-6 w-24 bg-accent/30 animate-pulse rounded-md mt-1" />
+                    <div className="h-6 w-24 bg-accent/30 animate-pulse rounded mt-1" />
                   ) : (
-                    <p className="text-sm lg:text-3xl font-black mt-0.5 lg:mt-1 tracking-tight truncate">
+                    <p className="text-base lg:text-3xl font-black mt-0.5 lg:mt-1 tracking-tight truncate">
                       {card.value}
                     </p>
                   )}
@@ -268,37 +298,39 @@ export default function Dashboard() {
         </div>
 
         {/* Payment Methods Section */}
-        <div className="space-y-3 sm:space-y-4">
-          <h2 className="text-sm sm:text-lg font-bold flex items-center gap-2 opacity-70">
-            <div className="h-2 w-2 rounded-full bg-primary" />
-            Resumen de Ingresos
+        <div className="space-y-4">
+          <h2 className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-2 opacity-40 px-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+            Ingresos por método
           </h2>
-          <div className="grid grid-cols-3 gap-2 sm:gap-6">
-            {paymentCards.map((card, idx) => (
+          <div className="grid grid-cols-3 gap-2 lg:gap-6">
+            {paymentCards.map((card) => (
               <div
                 key={card.label}
-                className={`pos-card pos-card-hover border-transparent bg-white/40 shadow-sm group p-2.5 sm:p-5`}
+                className="pos-card bg-white/40 shadow-sm p-3 lg:p-5 border-l-4"
                 style={{
-                  animationDelay: `${(idx + 4) * 100}ms`,
-                  borderLeft: `3px sm:border-l-4 solid ${card.color.replace("text-", "")}`,
+                  borderColor: "currentColor",
+                  color: card.color.includes("emerald")
+                    ? "#059669"
+                    : card.color.includes("blue")
+                      ? "#2563eb"
+                      : "#9333ea",
                 }}
               >
-                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
+                <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-4 text-center lg:text-left">
                   <div
-                    className={`w-8 h-8 sm:w-14 sm:h-14 rounded-full flex items-center justify-center ${card.bgColor} ${card.color} transition-all duration-200 group-hover:rotate-12`}
+                    className={`w-8 h-8 lg:w-12 lg:h-12 rounded-full flex items-center justify-center ${card.bgColor} shrink-0`}
                   >
-                    <card.icon className="h-4 w-4 sm:h-7 sm:w-7" />
+                    <card.icon className="h-4 w-4 lg:h-6 lg:w-6" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[7px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest sm:tracking-[0.2em] truncate">
+                    <p className="text-[7px] lg:text-[10px] font-black text-muted-foreground uppercase tracking-widest truncate">
                       {card.label}
                     </p>
-                    {card.loading ? (
-                      <div className="h-5 w-20 bg-accent/20 animate-pulse rounded-md mt-1" />
+                    {loadingOrders ? (
+                      <div className="h-5 w-20 bg-accent/20 animate-pulse rounded mt-1" />
                     ) : (
-                      <p
-                        className={`text-[10px] sm:text-2xl font-black ${card.color} truncate`}
-                      >
+                      <p className="text-[10px] lg:text-2xl font-black truncate">
                         {card.value}
                       </p>
                     )}
@@ -311,259 +343,145 @@ export default function Dashboard() {
 
         {/* Analytics & Activity Section */}
         <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6 lg:space-y-8">
-            <div className="pos-card bg-white p-4 lg:p-8">
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h3 className="text-xl font-bold tracking-tight">
-                    Rendimiento de Productos
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Top 6 artículos con mayor demanda
-                  </p>
-                </div>
-                <div className="h-10 w-10 rounded-xl bg-accent flex items-center justify-center">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                </div>
-              </div>
-
-              <div className="h-[350px] w-full">
+          <div className="lg:col-span-2 space-y-8">
+            <div className="pos-card bg-white p-6 lg:p-8">
+              <h3 className="text-xl font-bold mb-8">Productos más vendidos</h3>
+              <div className="h-[300px] w-full">
                 {loadingProducts ? (
-                  <div className="h-full w-full space-y-4 flex flex-col justify-center">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div
-                        key={i}
-                        className="h-8 bg-accent/20 animate-pulse rounded-xl w-full"
-                        style={{ opacity: 1 - i * 0.15 }}
-                      />
-                    ))}
+                  <div className="h-full flex items-center justify-center">
+                    Cargando...
                   </div>
-                ) : productStats.length > 0 ? (
+                ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={productStats}
-                      layout="vertical"
-                      margin={{ left: 20, right: 30, top: 0, bottom: 0 }}
-                    >
+                    <BarChart data={productStats} layout="vertical">
                       <CartesianGrid
                         strokeDasharray="3 3"
-                        vertical={false}
+                        horizontal={false}
                         stroke="rgba(0,0,0,0.05)"
                       />
                       <XAxis
                         type="number"
-                        fontSize={11}
-                        fontWeight={600}
+                        fontSize={10}
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: "rgba(0,0,0,0.3)" }}
                       />
                       <YAxis
                         type="category"
                         dataKey="product_name"
-                        width={window.innerWidth < 640 ? 80 : 120}
+                        width={100}
                         fontSize={10}
-                        fontWeight={700}
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: "rgba(0,0,0,0.6)" }}
                       />
-                      <Tooltip
-                        cursor={{ fill: "rgba(0,0,0,0.02)" }}
-                        contentStyle={{
-                          backgroundColor: "#fff",
-                          borderRadius: "16px",
-                          border: "none",
-                          boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-                          padding: "12px 16px",
-                        }}
-                      />
+                      <Tooltip />
                       <Bar
                         dataKey="quantity"
                         fill="hsl(var(--primary))"
-                        radius={[0, 12, 12, 0]}
-                        barSize={32}
+                        radius={[0, 8, 8, 0]}
+                        barSize={24}
                       />
                     </BarChart>
                   </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2 opacity-50">
-                    <Package className="h-12 w-12" />
-                    <p className="text-sm font-bold uppercase tracking-widest">
-                      Sin datos suficientes
-                    </p>
-                  </div>
                 )}
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4 lg:gap-8">
-              <div className="pos-card bg-white p-6 lg:p-8">
-                <h3 className="text-lg font-bold mb-4 lg:mb-6">
-                  Distribución de Estados
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="pos-card bg-white p-8 h-[250px]">
+                <h3 className="text-lg font-bold mb-4 text-center">
+                  Estados de Pedido
                 </h3>
-                <div className="h-[200px] relative">
-                  {loadingStats ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="h-32 w-32 rounded-full border-8 border-accent/20 border-t-primary animate-spin" />
-                    </div>
-                  ) : statusDistribution.some((s) => s.value > 0) ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={statusDistribution}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={65}
-                          outerRadius={85}
-                          paddingAngle={8}
-                          dataKey="value"
-                        >
-                          {statusDistribution.map((_, index) => (
-                            <Cell
-                              key={index}
-                              fill={COLORS[index % COLORS.length]}
-                              stroke="none"
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-40">
-                      Sin pedidos hoy
-                    </div>
-                  )}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase leading-none">
-                      Total
-                    </p>
-                    <p className="text-2xl font-black leading-tight">
-                      {statusDistribution.reduce(
-                        (acc, curr) => acc + curr.value,
-                        0,
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pos-card bg-primary p-6 lg:p-8 text-white relative overflow-hidden group">
-                <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-300" />
-                <div className="relative z-10 space-y-4">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold">Crecimiento Diario</h3>
-                    <p className="text-sm text-white/70">
-                      Mantén el ritmo, las ventas van por buen camino.
-                    </p>
-                  </div>
-                  <div className="pt-4">
-                    <Button
-                      variant="secondary"
-                      className="w-full bg-white text-primary font-bold rounded-xl hover:scale-105 transition-transform"
-                      onClick={() => navigate("/reporteria")}
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusDistribution}
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
                     >
-                      Ver Reporte Detallado
-                    </Button>
-                  </div>
+                      {statusDistribution.map((_, index) => (
+                        <Cell
+                          key={index}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="pos-card bg-primary p-8 text-white flex flex-col justify-between">
+                <div>
+                  <h3 className="text-lg font-bold mb-2">Reportes Completos</h3>
+                  <p className="text-sm text-white/70">
+                    Consulta históricos detallados y exporta datos.
+                  </p>
                 </div>
+                <Button
+                  className="w-full bg-white text-primary font-bold mt-4 hover:bg-white/90"
+                  onClick={() => navigate("/reporteria")}
+                >
+                  IR A REPORTES
+                </Button>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4 lg:space-y-6">
-            <div className="pos-card bg-white p-6 lg:p-8 h-full flex flex-col">
-              <div className="flex items-center justify-between mb-6 lg:mb-8">
-                <h3 className="text-xl font-bold tracking-tight">Actividad</h3>
-                <Badge className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors border-none font-black text-[10px]">
-                  EN VIVO
-                </Badge>
-              </div>
-
-              <div className="flex-1 space-y-6 overflow-y-auto pr-2 no-scrollbar">
-                {loadingRecent ? (
-                  <div className="space-y-6">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="flex gap-4 animate-pulse">
-                        <div className="w-12 h-12 rounded-2xl bg-accent/30" />
-                        <div className="flex-1 space-y-2 py-1">
-                          <div className="h-3 bg-accent/30 rounded w-1/2" />
-                          <div className="h-2 bg-accent/20 rounded w-3/4" />
-                        </div>
-                      </div>
-                    ))}
+          <div className="pos-card bg-white p-6 lg:p-8 flex flex-col">
+            <h3 className="text-xl font-bold mb-8 flex items-center justify-between">
+              Actividad Reciente
+              <span className="text-[10px] bg-green-500/10 text-green-600 px-2 py-1 rounded-full animate-pulse">
+                EN VIVO
+              </span>
+            </h3>
+            <div className="flex-1 space-y-4">
+              {stats.recentOrders.map((order: DashboardOrder) => (
+                <div
+                  key={order.id}
+                  className="flex items-center gap-3 p-2 rounded-xl hover:bg-accent/5 transition-colors border border-transparent hover:border-accent/10"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-accent/30 flex flex-col items-center justify-center shrink-0">
+                    <span className="text-[8px] font-black opacity-30 leading-none">
+                      LOC
+                    </span>
+                    <span className="font-black text-xs">{order.locator}</span>
                   </div>
-                ) : (
-                  recentOrders.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground opacity-30 space-y-4">
-                      <Clock className="h-12 w-12" />
-                      <p className="text-sm font-bold uppercase tracking-widest">
-                        Sin actividad
+                  <div className="min-w-0 flex-1">
+                    <div className="flex justify-between items-center">
+                      <p className="font-bold text-xs truncate">
+                        {order.profiles?.name || "Kiosko"}
+                      </p>
+                      <p className="text-[10px] font-black text-primary">
+                        {formatPrice(order.total)}
                       </p>
                     </div>
-                  )
-                )}
-                {recentOrders.map((order: RecentOrder, idx: number) => (
-                  <div
-                    key={order.id}
-                    className="flex items-center gap-4 group animate-in fade-in slide-in-from-right-4"
-                    style={{ animationDelay: `${idx * 50}ms` }}
-                  >
-                    <div className="w-12 h-12 rounded-2xl bg-accent/50 border border-white flex flex-col items-center justify-center group-hover:bg-primary group-hover:border-primary transition-all duration-300">
-                      <span className="text-[10px] font-black text-primary group-hover:text-white leading-none">
-                        LOC
-                      </span>
-                      <span className="font-display font-black text-sm group-hover:text-white">
-                        {order.locator}
-                      </span>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm truncate">
-                          {order.profiles?.name || "Kiosko"}
-                        </span>
-                        <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full">
-                          {formatPrice(order.total)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            order.status === "entregado"
-                              ? "bg-green-500"
-                              : order.status === "en_preparacion"
-                                ? "bg-blue-500"
-                                : "bg-orange-500"
-                          }`}
-                        />
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">
-                          {(order.status || "").replace("_", " ")} •{" "}
-                          {new Date(order.created_at).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    </div>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                      {order.status.replace("_", " ")} •{" "}
+                      {new Date(order.created_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
                   </div>
-                ))}
-              </div>
-
-              <div className="mt-8 pt-8 border-t">
-                <Button
-                  variant="outline"
-                  className="w-full border-2 font-bold rounded-xl hover:bg-accent hover:border-primary/20 transition-all"
-                  onClick={() => navigate("/reporteria")}
-                >
-                  Ver Historial Completo
-                </Button>
-              </div>
+                </div>
+              ))}
+              {stats.recentOrders.length === 0 && (
+                <div className="text-center py-20 opacity-20">
+                  <Clock className="mx-auto h-8 w-8 mb-2" />
+                  <p className="text-[10px] font-black uppercase">
+                    Sin actividad
+                  </p>
+                </div>
+              )}
             </div>
+            <Button
+              variant="ghost"
+              className="mt-8 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/5"
+              onClick={() => navigate("/reporteria")}
+            >
+              Ver todo el historial
+            </Button>
           </div>
         </div>
       </div>
