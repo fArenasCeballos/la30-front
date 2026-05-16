@@ -454,48 +454,50 @@ export default function Kiosko() {
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-10">
             <div className="lg:col-span-3 space-y-6 sm:space-y-8">
-              <div className="pos-card p-6 sm:p-8 border-2 border-primary/5">
-                <div className="flex items-center justify-between mb-8 pb-6 border-b">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-accent/50 border shadow-soft flex flex-col items-center justify-center">
-                      <span className="text-[9px] font-black opacity-40 leading-none mb-0.5">
-                        ORD
-                      </span>
-                      <span className="text-2xl font-black text-primary">
-                        {locator}
-                      </span>
+              <div className="pos-card p-0 overflow-hidden border-2 border-primary/5 flex flex-col">
+                <div className="p-6 sm:p-8 border-b bg-accent/5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-white border-2 border-primary/20 shadow-soft flex flex-col items-center justify-center">
+                        <span className="text-[9px] font-black opacity-40 leading-none mb-0.5">
+                          ORD
+                        </span>
+                        <span className="text-2xl font-black text-primary">
+                          {locator}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-black text-lg">Resumen de Items</p>
+                        <p className="text-xs font-bold text-muted-foreground">
+                          {itemCount} productos seleccionados
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-black text-lg">Resumen de Items</p>
-                      <p className="text-xs font-bold text-muted-foreground">
-                        {itemCount} productos seleccionados
-                      </p>
-                    </div>
+                    <StatusBadge
+                      status={editOrderId ? "confirmado" : "pendiente"}
+                    />
                   </div>
-                  <StatusBadge
-                    status={editOrderId ? "confirmado" : "pendiente"}
-                  />
                 </div>
 
-                <div className="space-y-6">
+                <div className="p-6 sm:p-8 max-h-[450px] overflow-y-auto premium-scrollbar space-y-6">
                   {cart.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-start justify-between gap-6 group"
+                      className="flex items-start justify-between gap-6 group animate-in fade-in slide-in-from-bottom-2 duration-300"
                     >
                       <div className="flex gap-4">
-                        <div className="relative">
+                        <div className="relative shrink-0">
                           <CartItemImage product={item.product} />
                           <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-lg bg-primary text-white font-black p-0 flex items-center justify-center border-2 border-white shadow-soft">
                             {item.quantity}
                           </Badge>
                         </div>
                         <div className="space-y-1">
-                          <p className="font-black text-sm group-hover:text-primary transition-colors">
+                          <p className="font-black text-sm group-hover:text-primary transition-colors leading-tight">
                             {item.product.name}
                           </p>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-accent/50 px-2 py-0.5 rounded-full">
+                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest bg-accent/50 px-2 py-0.5 rounded-full">
                               {item.product.categories?.name}
                             </span>
                           </div>
@@ -506,46 +508,56 @@ export default function Kiosko() {
                           )}
                         </div>
                       </div>
-                      <p className="font-black text-sm tabular-nums">
+                      <p className="font-black text-sm tabular-nums shrink-0">
                         {formatPrice(item.unit_price * item.quantity)}
                       </p>
                     </div>
                   ))}
                 </div>
-
-                <div className="mt-10 pt-8 border-t-2 border-dashed border-accent">
-                  <div className="flex justify-between items-center mb-1">
-                    <p className="text-sm font-bold text-muted-foreground">
-                      Subtotal
-                    </p>
-                    <p className="text-sm font-bold">{formatPrice(total)}</p>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-xl font-black">Total a Pagar</p>
-                    <p className="text-3xl font-black text-primary tracking-tight">
-                      {formatPrice(total)}
-                    </p>
-                  </div>
-                </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground px-2 flex items-center gap-2">
-                  <Edit3 className="h-3 w-3" />
+              <div className="space-y-4 bg-primary/5 p-6 rounded-4xl border-2 border-dashed border-primary/20">
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary px-2 flex items-center gap-2">
+                  <Edit3 className="h-4 w-4" />
                   Comentarios Adicionales
                 </h3>
                 <Textarea
                   value={orderNotes}
                   onChange={(e) => setOrderNotes(e.target.value)}
-                  placeholder="Instrucciones especiales para cocina o caja..."
-                  className="rounded-3xl border-2 p-6 h-32 shadow-soft focus:border-primary transition-all bg-white/50 backdrop-blur-sm font-medium"
+                  placeholder="¿Alguna instrucción especial para tu pedido?"
+                  className="rounded-2xl border-2 border-white p-6 h-32 shadow-soft focus:border-primary transition-all bg-white font-bold text-sm placeholder:text-muted-foreground/30"
                 />
               </div>
             </div>
 
             <div className="lg:col-span-2">
               <div className="sticky top-24 space-y-6">
-                <div className="pos-card p-8 bg-primary text-white shadow-strong shadow-primary/20 overflow-hidden relative group">
+                <div className="pos-card p-8 border-2 border-primary/10 shadow-medium">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">
+                        Subtotal
+                      </p>
+                      <p className="font-bold">{formatPrice(total)}</p>
+                    </div>
+                    <div className="h-px bg-dashed border-t-2 border-accent border-dashed" />
+                    <div className="flex justify-between items-end">
+                      <div>
+                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">
+                          Total Neto
+                        </p>
+                        <p className="text-2xl font-black tracking-tight leading-none">
+                          A Pagar
+                        </p>
+                      </div>
+                      <p className="text-4xl font-black text-primary tracking-tighter">
+                        {formatPrice(total)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pos-card p-8 bg-primary text-white shadow-strong shadow-primary/20 overflow-hidden relative group border-none">
                   <div className="absolute -right-10 -top-10 h-40 w-40 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-300" />
                   <div className="relative z-10 space-y-6">
                     <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
@@ -583,7 +595,7 @@ export default function Kiosko() {
                   onClick={() => setStep("menu")}
                   disabled={isSending}
                 >
-                  <Edit3 className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Seguir Agregando
                 </Button>
               </div>
