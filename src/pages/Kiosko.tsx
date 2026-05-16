@@ -532,6 +532,16 @@ export default function Kiosko() {
 
             <div className="lg:col-span-2">
               <div className="sticky top-24 space-y-6">
+                <Button
+                  variant="ghost"
+                  className="w-full h-14 rounded-2xl font-black text-muted-foreground hover:text-primary transition-all bg-white border-2 border-transparent hover:border-primary/20 shadow-soft hover:shadow-medium"
+                  onClick={() => setStep("menu")}
+                  disabled={isSending}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Seguir Agregando
+                </Button>
+
                 <div className="pos-card p-8 border-2 border-primary/10 shadow-medium">
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
@@ -588,16 +598,6 @@ export default function Kiosko() {
                     </Button>
                   </div>
                 </div>
-
-                <Button
-                  variant="ghost"
-                  className="w-full h-14 rounded-2xl font-black text-muted-foreground hover:text-primary transition-all"
-                  onClick={() => setStep("menu")}
-                  disabled={isSending}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Seguir Agregando
-                </Button>
               </div>
             </div>
           </div>
