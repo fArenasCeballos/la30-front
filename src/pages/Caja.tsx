@@ -84,7 +84,7 @@ export default function Caja() {
       toast.success("Cierre de caja generado correctamente");
       console.log("Cierre generado:", data);
       // Opcional: navegar a reportes para ver el cierre
-      navigate("/reporteria");
+      navigate("/administracion?tab=reportes");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error desconocido";
       toast.error(`Error al generar cierre: ${msg}`);

@@ -517,7 +517,7 @@ export default function Dashboard() {
                 </div>
                 <Button
                   className="w-full bg-white text-primary font-bold mt-4 hover:bg-white/90"
-                  onClick={() => navigate("/reporteria")}
+                  onClick={() => navigate("/administracion?tab=reportes")}
                 >
                   IR A REPORTES
                 </Button>
@@ -575,7 +575,7 @@ export default function Dashboard() {
             <Button
               variant="ghost"
               className="mt-8 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/5"
-              onClick={() => navigate("/reporteria")}
+              onClick={() => navigate("/administracion?tab=reportes")}
             >
               Ver todo el historial
             </Button>

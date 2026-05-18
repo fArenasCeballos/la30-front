@@ -8,14 +8,11 @@ import {
   Monitor,
   ChefHat,
   BarChart3,
-  FileText,
-  Package,
-  Users,
   Wrench,
   ClipboardList,
   Store,
-  Search,
   Truck,
+  Settings,
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { NavLink } from "@/components/NavLink";
@@ -57,16 +54,13 @@ const NAV_ITEMS: {
     roles: ["caja", "admin"],
   },
   { to: "/cocina", label: "Cocina", icon: ChefHat, roles: ["cocina", "admin"] },
-  { to: "/reporteria", label: "Reportes", icon: FileText, roles: ["admin"] },
-  { to: "/inventario", label: "Inventario", icon: Package, roles: ["admin"] },
-  { to: "/usuarios", label: "Usuarios", icon: Users, roles: ["admin"] },
   {
     to: "/mis-pedidos",
     label: "Mis Pedidos",
     icon: ClipboardList,
     roles: ["mesero", "caja", "admin"],
   },
-  { to: "/consultas", label: "Consultas", icon: Search, roles: ["admin"] },
+  { to: "/administracion", label: "Administración", icon: Settings, roles: ["admin"] },
 ];
 
 export function AppLayout() {
