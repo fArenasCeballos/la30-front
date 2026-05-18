@@ -212,7 +212,7 @@ export default function Consultas() {
       } else {
         const results = data as unknown as Order[];
         setFoundOrders(results);
-        if (results.length === 1 && trimmedQuery) {
+        if (results.length === 1) {
           setSelectedOrder(results[0]);
         }
         toast.success(`${results.length} registro(s) encontrado(s)`);
@@ -533,8 +533,8 @@ export default function Consultas() {
 
       {/* Result Area */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Results List (if multiple) */}
-        {foundOrders.length > 1 && !selectedOrder && (
+        {/* Results List (if multiple or single but not selected) */}
+        {foundOrders.length >= 1 && !selectedOrder && (
           <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 no-print">
             {foundOrders.map((order) => (
               <div
@@ -568,7 +568,7 @@ export default function Consultas() {
         {/* Selected Order Detail */}
         {selectedOrder ? (
           <div className="lg:col-span-12 space-y-4 animate-in zoom-in duration-300">
-            {foundOrders.length > 1 && (
+            {foundOrders.length >= 1 && (
               <Button
                 variant="ghost"
                 size="sm"
