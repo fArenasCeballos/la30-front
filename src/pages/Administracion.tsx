@@ -7,14 +7,17 @@ import {
   ChevronRight,
   Settings,
 } from "lucide-react";
-import Inventario from "./Inventario";
-import Reporteria from "./Reporteria";
-import Usuarios from "./Usuarios";
-import Consultas from "./Consultas";
+import { lazy, Suspense, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Lazy load heavy administrative sub-modules for instantaneous loading
+const Inventario = lazy(() => import("./Inventario"));
+const Reporteria = lazy(() => import("./Reporteria"));
+const Usuarios = lazy(() => import("./Usuarios"));
+const Consultas = lazy(() => import("./Consultas"));
 
 const TABS = [
   {
@@ -46,6 +49,21 @@ const TABS = [
     desc: "Búsqueda quirúrgica y control detallado de órdenes del día",
   },
 ];
+
+const TabLoading = () => (
+  <div className="p-8 space-y-6 animate-pulse max-w-5xl mx-auto">
+    <div className="space-y-2">
+      <Skeleton className="h-8 w-1/4 rounded-xl" />
+      <Skeleton className="h-4 w-1/3 rounded-xl" />
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <Skeleton className="h-32 rounded-3xl" />
+      <Skeleton className="h-32 rounded-3xl" />
+      <Skeleton className="h-32 rounded-3xl" />
+    </div>
+    <Skeleton className="h-64 rounded-3xl w-full" />
+  </div>
+);
 
 export default function Administracion() {
   const { user } = useAuth();
@@ -169,7 +187,9 @@ export default function Administracion() {
       ) : (
         <div className="animate-in fade-in duration-300">
           <ErrorBoundary>
-            <activeTab.component />
+            <Suspense fallback={<TabLoading />}>
+              <activeTab.component />
+            </Suspense>
           </ErrorBoundary>
         </div>
       )}
