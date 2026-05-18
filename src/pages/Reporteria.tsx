@@ -104,6 +104,7 @@ const QUICK_RANGES = [
 ];
 
 interface ReportOrder {
+  is_delivery: boolean;
   id: string;
   locator: string;
   status: OrderStatus;
@@ -148,6 +149,9 @@ export default function Reporteria() {
   const storeId = activeStore?.id;
   const [activeQuick, setActiveQuick] = useState("Hoy");
   const [expandedDetailId, setExpandedDetailId] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<"all" | "caja" | "delivery">(
+    "all",
+  );
 
   const shiftRange = useMemo(() => {
     if (!dateRange?.from) return null;
@@ -184,6 +188,16 @@ export default function Reporteria() {
     enabled: !!user && !!shiftRange,
   });
 
+  const deliveryFilteredOrders = useMemo(() => {
+    if (activeStore?.slug !== "domicilios" || typeFilter === "all") {
+      return reportOrders;
+    }
+    if (typeFilter === "delivery") {
+      return reportOrders.filter((o) => o.is_delivery === true);
+    }
+    return reportOrders.filter((o) => o.is_delivery !== true);
+  }, [reportOrders, typeFilter, activeStore]);
+
   // Query de pagos para el desglose por método
   const { data: reportPayments = [] } = useQuery({
     queryKey: ["report-payments", user?.id, dateRange, storeId],
@@ -201,10 +215,7 @@ export default function Reporteria() {
         .lte("created_at", to);
 
       if (storeId) {
-        // We filter payments by joining with orders store_id if possible,
-        // but since we already filter orders above, and we filter payments here by deliveredOrderIds below,
-        // it might be redundant but safer to filter here if the table had store_id.
-        // Wait, does payments have store_id? Let me check database.types.ts
+        // We filter payments by joining with orders store_id if possible
       }
 
       const { data, error } = await query;
@@ -216,9 +227,9 @@ export default function Reporteria() {
   });
 
   const filteredOrders = useMemo(() => {
-    if (statusFilter === "all") return reportOrders;
-    return reportOrders.filter((o) => o.status === statusFilter);
-  }, [reportOrders, statusFilter]);
+    if (statusFilter === "all") return deliveryFilteredOrders;
+    return deliveryFilteredOrders.filter((o) => o.status === statusFilter);
+  }, [deliveryFilteredOrders, statusFilter]);
 
   const summary = useMemo(() => {
     // Solo pedidos entregados cuentan para ventas reales
@@ -242,11 +253,15 @@ export default function Reporteria() {
   }, [filteredOrders]);
 
   const cashSummary = useMemo(() => {
-    const delivered = reportOrders.filter((o) => o.status === "entregado");
-    const pending = reportOrders.filter(
+    const delivered = deliveryFilteredOrders.filter(
+      (o) => o.status === "entregado",
+    );
+    const pending = deliveryFilteredOrders.filter(
       (o) => !["entregado", "cancelado"].includes(o.status),
     );
-    const cancelled = reportOrders.filter((o) => o.status === "cancelado");
+    const cancelled = deliveryFilteredOrders.filter(
+      (o) => o.status === "cancelado",
+    );
     return {
       totalSales: delivered.reduce((s, o) => s + o.total, 0),
       deliveredCount: delivered.length,
@@ -254,15 +269,12 @@ export default function Reporteria() {
       pendingTotal: pending.reduce((s, o) => s + o.total, 0),
       cancelledCount: cancelled.length,
       cancelledTotal: cancelled.reduce((s, o) => s + o.total, 0),
-      totalOrders: reportOrders.length,
+      totalOrders: deliveryFilteredOrders.length,
     };
-  }, [reportOrders]);
+  }, [deliveryFilteredOrders]);
 
   // Desglose por método de pago
   // SOLO pagos de pedidos ENTREGADOS
-  // NO mixto: method indica el método → amount_total es el monto real del pedido
-  // Mixto: los sub-montos indican cómo se dividió el total entre métodos
-  // (amount_efectivo guarda amount_received en pagos simples, NO sirve para el desglose)
   const paymentSummary = useMemo(() => {
     let efectivo = 0;
     let tarjeta = 0;
@@ -270,7 +282,9 @@ export default function Reporteria() {
 
     // Solo contar pagos de pedidos entregados
     const deliveredOrderIds = new Set(
-      reportOrders.filter((o) => o.status === "entregado").map((o) => o.id),
+      deliveryFilteredOrders
+        .filter((o) => o.status === "entregado")
+        .map((o) => o.id),
     );
 
     reportPayments
@@ -301,12 +315,12 @@ export default function Reporteria() {
       });
 
     return { efectivo, tarjeta, nequi, total: efectivo + tarjeta + nequi };
-  }, [reportPayments, reportOrders]);
+  }, [reportPayments, deliveryFilteredOrders]);
 
   const hourlyData = useMemo(() => {
     const hours: Record<number, number> = {};
     // Solo pedidos entregados en el gráfico de ventas por hora
-    reportOrders
+    deliveryFilteredOrders
       .filter((o) => o.status === "entregado")
       .forEach((o) => {
         const h = new Date(o.created_at).getHours();
@@ -316,13 +330,13 @@ export default function Reporteria() {
       hora: `${i}:00`,
       ventas: hours[i] || 0,
     })).filter((d) => d.ventas > 0);
-  }, [reportOrders]);
+  }, [deliveryFilteredOrders]);
 
   const waiterData = useMemo(() => {
     const map: Record<string, { name: string; orders: number; total: number }> =
       {};
     // Solo pedidos entregados cuentan como ventas reales por mesero
-    reportOrders
+    deliveryFilteredOrders
       .filter((o) => o.status === "entregado")
       .forEach((o) => {
         const key = o.created_by;
@@ -334,7 +348,7 @@ export default function Reporteria() {
         map[key].total += o.total;
       });
     return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [reportOrders]);
+  }, [deliveryFilteredOrders]);
 
   const handleQuickRange = (label: string) => {
     const range = QUICK_RANGES.find((r) => r.label === label);
@@ -444,7 +458,9 @@ export default function Reporteria() {
                 <span className="hidden lg:inline text-[10px] tracking-widest uppercase">
                   Exportar XLSX
                 </span>
-                <span className="lg:hidden text-[9px] ml-1.5 font-black">XLSX</span>
+                <span className="lg:hidden text-[9px] ml-1.5 font-black">
+                  XLSX
+                </span>
               </Button>
             </div>
 
@@ -540,6 +556,44 @@ export default function Reporteria() {
                     ))}
                   </SelectContent>
                 </Select>
+
+                {/* Type Filter (Caja vs Domicilio) - Only for domicilios store */}
+                {activeStore?.slug === "domicilios" && (
+                  <Select
+                    value={typeFilter}
+                    onValueChange={(v: any) => setTypeFilter(v)}
+                  >
+                    <SelectTrigger className="w-32 lg:w-44 h-8 lg:h-10 rounded-xl lg:rounded-2xl border-none bg-accent/5 font-black text-[8px] lg:text-[10px] tracking-widest uppercase shadow-none hover:bg-accent/10 transition-colors shrink-0">
+                      <div className="flex items-center gap-1.5">
+                        <Filter
+                          className="h-3.5 w-3.5 text-primary/40"
+                          strokeWidth={2.5}
+                        />
+                        <SelectValue placeholder="Tipo" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-none shadow-strong p-1">
+                      <SelectItem
+                        value="all"
+                        className="font-black text-[9px] lg:text-[10px] tracking-widest uppercase py-3 rounded-xl"
+                      >
+                        Todos los Tipos
+                      </SelectItem>
+                      <SelectItem
+                        value="caja"
+                        className="font-black text-[9px] lg:text-[10px] tracking-widest uppercase py-3 rounded-xl"
+                      >
+                        Solo Caja
+                      </SelectItem>
+                      <SelectItem
+                        value="delivery"
+                        className="font-black text-[9px] lg:text-[10px] tracking-widest uppercase py-3 rounded-xl"
+                      >
+                        Solo Domicilios
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               {/* Tabs Integration - Scrollable on Mobile */}
@@ -556,7 +610,10 @@ export default function Reporteria() {
                       value={tab.value}
                       className="rounded-lg lg:rounded-xl px-3 lg:px-5 py-1.5 lg:py-2 font-black uppercase tracking-widest text-[8px] lg:text-[9px] transition-all duration-300 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-1.5"
                     >
-                      <tab.icon className="h-3 w-3 lg:h-3.5 lg:w-3.5" strokeWidth={3} />
+                      <tab.icon
+                        className="h-3 w-3 lg:h-3.5 lg:w-3.5"
+                        strokeWidth={3}
+                      />
                       {tab.label}
                     </TabsTrigger>
                   ))}

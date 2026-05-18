@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Toaster } from 'sonner';
+import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/AuthContext";
 import { StoreProvider } from "@/context/StoreContext";
@@ -22,6 +22,7 @@ const Inventario = lazy(() => import("./pages/Inventario"));
 const Usuarios = lazy(() => import("./pages/Usuarios"));
 const MisPedidos = lazy(() => import("./pages/MisPedidos"));
 const Consultas = lazy(() => import("./pages/Consultas"));
+const Domicilios = lazy(() => import("./pages/Domicilios"));
 const StoreSelector = lazy(() => import("./pages/StoreSelector"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -29,7 +30,9 @@ const PageLoading = () => (
   <div className="p-8 space-y-4">
     <Skeleton className="h-12 w-full max-w-md" />
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-      {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="aspect-square w-full" />)}
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <Skeleton key={i} className="aspect-square w-full" />
+      ))}
     </div>
   </div>
 );
@@ -50,7 +53,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster position="top-center" richColors/>
+      <Toaster position="top-center" richColors />
       <AuthProvider>
         <StoreProvider>
           <NotificationProvider>
@@ -66,6 +69,7 @@ const App = () => (
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/kiosko" element={<Kiosko />} />
                         <Route path="/caja" element={<Caja />} />
+                        <Route path="/domicilios" element={<Domicilios />} />
                         <Route path="/cocina" element={<Cocina />} />
                         <Route path="/reporteria" element={<Reporteria />} />
                         <Route path="/inventario" element={<Inventario />} />

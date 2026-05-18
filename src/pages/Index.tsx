@@ -33,6 +33,11 @@ export default function Index() {
     return <Navigate to="/select-store" replace />;
   }
 
+  // If active store is Domicilios, go directly to the delivery module
+  if (user?.role === "admin" && activeStore?.slug === "domicilios") {
+    return <Navigate to="/domicilios" replace />;
+  }
+
   const target = user ? ROLE_ROUTES[user.role] || "/caja" : "/login";
   
   // Extra safety: If we are going to dashboard but have no store (as admin), don't

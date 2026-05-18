@@ -308,6 +308,12 @@ export type Database = {
           total_amount: number;
           notes: string | null;
           locator: string | null;
+          delivery_name: string | null;
+          delivery_address: string | null;
+          delivery_phone: string | null;
+          delivery_fee: number;
+          is_delivery: boolean;
+          is_dispatched: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -326,6 +332,12 @@ export type Database = {
           total_amount: number;
           notes?: string | null;
           locator?: string | null;
+          delivery_name?: string | null;
+          delivery_address?: string | null;
+          delivery_phone?: string | null;
+          delivery_fee?: number;
+          is_delivery?: boolean;
+          is_dispatched?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -344,6 +356,12 @@ export type Database = {
           total_amount?: number;
           notes?: string | null;
           locator?: string | null;
+          delivery_name?: string | null;
+          delivery_address?: string | null;
+          delivery_phone?: string | null;
+          delivery_fee?: number;
+          is_delivery?: boolean;
+          is_dispatched?: boolean;
           created_at?: string;
           updated_at?: string;
         };

@@ -266,10 +266,10 @@ export function PaymentCalculator({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl p-0 gap-0 overflow-y-auto max-h-[95vh] rounded-3xl lg:rounded-[3.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl custom-scrollbar">
+      <DialogContent className="max-w-xl p-0 gap-0 overflow-y-auto max-h-[92vh] rounded-3xl lg:rounded-[2.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl custom-scrollbar">
         {/* Done step */}
         {step === "done" && (
-          <div className="flex flex-col items-center justify-center p-24 space-y-8 animate-in fade-in zoom-in duration-700">
+          <div className="flex flex-col items-center justify-center p-12 lg:p-16 space-y-6 animate-in fade-in zoom-in duration-700">
             <div className="relative">
               <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" />
               <div className="relative w-32 h-32 rounded-full bg-green-500/20 flex items-center justify-center border-4 border-green-500/10 shadow-inner">
@@ -293,9 +293,9 @@ export function PaymentCalculator({
         {/* Method selection */}
         {step === "method" && (
           <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <DialogHeader className="p-4 lg:p-10 pb-2 lg:pb-4">
+            <DialogHeader className="p-4 lg:p-6 pb-2 lg:pb-3">
               <div className="flex items-center gap-4 mb-2">
-                <div className="bg-primary/10 p-3 rounded-2xl">
+                <div className="bg-primary/10 p-2 lg:p-3 rounded-2xl">
                   <Receipt className="h-8 w-8 text-primary" strokeWidth={3} />
                 </div>
                 <div className="space-y-0.5">
@@ -312,11 +312,11 @@ export function PaymentCalculator({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="p-4 lg:p-10 pt-2 lg:pt-4 space-y-4 lg:space-y-10">
+            <div className="p-4 lg:p-6 pt-2 lg:pt-3 space-y-3 lg:space-y-6">
               {/* Ticket Order summary */}
               <div className="relative">
                 <div className="absolute inset-0 bg-accent/5 rounded-2xl lg:rounded-[2.5rem] -rotate-1 translate-y-1" />
-                <div className="relative rounded-2xl lg:rounded-[2.5rem] bg-white border-2 border-accent/20 p-5 lg:p-8 space-y-3 lg:space-y-4 shadow-soft">
+                <div className="relative rounded-2xl lg:rounded-3xl bg-white border-2 border-accent/20 p-4 lg:p-5 space-y-2 lg:space-y-3 shadow-soft">
                   <div className="flex items-center justify-between border-b-2 border-dashed border-accent/20 pb-4 mb-4">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
                       DETALLE DE ORDEN
@@ -325,7 +325,7 @@ export function PaymentCalculator({
                       {order.order_items?.length} ITEMS
                     </span>
                   </div>
-                  <div className="space-y-3 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-2 max-h-[100px] overflow-y-auto pr-2 custom-scrollbar">
                     {order.order_items?.map((item) => (
                       <div
                         key={item.id}
@@ -343,12 +343,12 @@ export function PaymentCalculator({
                       </div>
                     ))}
                   </div>
-                  <div className="border-t-2 border-accent/10 pt-6 flex justify-between items-end">
+                  <div className="border-t-2 border-accent/10 pt-4 flex justify-between items-end">
                     <div className="space-y-1">
                       <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">
                         TOTAL A RECAUDAR
                       </span>
-                      <div className="text-3xl lg:text-5xl font-black tracking-tighter text-primary">
+                      <div className="text-2xl lg:text-4xl font-black tracking-tighter text-primary">
                         {formatPrice(order.total)}
                       </div>
                     </div>
@@ -365,20 +365,20 @@ export function PaymentCalculator({
                   </span>
                   <div className="h-px flex-1 bg-accent/20" />
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
                   {PAYMENT_METHODS.map((pm) => (
                     <button
                       key={pm.key}
                       onClick={() => selectMethod(pm.key)}
                       className={cn(
-                        "group relative flex flex-row lg:flex-col items-center justify-center gap-2 lg:gap-4 p-3 lg:p-8 rounded-xl lg:rounded-4xl border-2 transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] shadow-soft hover:shadow-xl",
+                        "group relative flex flex-row lg:flex-col items-center justify-center gap-2 lg:gap-3 p-3 lg:p-4 rounded-xl lg:rounded-2xl border-2 transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] shadow-soft hover:shadow-xl",
                         pm.color,
                       )}
                     >
-                      <div className="transition-transform duration-500 group-hover:scale-110 lg:group-hover:scale-125 lg:group-hover:-rotate-6 shrink-0">
+                      <div className="transition-transform duration-500 group-hover:scale-110 shrink-0">
                         {pm.icon}
                       </div>
-                      <span className="text-[9px] lg:text-xs font-black tracking-widest lg:tracking-[0.2em] truncate">
+                      <span className="text-[9px] lg:text-xs font-black tracking-widest truncate">
                         {pm.label}
                       </span>
                     </button>
@@ -586,8 +586,8 @@ export function PaymentCalculator({
 
         {/* Amount / calculator */}
         {step === "amount" && (method || secondMethod) && (
-          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 p-2 lg:p-10">
-            <div className="flex items-center gap-2 lg:gap-6 mb-2 lg:mb-10">
+          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 p-4 lg:p-6">
+            <div className="flex items-center gap-2 lg:gap-6 mb-2 lg:mb-4">
               <Button
                 variant="ghost"
                 size="icon"
@@ -596,9 +596,9 @@ export function PaymentCalculator({
                   else setStep("method");
                   setReceived("");
                 }}
-                className="h-14 w-14 rounded-2xl bg-accent/10"
+                className="h-10 w-10 lg:h-14 lg:w-14 rounded-xl lg:rounded-2xl bg-accent/10 animate-none"
               >
-                <ArrowLeft className="h-6 w-6" strokeWidth={3} />
+                <ArrowLeft className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
               </Button>
               <div className="space-y-0.5">
                 <div className="text-primary font-black uppercase tracking-[0.3em] text-[8px] lg:text-[10px]">
@@ -606,30 +606,30 @@ export function PaymentCalculator({
                     ? "FINALIZAR PAGO MIXTO"
                     : "REGISTRAR EFECTIVO"}
                 </div>
-                <h3 className="text-xl lg:text-4xl font-black tracking-tighter">
+                <h3 className="text-xl lg:text-2xl font-black tracking-tighter">
                   {method === "mixto" ? `Efectivo Faltante` : `Monto Recibido`}
                 </h3>
               </div>
             </div>
 
-            <div className="space-y-3 lg:space-y-8">
+            <div className="space-y-3 lg:space-y-4">
               {/* Display */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-8">
-                <div className="rounded-2xl lg:rounded-[2.5rem] bg-accent/5 p-2 lg:p-10 text-center space-y-0.5 lg:space-y-4 border-2 border-accent/5 shadow-inner">
-                  <p className="text-[11px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                <div className="rounded-2xl lg:rounded-3xl bg-accent/5 p-4 lg:p-6 text-center space-y-1 lg:space-y-3 border-2 border-accent/5 shadow-inner">
+                  <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
                     EFECTIVO RECIBIDO
                   </p>
-                  <p className="text-2xl lg:text-6xl font-black tracking-tighter text-foreground">
+                  <p className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground">
                     {received ? formatPrice(receivedNum) : "$0"}
                   </p>
                   {receivedNum > 0 && (
-                    <div className="pt-6 border-t-2 border-accent/10 mt-6 flex flex-col items-center gap-2">
-                      <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest leading-none">
+                    <div className="pt-3 border-t border-accent/10 mt-3 flex flex-col items-center gap-1">
+                      <p className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest leading-none">
                         CAMBIO PARA EL CLIENTE
                       </p>
                       <p
                         className={cn(
-                          "text-lg lg:text-4xl font-black tracking-tighter",
+                          "text-lg lg:text-2xl font-black tracking-tighter",
                           canConfirm ? "text-green-500" : "text-destructive",
                         )}
                       >
@@ -639,8 +639,8 @@ export function PaymentCalculator({
                       </p>
                     </div>
                   )}
-                  <div className="pt-4 mt-2">
-                    <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">
+                  <div className="pt-2 mt-2 border-t border-accent/5">
+                    <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
                       DEBE PAGAR:{" "}
                       <span className="text-foreground font-black ml-1">
                         {formatPrice(remainingTotal)}
@@ -649,13 +649,13 @@ export function PaymentCalculator({
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleExact}
-                      className="h-9 lg:h-16 rounded-xl lg:rounded-2xl border-2 font-black uppercase tracking-widest text-[8px] lg:text-[10px] shadow-soft"
+                      className="h-10 lg:h-12 rounded-xl lg:rounded-2xl border-2 font-black uppercase tracking-widest text-[8px] lg:text-[10px] shadow-soft"
                     >
                       MONTO EXACTO
                     </Button>
@@ -663,19 +663,19 @@ export function PaymentCalculator({
                       variant="outline"
                       size="sm"
                       onClick={() => setReceived("50000")}
-                      className="h-9 lg:h-16 rounded-xl lg:rounded-2xl border-2 font-black text-sm lg:text-lg shadow-soft"
+                      className="h-10 lg:h-12 rounded-xl lg:rounded-2xl border-2 font-black text-sm shadow-soft"
                     >
                       $50.000
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     {QUICK_AMOUNTS.slice(2, 6).map((a) => (
                       <Button
                         key={a}
                         variant="secondary"
                         size="sm"
                         onClick={() => handleQuickAmount(a)}
-                        className="h-9 lg:h-16 rounded-xl lg:rounded-2xl font-black text-sm lg:text-lg shadow-soft bg-white border-2 border-accent/5"
+                        className="h-10 lg:h-12 rounded-xl lg:rounded-2xl font-black text-sm shadow-soft bg-white border-2 border-accent/5"
                       >
                         +{formatPrice(a)}
                       </Button>
@@ -685,7 +685,7 @@ export function PaymentCalculator({
               </div>
 
               {/* Numpad */}
-              <div className="grid grid-cols-3 gap-2 lg:gap-4">
+              <div className="grid grid-cols-3 gap-2">
                 {[
                   "1",
                   "2",
@@ -704,7 +704,7 @@ export function PaymentCalculator({
                     key={key}
                     variant="secondary"
                     className={cn(
-                      "h-9 lg:h-16 rounded-xl lg:rounded-2xl font-black text-lg lg:text-2xl transition-all active:scale-95 shadow-soft border-2 border-transparent",
+                      "h-10 lg:h-11 rounded-xl lg:rounded-2xl font-black text-lg transition-all active:scale-95 shadow-soft border-2 border-transparent",
                       key === "C"
                         ? "text-destructive hover:bg-destructive/5 hover:border-destructive/10"
                         : key === "DEL"
@@ -724,14 +724,20 @@ export function PaymentCalculator({
 
               <Button
                 size="lg"
-                className="w-full h-10 lg:h-20 rounded-xl lg:rounded-3xl bg-primary hover:bg-primary/90 text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.2em] shadow-strong shadow-primary/20 transition-all active:scale-95"
+                className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.2em] shadow-strong shadow-primary/20 transition-all active:scale-95"
                 disabled={!canConfirm}
                 onClick={() => handleConfirmPayment()}
               >
                 {canConfirm ? (
                   <div className="flex items-center gap-3">
-                    <CheckCircle className="h-6 w-6" strokeWidth={3} />
-                    CONFIRMAR PAGO & ENVIAR A COCINA
+                    <CheckCircle
+                      className="h-5 w-5 lg:h-6 lg:w-6"
+                      strokeWidth={3}
+                    />
+                    {order.status === "pendiente" ||
+                    order.status === "en_preparacion"
+                      ? "CONFIRMAR PAGO & ENVIAR A COCINA"
+                      : "CONFIRMAR PAGO & ENTREGAR"}
                   </div>
                 ) : (
                   "MONTO INSUFICIENTE"

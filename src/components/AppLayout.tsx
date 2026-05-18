@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Store,
   Search,
+  Truck,
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { NavLink } from "@/components/NavLink";
@@ -49,6 +50,12 @@ const NAV_ITEMS: {
     roles: ["mesero", "admin", "caja"],
   },
   { to: "/caja", label: "Caja", icon: Monitor, roles: ["caja", "admin"] },
+  {
+    to: "/domicilios",
+    label: "Domicilios",
+    icon: Truck,
+    roles: ["caja", "admin"],
+  },
   { to: "/cocina", label: "Cocina", icon: ChefHat, roles: ["cocina", "admin"] },
   { to: "/reporteria", label: "Reportes", icon: FileText, roles: ["admin"] },
   { to: "/inventario", label: "Inventario", icon: Package, roles: ["admin"] },
@@ -67,7 +74,9 @@ export function AppLayout() {
   const { activeStore, isAdmin, loading: storeLoading } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const ecosystem = location.pathname.startsWith("/kiosko") ? "kiosk" : "restaurant";
+  const ecosystem = location.pathname.startsWith("/kiosko")
+    ? "kiosk"
+    : "restaurant";
   const [showResetDialog, setShowResetDialog] = useState(false);
 
   // Guard: Admin without store should go to selector
@@ -82,6 +91,19 @@ export function AppLayout() {
       navigate("/select-store", { replace: true });
     }
   }, [loading, storeLoading, isAuthenticated, isAdmin, activeStore, navigate]);
+
+  // Guard: Prevent accessing /domicilios if the active store is not Domicilios
+  useEffect(() => {
+    if (
+      !loading &&
+      !storeLoading &&
+      activeStore &&
+      location.pathname === "/domicilios" &&
+      activeStore.slug !== "domicilios"
+    ) {
+      navigate(user?.role === "admin" ? "/dashboard" : "/");
+    }
+  }, [loading, storeLoading, activeStore, location.pathname, navigate, user?.role]);
 
   if (loading) {
     return (
@@ -101,9 +123,17 @@ export function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  const visibleNav = NAV_ITEMS.filter(
-    (item) => user && item.roles.includes(user.role),
-  );
+  const visibleNav = NAV_ITEMS.filter((item) => {
+    if (!user) return false;
+    if (!item.roles.includes(user.role)) return false;
+    
+    // Hide Domicilios module from the navbar if the active store is NOT "domicilios"
+    if (item.to === "/domicilios" && activeStore?.slug !== "domicilios") {
+      return false;
+    }
+    
+    return true;
+  });
 
   return (
     <div className="min-h-screen flex flex-col bg-white">

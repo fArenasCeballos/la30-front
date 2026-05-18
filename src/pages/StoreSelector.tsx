@@ -11,15 +11,16 @@ export default function StoreSelector() {
 
   const handleSelect = (store: Store) => {
     setActiveStore(store);
-    navigate("/", { replace: true });
+    const destination = store.slug === "domicilios" ? "/domicilios" : "/";
+    navigate(destination, { replace: true });
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#0A0A0A]">
       {/* Dynamic Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] animate-pulse" />
-        <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-orange-600/5 blur-[120px] animate-pulse delay-1000" />
+        <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-orange-600/5 blur-[120px] animate-pulse delay-1000" />
       </div>
 
       <div className="w-full max-w-4xl relative z-10 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">

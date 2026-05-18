@@ -32,6 +32,12 @@ export interface OrderContextType {
     items: OrderItemInput[],
     notes?: string,
   ) => Promise<void>;
+  addDeliveryOrder: (
+    locator: string,
+    items: OrderItemInput[],
+    deliveryInfo: { name: string; address: string; phone: string; fee: number },
+    notes?: string,
+  ) => Promise<void>;
   updateOrder: (
     orderId: string,
     locator: string,
@@ -39,6 +45,7 @@ export interface OrderContextType {
     notes?: string,
   ) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
+  dispatchOrder: (orderId: string) => Promise<void>;
   toggleOrderItem: (itemId: string, completed: boolean) => Promise<void>;
   processPayment: (
     orderId: string,
@@ -303,6 +310,53 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     [queryClient, user?.id, storeId],
   );
 
+  const addDeliveryOrder = useCallback(
+    async (
+      locator: string,
+      items: OrderItemInput[],
+      deliveryInfo: { name: string; address: string; phone: string; fee: number },
+      notes?: string,
+    ) => {
+      const { data, error } = await supabase.rpc("create_order", {
+        p_locator: locator,
+        p_items: items as unknown as Json,
+        p_notes: notes || null,
+        p_store_id: storeId || null,
+      });
+
+      if (error) {
+        toast.error(`Error: ${error.message}`);
+        return;
+      }
+
+      const createdOrder = data as unknown as { order_id: string; locator: string };
+      const itemsTotal = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+      const grandTotal = itemsTotal + deliveryInfo.fee;
+
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({
+          delivery_name: deliveryInfo.name,
+          delivery_address: deliveryInfo.address,
+          delivery_phone: deliveryInfo.phone,
+          delivery_fee: deliveryInfo.fee,
+          is_delivery: true,
+          total: grandTotal,
+        })
+        .eq("id", createdOrder.order_id);
+
+      if (updateError) {
+        toast.error(`Error delivery: ${updateError.message}`);
+        return;
+      }
+
+      toast.success(`🛵 Domicilio ${createdOrder?.locator || locator} creado`);
+      queryClient.invalidateQueries({ queryKey: ["orders", user?.id, storeId] });
+      queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id, storeId] });
+    },
+    [queryClient, user?.id, storeId],
+  );
+
   const updateOrder = useCallback(
     async (
       orderId: string,
@@ -361,6 +415,39 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     [queryClient, user?.id, storeId],
   );
 
+  const dispatchOrder = useCallback(
+    async (orderId: string) => {
+      const previousOrders = queryClient.getQueryData(["orders", user?.id, storeId]);
+      const previousActive = queryClient.getQueryData([
+        "active-orders",
+        user?.id,
+        storeId,
+      ]);
+
+      const updateFn = (old: Order[] | undefined) => {
+        if (!old) return old;
+        return old.map((o) => (o.id === orderId ? { ...o, is_dispatched: true } : o));
+      };
+
+      queryClient.setQueryData(["orders", user?.id, storeId], updateFn);
+      queryClient.setQueryData(["active-orders", user?.id, storeId], updateFn);
+
+      const { error } = await supabase
+        .from("orders")
+        .update({ is_dispatched: true })
+        .eq("id", orderId);
+
+      if (error) {
+        toast.error(`Error al despachar: ${error.message}`);
+        queryClient.setQueryData(["orders", user?.id, storeId], previousOrders);
+        queryClient.setQueryData(["active-orders", user?.id, storeId], previousActive);
+        return;
+      }
+      toast.success("Domicilio despachado (en camino) 🛵");
+    },
+    [queryClient, user?.id, storeId],
+  );
+
   const toggleOrderItem = useCallback(
     async (itemId: string, completed: boolean) => {
       const previousOrders = queryClient.getQueryData(["orders", user?.id, storeId]);
@@ -405,7 +492,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       orderId: string, 
       method: string, 
       amountReceived: number,
-      breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number }
+      breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number },
+      targetStatus: OrderStatus | null = "en_preparacion"
     ) => {
       const { error: paymentError } = await supabase.rpc("process_payment", {
         p_order_id: orderId,
@@ -417,14 +505,17 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       });
       if (paymentError) {
         toast.error(`Error de pago: ${paymentError.message}`);
-        return;
+        return false;
       }
-      await supabase.rpc("update_order_status", {
-        p_order_id: orderId,
-        p_status: "en_preparacion",
-      });
+      if (targetStatus) {
+        await supabase.rpc("update_order_status", {
+          p_order_id: orderId,
+          p_status: targetStatus,
+        });
+      }
       toast.success("Pago procesado");
       queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id, storeId] });
+      return true;
     },
     [queryClient, user?.id, storeId],
   );
@@ -451,8 +542,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       loading: loadingOrders,
       loadingActive,
       addOrder,
+      addDeliveryOrder,
       updateOrder,
       updateOrderStatus,
+      dispatchOrder,
       toggleOrderItem,
       processPayment,
       getOrdersByStatus,
@@ -465,8 +558,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       loadingOrders,
       loadingActive,
       addOrder,
+      addDeliveryOrder,
       updateOrder,
       updateOrderStatus,
+      dispatchOrder,
       toggleOrderItem,
       processPayment,
       getOrdersByStatus,

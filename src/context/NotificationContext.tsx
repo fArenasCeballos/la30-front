@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import type { Notification } from "@/types";
+import { useStore } from "@/context/StoreContext";
 
 export interface NotificationContextType {
   notifications: Notification[];
@@ -33,11 +34,43 @@ function playNotificationSound() {
   }
 }
 
+export function isNotificationForStore(n: { title: string; message: string }, storeSlug: string | undefined): boolean {
+  if (!storeSlug) return true;
+  
+  const text = ((n.title || "") + " " + (n.message || "")).toLowerCase();
+  
+  if (storeSlug === "domicilios") {
+    return text.includes("domicilio") || text.includes("domicilios");
+  }
+  
+  if (storeSlug === "carrito" || storeSlug === "trailer" || storeSlug === "carrito-movil") {
+    return text.includes("trailer") || text.includes("tráiler") || text.includes("carrito");
+  }
+  
+  if (storeSlug === "restaurante") {
+    return (
+      !text.includes("trailer") &&
+      !text.includes("tráiler") &&
+      !text.includes("carrito") &&
+      !text.includes("domicilio") &&
+      !text.includes("domicilios")
+    );
+  }
+  
+  return true;
+}
+
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { activeStore } = useStore();
   const queryClient = useQueryClient();
 
-  const { data: notifications = [], refetch: refreshNotifications } = useQuery({
+  const activeStoreRef = React.useRef(activeStore);
+  useEffect(() => {
+    activeStoreRef.current = activeStore;
+  }, [activeStore]);
+
+  const { data: allNotifications = [], refetch: refreshNotifications } = useQuery({
     queryKey: ['notifications', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
@@ -54,6 +87,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     enabled: !!user?.id,
     staleTime: 1000 * 60, // 1 minuto de caché para notificaciones
   });
+
+  const notifications = React.useMemo(() => {
+    if (!activeStore?.slug) return allNotifications;
+    return allNotifications.filter((n) => isNotificationForStore(n, activeStore.slug));
+  }, [allNotifications, activeStore?.slug]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -78,7 +116,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               if (list.some(n => n.id === newNotif.id)) return list;
               return [newNotif, ...list].slice(0, 50);
             });
-            playNotificationSound();
+            if (isNotificationForStore(newNotif, activeStoreRef.current?.slug)) {
+              playNotificationSound();
+            }
           } catch (err) {
             console.error("Error handling realtime notification:", err);
           }

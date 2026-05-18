@@ -113,11 +113,11 @@ export default function Caja() {
     }
   };
 
-  const pendientes = getOrdersByStatus("pendiente");
-  const confirmados = getOrdersByStatus("confirmado");
-  const enCocina = getOrdersByStatus("en_preparacion");
-  const listos = getOrdersByStatus("listo");
-  const completados = getCompletedOrders();
+  const pendientes = getOrdersByStatus("pendiente").filter((o) => !o.is_delivery);
+  const confirmados = getOrdersByStatus("confirmado").filter((o) => !o.is_delivery);
+  const enCocina = getOrdersByStatus("en_preparacion").filter((o) => !o.is_delivery);
+  const listos = getOrdersByStatus("listo").filter((o) => !o.is_delivery);
+  const completados = getCompletedOrders().filter((o) => !o.is_delivery);
 
   const cajeroName = user?.name ?? "Cajero";
 
@@ -128,7 +128,8 @@ export default function Caja() {
   ) => {
     if (!payingOrder) return;
     const change = Math.max(0, received - payingOrder.total);
-    await processPayment(payingOrder.id, method, received, breakdown);
+    const success = await processPayment(payingOrder.id, method, received, breakdown);
+    if (!success) return;
 
     // Generar factura electrónica Siigo en background (no bloquea impresión)
     // Feature flag: solo activo cuando VITE_SIIGO_ENABLED=true en .env

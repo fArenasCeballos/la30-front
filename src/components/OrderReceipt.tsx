@@ -124,7 +124,9 @@ export function OrderReceipt({
     <>
       {/* Encabezado */}
       <div className="center">
-        <p className="header-title">VENTA A LA MESA</p>
+        <p className="header-title">
+          {order.is_delivery ? "VENTA A DOMICILIO" : "VENTA A LA MESA"}
+        </p>
       </div>
 
       <div className="double-divider">
@@ -150,9 +152,30 @@ export function OrderReceipt({
       </div>
 
       <div className="row">
-        <span>Mesa No.:</span>
+        <span>{order.is_delivery ? "Domicilio No." : "Mesa No."}:</span>
         <span className="bold">{order.locator}</span>
       </div>
+
+      {order.is_delivery && (
+        <>
+          <div className="row">
+            <span>Cliente:</span>
+            <span className="bold">{(order.delivery_name ?? "Cliente").toUpperCase()}</span>
+          </div>
+          {order.delivery_address && (
+            <div className="row">
+              <span>Dirección:</span>
+              <span className="bold">{order.delivery_address.toUpperCase()}</span>
+            </div>
+          )}
+          {order.delivery_phone && (
+            <div className="row">
+              <span>Teléfono:</span>
+              <span className="bold">{order.delivery_phone}</span>
+            </div>
+          )}
+        </>
+      )}
 
       <div className="row">
         <span>Cajero :</span>
@@ -193,6 +216,12 @@ export function OrderReceipt({
         <span>Sub Total</span>
         <span>{formatPrice(subtotal)}</span>
       </div>
+      {(order.delivery_fee ?? 0) > 0 && (
+        <div className="row">
+          <span>Costo Envío</span>
+          <span>{formatPrice(order.delivery_fee)}</span>
+        </div>
+      )}
       <div className="row">
         <span>Descuento</span>
         <span>$0</span>
@@ -281,13 +310,25 @@ export function OrderReceipt({
   const kitchenReceipt = (
     <>
       <div className="center">
-        <p className="kitchen-title">PEDIDO</p>
+        <p className="kitchen-title">
+          {order.is_delivery ? "DOMICILIO" : "PEDIDO"}
+        </p>
       </div>
 
       <div className="row" style={{ alignItems: "baseline" }}>
-        <span className="bold">Mesa #</span>
+        <span className="bold">
+          {order.is_delivery ? "Domicilio #" : "Mesa #"}
+        </span>
         <span className="kitchen-locator">{order.locator}</span>
       </div>
+
+      {order.is_delivery && (
+        <div style={{ fontSize: "14px", marginTop: "6px", border: "2px dashed #000", padding: "6px", background: "#f9f9f9" }}>
+          <div><strong>CLIENTE:</strong> {(order.delivery_name ?? "Cliente").toUpperCase()}</div>
+          {order.delivery_address && <div><strong>DIR:</strong> {order.delivery_address.toUpperCase()}</div>}
+          {order.delivery_phone && <div><strong>TEL:</strong> {order.delivery_phone}</div>}
+        </div>
+      )}
 
       <div className="row">
         <span>Ticket Control</span>

@@ -13,6 +13,8 @@ import {
   Banknote,
   CreditCard,
   Smartphone,
+  Truck,
+  ShoppingBag,
 } from "lucide-react";
 
 type DashboardOrder = OrderRow & { profiles: { name: string } | null };
@@ -131,6 +133,28 @@ export default function Dashboard() {
     const revenue = delivered.reduce((acc, o) => acc + (o.total || 0), 0);
     const avgTicket = delivered.length > 0 ? revenue / delivered.length : 0;
 
+    // Segregate delivery vs counter/caja orders for Domicilios store
+    const deliveryDelivered = delivered.filter((o) => o.is_delivery === true);
+    const cajaDelivered = delivered.filter((o) => o.is_delivery !== true);
+
+    const deliveryRevenue = deliveryDelivered.reduce((acc, o) => acc + (o.total || 0), 0);
+    const cajaRevenue = cajaDelivered.reduce((acc, o) => acc + (o.total || 0), 0);
+
+    const deliveryCompletedCount = deliveryDelivered.length;
+    const cajaCompletedCount = cajaDelivered.length;
+
+    // Delivery Specific Metrics
+    const dispatchedCount = shiftOrders.filter(
+      (o) => o.status === "listo" && o.is_dispatched === true,
+    ).length;
+    const readyNotSentCount = shiftOrders.filter(
+      (o) => o.status === "listo" && o.is_dispatched !== true,
+    ).length;
+    const deliveryFees = delivered.reduce(
+      (acc, o) => acc + (o.delivery_fee || 0),
+      0,
+    );
+
     // Payment breakdown
     let cash = 0;
     let card = 0;
@@ -160,49 +184,122 @@ export default function Dashboard() {
       cash,
       card,
       nequi,
+      dispatchedCount,
+      readyNotSentCount,
+      deliveryFees,
+      deliveryRevenue,
+      cajaRevenue,
+      deliveryCompletedCount,
+      cajaCompletedCount,
       recentOrders: shiftOrders.slice(0, 8),
     };
   }, [shiftOrders, shiftPayments]);
 
+  const isDeliveryStore = activeStore?.slug === "domicilios";
+
   const statusDistribution = useMemo(
-    () => [
+    () => isDeliveryStore ? [
+      { name: "En Camino 🛵", value: stats.dispatchedCount },
+      { name: "Listos en Local", value: stats.readyNotSentCount },
+      { name: "Completados", value: stats.completedCount },
+      { name: "Cancelados", value: stats.cancelledCount },
+    ] : [
       { name: "Activos", value: stats.activeCount },
       { name: "Completados", value: stats.completedCount },
       { name: "Cancelados", value: stats.cancelledCount },
     ],
-    [stats],
+    [stats, isDeliveryStore],
   );
 
-  const statCards = [
-    {
-      label: "Ventas del día",
-      value: formatPrice(stats.revenue),
-      icon: DollarSign,
-      color: "text-green-500",
-      loading: loadingOrders,
-    },
-    {
-      label: "Pedidos activos",
-      value: stats.activeCount,
-      icon: Clock,
-      color: "text-orange-500",
-      loading: loadingOrders,
-    },
-    {
-      label: "Completados",
-      value: stats.completedCount,
-      icon: CheckCircle,
-      color: "text-green-500",
-      loading: loadingOrders,
-    },
-    {
-      label: "Ticket promedio",
-      value: formatPrice(stats.avgTicket),
-      icon: TrendingUp,
-      color: "text-blue-500",
-      loading: loadingOrders,
-    },
-  ];
+  const statCards = isDeliveryStore
+    ? [
+        {
+          label: "Ventas Domicilios",
+          value: formatPrice(stats.deliveryRevenue),
+          icon: DollarSign,
+          color: "text-purple-500",
+          loading: loadingOrders,
+        },
+        {
+          label: "Ventas Caja",
+          value: formatPrice(stats.cajaRevenue),
+          icon: Banknote,
+          color: "text-emerald-500",
+          loading: loadingOrders,
+        },
+        {
+          label: "Ventas Totales",
+          value: formatPrice(stats.revenue),
+          icon: DollarSign,
+          color: "text-primary",
+          loading: loadingOrders,
+        },
+        {
+          label: "Domicilios Completados",
+          value: stats.deliveryCompletedCount,
+          icon: CheckCircle,
+          color: "text-purple-500",
+          loading: loadingOrders,
+        },
+        {
+          label: "Completados en Caja",
+          value: stats.cajaCompletedCount,
+          icon: ShoppingBag,
+          color: "text-emerald-500",
+          loading: loadingOrders,
+        },
+        {
+          label: "Domicilios en camino",
+          value: stats.dispatchedCount,
+          icon: Truck,
+          color: "text-blue-500",
+          loading: loadingOrders,
+        },
+        {
+          label: "Listos por despachar",
+          value: stats.readyNotSentCount,
+          icon: Clock,
+          color: "text-amber-500",
+          loading: loadingOrders,
+        },
+        {
+          label: "Ingreso por envíos",
+          value: formatPrice(stats.deliveryFees),
+          icon: TrendingUp,
+          color: "text-green-500",
+          loading: loadingOrders,
+        },
+      ]
+    : [
+        {
+          label: "Ventas del día",
+          value: formatPrice(stats.revenue),
+          icon: DollarSign,
+          color: "text-green-500",
+          loading: loadingOrders,
+        },
+        {
+          label: "Pedidos activos",
+          value: stats.activeCount,
+          icon: Clock,
+          color: "text-orange-500",
+          loading: loadingOrders,
+        },
+        {
+          label: "Completados",
+          value: stats.completedCount,
+          icon: CheckCircle,
+          color: "text-green-500",
+          loading: loadingOrders,
+        },
+        {
+          label: "Ticket promedio",
+          value: formatPrice(stats.avgTicket),
+          icon: TrendingUp,
+          color: "text-blue-500",
+          loading: loadingOrders,
+        },
+      ];
 
   const paymentCards = [
     {

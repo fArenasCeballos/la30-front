@@ -231,8 +231,20 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
     `;
   }
 
+  const headerTitle = order.is_delivery ? "VENTA A DOMICILIO" : "VENTA A LA MESA";
+  const locatorLabel = order.is_delivery ? "Domicilio No." : "Mesa No.";
+
+  let deliveryInfo = "";
+  if (order.is_delivery) {
+    deliveryInfo = `
+      <div class="row"><span>Cliente:</span><span class="bold">${(order.delivery_name ?? "Cliente").toUpperCase()}</span></div>
+      ${order.delivery_address ? `<div class="row"><span>Dirección:</span><span class="bold">${order.delivery_address.toUpperCase()}</span></div>` : ""}
+      ${order.delivery_phone ? `<div class="row"><span>Teléfono:</span><span class="bold">${order.delivery_phone}</span></div>` : ""}
+    `;
+  }
+
   return `
-    <div class="center"><p class="header-title">VENTA A LA MESA</p></div>
+    <div class="center"><p class="header-title">${headerTitle}</p></div>
     <div class="double-divider">
       <div class="row">
         <span class="bold">TIQUETE DE CONSUMO</span>
@@ -243,7 +255,8 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
     <div class="divider"></div>
     <div class="row"><span>Fecha :</span><span>${dateOnly}</span></div>
     <div class="row"><span>Hora  :</span><span>${timeOnly}</span></div>
-    <div class="row"><span>Mesa No.:</span><span class="bold">${order.locator}</span></div>
+    <div class="row"><span>${locatorLabel}:</span><span class="bold">${order.locator}</span></div>
+    ${deliveryInfo}
     <div class="row"><span>Cajero :</span><span class="bold">${cajeroName.toUpperCase()}</span></div>
     <div class="divider"></div>
     <table>
@@ -252,6 +265,7 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
     </table>
     <div class="divider"></div>
     <div class="row"><span>Sub Total</span><span>${formatPrice(subtotal)}</span></div>
+    ${(order.delivery_fee ?? 0) > 0 ? `<div class="row"><span>Costo Envío</span><span>${formatPrice(order.delivery_fee)}</span></div>` : ""}
     <div class="row"><span>Descuento</span><span>$0</span></div>
     <div class="divider"></div>
     <div class="row total-row"><span>Total</span><span class="big-total">${formatPrice(order.total ?? 0)}</span></div>
@@ -313,12 +327,27 @@ export function buildKitchenReceiptHTML(
     `;
   }
 
+  const kitchenTitle = order.is_delivery ? "DOMICILIO" : "PEDIDO";
+  const locatorLabel = order.is_delivery ? "Domicilio #" : "Mesa #";
+
+  let deliveryInfo = "";
+  if (order.is_delivery) {
+    deliveryInfo = `
+      <div style="font-size:14px; margin-top:6px; border:2px dashed #000; padding:6px; background:#f9f9f9;">
+        <div><strong>CLIENTE:</strong> ${(order.delivery_name ?? "Cliente").toUpperCase()}</div>
+        ${order.delivery_address ? `<div><strong>DIR:</strong> ${order.delivery_address.toUpperCase()}</div>` : ""}
+        ${order.delivery_phone ? `<div><strong>TEL:</strong> ${order.delivery_phone}</div>` : ""}
+      </div>
+    `;
+  }
+
   return `
-    <div class="center"><p class="kitchen-title">PEDIDO</p></div>
+    <div class="center"><p class="kitchen-title">${kitchenTitle}</p></div>
     <div class="row" style="align-items:baseline">
-      <span class="bold">Mesa #</span>
+      <span class="bold">${locatorLabel}</span>
       <span class="kitchen-locator">${order.locator}</span>
     </div>
+    ${deliveryInfo}
     <div class="row"><span>Ticket Control</span><span class="bold kitchen-ticket">${ticketNumber}</span></div>
     <div class="center" style="padding:2px 0"><span class="kitchen-cashier">${cajeroName.toUpperCase()}</span></div>
     <div class="divider"></div>

@@ -86,9 +86,10 @@ function clearDraft() {
 export default function Kiosko() {
   const [searchParams] = useSearchParams();
   const editOrderId = searchParams.get("edit");
-  const { addOrder, updateOrder, orders } = useOrders();
+  const { addOrder, addDeliveryOrder, updateOrder, orders } = useOrders();
   const { activeStore } = useStore();
   const storeId = activeStore?.id;
+  const isDeliveryMode = activeStore?.slug === "domicilios";
 
   // Initialize from draft if available (and not in edit mode)
   const savedDraft = !editOrderId ? loadDraft() : null;
@@ -99,12 +100,26 @@ export default function Kiosko() {
   const [step, setStep] = useState<"locator" | "menu" | "confirm">(
     savedDraft?.step ?? "locator",
   );
+  const [isDeliveryOrder, setIsDeliveryOrder] = useState(false);
   const [orderNotes, setOrderNotes] = useState(savedDraft?.orderNotes ?? "");
   const [customizingProduct, setCustomizingProduct] =
     useState<ProductWithCategory | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
+
+  // Delivery-specific state
+  const [deliveryName, setDeliveryName] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryPhone, setDeliveryPhone] = useState("");
+  const [deliveryFee, setDeliveryFee] = useState(0);
+
+  // Auto-generate locator for delivery orders (sequential per shift)
+  const nextDeliveryLocator = useMemo(() => {
+    if (!isDeliveryMode) return "";
+    const deliveryCount = orders.filter((o) => o.is_delivery).length;
+    return String(deliveryCount + 1);
+  }, [isDeliveryMode, orders]);
 
   // Queries con React Query
   const { data: categories = [], isLoading: loadingCats } = useQuery({
@@ -347,6 +362,18 @@ export default function Kiosko() {
       return;
     }
 
+    // Delivery validation
+    if (isDeliveryOrder && !editOrderId) {
+      if (
+        !deliveryName.trim() ||
+        !deliveryAddress.trim() ||
+        !deliveryPhone.trim()
+      ) {
+        toast.error("Completa los datos del cliente para el domicilio");
+        return;
+      }
+    }
+
     setIsSending(true);
     try {
       const itemsForDb = cart.map((item) => ({
@@ -359,12 +386,30 @@ export default function Kiosko() {
       if (editOrderId) {
         await updateOrder(editOrderId, locator, itemsForDb, orderNotes);
         window.history.replaceState({}, "", "/kiosko");
+      } else if (isDeliveryOrder) {
+        const deliveryLocator = nextDeliveryLocator;
+        await addDeliveryOrder(
+          deliveryLocator,
+          itemsForDb,
+          {
+            name: deliveryName,
+            address: deliveryAddress,
+            phone: deliveryPhone,
+            fee: deliveryFee,
+          },
+          orderNotes || `📍 ${deliveryAddress}`,
+        );
+        setDeliveryName("");
+        setDeliveryAddress("");
+        setDeliveryPhone("");
+        setDeliveryFee(0);
       } else {
         await addOrder(locator, itemsForDb, orderNotes);
       }
       setCart([]);
       setLocator("");
       setOrderNotes("");
+      setIsDeliveryOrder(false);
       setStep("locator");
       clearDraft();
     } finally {
@@ -372,56 +417,162 @@ export default function Kiosko() {
     }
   };
 
-  // Step 1: Locator (Entry)
+  // Step 1: Locator (Entry) or Delivery/Local choice
   if (step === "locator") {
     return (
       <ErrorBoundary>
-        <div className="section-container flex flex-col items-center justify-center min-h-[85vh] animate-in fade-in duration-300">
-          <div className="w-full max-w-xl space-y-12 text-center">
-            <div className="relative inline-block">
-              <div className="absolute inset-0 bg-primary/20 blur-[100px] rounded-full animate-pulse" />
-              <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-[2.5rem] bg-white border shadow-strong flex items-center justify-center mx-auto group">
-                <ShoppingCart className="h-10 w-10 sm:h-14 sm:w-14 text-primary group-hover:scale-110 transition-transform duration-200" />
+        <div className="section-container flex flex-col items-center justify-center min-h-[45vh] py-3 sm:py-6 px-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-xl space-y-4 sm:space-y-6 text-center">
+            <div className="relative inline-block md:block">
+              <div className="absolute inset-0 bg-primary/20 blur-[50px] rounded-full animate-pulse" />
+              <div className="relative w-16 h-16 rounded-xl bg-white border shadow-strong flex items-center justify-center mx-auto group">
+                <ShoppingCart className="h-6 w-6 text-primary group-hover:scale-110 transition-transform duration-200" />
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-center gap-2 text-primary font-bold uppercase tracking-[0.3em] text-[10px]">
-                <div className="h-px w-6 sm:w-8 bg-primary/30" />
-                Nueva Orden
-                <div className="h-px w-6 sm:w-8 bg-primary/30" />
-              </div>
-              <h1 className="text-4xl sm:text-5xl font-black tracking-tight">
-                Identifica el Pedido
-              </h1>
-              <p className="text-muted-foreground font-medium text-base sm:text-lg max-w-sm mx-auto px-4">
-                Ingresa el número de localizador asignado para comenzar la
-                selección.
-              </p>
-            </div>
+            {/* Delivery mode: show choice between local and delivery */}
+            {isDeliveryMode ? (
+              <>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-center gap-2 text-primary font-bold uppercase tracking-[0.3em] text-[8px] sm:text-[9px]">
+                    <div className="h-px w-6 bg-primary/30" />
+                    Nueva Orden
+                    <div className="h-px w-6 bg-primary/30" />
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-black tracking-tight">
+                    ¿Tipo de Pedido?
+                  </h1>
+                  <p className="text-muted-foreground font-medium text-[10px] sm:text-xs max-w-[260px] sm:max-w-sm mx-auto px-2">
+                    Selecciona si el cliente come aquí o es un domicilio.
+                  </p>
+                </div>
 
-            <div className="relative max-w-sm mx-auto group">
-              <Input
-                value={locator}
-                onChange={(e) => setLocator(e.target.value.toUpperCase())}
-                placeholder="00"
-                className="h-16 lg:h-28 text-center text-4xl lg:text-6xl font-black rounded-2xl lg:rounded-4xl border-4 border-primary/10 shadow-soft focus-visible:ring-primary focus-visible:border-primary transition-all bg-white/50 backdrop-blur-sm"
-                autoFocus
-              />
-              <div className="absolute -bottom-3 sm:-bottom-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg opacity-0 group-focus-within:opacity-100 transition-opacity whitespace-nowrap">
-                Localizador
-              </div>
-            </div>
+                <div className="flex flex-row gap-3 max-w-md mx-auto justify-center">
+                  {/* Local / Eat-in */}
+                  <button
+                    onClick={() => {
+                      setIsDeliveryOrder(false);
+                      setLocator("");
+                    }}
+                    className={cn(
+                      "group flex items-center gap-3 p-3 sm:p-4 rounded-xl border-2 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] w-[140px] sm:w-[180px] justify-center",
+                      !isDeliveryOrder && locator !== ""
+                        ? "border-primary bg-primary/5 shadow-xl shadow-primary/10"
+                        : "border-accent/20 bg-white shadow-soft hover:border-primary/30 hover:shadow-medium",
+                    )}
+                  >
+                    <span className="text-xl sm:text-2xl group-hover:scale-110 transition-transform duration-300">
+                      🍽️
+                    </span>
+                    <div className="text-left leading-none">
+                      <p className="font-black text-xs sm:text-sm tracking-tight">
+                        Comer Aquí
+                      </p>
+                      <p className="text-[7px] sm:text-[8px] font-bold text-muted-foreground/35 uppercase tracking-widest mt-0.5">
+                        Mesa
+                      </p>
+                    </div>
+                  </button>
 
-            <Button
-              size="lg"
-              className="h-14 lg:h-16 px-8 lg:px-12 rounded-2xl text-base lg:text-lg font-black shadow-strong hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 group"
-              disabled={!locator.trim()}
-              onClick={() => setStep("menu")}
-            >
-              INICIAR SELECCIÓN
-              <ArrowRight className="h-6 w-6 ml-3 group-hover:translate-x-1 transition-transform" />
-            </Button>
+                  {/* Delivery */}
+                  <button
+                    onClick={() => {
+                      setIsDeliveryOrder(true);
+                      setLocator(nextDeliveryLocator);
+                      setStep("menu");
+                    }}
+                    className="group flex items-center gap-3 p-3 sm:p-4 rounded-xl border-2 border-purple-500/20 bg-purple-500/5 shadow-soft hover:border-purple-500/40 hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] w-[140px] sm:w-[180px] justify-center"
+                  >
+                    <span className="text-xl sm:text-2xl group-hover:scale-110 transition-transform duration-300">
+                      🛵
+                    </span>
+                    <div className="text-left leading-none">
+                      <p className="font-black text-xs sm:text-sm tracking-tight text-purple-700">
+                        Domicilio
+                      </p>
+                      <p className="text-[7px] sm:text-[8px] font-bold text-purple-400 uppercase tracking-widest mt-0.5">
+                        Pedido #{nextDeliveryLocator}
+                      </p>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Locator input (only shown if "Comer Aquí" was tapped) */}
+                {!isDeliveryOrder && (
+                  <div className="space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="flex flex-row items-center justify-center gap-2 max-w-xs sm:max-w-md mx-auto">
+                      <div className="relative group w-24">
+                        <Input
+                          value={locator}
+                          onChange={(e) =>
+                            setLocator(e.target.value.toUpperCase())
+                          }
+                          placeholder="00"
+                          className="h-10 sm:h-12 text-center text-lg sm:text-xl font-black rounded-lg border-2 border-primary/20 shadow-soft focus-visible:ring-primary focus-visible:border-primary transition-all bg-white"
+                          autoFocus
+                        />
+                        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-primary text-white text-[7px] font-black uppercase tracking-widest rounded-full shadow-lg opacity-0 group-focus-within:opacity-100 transition-opacity whitespace-nowrap">
+                          Localizador
+                        </div>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        className="h-10 sm:h-12 px-6 rounded-lg text-xs font-black shadow-strong hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 group w-auto"
+                        disabled={!locator.trim()}
+                        onClick={() => setStep("menu")}
+                      >
+                        INICIAR SELECCIÓN
+                        <ArrowRight className="h-4 w-4 ml-1.5 group-hover:translate-x-1 transition-transform" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Normal mode: just show locator input */
+              <>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-center gap-2 text-primary font-bold uppercase tracking-[0.3em] text-[8px] sm:text-[9px]">
+                    <div className="h-px w-6 bg-primary/30" />
+                    Nueva Orden
+                    <div className="h-px w-6 bg-primary/30" />
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-black tracking-tight">
+                    Identifica el Pedido
+                  </h1>
+                  <p className="text-muted-foreground font-medium text-[10px] sm:text-xs max-w-[260px] sm:max-w-sm mx-auto px-2">
+                    Ingresa el número de localizador asignado para comenzar la
+                    selección.
+                  </p>
+                </div>
+
+                <div className="flex flex-row items-center justify-center gap-2 max-w-xs sm:max-w-md mx-auto">
+                  <div className="relative group w-24">
+                    <Input
+                      value={locator}
+                      onChange={(e) => setLocator(e.target.value.toUpperCase())}
+                      placeholder="00"
+                      className="h-10 sm:h-12 text-center text-lg sm:text-xl font-black rounded-lg border-2 border-primary/20 shadow-soft focus-visible:ring-primary focus-visible:border-primary transition-all bg-white"
+                      autoFocus
+                    />
+                    <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-primary text-white text-[7px] font-black uppercase tracking-widest rounded-full shadow-lg opacity-0 group-focus-within:opacity-100 transition-opacity whitespace-nowrap">
+                      Localizador
+                    </div>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    className="h-10 sm:h-12 px-6 rounded-lg text-xs font-black shadow-strong hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 group w-auto"
+                    disabled={!locator.trim()}
+                    onClick={() => setStep("menu")}
+                  >
+                    INICIAR SELECCIÓN
+                    <ArrowRight className="h-4 w-4 ml-1.5 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </ErrorBoundary>
@@ -444,10 +595,14 @@ export default function Kiosko() {
             </Button>
             <div>
               <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-primary leading-none mb-1">
-                {editOrderId ? "Edición de Orden" : "Finalizar Pedido"}
+                {editOrderId
+                  ? "Edición de Orden"
+                  : isDeliveryOrder
+                    ? "🛵 Nuevo Domicilio"
+                    : "Finalizar Pedido"}
               </p>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-                Revisión de Compra
+                {isDeliveryOrder ? "Datos de Entrega" : "Revisión de Compra"}
               </h1>
             </div>
           </div>
@@ -460,10 +615,10 @@ export default function Kiosko() {
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-white border-2 border-primary/20 shadow-soft flex flex-col items-center justify-center">
                         <span className="text-[9px] font-black opacity-40 leading-none mb-0.5">
-                          ORD
+                          {isDeliveryOrder ? "DOM" : "ORD"}
                         </span>
                         <span className="text-2xl font-black text-primary">
-                          {locator}
+                          {isDeliveryOrder ? nextDeliveryLocator : locator}
                         </span>
                       </div>
                       <div>
@@ -516,6 +671,45 @@ export default function Kiosko() {
                 </div>
               </div>
 
+              {/* Delivery Info (only in delivery mode) */}
+              {isDeliveryOrder && !editOrderId && (
+                <div className="space-y-4 bg-purple-500/5 p-6 rounded-4xl border-2 border-dashed border-purple-500/20">
+                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-purple-600 px-2 flex items-center gap-2">
+                    🛵 Datos del Domicilio
+                  </h3>
+                  <Input
+                    value={deliveryName}
+                    onChange={(e) => setDeliveryName(e.target.value)}
+                    placeholder="Nombre del cliente"
+                    className="rounded-2xl border-2 border-white p-4 h-12 shadow-soft focus:border-purple-500 transition-all bg-white font-bold text-sm placeholder:text-muted-foreground/30"
+                  />
+                  <Input
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    placeholder="Dirección de entrega"
+                    className="rounded-2xl border-2 border-white p-4 h-12 shadow-soft focus:border-purple-500 transition-all bg-white font-bold text-sm placeholder:text-muted-foreground/30"
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      value={deliveryPhone}
+                      onChange={(e) => setDeliveryPhone(e.target.value)}
+                      placeholder="Celular"
+                      type="tel"
+                      className="rounded-2xl border-2 border-white p-4 h-12 shadow-soft focus:border-purple-500 transition-all bg-white font-bold text-sm placeholder:text-muted-foreground/30"
+                    />
+                    <Input
+                      value={deliveryFee || ""}
+                      onChange={(e) =>
+                        setDeliveryFee(Number(e.target.value) || 0)
+                      }
+                      placeholder="Costo envío"
+                      type="number"
+                      className="rounded-2xl border-2 border-white p-4 h-12 shadow-soft focus:border-purple-500 transition-all bg-white font-bold text-sm placeholder:text-muted-foreground/30"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4 bg-primary/5 p-6 rounded-4xl border-2 border-dashed border-primary/20">
                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary px-2 flex items-center gap-2">
                   <Edit3 className="h-4 w-4" />
@@ -550,6 +744,16 @@ export default function Kiosko() {
                       </p>
                       <p className="font-bold">{formatPrice(total)}</p>
                     </div>
+                    {isDeliveryOrder && deliveryFee > 0 && (
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs font-black text-purple-500 uppercase tracking-widest">
+                          Envío
+                        </p>
+                        <p className="font-bold text-purple-600">
+                          {formatPrice(deliveryFee)}
+                        </p>
+                      </div>
+                    )}
                     <div className="h-px bg-dashed border-t-2 border-accent border-dashed" />
                     <div className="flex justify-between items-end">
                       <div>
@@ -557,17 +761,26 @@ export default function Kiosko() {
                           Total Neto
                         </p>
                         <p className="text-2xl font-black tracking-tight leading-none">
-                          A Pagar
+                          {isDeliveryOrder ? "A Cobrar" : "A Pagar"}
                         </p>
                       </div>
                       <p className="text-4xl font-black text-primary tracking-tighter">
-                        {formatPrice(total)}
+                        {formatPrice(
+                          total + (isDeliveryOrder ? deliveryFee : 0),
+                        )}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="pos-card p-8 bg-primary text-white shadow-strong shadow-primary/20 overflow-hidden relative group border-none">
+                <div
+                  className={cn(
+                    "pos-card p-8 text-white shadow-strong overflow-hidden relative group border-none",
+                    isDeliveryOrder
+                      ? "bg-purple-600 shadow-purple-500/20"
+                      : "bg-primary shadow-primary/20",
+                  )}
+                >
                   <div className="absolute -right-10 -top-10 h-40 w-40 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-300" />
                   <div className="relative z-10 space-y-6">
                     <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
@@ -575,17 +788,23 @@ export default function Kiosko() {
                     </div>
                     <div>
                       <h4 className="text-2xl font-black tracking-tight leading-tight mb-2">
-                        Listo para el despacho
+                        {isDeliveryOrder
+                          ? "Enviar a domicilio"
+                          : "Listo para el despacho"}
                       </h4>
                       <p className="text-white/70 text-sm font-medium">
-                        Verifica que todos los productos y cantidades sean
-                        correctos antes de confirmar.
+                        {isDeliveryOrder
+                          ? "Verifica los datos del cliente y los productos antes de crear el domicilio."
+                          : "Verifica que todos los productos y cantidades sean correctos antes de confirmar."}
                       </p>
                     </div>
                     <Button
                       size="xl"
                       variant="secondary"
-                      className="w-full h-16 rounded-2xl font-black text-primary shadow-lg hover:shadow-xl transition-all"
+                      className={cn(
+                        "w-full h-16 rounded-2xl font-black shadow-lg hover:shadow-xl transition-all",
+                        isDeliveryOrder ? "text-purple-600" : "text-primary",
+                      )}
                       onClick={handleSend}
                       disabled={isSending}
                     >
@@ -594,7 +813,11 @@ export default function Kiosko() {
                       ) : (
                         <ArrowRight className="h-6 w-6 mr-2" />
                       )}
-                      {editOrderId ? "GUARDAR CAMBIOS" : "CONFIRMAR PEDIDO"}
+                      {editOrderId
+                        ? "GUARDAR CAMBIOS"
+                        : isDeliveryOrder
+                          ? "🛵 CREAR DOMICILIO"
+                          : "CONFIRMAR PEDIDO"}
                     </Button>
                   </div>
                 </div>
@@ -666,6 +889,7 @@ export default function Kiosko() {
                 <SheetContent
                   side="right"
                   className="w-full sm:w-[450px] p-0 flex flex-col border-none shadow-strong h-dvh overflow-hidden"
+                  aria-describedby={undefined}
                 >
                   <SheetHeader className="p-4 sm:p-8 border-b bg-primary text-white shrink-0">
                     <SheetTitle className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-3 text-white">
