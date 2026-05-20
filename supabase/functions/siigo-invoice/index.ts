@@ -7,7 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SIIGO_AUTH_URL = "https://api.siigo.com/auth";
 const SIIGO_API_URL = "https://api.siigo.com/v1";
-const PARTNER_ID = "TUULAPP";
+const PARTNER_ID = "PosPyH";
 
 // Sandbox defaults — these IDs come from the sandbox account
 // In production, these should be fetched dynamically or configured per-store
