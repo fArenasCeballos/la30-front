@@ -79,7 +79,7 @@ export function OrderReceipt({
   const ticketNumber = order.ticket_number ?? "—";
 
   /* ── Imprimir ──────────────────────────────────────────── */
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const receiptData = {
       order,
       cajeroName,
@@ -90,7 +90,7 @@ export function OrderReceipt({
     };
 
     if (type === "customer") {
-      silentPrint(
+      await silentPrint(
         buildCustomerReceiptHTML(receiptData),
         `Recibo - ${order.locator}`,
       );
@@ -123,7 +123,7 @@ export function OrderReceipt({
           )
           .join("");
 
-        silentPrint(combinedKitchenHTML);
+        await silentPrint(combinedKitchenHTML);
       }
     }
     onClose();
