@@ -113,15 +113,10 @@ export function OrderReceipt({
           buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
         );
 
-        const combinedKitchenHTML = kitchenHTMLs
-          .map(
-            (html, idx) => `
-            <div class="${idx < kitchenHTMLs.length - 1 ? "print-page-break" : ""}">
-              ${html}
-            </div>
-          `,
-          )
-          .join("");
+        // Combinar todos los HTMLs interconectados por un separador de salto de página
+        const combinedKitchenHTML = kitchenHTMLs.join(
+          '<div class="print-page-break"></div>',
+        );
 
         await silentPrint(combinedKitchenHTML);
       }

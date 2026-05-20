@@ -199,16 +199,10 @@ export default function Caja() {
             buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
           );
 
-          // Combinar todos los HTMLs con la clase print-page-break en los contenedores intermedios
-          const combinedKitchenHTML = kitchenHTMLs
-            .map(
-              (html, idx) => `
-              <div class="${idx < kitchenHTMLs.length - 1 ? "print-page-break" : ""}">
-                ${html}
-              </div>
-            `,
-            )
-            .join("");
+          // Combinar todos los HTMLs interconectados por un separador de salto de página
+          const combinedKitchenHTML = kitchenHTMLs.join(
+            '<div class="print-page-break"></div>',
+          );
 
           await silentPrint(combinedKitchenHTML);
         }
