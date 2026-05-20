@@ -21,8 +21,8 @@ const DEFAULTS = {
   genericCustomer: {
     person_type: "Person",
     id_type: "13", // CC - Cédula de Ciudadanía
-    identification: "222222222",
-    name: ["Consumidor Final"],
+    identification: "222222222222",
+    name: ["Consumidor", "Final"],
     address: {
       address: "Calle 0 # 0-0",
       city: {
@@ -77,12 +77,26 @@ async function getSiigoToken(): Promise<string> {
 // ─── Siigo Payment Type Mapping ────────────────────────────
 function mapPaymentType(method: string): number {
   switch (method) {
-    case "tarjeta":
-      return DEFAULTS.paymentTypeTarjeta;
+    case "tarjeta_credito":
+      return Deno.env.get("SIIGO_PAYMENT_TARJETA_CREDITO")
+        ? Number(Deno.env.get("SIIGO_PAYMENT_TARJETA_CREDITO"))
+        : 11070; // "Tarjeta Credito MMA"
+    case "tarjeta_debito":
+      return Deno.env.get("SIIGO_PAYMENT_TARJETA_DEBITO")
+        ? Number(Deno.env.get("SIIGO_PAYMENT_TARJETA_DEBITO"))
+        : 11069; // "Tarjeta Debito MMA"
     case "nequi":
-      return DEFAULTS.paymentTypeNequi;
+      return Deno.env.get("SIIGO_PAYMENT_NEQUI")
+        ? Number(Deno.env.get("SIIGO_PAYMENT_NEQUI"))
+        : 8026; // "Nequi"
+    case "daviplata":
+      return Deno.env.get("SIIGO_PAYMENT_DAVIPLATA")
+        ? Number(Deno.env.get("SIIGO_PAYMENT_DAVIPLATA"))
+        : 10883; // "Trasferencia"
+    case "tarjeta":
+      return DEFAULTS.paymentTypeTarjeta; // 8003 (Contado)
     case "efectivo":
-      return DEFAULTS.paymentTypeEffective;
+      return DEFAULTS.paymentTypeEffective; // 8147
     default:
       return DEFAULTS.paymentTypeTarjeta;
   }
@@ -92,16 +106,24 @@ function mapPaymentType(method: string): number {
 interface InvoiceRequest {
   orderId: string;
   method: string;
-  breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number };
+  breakdown?: {
+    efectivo?: number;
+    tarjeta?: number;
+    nequi?: number;
+    tarjeta_credito?: number;
+    tarjeta_debito?: number;
+    daviplata?: number;
+  };
   items: Array<{
     id: string;
     product_id: string;
     quantity: number;
     unit_price: number;
-    products: { name: string; id: string };
+    products: { name: string; id: string; siigo_code?: string | null };
   }>;
   total: number;
   locator: string;
+  customer?: any;
 }
 
 function buildInvoicePayload(req: InvoiceRequest) {
@@ -109,7 +131,7 @@ function buildInvoicePayload(req: InvoiceRequest) {
 
   // Build items — products are tax-exempt (Excluded)
   const items = req.items.map((item) => ({
-    code: item.product_id?.substring(0, 20) || "POS-ITEM",
+    code: item.products?.siigo_code || item.product_id?.substring(0, 20) || "POS-ITEM",
     description: item.products?.name || "Producto POS",
     quantity: item.quantity,
     price: item.unit_price,
@@ -118,32 +140,26 @@ function buildInvoicePayload(req: InvoiceRequest) {
   }));
 
   // Build payments array
-  // For mixed payments, we send the non-cash portion as the payment
   const payments: Array<{ id: number; value: number; due_date: string }> = [];
 
   if (req.method === "mixto" && req.breakdown) {
-    // For mixed, include each non-cash method
-    if ((req.breakdown.tarjeta ?? 0) > 0) {
-      payments.push({
-        id: mapPaymentType("tarjeta"),
-        value: req.breakdown.tarjeta!,
-        due_date: today,
-      });
-    }
-    if ((req.breakdown.nequi ?? 0) > 0) {
-      payments.push({
-        id: mapPaymentType("nequi"),
-        value: req.breakdown.nequi!,
-        due_date: today,
-      });
-    }
-    // Also include cash portion if present
-    if ((req.breakdown.efectivo ?? 0) > 0) {
-      payments.push({
-        id: mapPaymentType("efectivo"),
-        value: req.breakdown.efectivo!,
-        due_date: today,
-      });
+    const keys: Array<keyof Required<InvoiceRequest>["breakdown"]> = [
+      "efectivo",
+      "tarjeta",
+      "nequi",
+      "tarjeta_credito",
+      "tarjeta_debito",
+      "daviplata"
+    ];
+    for (const key of keys) {
+      const val = req.breakdown[key];
+      if (val && val > 0) {
+        payments.push({
+          id: mapPaymentType(key),
+          value: val,
+          due_date: today,
+        });
+      }
     }
   } else {
     // Single payment method
@@ -159,7 +175,7 @@ function buildInvoicePayload(req: InvoiceRequest) {
       id: DEFAULTS.documentTypeId,
     },
     date: today,
-    customer: DEFAULTS.genericCustomer,
+    customer: req.customer || DEFAULTS.genericCustomer,
     seller: DEFAULTS.sellerId,
     observations: `Pedido #${req.locator} — La 30`,
     items,
@@ -237,6 +253,19 @@ Deno.serve(async (rawReq: Request) => {
         ? null
         : JSON.stringify(siigoData.Errors ?? siigoData),
     });
+
+    if (isSuccess) {
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({
+          siigo_invoice_id: String(siigoData.id ?? ""),
+          siigo_invoice_number: siigoData.name ?? null,
+        })
+        .eq("id", body.orderId);
+      if (updateError) {
+        console.error("Error updating order with Siigo invoice details:", updateError);
+      }
+    }
 
     if (!isSuccess) {
       console.error("Siigo API error:", JSON.stringify(siigoData));

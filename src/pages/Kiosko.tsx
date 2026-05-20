@@ -125,28 +125,46 @@ export default function Kiosko() {
   const { data: categories = [], isLoading: loadingCats } = useQuery({
     queryKey: ["categories", storeId],
     queryFn: async () => {
-      let query = supabase
-        .from("categories")
-        .select("*")
-        .eq("is_active", true)
-        .order("sort_order");
-      if (storeId) query = query.contains("store_ids", [storeId]);
-      const { data } = await query;
-      return (data || []) as Category[];
+      try {
+        let query = supabase
+          .from("categories")
+          .select("*")
+          .eq("is_active", true)
+          .order("sort_order");
+        if (storeId) query = query.contains("store_ids", [storeId]);
+        const { data, error } = await query;
+        if (error) throw error;
+        localStorage.setItem(`la30_cached_categories_${storeId}`, JSON.stringify(data));
+        return (data || []) as Category[];
+      } catch (err) {
+        console.warn("Error fetching categories, falling back to cache:", err);
+        const cached = localStorage.getItem(`la30_cached_categories_${storeId}`);
+        if (cached) return JSON.parse(cached) as Category[];
+        return [];
+      }
     },
   });
 
   const { data: products = [], isLoading: loadingProds } = useQuery({
     queryKey: ["products", storeId],
     queryFn: async () => {
-      let query = supabase
-        .from("products")
-        .select("*, categories(*)")
-        .eq("available", true)
-        .order("sort_order");
-      if (storeId) query = query.contains("store_ids", [storeId]);
-      const { data } = await query;
-      return (data || []) as unknown as ProductWithCategory[];
+      try {
+        let query = supabase
+          .from("products")
+          .select("*, categories(*)")
+          .eq("available", true)
+          .order("sort_order");
+        if (storeId) query = query.contains("store_ids", [storeId]);
+        const { data, error } = await query;
+        if (error) throw error;
+        localStorage.setItem(`la30_cached_products_${storeId}`, JSON.stringify(data));
+        return (data || []) as unknown as ProductWithCategory[];
+      } catch (err) {
+        console.warn("Error fetching products, falling back to cache:", err);
+        const cached = localStorage.getItem(`la30_cached_products_${storeId}`);
+        if (cached) return JSON.parse(cached) as unknown as ProductWithCategory[];
+        return [];
+      }
     },
   });
 

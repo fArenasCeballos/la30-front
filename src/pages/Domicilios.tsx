@@ -7,7 +7,7 @@ import { useOrders } from "@/context/OrderContext";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/formatPrice";
 import { toast } from "sonner";
-import type { Order, OrderStatus, Category, Product } from "@/types";
+import type { Order, OrderItem, OrderStatus, Category, Product } from "@/types";
 import { cn } from "@/lib/utils";
 import { PaymentCalculator } from "@/components/PaymentCalculator";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -37,9 +37,19 @@ import {
   History,
   RotateCcw,
   CheckCircle,
+  FileText,
+  Zap,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { OrderReceipt } from "@/components/OrderReceipt";
+import {
+  buildCustomerReceiptHTML,
+  buildKitchenReceiptHTML,
+  silentPrint,
+} from "@/lib/receiptUtils";
+import type { ReceiptData } from "@/lib/receiptUtils";
+import { shouldGenerateInvoice } from "@/lib/siigoService";
+import { SiigoInvoiceModal } from "@/components/SiigoInvoiceModal";
 
 interface CartItem {
   product: Product;
@@ -69,6 +79,18 @@ export default function Domicilios() {
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
   const [receipt, setReceipt] = useState<ReceiptState | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<"todos" | "cocina" | "listos" | "camino">("todos");
+  const [siigoOrder, setSiigoOrder] = useState<{
+    order: Order;
+    method: string;
+    breakdown?: {
+      efectivo?: number;
+      tarjeta?: number;
+      nequi?: number;
+      tarjeta_credito?: number;
+      tarjeta_debito?: number;
+      daviplata?: number;
+    };
+  } | null>(null);
 
   const handleReprintCustomer = (order: Order) => {
     const lastPayment = order.payments?.[0];
@@ -302,6 +324,43 @@ export default function Domicilios() {
     setUpdatingIds((prev) => new Set(prev).add(orderId));
     try {
       await updateOrderStatus(orderId, status);
+
+      // Al confirmar un domicilio: imprimir factura (sin pago) + comandas de cocina
+      if (status === "confirmado") {
+        const order = [...(activeOrders ?? []), ...(orders ?? [])].find(
+          (o) => o.id === orderId,
+        );
+        if (order) {
+          const cajeroName = user?.name ?? "Cajero";
+          const receiptData: ReceiptData = {
+            order,
+            cajeroName,
+            // Sin paymentMethod → la factura no muestra info de pago
+          };
+
+          // Imprimir factura del cliente (sin método de pago)
+          await silentPrint(
+            buildCustomerReceiptHTML(receiptData),
+            `Recibo - ${order.locator}`,
+          );
+
+          // Imprimir comandas agrupadas por categoría
+          const items = (order.order_items ?? []).filter(
+            (i) => i.products != null,
+          );
+          const categoryGroups: Record<string, OrderItem[]> = {};
+          items.forEach((item) => {
+            const catName = item.products?.categories?.name || "General";
+            if (!categoryGroups[catName]) categoryGroups[catName] = [];
+            categoryGroups[catName].push(item);
+          });
+          for (const catName of Object.keys(categoryGroups)) {
+            await silentPrint(
+              buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
+            );
+          }
+        }
+      }
     } finally {
       setUpdatingIds((prev) => {
         const next = new Set(prev);
@@ -314,11 +373,23 @@ export default function Domicilios() {
   const handlePaymentComplete = async (
     method: "efectivo" | "tarjeta" | "nequi" | "mixto",
     received: number,
-    breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number },
+    breakdown?: {
+      efectivo?: number;
+      tarjeta?: number;
+      nequi?: number;
+      tarjeta_credito?: number;
+      tarjeta_debito?: number;
+      daviplata?: number;
+    },
   ): Promise<boolean> => {
     if (!payingOrder) return false;
     const success = await processPayment(payingOrder.id, method, received, breakdown, "entregado");
     if (success) {
+      // Abrir modal de facturación electrónica Siigo si aplica
+      const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true";
+      if (siigoEnabled && shouldGenerateInvoice(method, breakdown)) {
+        setSiigoOrder({ order: payingOrder, method, breakdown });
+      }
       setPayingOrder(null);
       return true;
     }
@@ -671,7 +742,7 @@ export default function Domicilios() {
               </div>
             ) : (
               <div className="grid gap-6">
-                {completedDeliveries.map((order, idx) => {
+              {completedDeliveries.map((order, idx) => {
                   const isEntregado = order.status === "entregado";
                   const hora = new Intl.DateTimeFormat("es-CO", {
                     hour: "2-digit",
@@ -682,6 +753,29 @@ export default function Domicilios() {
                       ? new Date(order.created_at)
                       : new Date(),
                   );
+
+                  // Invoice status check
+                  const successInvoice = order.siigo_invoices?.find(
+                    (inv) => inv.status === "success",
+                  );
+                  const hasInvoice = !!successInvoice || !!order.siigo_invoice_id;
+                  const invoiceNumber = successInvoice?.siigo_invoice_number || order.siigo_invoice_number || "Facturado";
+
+                  // Reconstruct breakdown from payment for eligibility check
+                  const lastPayment = order.payments?.[0];
+                  const paymentMethod = lastPayment?.method ?? order.payment_method;
+                  const reconstructedBreakdown = lastPayment
+                    ? {
+                        efectivo: lastPayment.amount_efectivo ?? 0,
+                        tarjeta: lastPayment.amount_tarjeta ?? 0,
+                        nequi: lastPayment.amount_nequi ?? 0,
+                      }
+                    : undefined;
+                  const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true";
+                  const canGenerateInvoice =
+                    siigoEnabled &&
+                    !hasInvoice &&
+                    shouldGenerateInvoice(paymentMethod, reconstructedBreakdown);
 
                   return (
                     <div
@@ -724,6 +818,13 @@ export default function Domicilios() {
                                 Tel: {order.delivery_phone}
                               </div>
                             )}
+                            {/* Invoice status badge */}
+                            {hasInvoice && (
+                              <div className="flex items-center gap-1.5 text-[10px] font-black text-emerald-700 uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
+                                <FileText className="h-3 w-3" />
+                                {invoiceNumber}
+                              </div>
+                            )}
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
                             <div className="flex items-baseline gap-2">
@@ -744,19 +845,41 @@ export default function Domicilios() {
                         </div>
                       </div>
 
-                      {isEntregado && (
-                        <Button
-                          variant="outline"
-                          className="rounded-2xl h-10 border-2 border-accent/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-accent/5 transition-all active:scale-95 shadow-sm shrink-0"
-                          onClick={() => handleReprintCustomer(order)}
-                        >
-                          <RotateCcw
-                            className="h-4 w-4 mr-3"
-                            strokeWidth={3}
-                          />{" "}
-                          REIMPRIMIR FACTURA
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Generate Invoice button */}
+                        {canGenerateInvoice && (
+                          <Button
+                            className="rounded-2xl h-10 border-2 font-black text-[10px] uppercase tracking-widest px-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white transition-all active:scale-95 shadow-lg shadow-emerald-500/20 border-emerald-400/20"
+                            onClick={() =>
+                              setSiigoOrder({
+                                order,
+                                method: paymentMethod,
+                                breakdown: reconstructedBreakdown,
+                              })
+                            }
+                          >
+                            <Zap
+                              className="h-4 w-4 mr-2"
+                              strokeWidth={3}
+                            />
+                            Generar Factura
+                          </Button>
+                        )}
+
+                        {isEntregado && (
+                          <Button
+                            variant="outline"
+                            className="rounded-2xl h-10 border-2 border-accent/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-accent/5 transition-all active:scale-95 shadow-sm shrink-0"
+                            onClick={() => handleReprintCustomer(order)}
+                          >
+                            <RotateCcw
+                              className="h-4 w-4 mr-3"
+                              strokeWidth={3}
+                            />{" "}
+                            REIMPRIMIR FACTURA
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -968,6 +1091,16 @@ export default function Domicilios() {
           paymentReceived={receipt.paymentReceived}
           paymentChange={receipt.paymentChange}
           paymentBreakdown={receipt.paymentBreakdown}
+        />
+      )}
+
+      {siigoOrder && (
+        <SiigoInvoiceModal
+          open={!!siigoOrder}
+          onClose={() => setSiigoOrder(null)}
+          order={siigoOrder.order}
+          method={siigoOrder.method}
+          breakdown={siigoOrder.breakdown}
         />
       )}
     </div>

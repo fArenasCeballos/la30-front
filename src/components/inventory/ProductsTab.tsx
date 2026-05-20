@@ -96,12 +96,14 @@ export function ProductsTab() {
     price: string;
     sort_order: string;
     store_ids: string[];
+    siigo_code: string;
   }>({
     name: "",
     category_id: "",
     price: "",
     sort_order: "0",
     store_ids: [],
+    siigo_code: "",
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -154,6 +156,7 @@ export function ProductsTab() {
       price: "",
       sort_order: "0",
       store_ids: categories[0]?.store_ids || [],
+      siigo_code: "",
     });
     if (imagePreview && imagePreview.startsWith("blob:"))
       URL.revokeObjectURL(imagePreview);
@@ -171,6 +174,7 @@ export function ProductsTab() {
       price: String(product.price),
       sort_order: String(product.sort_order || 0),
       store_ids: product.store_ids || [],
+      siigo_code: product.siigo_code || "",
     });
     if (imagePreview && imagePreview.startsWith("blob:"))
       URL.revokeObjectURL(imagePreview);
@@ -266,6 +270,7 @@ export function ProductsTab() {
         sort_order: Number(form.sort_order),
         image_url: finalImageUrl,
         store_ids: form.store_ids,
+        siigo_code: form.siigo_code.trim() || null,
       };
 
       if (editProduct) {
@@ -732,6 +737,20 @@ export function ProductsTab() {
                   className="h-14 rounded-2xl border-2 bg-accent/10 focus-visible:ring-primary/20 border-transparent focus-visible:border-primary/30 font-bold"
                 />
               </div>
+
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] ml-1 opacity-60">
+                  Código de Producto Siigo (Facturación)
+                </Label>
+                <Input
+                  value={form.siigo_code}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, siigo_code: e.target.value }))
+                  }
+                  placeholder="Ej: 1001 o PROD-🍔"
+                  className="h-14 rounded-2xl border-2 bg-accent/10 focus-visible:ring-primary/20 border-transparent focus-visible:border-primary/30 font-bold"
+                />
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -1007,9 +1026,16 @@ function SortableProductCard({
           )}
         </div>
 
-        <h3 className="font-black text-sm lg:text-lg tracking-tighter text-foreground group-hover:text-primary transition-colors duration-200 leading-[1.1] min-h-[2.2em]">
-          {product.name}
-        </h3>
+        <div className="flex flex-col gap-1">
+          <h3 className="font-black text-sm lg:text-lg tracking-tighter text-foreground group-hover:text-primary transition-colors duration-200 leading-[1.1] min-h-[2.2em] mb-0">
+            {product.name}
+          </h3>
+          {product.siigo_code && (
+            <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest bg-slate-100/80 px-2 py-0.5 rounded-md w-fit">
+              Siigo: {product.siigo_code}
+            </span>
+          )}
+        </div>
 
         <div className="flex items-center justify-between pt-4 lg:pt-6 border-t border-accent/10 mt-auto">
           <div className="flex flex-col">

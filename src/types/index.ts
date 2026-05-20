@@ -29,6 +29,18 @@ export interface OrderItem extends OrderItemRow {
   products: ProductWithCategory;
 }
 
+// Siigo invoice record (from siigo_invoices table join)
+export interface SiigoInvoiceRecord {
+  id: string;
+  order_id: string | null;
+  siigo_invoice_id: string | null;
+  siigo_invoice_number: string | null;
+  payment_method: string;
+  status: string;
+  error_message: string | null;
+  created_at: string;
+}
+
 // Order with joined items (each item includes its product)
 export interface Order extends OrderRow {
   profiles: Profile | null;
@@ -36,7 +48,9 @@ export interface Order extends OrderRow {
   order_items: OrderItem[];
   total: number;
   payments?: Payment[];
+  siigo_invoices?: SiigoInvoiceRecord[];
   isOptimistic?: boolean;
+  isOfflinePending?: boolean;
 }
 
 // Custom option with its choices (for ProductCustomizer)

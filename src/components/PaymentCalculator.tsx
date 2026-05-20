@@ -80,6 +80,17 @@ export function PaymentCalculator({
 }: PaymentCalculatorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [method, setMethod] = useState<PaymentMethod | null>(null);
+  const [subMethod, setSubMethod] = useState<
+    "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata" | null
+  >(null);
+  const [firstSubMethod, setFirstSubMethod] = useState<
+    "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata" | null
+  >(null);
+  const [secondSubMethod, setSecondSubMethod] = useState<
+    "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata" | null
+  >(null);
+  const [pendingSplit, setPendingSplit] = useState<"first" | "second" | null>(null);
+
   const [received, setReceived] = useState("");
   const [step, setStep] = useState<
     | "method"
@@ -87,6 +98,8 @@ export function PaymentCalculator({
     | "split_first"
     | "split_amount"
     | "split_second"
+    | "sub_method_tarjeta"
+    | "sub_method_transfer"
     | "done"
   >("method");
 
@@ -160,6 +173,10 @@ export function PaymentCalculator({
 
   const resetState = useCallback(() => {
     setMethod(null);
+    setSubMethod(null);
+    setFirstSubMethod(null);
+    setSecondSubMethod(null);
+    setPendingSplit(null);
     setReceived("");
     setFirstMethod(null);
     setFirstAmount("");
@@ -178,6 +195,8 @@ export function PaymentCalculator({
       overrideReceived?: number,
       overrideSecondMethod?: Exclude<PaymentMethod, "mixto">,
       overrideMethod?: PaymentMethod,
+      overrideSubMethod?: "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata" | null,
+      overrideSecondSubMethod?: "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata" | null,
     ) => {
       const activeMethod = overrideMethod || method;
       if (!activeMethod || isSubmitting) return;
@@ -194,17 +213,40 @@ export function PaymentCalculator({
         activeMethod === "mixto" ? firstAmountNum + currentReceived : currentReceived;
 
       // Build breakdown
-      const breakdown: { efectivo?: number; tarjeta?: number; nequi?: number } =
-        {};
+      const breakdown: {
+        efectivo?: number;
+        tarjeta?: number;
+        nequi?: number;
+        tarjeta_credito?: number;
+        tarjeta_debito?: number;
+        daviplata?: number;
+      } = {};
+
       if (activeMethod === "mixto") {
-        if (firstMethod) breakdown[firstMethod] = firstAmountNum;
-        if (currentSecondMethod)
-          breakdown[currentSecondMethod] =
-            currentSecondMethod === "efectivo"
-              ? currentReceived
-              : remainingTotal;
+        if (firstMethod) {
+          if (firstMethod === "efectivo") {
+            breakdown.efectivo = firstAmountNum;
+          } else {
+            const finalSub = overrideSubMethod || firstSubMethod || (firstMethod as "tarjeta" | "nequi");
+            breakdown[finalSub] = firstAmountNum;
+          }
+        }
+        if (currentSecondMethod) {
+          const val = currentSecondMethod === "efectivo" ? currentReceived : remainingTotal;
+          if (currentSecondMethod === "efectivo") {
+            breakdown.efectivo = val;
+          } else {
+            const finalSub = overrideSecondSubMethod || secondSubMethod || (currentSecondMethod as "tarjeta" | "nequi");
+            breakdown[finalSub] = val;
+          }
+        }
       } else if (activeMethod) {
-        breakdown[activeMethod as Exclude<PaymentMethod, "mixto">] = currentReceived;
+        if (activeMethod === "efectivo") {
+          breakdown.efectivo = currentReceived;
+        } else {
+          const finalSub = overrideSubMethod || subMethod || (activeMethod as "tarjeta" | "nequi");
+          breakdown[finalSub] = currentReceived;
+        }
       }
 
       try {
@@ -231,6 +273,9 @@ export function PaymentCalculator({
       firstMethod,
       firstAmountNum,
       remainingTotal,
+      subMethod,
+      firstSubMethod,
+      secondSubMethod,
       onPaymentComplete,
       resetState,
       onClose,
@@ -276,15 +321,46 @@ export function PaymentCalculator({
   const selectMethod = (m: PaymentMethod) => {
     if (isSubmitting) return;
     setMethod(m);
+    setPendingSplit(null);
     if (m === "mixto") {
       setStep("split_first");
-    } else if (m === "tarjeta" || m === "nequi") {
-      // Tarjeta/Nequi: monto exacto, confirmar directo sin calculadora
-      setReceived(String(order.total));
-      handleConfirmPayment(order.total, undefined, m);
+    } else if (m === "tarjeta") {
+      setStep("sub_method_tarjeta");
+    } else if (m === "nequi") {
+      setStep("sub_method_transfer");
     } else {
       // Efectivo: mostrar calculadora para ingresar monto recibido
       setStep("amount");
+    }
+  };
+
+  const selectSubMethodTarjeta = (sub: "tarjeta_credito" | "tarjeta_debito") => {
+    if (pendingSplit === "first") {
+      setFirstSubMethod(sub);
+      setStep("split_amount");
+    } else if (pendingSplit === "second") {
+      setSecondSubMethod(sub);
+      setReceived(String(remainingTotal));
+      handleConfirmPayment(remainingTotal, "tarjeta", undefined, firstSubMethod, sub);
+    } else {
+      setSubMethod(sub);
+      setReceived(String(order.total));
+      handleConfirmPayment(order.total, undefined, "tarjeta", sub);
+    }
+  };
+
+  const selectSubMethodTransfer = (sub: "nequi" | "daviplata") => {
+    if (pendingSplit === "first") {
+      setFirstSubMethod(sub);
+      setStep("split_amount");
+    } else if (pendingSplit === "second") {
+      setSecondSubMethod(sub);
+      setReceived(String(remainingTotal));
+      handleConfirmPayment(remainingTotal, "nequi", undefined, firstSubMethod, sub);
+    } else {
+      setSubMethod(sub);
+      setReceived(String(order.total));
+      handleConfirmPayment(order.total, undefined, "nequi", sub);
     }
   };
 
@@ -462,8 +538,17 @@ export function PaymentCalculator({
                 <button
                   key={pm.key}
                   onClick={() => {
-                    setFirstMethod(pm.key as Exclude<PaymentMethod, "mixto">);
-                    setStep("split_amount");
+                    const selected = pm.key as Exclude<PaymentMethod, "mixto">;
+                    setFirstMethod(selected);
+                    if (selected === "tarjeta") {
+                      setPendingSplit("first");
+                      setStep("sub_method_tarjeta");
+                    } else if (selected === "nequi") {
+                      setPendingSplit("first");
+                      setStep("sub_method_transfer");
+                    } else {
+                      setStep("split_amount");
+                    }
                   }}
                   className={cn(
                     "flex flex-col items-center justify-center gap-4 p-6 lg:p-8 rounded-2xl lg:rounded-3xl border-2 transition-all duration-500 hover:scale-[1.05] shadow-soft hover:shadow-xl",
@@ -611,9 +696,12 @@ export function PaymentCalculator({
                     setSecondMethod(selected);
                     if (selected === "efectivo") {
                       setStep("amount");
-                    } else {
-                      setReceived(String(remainingTotal));
-                      handleConfirmPayment(remainingTotal, selected);
+                    } else if (selected === "tarjeta") {
+                      setPendingSplit("second");
+                      setStep("sub_method_tarjeta");
+                    } else if (selected === "nequi") {
+                      setPendingSplit("second");
+                      setStep("sub_method_transfer");
                     }
                   }}
                   className={cn(
@@ -627,6 +715,102 @@ export function PaymentCalculator({
                   </span>
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sub Method Tarjeta */}
+        {step === "sub_method_tarjeta" && (
+          <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-4 lg:p-6">
+            <div className="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (pendingSplit === "first") setStep("split_first");
+                  else if (pendingSplit === "second") setStep("split_second");
+                  else setStep("method");
+                }}
+                className="h-14 w-14 rounded-2xl bg-accent/10"
+              >
+                <ArrowLeft className="h-6 w-6" strokeWidth={3} />
+              </Button>
+              <div className="space-y-0.5">
+                <div className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
+                  TIPO DE TARJETA
+                </div>
+                <h3 className="text-4xl font-black tracking-tighter">
+                  Selecciona una opción
+                </h3>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <button
+                onClick={() => selectSubMethodTarjeta("tarjeta_debito")}
+                className="flex flex-col items-center justify-center gap-4 p-8 rounded-3xl border-2 transition-all duration-500 hover:scale-[1.05] shadow-soft hover:shadow-xl bg-cyan-500/10 text-cyan-600 border-cyan-500/20"
+              >
+                <CreditCard className="h-12 w-12" strokeWidth={2} />
+                <span className="text-sm font-black tracking-widest uppercase">
+                  T. DÉBITO
+                </span>
+              </button>
+              <button
+                onClick={() => selectSubMethodTarjeta("tarjeta_credito")}
+                className="flex flex-col items-center justify-center gap-4 p-8 rounded-3xl border-2 transition-all duration-500 hover:scale-[1.05] shadow-soft hover:shadow-xl bg-blue-500/10 text-blue-600 border-blue-500/20"
+              >
+                <CreditCard className="h-12 w-12" strokeWidth={2} />
+                <span className="text-sm font-black tracking-widest uppercase">
+                  T. CRÉDITO
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Sub Method Transfer */}
+        {step === "sub_method_transfer" && (
+          <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-4 lg:p-6">
+            <div className="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (pendingSplit === "first") setStep("split_first");
+                  else if (pendingSplit === "second") setStep("split_second");
+                  else setStep("method");
+                }}
+                className="h-14 w-14 rounded-2xl bg-accent/10"
+              >
+                <ArrowLeft className="h-6 w-6" strokeWidth={3} />
+              </Button>
+              <div className="space-y-0.5">
+                <div className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
+                  TIPO DE TRANSFERENCIA
+                </div>
+                <h3 className="text-4xl font-black tracking-tighter">
+                  Selecciona una opción
+                </h3>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <button
+                onClick={() => selectSubMethodTransfer("nequi")}
+                className="flex flex-col items-center justify-center gap-4 p-8 rounded-3xl border-2 transition-all duration-500 hover:scale-[1.05] shadow-soft hover:shadow-xl bg-purple-500/10 text-purple-600 border-purple-500/20"
+              >
+                <Smartphone className="h-12 w-12" strokeWidth={2} />
+                <span className="text-sm font-black tracking-widest uppercase">
+                  NEQUI
+                </span>
+              </button>
+              <button
+                onClick={() => selectSubMethodTransfer("daviplata")}
+                className="flex flex-col items-center justify-center gap-4 p-8 rounded-3xl border-2 transition-all duration-500 hover:scale-[1.05] shadow-soft hover:shadow-xl bg-red-500/10 text-red-600 border-red-500/20"
+              >
+                <Smartphone className="h-12 w-12" strokeWidth={2} />
+                <span className="text-sm font-black tracking-widest uppercase">
+                  DAVIPLATA
+                </span>
+              </button>
             </div>
           </div>
         )}

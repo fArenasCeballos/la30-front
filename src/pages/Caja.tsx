@@ -30,15 +30,15 @@ import {
   XCircle,
   Loader2,
   Clock,
+  FileText,
+  Zap,
 } from "lucide-react";
 import { formatPrice } from "@/lib/formatPrice";
 import type { Order, OrderItem, OrderStatus } from "@/types";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/StatusBadge";
-import {
-  shouldGenerateInvoice,
-  generateSiigoInvoice,
-} from "@/lib/siigoService";
+import { shouldGenerateInvoice } from "@/lib/siigoService";
+import { SiigoInvoiceModal } from "@/components/SiigoInvoiceModal";
 
 interface ReceiptState {
   order: Order;
@@ -59,11 +59,24 @@ export default function Caja() {
     getCompletedOrders,
     processPayment,
     toggleOrderItem,
+    refreshOrders,
   } = useOrders();
   const [payingOrder, setPayingOrder] = useState<Order | null>(null);
   const [receipt, setReceipt] = useState<ReceiptState | null>(null);
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
   const [isClosing, setIsClosing] = useState(false);
+  const [siigoOrder, setSiigoOrder] = useState<{
+    order: Order;
+    method: string;
+    breakdown?: {
+      efectivo?: number;
+      tarjeta?: number;
+      nequi?: number;
+      tarjeta_credito?: number;
+      tarjeta_debito?: number;
+      daviplata?: number;
+    };
+  } | null>(null);
 
   const handleGenerateClosing = async () => {
     if (isClosing) return;
@@ -124,7 +137,14 @@ export default function Caja() {
   const handlePaymentComplete = async (
     method: string,
     received: number,
-    breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number },
+    breakdown?: {
+      efectivo?: number;
+      tarjeta?: number;
+      nequi?: number;
+      tarjeta_credito?: number;
+      tarjeta_debito?: number;
+      daviplata?: number;
+    },
   ): Promise<boolean> => {
     if (!payingOrder) return false;
     const change = Math.max(0, received - payingOrder.total);
@@ -136,31 +156,10 @@ export default function Caja() {
       try {
         const activeOrder = payingOrder;
 
-        // Generar factura electrónica Siigo en background (no bloquea impresión)
+        // Abrir modal de facturación electrónica Siigo si aplica
         const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true";
         if (siigoEnabled && shouldGenerateInvoice(method, breakdown)) {
-          generateSiigoInvoice({
-            orderId: activeOrder.id,
-            method,
-            breakdown,
-            items: activeOrder.order_items ?? [],
-            total: activeOrder.total,
-            locator: activeOrder.locator ?? "",
-          })
-            .then((result) => {
-              if (result.success) {
-                toast.success(
-                  `Factura Siigo generada: ${result.invoiceNumber ?? "OK"}`,
-                );
-              } else {
-                toast.error(
-                  `Error factura Siigo: ${result.error ?? "desconocido"}`,
-                );
-              }
-            })
-            .catch(() => {
-              toast.error("Error generando factura Siigo");
-            });
+          setSiigoOrder({ order: activeOrder, method, breakdown });
         }
 
         // Auto-imprimir factura del cliente
@@ -279,14 +278,14 @@ export default function Caja() {
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
-                  className="rounded-lg lg:rounded-xl px-4 lg:px-8 py-2 lg:py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all font-black text-[9px] lg:text-[11px] uppercase tracking-widest flex items-center gap-2 lg:gap-3 border-2 border-transparent data-[state=active]:border-primary/5 min-w-[120px] lg:min-w-[140px]"
+                  className="group rounded-lg lg:rounded-xl px-4 lg:px-8 py-2 lg:py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all font-black text-[9px] lg:text-[11px] uppercase tracking-widest flex items-center gap-2 lg:gap-3 border-2 border-transparent data-[state=active]:border-primary/5 min-w-[120px] lg:min-w-[140px]"
                 >
                   <tab.icon
                     className={cn(
-                      "h-4 w-4",
+                      "h-5 w-5 lg:h-6 lg:w-6 shrink-0 transition-all duration-200 group-hover:scale-110 group-active:scale-95",
                       tab.id === "cocina" && "animate-spin",
                     )}
-                    strokeWidth={3}
+                    strokeWidth={2.5}
                   />
                   {tab.label}
                   <Badge className="bg-primary text-white border-none rounded-xl h-6 min-w-[24px] px-1.5 flex items-center justify-center font-black text-[10px] ml-auto shadow-md">
@@ -601,6 +600,29 @@ export default function Caja() {
                         : new Date(),
                     );
 
+                    // Invoice status check
+                    const successInvoice = order.siigo_invoices?.find(
+                      (inv) => inv.status === "success",
+                    );
+                    const hasInvoice = !!successInvoice || !!order.siigo_invoice_id;
+                    const invoiceNumber = successInvoice?.siigo_invoice_number || order.siigo_invoice_number || "Facturado";
+
+                    // Reconstruct breakdown from payment for eligibility check
+                    const lastPayment = order.payments?.[0];
+                    const paymentMethod = lastPayment?.method ?? order.payment_method;
+                    const reconstructedBreakdown = lastPayment
+                      ? {
+                          efectivo: lastPayment.amount_efectivo ?? 0,
+                          tarjeta: lastPayment.amount_tarjeta ?? 0,
+                          nequi: lastPayment.amount_nequi ?? 0,
+                        }
+                      : undefined;
+                    const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true";
+                    const canGenerateInvoice =
+                      siigoEnabled &&
+                      !hasInvoice &&
+                      shouldGenerateInvoice(paymentMethod, reconstructedBreakdown);
+
                     return (
                       <div
                         key={order.id}
@@ -625,12 +647,19 @@ export default function Caja() {
                           </div>
 
                           <div className="space-y-2">
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-3">
                               <StatusBadge status={order.status} />
                               <div className="flex items-center gap-1.5 text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest bg-accent/10 px-3 py-1.5 rounded-full">
                                 <Clock className="h-3 w-3" />
                                 {hora}
                               </div>
+                              {/* Invoice status badge */}
+                              {hasInvoice && (
+                                <div className="flex items-center gap-1.5 text-[10px] font-black text-emerald-700 uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
+                                  <FileText className="h-3 w-3" />
+                                  {invoiceNumber}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-baseline gap-2">
                               <p className="text-xl lg:text-2xl font-black tracking-tighter text-foreground">
@@ -643,19 +672,41 @@ export default function Caja() {
                           </div>
                         </div>
 
-                        {isEntregado && (
-                          <Button
-                            variant="outline"
-                            className="rounded-2xl h-10 border-2 border-accent/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-accent/5 transition-all active:scale-95 shadow-sm"
-                            onClick={() => handleReprintCustomer(order)}
-                          >
-                            <RotateCcw
-                              className="h-4 w-4 mr-3"
-                              strokeWidth={3}
-                            />{" "}
-                            REIMPRIMIR FACTURA
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Generate Invoice button */}
+                          {canGenerateInvoice && (
+                            <Button
+                              className="rounded-2xl h-10 border-2 font-black text-[10px] uppercase tracking-widest px-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white transition-all active:scale-95 shadow-lg shadow-emerald-500/20 border-emerald-400/20"
+                              onClick={() =>
+                                setSiigoOrder({
+                                  order,
+                                  method: paymentMethod,
+                                  breakdown: reconstructedBreakdown,
+                                })
+                              }
+                            >
+                              <Zap
+                                className="h-4 w-4 mr-2"
+                                strokeWidth={3}
+                              />
+                              Generar Factura
+                            </Button>
+                          )}
+
+                          {isEntregado && (
+                            <Button
+                              variant="outline"
+                              className="rounded-2xl h-10 border-2 border-accent/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-accent/5 transition-all active:scale-95 shadow-sm"
+                              onClick={() => handleReprintCustomer(order)}
+                            >
+                              <RotateCcw
+                                className="h-4 w-4 mr-3"
+                                strokeWidth={3}
+                              />{" "}
+                              REIMPRIMIR FACTURA
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     );
                   })
@@ -685,6 +736,19 @@ export default function Caja() {
           paymentReceived={receipt.paymentReceived}
           paymentChange={receipt.paymentChange}
           paymentBreakdown={receipt.paymentBreakdown}
+        />
+      )}
+
+      {siigoOrder && (
+        <SiigoInvoiceModal
+          open={!!siigoOrder}
+          onClose={() => {
+            setSiigoOrder(null);
+            refreshOrders();
+          }}
+          order={siigoOrder.order}
+          method={siigoOrder.method}
+          breakdown={siigoOrder.breakdown}
         />
       )}
     </ErrorBoundary>

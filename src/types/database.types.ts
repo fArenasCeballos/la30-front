@@ -130,6 +130,7 @@ export type Database = {
           sort_order: number;
           store_ids: string[];
           created_at: string;
+          siigo_code: string | null;
         };
         Insert: {
           id?: string;
@@ -142,6 +143,7 @@ export type Database = {
           sort_order?: number;
           store_ids?: string[];
           created_at?: string;
+          siigo_code?: string | null;
         };
         Update: {
           id?: string;
@@ -154,6 +156,7 @@ export type Database = {
           sort_order?: number;
           store_ids?: string[];
           created_at?: string;
+          siigo_code?: string | null;
         };
         Relationships: [
           {
@@ -316,6 +319,8 @@ export type Database = {
           is_dispatched: boolean;
           created_at: string;
           updated_at: string;
+          siigo_invoice_id: string | null;
+          siigo_invoice_number: string | null;
         };
         Insert: {
           id?: string;
@@ -340,6 +345,8 @@ export type Database = {
           is_dispatched?: boolean;
           created_at?: string;
           updated_at?: string;
+          siigo_invoice_id?: string | null;
+          siigo_invoice_number?: string | null;
         };
         Update: {
           id?: string;
@@ -364,6 +371,8 @@ export type Database = {
           is_dispatched?: boolean;
           created_at?: string;
           updated_at?: string;
+          siigo_invoice_id?: string | null;
+          siigo_invoice_number?: string | null;
         };
         Relationships: [
           {
