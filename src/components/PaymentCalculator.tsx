@@ -69,7 +69,7 @@ interface PaymentCalculatorProps {
     method: PaymentMethod,
     received: number,
     breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number },
-  ) => void;
+  ) => Promise<boolean> | boolean | Promise<void> | void;
 }
 
 export function PaymentCalculator({
@@ -78,6 +78,7 @@ export function PaymentCalculator({
   onClose,
   onPaymentComplete,
 }: PaymentCalculatorProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [method, setMethod] = useState<PaymentMethod | null>(null);
   const [received, setReceived] = useState("");
   const [step, setStep] = useState<
@@ -139,6 +140,7 @@ export function PaymentCalculator({
 
   const handleNumpad = useCallback(
     (val: string) => {
+      if (isSubmitting) return;
       const setter = step === "split_amount" ? setFirstAmount : setReceived;
       if (val === "C") {
         setter("");
@@ -148,12 +150,13 @@ export function PaymentCalculator({
         setter((prev) => (prev + val).slice(0, 10));
       }
     },
-    [step],
+    [step, isSubmitting],
   );
 
   const handleQuickAmount = useCallback((amount: number) => {
+    if (isSubmitting) return;
     setReceived((prev) => String((parseInt(prev) || 0) + amount));
-  }, []);
+  }, [isSubmitting]);
 
   const resetState = useCallback(() => {
     setMethod(null);
@@ -162,19 +165,23 @@ export function PaymentCalculator({
     setFirstAmount("");
     setSecondMethod(null);
     setStep("method");
+    setIsSubmitting(false);
   }, []);
 
   const handleExact = useCallback(() => {
+    if (isSubmitting) return;
     setReceived(String(remainingTotal));
-  }, [remainingTotal]);
+  }, [remainingTotal, isSubmitting]);
 
   const handleConfirmPayment = useCallback(
-    (
+    async (
       overrideReceived?: number,
       overrideSecondMethod?: Exclude<PaymentMethod, "mixto">,
+      overrideMethod?: PaymentMethod,
     ) => {
-      if (!method) return;
-      setStep("done");
+      const activeMethod = overrideMethod || method;
+      if (!activeMethod || isSubmitting) return;
+      setIsSubmitting(true);
 
       const currentReceived =
         overrideReceived !== undefined ? overrideReceived : receivedNum;
@@ -184,29 +191,41 @@ export function PaymentCalculator({
           : secondMethod;
 
       const finalReceived =
-        method === "mixto" ? firstAmountNum + currentReceived : currentReceived;
+        activeMethod === "mixto" ? firstAmountNum + currentReceived : currentReceived;
 
       // Build breakdown
       const breakdown: { efectivo?: number; tarjeta?: number; nequi?: number } =
         {};
-      if (method === "mixto") {
+      if (activeMethod === "mixto") {
         if (firstMethod) breakdown[firstMethod] = firstAmountNum;
         if (currentSecondMethod)
           breakdown[currentSecondMethod] =
             currentSecondMethod === "efectivo"
               ? currentReceived
               : remainingTotal;
-      } else if (method) {
-        breakdown[method as Exclude<PaymentMethod, "mixto">] = currentReceived;
+      } else if (activeMethod) {
+        breakdown[activeMethod as Exclude<PaymentMethod, "mixto">] = currentReceived;
       }
 
-      setTimeout(() => {
-        onPaymentComplete(method, finalReceived, breakdown);
-        resetState();
-      }, 2000);
+      try {
+        const success = await onPaymentComplete(activeMethod, finalReceived, breakdown);
+        if (success !== false) {
+          setStep("done");
+          setTimeout(() => {
+            resetState();
+            onClose();
+          }, 1500);
+        } else {
+          setIsSubmitting(false);
+        }
+      } catch (error) {
+        console.error("Error processing payment:", error);
+        setIsSubmitting(false);
+      }
     },
     [
       method,
+      isSubmitting,
       receivedNum,
       secondMethod,
       firstMethod,
@@ -214,12 +233,14 @@ export function PaymentCalculator({
       remainingTotal,
       onPaymentComplete,
       resetState,
+      onClose,
     ],
   );
 
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isSubmitting) return;
       if (e.key >= "0" && e.key <= "9") handleNumpad(e.key);
       else if (e.key === "Backspace") handleNumpad("DEL");
       else if (e.key === "Escape" || e.key === "Delete") handleNumpad("C");
@@ -243,21 +264,24 @@ export function PaymentCalculator({
     order.total,
     handleNumpad,
     handleConfirmPayment,
+    isSubmitting,
   ]);
 
   const handleClose = () => {
+    if (isSubmitting) return;
     resetState();
     onClose();
   };
 
   const selectMethod = (m: PaymentMethod) => {
+    if (isSubmitting) return;
     setMethod(m);
     if (m === "mixto") {
       setStep("split_first");
     } else if (m === "tarjeta" || m === "nequi") {
       // Tarjeta/Nequi: monto exacto, confirmar directo sin calculadora
       setReceived(String(order.total));
-      handleConfirmPayment(order.total);
+      handleConfirmPayment(order.total, undefined, m);
     } else {
       // Efectivo: mostrar calculadora para ingresar monto recibido
       setStep("amount");
@@ -266,7 +290,30 @@ export function PaymentCalculator({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-xl p-0 gap-0 overflow-y-auto max-h-[92vh] rounded-3xl lg:rounded-[2.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl custom-scrollbar">
+      <DialogContent className="relative max-w-xl p-0 gap-0 overflow-y-auto max-h-[92vh] rounded-3xl lg:rounded-[2.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl custom-scrollbar">
+        {/* Glassmorphic Loading Overlay */}
+        {isSubmitting && step !== "done" && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-8 lg:p-12 space-y-6 bg-white/90 backdrop-blur-md rounded-3xl lg:rounded-[2.5rem] animate-in fade-in duration-300">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
+              <div className="relative w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/5 shadow-inner">
+                <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-xl lg:text-2xl font-black tracking-tighter text-foreground uppercase">
+                Procesando Transacción
+              </h3>
+              <p className="text-muted-foreground font-medium text-xs lg:text-sm max-w-xs mx-auto">
+                Por favor, espera un momento mientras registramos el pago de forma segura...
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Done step */}
         {step === "done" && (
           <div className="flex flex-col items-center justify-center p-12 lg:p-16 space-y-6 animate-in fade-in zoom-in duration-700">
@@ -725,10 +772,18 @@ export function PaymentCalculator({
               <Button
                 size="lg"
                 className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.2em] shadow-strong shadow-primary/20 transition-all active:scale-95"
-                disabled={!canConfirm}
+                disabled={!canConfirm || isSubmitting}
                 onClick={() => handleConfirmPayment()}
               >
-                {canConfirm ? (
+                {isSubmitting ? (
+                  <div className="flex items-center gap-3 justify-center">
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    PROCESANDO PAGO...
+                  </div>
+                ) : canConfirm ? (
                   <div className="flex items-center gap-3">
                     <CheckCircle
                       className="h-5 w-5 lg:h-6 lg:w-6"

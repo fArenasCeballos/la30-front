@@ -122,6 +122,12 @@ export const PRINT_STYLES = `
     font-size: 12px;
     margin-top: 6px;
   }
+  .print-page-break {
+    page-break-after: always !important;
+    break-after: page !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
 `;
 
 /* ── Datos comunes helpers ────────────────────────────────── */
@@ -421,14 +427,27 @@ export async function silentPrint(bodyHTML: string, _title?: string): Promise<vo
       </div>
     `;
 
+    let resolved = false;
+
     // 3. Escuchar cuando el usuario cierra el cuadro de impresión
     const handleAfterPrint = () => {
+      if (resolved) return;
+      resolved = true;
       window.removeEventListener("afterprint", handleAfterPrint);
+      if (timeoutId) clearTimeout(timeoutId);
       mount!.innerHTML = ""; // Limpiar contenido
       setTimeout(resolve, 300);
     };
 
     window.addEventListener("afterprint", handleAfterPrint);
+
+    // Timeout de seguridad de 10 segundos para evitar que la UI quede congelada si afterprint no se dispara
+    const timeoutId = setTimeout(() => {
+      if (!resolved) {
+        console.warn("silentPrint: window.afterprint event timed out, resolving manually.");
+        handleAfterPrint();
+      }
+    }, 10000);
 
     // 4. Lanzar impresión con un delay para asegurar renderizado de fuentes y estilos
     setTimeout(() => {

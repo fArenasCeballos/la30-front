@@ -245,11 +245,30 @@
     margin: 0 !important;
   }
 
+  /* Ocultar la UI completa de la aplicación y portales Radix/Toasts por defecto para evitar fugas en impresión manual */
+  #root,
+  [data-radix-portal],
+  [portal-container],
+  .toaster,
   .no-print, 
   nav, 
   aside, 
   header {
     display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+  }
+
+  /* Permitir única y exclusivamente la impresión estructurada de #print-mount */
+  #print-mount {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+  }
+
+  #print-mount * {
+    visibility: visible !important;
   }
 
   .print-only {

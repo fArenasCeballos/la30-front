@@ -125,78 +125,99 @@ export default function Caja() {
     method: string,
     received: number,
     breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number },
-  ) => {
-    if (!payingOrder) return;
+  ): Promise<boolean> => {
+    if (!payingOrder) return false;
     const change = Math.max(0, received - payingOrder.total);
     const success = await processPayment(payingOrder.id, method, received, breakdown);
-    if (!success) return;
+    if (!success) return false;
 
-    // Generar factura electrónica Siigo en background (no bloquea impresión)
-    // Feature flag: solo activo cuando VITE_SIIGO_ENABLED=true en .env
-    const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true";
-    if (siigoEnabled && shouldGenerateInvoice(method, breakdown)) {
-      generateSiigoInvoice({
-        orderId: payingOrder.id,
-        method,
-        breakdown,
-        items: payingOrder.order_items ?? [],
-        total: payingOrder.total,
-        locator: payingOrder.locator ?? "",
-      })
-        .then((result) => {
-          if (result.success) {
-            toast.success(
-              `Factura Siigo generada: ${result.invoiceNumber ?? "OK"}`,
-            );
-          } else {
-            toast.error(
-              `Error factura Siigo: ${result.error ?? "desconocido"}`,
-            );
-          }
-        })
-        .catch(() => {
-          toast.error("Error generando factura Siigo");
+    // Ejecutar tareas de Siigo y de Impresión en segundo plano sin bloquear el calculador
+    (async () => {
+      try {
+        const activeOrder = payingOrder;
+
+        // Generar factura electrónica Siigo en background (no bloquea impresión)
+        const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true";
+        if (siigoEnabled && shouldGenerateInvoice(method, breakdown)) {
+          generateSiigoInvoice({
+            orderId: activeOrder.id,
+            method,
+            breakdown,
+            items: activeOrder.order_items ?? [],
+            total: activeOrder.total,
+            locator: activeOrder.locator ?? "",
+          })
+            .then((result) => {
+              if (result.success) {
+                toast.success(
+                  `Factura Siigo generada: ${result.invoiceNumber ?? "OK"}`,
+                );
+              } else {
+                toast.error(
+                  `Error factura Siigo: ${result.error ?? "desconocido"}`,
+                );
+              }
+            })
+            .catch(() => {
+              toast.error("Error generando factura Siigo");
+            });
+        }
+
+        // Auto-imprimir factura del cliente
+        const receiptData: ReceiptData = {
+          order: activeOrder,
+          cajeroName,
+          paymentMethod: method,
+          paymentReceived: received,
+          paymentChange: change,
+          paymentBreakdown: breakdown,
+        };
+        
+        await silentPrint(
+          buildCustomerReceiptHTML(receiptData),
+          `Recibo - ${activeOrder.locator}`,
+        );
+
+        // Agrupar productos por categoría para comandas separadas
+        const items = (activeOrder.order_items ?? []).filter(
+          (i) => i.products != null,
+        );
+
+        const categoryGroups: Record<string, OrderItem[]> = {};
+
+        items.forEach((item) => {
+          const catName = item.products?.categories?.name || "General";
+          if (!categoryGroups[catName]) categoryGroups[catName] = [];
+          categoryGroups[catName].push(item);
         });
-    }
 
-    // Auto-imprimir factura del cliente
-    const receiptData: ReceiptData = {
-      order: payingOrder,
-      cajeroName,
-      paymentMethod: method,
-      paymentReceived: received,
-      paymentChange: change,
-      paymentBreakdown: breakdown,
-    };
-    // Esperar a que se imprima la factura
-    await silentPrint(
-      buildCustomerReceiptHTML(receiptData),
-      `Recibo - ${payingOrder.locator}`,
-    );
+        const categoryKeys = Object.keys(categoryGroups);
 
-    // Agrupar productos por categoría para comandas separadas
-    const items = (payingOrder.order_items ?? []).filter(
-      (i) => i.products != null,
-    );
-    const categoryGroups: Record<string, OrderItem[]> = {};
+        // Auto-imprimir comanda de cocina agrupada en un único diálogo
+        if (categoryKeys.length > 0) {
+          const kitchenHTMLs = categoryKeys.map((catName) =>
+            buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
+          );
 
-    items.forEach((item) => {
-      const catName = item.products?.categories?.name || "General";
-      if (!categoryGroups[catName]) categoryGroups[catName] = [];
-      categoryGroups[catName].push(item);
-    });
+          // Combinar todos los HTMLs con la clase print-page-break en los contenedores intermedios
+          const combinedKitchenHTML = kitchenHTMLs
+            .map(
+              (html, idx) => `
+              <div class="${idx < kitchenHTMLs.length - 1 ? "print-page-break" : ""}">
+                ${html}
+              </div>
+            `,
+            )
+            .join("");
 
-    const categoryKeys = Object.keys(categoryGroups);
+          await silentPrint(combinedKitchenHTML);
+        }
+      } catch (err) {
+        console.error("Error in post-payment printing/Siigo pipeline:", err);
+      }
+    })();
 
-    // Auto-imprimir comanda de cocina (esperando una tras otra)
-    for (const catName of categoryKeys) {
-      await silentPrint(
-        buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
-      );
-    }
-
-    // Solo cerrar el modal cuando TODO haya terminado de imprimirse
-    setPayingOrder(null);
+    return true;
   };
 
   const handleShowKitchenReceipt = (order: Order) => {
@@ -319,11 +340,11 @@ export default function Caja() {
                         <button
                           className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-primary hover:bg-primary/90 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
                           onClick={() =>
-                            updateOrderStatus(order.id, "confirmado")
+                            handleUpdateStatus(order.id, "confirmado")
                           }
-                          disabled={order.isOptimistic}
+                          disabled={order.isOptimistic || updatingIds.has(order.id)}
                         >
-                          {order.isOptimistic ? (
+                          {order.isOptimistic || updatingIds.has(order.id) ? (
                             <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                           ) : (
                             <CheckCircle
@@ -336,7 +357,7 @@ export default function Caja() {
                         <button
                           className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-white border border-accent/20 hover:bg-accent/5 transition-all flex items-center justify-center disabled:opacity-50"
                           onClick={() => navigate(`/kiosko?edit=${order.id}`)}
-                          disabled={order.isOptimistic}
+                          disabled={order.isOptimistic || updatingIds.has(order.id)}
                         >
                           <Edit className="h-3 w-3 mr-1.5" strokeWidth={3} />{" "}
                           EDITAR
@@ -344,11 +365,15 @@ export default function Caja() {
                         <button
                           className="rounded-xl h-9 w-9 text-destructive hover:bg-destructive/5 border border-transparent hover:border-destructive/10 transition-all flex items-center justify-center disabled:opacity-50"
                           onClick={() =>
-                            updateOrderStatus(order.id, "cancelado")
+                            handleUpdateStatus(order.id, "cancelado")
                           }
-                          disabled={order.isOptimistic}
+                          disabled={order.isOptimistic || updatingIds.has(order.id)}
                         >
-                          <XCircle className="h-4 w-4" strokeWidth={3} />
+                          {updatingIds.has(order.id) ? (
+                            <Loader2 className="h-3 w-3 animate-spin text-destructive" />
+                          ) : (
+                            <XCircle className="h-4 w-4" strokeWidth={3} />
+                          )}
                         </button>
                       </div>
                     }
@@ -495,10 +520,15 @@ export default function Caja() {
                     className="bg-white/80 backdrop-blur-md border-green-500/20 shadow-xl shadow-green-500/5"
                     actions={
                       <button
-                        className="w-full rounded-xl h-10 font-black uppercase tracking-widest text-[10px] bg-green-500 hover:bg-green-600 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center"
-                        onClick={() => updateOrderStatus(order.id, "entregado")}
+                        className="w-full rounded-xl h-10 font-black uppercase tracking-widest text-[10px] bg-green-500 hover:bg-green-600 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
+                        onClick={() => handleUpdateStatus(order.id, "entregado")}
+                        disabled={updatingIds.has(order.id)}
                       >
-                        <CheckCircle className="h-4 w-4 mr-2" strokeWidth={3} />{" "}
+                        {updatingIds.has(order.id) ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4 mr-2" strokeWidth={3} />
+                        )}
                         ENTREGAR
                       </button>
                     }

@@ -107,12 +107,24 @@ export function OrderReceipt({
 
       const categoryKeys = Object.keys(categoryGroups);
 
-      // Imprimir una comanda por cada categoría
-      categoryKeys.forEach((catName) => {
-        silentPrint(
+      // Imprimir comandas agrupadas en un único diálogo
+      if (categoryKeys.length > 0) {
+        const kitchenHTMLs = categoryKeys.map((catName) =>
           buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
         );
-      });
+
+        const combinedKitchenHTML = kitchenHTMLs
+          .map(
+            (html, idx) => `
+            <div class="${idx < kitchenHTMLs.length - 1 ? "print-page-break" : ""}">
+              ${html}
+            </div>
+          `,
+          )
+          .join("");
+
+        silentPrint(combinedKitchenHTML);
+      }
     }
     onClose();
   };

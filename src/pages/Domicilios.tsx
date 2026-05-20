@@ -315,12 +315,14 @@ export default function Domicilios() {
     method: "efectivo" | "tarjeta" | "nequi" | "mixto",
     received: number,
     breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number },
-  ) => {
-    if (!payingOrder) return;
+  ): Promise<boolean> => {
+    if (!payingOrder) return false;
     const success = await processPayment(payingOrder.id, method, received, breakdown, "entregado");
     if (success) {
       setPayingOrder(null);
+      return true;
     }
+    return false;
   };
 
   const getStatusActions = (order: Order) => {

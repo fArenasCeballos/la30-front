@@ -31,7 +31,7 @@ import {
 import { useEffect, useState } from "react";
 import { Logo } from "./ui/logo";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const NAV_ITEMS: {
   to: string;
@@ -72,6 +72,32 @@ export function AppLayout() {
     ? "kiosk"
     : "restaurant";
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [showRestored, setShowRestored] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      setShowRestored(true);
+      const timer = setTimeout(() => {
+        setShowRestored(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    };
+
+    const handleOffline = () => {
+      setIsOffline(true);
+      setShowRestored(false);
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   // Guard: Admin without store should go to selector
   useEffect(() => {
@@ -131,6 +157,49 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
+      {/* Premium Connection Warning Banner */}
+      <AnimatePresence>
+        {isOffline && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            className="w-full bg-red-500/10 border-b border-red-500/20 backdrop-blur-md sticky top-0 z-[100] overflow-hidden"
+          >
+            <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-center gap-3 text-red-700 font-bold text-xs lg:text-sm text-center">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              </span>
+              <span>
+                <strong>Sin conexión a internet</strong> — Visualizando datos en caché. Los cambios nuevos no se guardarán hasta restablecer la conexión.
+              </span>
+            </div>
+          </motion.div>
+        )}
+        
+        {showRestored && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            className="w-full bg-green-500/10 border-b border-green-500/20 backdrop-blur-md sticky top-0 z-[100] overflow-hidden"
+          >
+            <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-center gap-3 text-green-700 font-bold text-xs lg:text-sm text-center">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <span>
+                <strong>¡Conexión de red restablecida!</strong> Datos sincronizados correctamente.
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Premium Glass Header */}
       <header className="h-14 lg:h-16 2xl:h-20 border-b bg-white/90 backdrop-blur-md flex items-center px-4 lg:px-6 2xl:px-10 gap-2 lg:gap-4 2xl:gap-8 sticky top-0 z-50 transition-all duration-300">
         {/* Brand & Store Selector */}
