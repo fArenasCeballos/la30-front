@@ -51,6 +51,7 @@ export interface Order extends OrderRow {
   siigo_invoices?: SiigoInvoiceRecord[];
   isOptimistic?: boolean;
   isOfflinePending?: boolean;
+  payment_method?: PaymentMethod;
 }
 
 // Custom option with its choices (for ProductCustomizer)

@@ -73,10 +73,15 @@ export default function Cocina() {
                 )}
                 {isSalida ? "LISTO" : "PREPARANDO"}
               </div>
-              <StatusBadge
-                status={order.status}
-                className="h-4 text-[8px] px-1.5"
-              />
+              <div className="flex items-center gap-1.5">
+                <StatusBadge
+                  status={order.status}
+                  className="h-4 text-[8px] px-1.5"
+                />
+                <span className="text-[8px] font-black text-primary/60 uppercase tracking-widest truncate max-w-[100px]">
+                  {order.profiles?.name ? `Mesero: ${order.profiles.name}` : "Kiosko"}
+                </span>
+              </div>
             </div>
           </div>
         </div>

@@ -172,7 +172,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         const shiftStart = getShiftStart().toISOString();
         let query = supabase
           .from("orders")
-          .select("*, order_items(*, products(*, categories(*))), payments(*), siigo_invoices(*)")
+          .select("*, order_items(*, products(*, categories(*))), payments(*), siigo_invoices(*), profiles(*)")
           .gte("created_at", shiftStart)
           .order("created_at", { ascending: false });
         if (storeId) query = query.eq("store_id", storeId);
@@ -200,7 +200,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         const shiftStart = getShiftStart().toISOString();
         let query = supabase
           .from("orders")
-          .select("*, order_items(*, products(*, categories(*))), payments(*), siigo_invoices(*)")
+          .select("*, order_items(*, products(*, categories(*))), payments(*), siigo_invoices(*), profiles(*)")
           .in("status", ["pendiente", "confirmado", "en_preparacion", "listo"])
           .gte("created_at", shiftStart)
           .order("created_at", { ascending: true });
@@ -399,6 +399,17 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         isOfflinePending: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        profiles: user ? {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          avatar_url: user.avatar_url,
+          is_active: user.is_active,
+          store_id: user.store_id,
+          created_at: user.created_at,
+          updated_at: user.updated_at
+        } : null,
         order_items: items.map((i) => ({
           id: crypto.randomUUID(),
           order_id: tempId,
@@ -545,6 +556,17 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         delivery_fee: deliveryInfo.fee,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        profiles: user ? {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          avatar_url: user.avatar_url,
+          is_active: user.is_active,
+          store_id: user.store_id,
+          created_at: user.created_at,
+          updated_at: user.updated_at
+        } : null,
         order_items: items.map((i) => ({
           id: crypto.randomUUID(),
           order_id: tempId,

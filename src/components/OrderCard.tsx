@@ -57,8 +57,8 @@ export function OrderCard({
               <span>{timeAgo(order.created_at)}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <p className="text-[8px] font-black text-primary/60 uppercase tracking-widest truncate max-w-[80px]">
-                {order.profiles?.name || "Kiosko"}
+              <p className="text-[8px] font-black text-primary/60 uppercase tracking-widest truncate max-w-[120px]">
+                {order.profiles?.name ? `Mesero: ${order.profiles.name}` : "Kiosko"}
               </p>
               {order.isOfflinePending && (
                 <span className="inline-flex items-center gap-0.5 text-[6px] font-black text-amber-600 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full uppercase tracking-widest animate-pulse shrink-0">

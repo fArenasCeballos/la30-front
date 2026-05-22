@@ -670,6 +670,9 @@ export default function Domicilios() {
                               minute: "2-digit",
                             })}
                           </p>
+                          <p className="text-[8px] font-black text-purple-600/70 uppercase tracking-widest truncate max-w-[120px] mt-0.5">
+                            {order.profiles?.name ? `Mesero: ${order.profiles.name}` : "Kiosko"}
+                          </p>
                         </div>
                       </div>
                       <StatusBadge status={order.status} />
@@ -775,7 +778,7 @@ export default function Domicilios() {
                   const canGenerateInvoice =
                     siigoEnabled &&
                     !hasInvoice &&
-                    shouldGenerateInvoice(paymentMethod, reconstructedBreakdown);
+                    shouldGenerateInvoice(paymentMethod ?? "efectivo", reconstructedBreakdown);
 
                   return (
                     <div
@@ -806,6 +809,9 @@ export default function Domicilios() {
                             <div className="flex items-center gap-1.5 text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest bg-accent/10 px-3 py-1.5 rounded-full">
                               <Clock className="h-3 w-3" />
                               {hora}
+                            </div>
+                            <div className="text-[10px] font-black text-purple-600 uppercase tracking-widest bg-purple-500/5 px-3 py-1.5 rounded-full">
+                              {order.profiles?.name ? `Mesero: ${order.profiles.name}` : "Kiosko"}
                             </div>
                             {order.delivery_name && (
                               <div className="flex items-center gap-1 text-[10px] font-black text-purple-600 uppercase tracking-widest bg-purple-500/5 px-3 py-1.5 rounded-full">
@@ -853,7 +859,7 @@ export default function Domicilios() {
                             onClick={() =>
                               setSiigoOrder({
                                 order,
-                                method: paymentMethod,
+                                method: paymentMethod ?? "efectivo",
                                 breakdown: reconstructedBreakdown,
                               })
                             }

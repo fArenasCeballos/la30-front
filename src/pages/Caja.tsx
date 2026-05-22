@@ -171,7 +171,7 @@ export default function Caja() {
           paymentChange: change,
           paymentBreakdown: breakdown,
         };
-        
+
         await silentPrint(
           buildCustomerReceiptHTML(receiptData),
           `Recibo - ${activeOrder.locator}`,
@@ -227,10 +227,10 @@ export default function Caja() {
       paymentChange: lastPayment?.amount_change,
       paymentBreakdown: lastPayment
         ? {
-            efectivo: lastPayment.amount_efectivo,
-            tarjeta: lastPayment.amount_tarjeta,
-            nequi: lastPayment.amount_nequi,
-          }
+          efectivo: lastPayment.amount_efectivo,
+          tarjeta: lastPayment.amount_tarjeta,
+          nequi: lastPayment.amount_nequi,
+        }
         : undefined,
     });
   };
@@ -243,57 +243,57 @@ export default function Caja() {
           <div className="bg-white/60 backdrop-blur-xl p-1 lg:p-2 rounded-2xl border-2 border-accent/20 shadow-sm mb-4 lg:mb-6 sticky top-14 lg:top-16 z-40 flex flex-col sm:flex-row items-center gap-2 lg:gap-4">
             <div className="flex-1 w-full overflow-x-auto no-scrollbar">
               <TabsList className="bg-transparent h-auto p-0 flex-nowrap w-full justify-start gap-1 lg:gap-2">
-              {[
-                {
-                  id: "pendientes",
-                  label: "PENDIENTES",
-                  count: pendientes.length,
-                  icon: Clock,
-                },
-                {
-                  id: "confirmados",
-                  label: "POR COBRAR",
-                  count: confirmados.length,
-                  icon: DollarSign,
-                },
-                {
-                  id: "cocina",
-                  label: "EN COCINA",
-                  count: enCocina.length,
-                  icon: Loader2,
-                },
-                {
-                  id: "listos",
-                  label: "LISTOS",
-                  count: listos.length,
-                  icon: CheckCircle,
-                },
-                {
-                  id: "historial",
-                  label: "HISTORIAL",
-                  count: completados.length,
-                  icon: History,
-                },
-              ].map((tab) => (
-                <TabsTrigger
-                  key={tab.id}
-                  value={tab.id}
-                  className="group rounded-lg lg:rounded-xl px-4 lg:px-8 py-2 lg:py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all font-black text-[9px] lg:text-[11px] uppercase tracking-widest flex items-center gap-2 lg:gap-3 border-2 border-transparent data-[state=active]:border-primary/5 min-w-[120px] lg:min-w-[140px]"
-                >
-                  <tab.icon
-                    className={cn(
-                      "h-5 w-5 lg:h-6 lg:w-6 shrink-0 transition-all duration-200 group-hover:scale-110 group-active:scale-95",
-                      tab.id === "cocina" && "animate-spin",
-                    )}
-                    strokeWidth={2.5}
-                  />
-                  {tab.label}
-                  <Badge className="bg-primary text-white border-none rounded-xl h-6 min-w-[24px] px-1.5 flex items-center justify-center font-black text-[10px] ml-auto shadow-md">
-                    {tab.count}
-                  </Badge>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+                {[
+                  {
+                    id: "pendientes",
+                    label: "PENDIENTES",
+                    count: pendientes.length,
+                    icon: Clock,
+                  },
+                  {
+                    id: "confirmados",
+                    label: "POR COBRAR",
+                    count: confirmados.length,
+                    icon: DollarSign,
+                  },
+                  {
+                    id: "cocina",
+                    label: "EN COCINA",
+                    count: enCocina.length,
+                    icon: Loader2,
+                  },
+                  {
+                    id: "listos",
+                    label: "LISTOS",
+                    count: listos.length,
+                    icon: CheckCircle,
+                  },
+                  {
+                    id: "historial",
+                    label: "HISTORIAL",
+                    count: completados.length,
+                    icon: History,
+                  },
+                ].map((tab) => (
+                  <TabsTrigger
+                    key={tab.id}
+                    value={tab.id}
+                    className="group rounded-lg lg:rounded-xl px-4 lg:px-8 py-2 lg:py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all font-black text-[9px] lg:text-[11px] uppercase tracking-widest flex items-center gap-2 lg:gap-3 border-2 border-transparent data-[state=active]:border-primary/5 min-w-[120px] lg:min-w-[140px]"
+                  >
+                    <tab.icon
+                      className={cn(
+                        "h-5 w-5 lg:h-6 lg:w-6 shrink-0 transition-all duration-200 group-hover:scale-110 group-active:scale-95",
+                        tab.id === "cocina" && "animate-spin",
+                      )}
+                      strokeWidth={2.5}
+                    />
+                    {tab.label}
+                    <Badge className="bg-primary text-white border-none rounded-xl h-6 min-w-[24px] px-1.5 flex items-center justify-center font-black text-[10px] ml-auto shadow-md">
+                      {tab.count}
+                    </Badge>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
             </div>
             <Button
               size="sm"
@@ -612,16 +612,16 @@ export default function Caja() {
                     const paymentMethod = lastPayment?.method ?? order.payment_method;
                     const reconstructedBreakdown = lastPayment
                       ? {
-                          efectivo: lastPayment.amount_efectivo ?? 0,
-                          tarjeta: lastPayment.amount_tarjeta ?? 0,
-                          nequi: lastPayment.amount_nequi ?? 0,
-                        }
+                        efectivo: lastPayment.amount_efectivo ?? 0,
+                        tarjeta: lastPayment.amount_tarjeta ?? 0,
+                        nequi: lastPayment.amount_nequi ?? 0,
+                      }
                       : undefined;
                     const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true";
                     const canGenerateInvoice =
                       siigoEnabled &&
                       !hasInvoice &&
-                      shouldGenerateInvoice(paymentMethod, reconstructedBreakdown);
+                      shouldGenerateInvoice(paymentMethod ?? "efectivo", reconstructedBreakdown);
 
                     return (
                       <div
@@ -653,6 +653,9 @@ export default function Caja() {
                                 <Clock className="h-3 w-3" />
                                 {hora}
                               </div>
+                              <div className="text-[10px] font-black text-primary/60 uppercase tracking-widest bg-primary/5 px-3 py-1.5 rounded-full">
+                                {order.profiles?.name ? `Mesero: ${order.profiles.name}` : "Kiosko"}
+                              </div>
                               {/* Invoice status badge */}
                               {hasInvoice && (
                                 <div className="flex items-center gap-1.5 text-[10px] font-black text-emerald-700 uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
@@ -680,7 +683,7 @@ export default function Caja() {
                               onClick={() =>
                                 setSiigoOrder({
                                   order,
-                                  method: paymentMethod,
+                                  method: paymentMethod ?? "efectivo",
                                   breakdown: reconstructedBreakdown,
                                 })
                               }
