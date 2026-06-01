@@ -92,7 +92,10 @@ export default function Usuarios() {
 
   useEffect(() => {
     if (!currentUser) return;
-    fetchProfiles();
+    const load = async () => {
+      await fetchProfiles();
+    };
+    load();
   }, [fetchProfiles, currentUser]);
 
   const filtered = useMemo(() => {
@@ -464,7 +467,12 @@ export default function Usuarios() {
                   </Label>
                   <Select
                     value={formRole}
-                    onValueChange={(v) => setFormRole(v as UserRole)}
+                    onValueChange={(v) => {
+                      setFormRole(v as UserRole);
+                      if (v !== "admin" && formStoreId === "all") {
+                        setFormStoreId(stores.length > 0 ? stores[0].id : "");
+                      }
+                    }}
                   >
                     <SelectTrigger className="h-16 rounded-[1.25rem] border-2 bg-accent/5 border-transparent font-bold text-lg px-6 hover:bg-accent/10 transition-all">
                       <SelectValue />
@@ -507,12 +515,14 @@ export default function Usuarios() {
                       <SelectValue placeholder="Seleccionar" />
                     </SelectTrigger>
                     <SelectContent className="rounded-3xl border-none shadow-strong p-3">
-                      <SelectItem
-                        value="all"
-                        className="rounded-xl font-black py-4 px-5 text-base"
-                      >
-                        Todas (Acceso Global)
-                      </SelectItem>
+                      {formRole === "admin" && (
+                        <SelectItem
+                          value="all"
+                          className="rounded-xl font-black py-4 px-5 text-base"
+                        >
+                          Todas (Acceso Global)
+                        </SelectItem>
+                      )}
                       {stores.map((s) => (
                         <SelectItem
                           key={s.id}
