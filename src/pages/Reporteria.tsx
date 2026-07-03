@@ -823,7 +823,7 @@ export default function Reporteria() {
                   <ResponsiveContainer width="100%" height="75%">
                     <LineChart
                       data={hourlyData}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 0 }}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
                     >
                       <defs>
                         <linearGradient
