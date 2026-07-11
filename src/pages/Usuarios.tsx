@@ -12,6 +12,8 @@ import {
   Search,
   PlusCircle,
   Loader2,
+  UserX,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -126,6 +128,42 @@ export default function Usuarios() {
     setNewPassword("");
     setShowPassword(false);
     setShowForm(true);
+  };
+
+  const toggleUserStatus = async (p: Profile) => {
+    if (
+      !confirm(
+        `¿Estás seguro de que deseas ${
+          p.is_active ? "inactivar" : "activar"
+        } a ${p.name}?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.rpc("update_user", {
+        p_user_id: p.id,
+        p_is_active: !p.is_active,
+      });
+
+      if (error) {
+        // Fallback to table update if RPC doesn't work or isn't handling is_active correctly
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({ is_active: !p.is_active })
+          .eq("id", p.id);
+          
+        if (updateError) throw updateError;
+      }
+      
+      toast.success(
+        `Usuario ${!p.is_active ? "activado" : "inactivado"} correctamente`
+      );
+      fetchProfiles();
+    } catch (err: any) {
+      toast.error(`Error al cambiar estado: ${err.message}`);
+    }
   };
 
   const handleSave = async () => {
@@ -288,7 +326,10 @@ export default function Usuarios() {
                   {filtered.map((u, idx) => (
                     <tr
                       key={u.id}
-                      className="group hover:bg-white/80 transition-all duration-300 animate-in fade-in slide-in-from-left-6"
+                      className={cn(
+                        "group transition-all duration-300 animate-in fade-in slide-in-from-left-6",
+                        u.is_active === false ? "opacity-60 bg-accent/5 grayscale-[0.5]" : "hover:bg-white/80"
+                      )}
                       style={{ animationDelay: `${idx * 40}ms` }}
                     >
                       <td className="px-10 py-7">
@@ -297,8 +338,13 @@ export default function Usuarios() {
                             {u.name?.charAt(0)}
                           </div>
                           <div className="space-y-1">
-                            <p className="font-black text-[17px] tracking-tight text-foreground group-hover:text-primary transition-colors">
+                            <p className="font-black text-[17px] tracking-tight text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
                               {u.name}
+                              {u.is_active === false && (
+                                <Badge variant="destructive" className="text-[9px] px-2 py-0 h-4">
+                                  INACTIVO
+                                </Badge>
+                              )}
                             </p>
                             <p className="text-[12px] text-muted-foreground/60 font-bold tracking-tight">
                               {u.email}
@@ -330,14 +376,35 @@ export default function Usuarios() {
                         </div>
                       </td>
                       <td className="px-10 py-7 text-right">
-                        <Button
-                          variant="secondary"
-                          size="icon"
-                          className="h-14 w-14 rounded-2xl bg-accent/20 hover:bg-primary hover:text-white transition-all shadow-soft border-none"
-                          onClick={() => openEdit(u)}
-                        >
-                          <Pencil className="h-6 w-6" strokeWidth={2.5} />
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="h-14 w-14 rounded-2xl bg-accent/20 hover:bg-primary hover:text-white transition-all shadow-soft border-none"
+                            onClick={() => openEdit(u)}
+                            title="Editar usuario"
+                          >
+                            <Pencil className="h-6 w-6" strokeWidth={2.5} />
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className={cn(
+                              "h-14 w-14 rounded-2xl transition-all shadow-soft border-none",
+                              u.is_active === false
+                                ? "bg-green-500/20 text-green-600 hover:bg-green-500 hover:text-white"
+                                : "bg-red-500/20 text-red-600 hover:bg-red-500 hover:text-white"
+                            )}
+                            onClick={() => toggleUserStatus(u)}
+                            title={u.is_active === false ? "Activar usuario" : "Inactivar usuario"}
+                          >
+                            {u.is_active === false ? (
+                              <UserCheck className="h-6 w-6" strokeWidth={2.5} />
+                            ) : (
+                              <UserX className="h-6 w-6" strokeWidth={2.5} />
+                            )}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

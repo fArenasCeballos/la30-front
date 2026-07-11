@@ -52,6 +52,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (data.is_active === false) {
+        toast.error("Cuenta inactiva. Comunícate con administración.");
+        await supabase.auth.signOut();
+        setUser(null);
+        return;
+      }
+
       setUser(data);
     } catch (err) {
       console.error("Profile fetch exception:", err);
