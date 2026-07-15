@@ -166,35 +166,55 @@ export default function Reporteria() {
 
   const shiftRange = useMemo(() => {
     if (!dateRange?.from) return null;
+    // Cada día seleccionado representa su turno: 4:00 PM del día → 4:00 AM del día siguiente.
+    // Para un rango: from = primer día a las 16:00, to = (último día + 1) a las 04:00.
     return getCalendarShiftRange(dateRange.from, dateRange.to);
   }, [dateRange]);
 
   const { data: reportOrders = [], isLoading } = useQuery({
-    queryKey: ["report-orders", user?.id, dateRange, storeId],
+    queryKey: ["report-orders", user?.id, shiftRange?.from?.toISOString(), shiftRange?.to?.toISOString(), storeId],
     queryFn: async () => {
       if (!shiftRange) return [];
       const from = shiftRange.from.toISOString();
       const to = shiftRange.to.toISOString();
 
-      // Fetch orders with nested profile and items
-      let query = supabase
-        .from("orders")
-        .select(
-          "*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*)), siigo_invoices(*)",
-        )
-        .gte("created_at", from)
-        .lte("created_at", to);
+      let allOrders: any[] = [];
+      let fromRow = 0;
+      const PAGE_SIZE = 1000;
+      let hasMore = true;
 
-      if (storeId) {
-        query = query.eq("store_id", storeId);
+      while (hasMore) {
+        let query = supabase
+          .from("orders")
+          .select(
+            "*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*)), siigo_invoices(*)",
+          )
+          .gte("created_at", from)
+          .lte("created_at", to)
+          .range(fromRow, fromRow + PAGE_SIZE - 1);
+
+        if (storeId) {
+          query = query.eq("store_id", storeId);
+        }
+
+        const { data, error } = await query.order("created_at", {
+          ascending: false,
+        });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allOrders = [...allOrders, ...data];
+          fromRow += PAGE_SIZE;
+          if (data.length < PAGE_SIZE) {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
+        }
       }
 
-      const { data, error } = await query.order("created_at", {
-        ascending: false,
-      });
-
-      if (error) throw error;
-      return (data as unknown as ReportOrder[]) || [];
+      return (allOrders as unknown as ReportOrder[]) || [];
     },
     enabled: !!user && !!shiftRange,
   });
@@ -211,28 +231,47 @@ export default function Reporteria() {
 
   // Query de pagos para el desglose por método
   const { data: reportPayments = [] } = useQuery({
-    queryKey: ["report-payments", user?.id, dateRange, storeId],
+    queryKey: ["report-payments", user?.id, shiftRange?.from?.toISOString(), shiftRange?.to?.toISOString(), storeId],
     queryFn: async () => {
       if (!shiftRange) return [];
       const from = shiftRange.from.toISOString();
       const to = shiftRange.to.toISOString();
 
-      const query = supabase
-        .from("payments")
-        .select(
-          "id, order_id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi, created_at",
-        )
-        .gte("created_at", from)
-        .lte("created_at", to);
+      let allPayments: any[] = [];
+      let fromRow = 0;
+      const PAGE_SIZE = 1000;
+      let hasMore = true;
 
-      if (storeId) {
-        // We filter payments by joining with orders store_id if possible
+      while (hasMore) {
+        const query = supabase
+          .from("payments")
+          .select(
+            "id, order_id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi, created_at",
+          )
+          .gte("created_at", from)
+          .lte("created_at", to)
+          .range(fromRow, fromRow + PAGE_SIZE - 1);
+
+        if (storeId) {
+          // We filter payments by joining with orders store_id if possible
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allPayments = [...allPayments, ...data];
+          fromRow += PAGE_SIZE;
+          if (data.length < PAGE_SIZE) {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
+        }
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return (data as unknown as ReportPayment[]) || [];
+      return (allPayments as unknown as ReportPayment[]) || [];
     },
     enabled: !!user && !!shiftRange,
   });

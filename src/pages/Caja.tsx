@@ -126,9 +126,15 @@ export default function Caja() {
     }
   };
 
-  const pendientes = getOrdersByStatus("pendiente").filter((o) => !o.is_delivery);
-  const confirmados = getOrdersByStatus("confirmado").filter((o) => !o.is_delivery);
-  const enCocina = getOrdersByStatus("en_preparacion").filter((o) => !o.is_delivery);
+  const pendientes = getOrdersByStatus("pendiente").filter(
+    (o) => !o.is_delivery,
+  );
+  const confirmados = getOrdersByStatus("confirmado").filter(
+    (o) => !o.is_delivery,
+  );
+  const enCocina = getOrdersByStatus("en_preparacion").filter(
+    (o) => !o.is_delivery,
+  );
   const listos = getOrdersByStatus("listo").filter((o) => !o.is_delivery);
   const completados = getCompletedOrders().filter((o) => !o.is_delivery);
 
@@ -148,7 +154,12 @@ export default function Caja() {
   ): Promise<boolean> => {
     if (!payingOrder) return false;
     const change = Math.max(0, received - payingOrder.total);
-    const success = await processPayment(payingOrder.id, method, received, breakdown);
+    const success = await processPayment(
+      payingOrder.id,
+      method,
+      received,
+      breakdown,
+    );
     if (!success) return false;
 
     // Ejecutar tareas de Siigo y de Impresión en segundo plano sin bloquear el calculador
@@ -226,10 +237,10 @@ export default function Caja() {
       paymentChange: lastPayment?.amount_change,
       paymentBreakdown: lastPayment
         ? {
-          efectivo: lastPayment.amount_efectivo,
-          tarjeta: lastPayment.amount_tarjeta,
-          nequi: lastPayment.amount_nequi,
-        }
+            efectivo: lastPayment.amount_efectivo,
+            tarjeta: lastPayment.amount_tarjeta,
+            nequi: lastPayment.amount_nequi,
+          }
         : undefined,
     });
   };
@@ -237,7 +248,6 @@ export default function Caja() {
   return (
     <ErrorBoundary>
       <div className="section-container space-y-4 lg:space-y-6 pb-10 animate-in fade-in duration-300">
-
         <Tabs defaultValue="pendientes" className="w-full">
           <div className="bg-white/60 backdrop-blur-xl p-1 lg:p-2 rounded-2xl border-2 border-accent/20 shadow-sm mb-4 lg:mb-6 sticky top-14 lg:top-16 z-40 flex flex-col sm:flex-row items-center gap-2 lg:gap-4">
             <div className="flex-1 w-full overflow-x-auto no-scrollbar">
@@ -334,7 +344,9 @@ export default function Caja() {
                           onClick={() =>
                             handleUpdateStatus(order.id, "confirmado")
                           }
-                          disabled={order.isOptimistic || updatingIds.has(order.id)}
+                          disabled={
+                            order.isOptimistic || updatingIds.has(order.id)
+                          }
                         >
                           {order.isOptimistic || updatingIds.has(order.id) ? (
                             <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
@@ -349,7 +361,9 @@ export default function Caja() {
                         <button
                           className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-white border border-accent/20 hover:bg-accent/5 transition-all flex items-center justify-center disabled:opacity-50"
                           onClick={() => navigate(`/kiosko?edit=${order.id}`)}
-                          disabled={order.isOptimistic || updatingIds.has(order.id)}
+                          disabled={
+                            order.isOptimistic || updatingIds.has(order.id)
+                          }
                         >
                           <Edit className="h-3 w-3 mr-1.5" strokeWidth={3} />{" "}
                           EDITAR
@@ -359,7 +373,9 @@ export default function Caja() {
                           onClick={() =>
                             handleUpdateStatus(order.id, "cancelado")
                           }
-                          disabled={order.isOptimistic || updatingIds.has(order.id)}
+                          disabled={
+                            order.isOptimistic || updatingIds.has(order.id)
+                          }
                         >
                           {updatingIds.has(order.id) ? (
                             <Loader2 className="h-3 w-3 animate-spin text-destructive" />
@@ -477,7 +493,10 @@ export default function Caja() {
                             className="w-full rounded-xl h-8 border border-accent/20 font-black uppercase tracking-widest text-[8px] hover:bg-accent/5 transition-all flex items-center justify-center"
                             onClick={() => handleShowKitchenReceipt(order)}
                           >
-                            <Printer className="h-3 w-3 mr-1.5" strokeWidth={3} />{" "}
+                            <Printer
+                              className="h-3 w-3 mr-1.5"
+                              strokeWidth={3}
+                            />{" "}
                             REIMPRIMIR
                           </button>
                         </div>
@@ -513,13 +532,18 @@ export default function Caja() {
                     actions={
                       <button
                         className="w-full rounded-xl h-10 font-black uppercase tracking-widest text-[10px] bg-green-500 hover:bg-green-600 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
-                        onClick={() => handleUpdateStatus(order.id, "entregado")}
+                        onClick={() =>
+                          handleUpdateStatus(order.id, "entregado")
+                        }
                         disabled={updatingIds.has(order.id)}
                       >
                         {updatingIds.has(order.id) ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
-                          <CheckCircle className="h-4 w-4 mr-2" strokeWidth={3} />
+                          <CheckCircle
+                            className="h-4 w-4 mr-2"
+                            strokeWidth={3}
+                          />
                         )}
                         ENTREGAR
                       </button>
@@ -603,23 +627,31 @@ export default function Caja() {
                     const successInvoice = order.siigo_invoices?.find(
                       (inv) => inv.status === "success",
                     );
-                    const hasInvoice = !!successInvoice || !!order.siigo_invoice_id;
-                    const invoiceNumber = successInvoice?.siigo_invoice_number || order.siigo_invoice_number || "Facturado";
+                    const hasInvoice =
+                      !!successInvoice || !!order.siigo_invoice_id;
+                    const invoiceNumber =
+                      successInvoice?.siigo_invoice_number ||
+                      order.siigo_invoice_number ||
+                      "Facturado";
 
                     // Reconstruct breakdown from payment for eligibility check
                     const lastPayment = order.payments?.[0];
-                    const paymentMethod = lastPayment?.method ?? order.payment_method;
+                    const paymentMethod =
+                      lastPayment?.method ?? order.payment_method;
                     const reconstructedBreakdown = lastPayment
                       ? {
-                        efectivo: lastPayment.amount_efectivo ?? 0,
-                        tarjeta: lastPayment.amount_tarjeta ?? 0,
-                        nequi: lastPayment.amount_nequi ?? 0,
-                      }
+                          efectivo: lastPayment.amount_efectivo ?? 0,
+                          tarjeta: lastPayment.amount_tarjeta ?? 0,
+                          nequi: lastPayment.amount_nequi ?? 0,
+                        }
                       : undefined;
                     const canGenerateInvoice =
                       order.status !== "cancelado" &&
                       !hasInvoice &&
-                      shouldGenerateInvoice(paymentMethod ?? "efectivo", reconstructedBreakdown);
+                      shouldGenerateInvoice(
+                        paymentMethod ?? "efectivo",
+                        reconstructedBreakdown,
+                      );
 
                     return (
                       <div
@@ -652,7 +684,9 @@ export default function Caja() {
                                 {hora}
                               </div>
                               <div className="text-[10px] font-black text-primary/60 uppercase tracking-widest bg-primary/5 px-3 py-1.5 rounded-full">
-                                {order.profiles?.name ? `Mesero: ${order.profiles.name}` : "Kiosko"}
+                                {order.profiles?.name
+                                  ? `Mesero: ${order.profiles.name}`
+                                  : "Kiosko"}
                               </div>
                               {/* Invoice status badge */}
                               {hasInvoice && (
@@ -677,7 +711,7 @@ export default function Caja() {
                           {/* Generate Invoice button */}
                           {canGenerateInvoice && (
                             <Button
-                              className="rounded-2xl h-10 border-2 font-black text-[10px] uppercase tracking-widest px-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white transition-all active:scale-95 shadow-lg shadow-emerald-500/20 border-emerald-400/20"
+                              className="rounded-2xl h-10 border-2 font-black text-[10px] uppercase tracking-widest px-6 bg-linear-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white transition-all active:scale-95 shadow-lg shadow-emerald-500/20 border-emerald-400/20"
                               onClick={() =>
                                 setSiigoOrder({
                                   order,
@@ -686,24 +720,30 @@ export default function Caja() {
                                 })
                               }
                             >
-                              <Zap
-                                className="h-4 w-4 mr-2"
-                                strokeWidth={3}
-                              />
+                              <Zap className="h-4 w-4 mr-2" strokeWidth={3} />
                               Generar Factura
                             </Button>
                           )}
 
-                          {successInvoice && successInvoice.response_payload?.public_url && (
-                            <Button
-                              variant="outline"
-                              className="rounded-2xl h-10 border-2 border-emerald-500/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-emerald-50 text-emerald-600 transition-all active:scale-95 shadow-sm"
-                              onClick={() => window.open(successInvoice.response_payload.public_url, '_blank')}
-                            >
-                              <FileText className="h-4 w-4 mr-2" strokeWidth={3} />
-                              PDF Siigo
-                            </Button>
-                          )}
+                          {successInvoice &&
+                            successInvoice.response_payload?.public_url && (
+                              <Button
+                                variant="outline"
+                                className="rounded-2xl h-10 border-2 border-emerald-500/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-emerald-50 text-emerald-600 transition-all active:scale-95 shadow-sm"
+                                onClick={() =>
+                                  window.open(
+                                    successInvoice.response_payload.public_url,
+                                    "_blank",
+                                  )
+                                }
+                              >
+                                <FileText
+                                  className="h-4 w-4 mr-2"
+                                  strokeWidth={3}
+                                />
+                                PDF Siigo
+                              </Button>
+                            )}
 
                           {isEntregado && (
                             <Button

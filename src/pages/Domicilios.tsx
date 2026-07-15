@@ -70,15 +70,23 @@ export default function Domicilios() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { activeStore } = useStore();
-  const { orders, activeOrders, updateOrderStatus, dispatchOrder, processPayment, addDeliveryOrder } =
-    useOrders();
+  const {
+    orders,
+    activeOrders,
+    updateOrderStatus,
+    dispatchOrder,
+    processPayment,
+    addDeliveryOrder,
+  } = useOrders();
 
   // UI state
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [payingOrder, setPayingOrder] = useState<Order | null>(null);
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
   const [receipt, setReceipt] = useState<ReceiptState | null>(null);
-  const [activeSubTab, setActiveSubTab] = useState<"todos" | "cocina" | "listos" | "camino">("todos");
+  const [activeSubTab, setActiveSubTab] = useState<
+    "todos" | "cocina" | "listos" | "camino"
+  >("todos");
   const [siigoOrder, setSiigoOrder] = useState<{
     order: Order;
     method: string;
@@ -185,7 +193,9 @@ export default function Domicilios() {
   const completedDeliveries = useMemo(
     () =>
       orders
-        .filter((o) => o.is_delivery && ["entregado", "cancelado"].includes(o.status))
+        .filter(
+          (o) => o.is_delivery && ["entregado", "cancelado"].includes(o.status),
+        )
         .sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -213,19 +223,29 @@ export default function Domicilios() {
     const inPrep = deliveryOrders.filter(
       (o) => o.status === "en_preparacion",
     ).length;
-    const ready = deliveryOrders.filter((o) => o.status === "listo" && !o.is_dispatched).length;
-    const dispatched = deliveryOrders.filter((o) => o.status === "listo" && o.is_dispatched).length;
+    const ready = deliveryOrders.filter(
+      (o) => o.status === "listo" && !o.is_dispatched,
+    ).length;
+    const dispatched = deliveryOrders.filter(
+      (o) => o.status === "listo" && o.is_dispatched,
+    ).length;
     return { pending, inPrep, ready, dispatched, total: deliveryOrders.length };
   }, [deliveryOrders]);
 
   const filteredActiveOrders = useMemo(() => {
     switch (activeSubTab) {
       case "cocina":
-        return deliveryOrders.filter((o) => ["pendiente", "confirmado", "en_preparacion"].includes(o.status));
+        return deliveryOrders.filter((o) =>
+          ["pendiente", "confirmado", "en_preparacion"].includes(o.status),
+        );
       case "listos":
-        return deliveryOrders.filter((o) => o.status === "listo" && !o.is_dispatched);
+        return deliveryOrders.filter(
+          (o) => o.status === "listo" && !o.is_dispatched,
+        );
       case "camino":
-        return deliveryOrders.filter((o) => o.status === "listo" && o.is_dispatched);
+        return deliveryOrders.filter(
+          (o) => o.status === "listo" && o.is_dispatched,
+        );
       default:
         return deliveryOrders;
     }
@@ -383,10 +403,17 @@ export default function Domicilios() {
     },
   ): Promise<boolean> => {
     if (!payingOrder) return false;
-    const success = await processPayment(payingOrder.id, method, received, breakdown, "entregado");
+    const success = await processPayment(
+      payingOrder.id,
+      method,
+      received,
+      breakdown,
+      "entregado",
+    );
     if (success) {
       // Abrir modal de facturación electrónica Siigo si aplica
-      const isFacturacionAllowed = user?.role === "admin" || user?.role === "caja";
+      const isFacturacionAllowed =
+        user?.role === "admin" || user?.role === "caja";
       if (isFacturacionAllowed && shouldGenerateInvoice(method, breakdown)) {
         setSiigoOrder({ order: payingOrder, method, breakdown });
       }
@@ -590,15 +617,26 @@ export default function Domicilios() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="activos" className="outline-none animate-in fade-in duration-300 space-y-6">
+        <TabsContent
+          value="activos"
+          className="outline-none animate-in fade-in duration-300 space-y-6"
+        >
           {/* Sub-tabs for filtering active deliveries */}
           {deliveryOrders.length > 0 && (
             <div className="flex flex-wrap gap-2 p-1.5 bg-white/40 border border-accent/10 rounded-2xl w-fit">
               {[
                 { id: "todos", label: "Todos", count: deliveryOrders.length },
-                { id: "cocina", label: "En Cocina", count: stats.pending + stats.inPrep },
+                {
+                  id: "cocina",
+                  label: "En Cocina",
+                  count: stats.pending + stats.inPrep,
+                },
                 { id: "listos", label: "Listos en Local", count: stats.ready },
-                { id: "camino", label: "En Camino 🛵", count: stats.dispatched },
+                {
+                  id: "camino",
+                  label: "En Camino 🛵",
+                  count: stats.dispatched,
+                },
               ].map((tab) => (
                 <Button
                   key={tab.id}
@@ -608,15 +646,19 @@ export default function Domicilios() {
                     "rounded-xl font-black text-[10px] uppercase tracking-wider px-3.5 py-2 h-8 transition-all shrink-0",
                     activeSubTab === tab.id
                       ? "bg-purple-600 text-white hover:bg-purple-700 shadow-md shadow-purple-500/10"
-                      : "text-muted-foreground hover:bg-purple-500/5 hover:text-purple-600"
+                      : "text-muted-foreground hover:bg-purple-500/5 hover:text-purple-600",
                   )}
                   onClick={() => setActiveSubTab(tab.id as any)}
                 >
                   {tab.label}
-                  <Badge className={cn(
-                    "ml-2 rounded-full px-1.5 py-0.5 text-[9px] font-black border-none shrink-0 h-4 min-w-[16px] flex items-center justify-center",
-                    activeSubTab === tab.id ? "bg-white text-purple-600" : "bg-purple-100 text-purple-600"
-                  )}>
+                  <Badge
+                    className={cn(
+                      "ml-2 rounded-full px-1.5 py-0.5 text-[9px] font-black border-none shrink-0 h-4 min-w-[16px] flex items-center justify-center",
+                      activeSubTab === tab.id
+                        ? "bg-white text-purple-600"
+                        : "bg-purple-100 text-purple-600",
+                    )}
+                  >
                     {tab.count}
                   </Badge>
                 </Button>
@@ -630,16 +672,18 @@ export default function Domicilios() {
                 <Truck className="h-10 w-10 text-purple-300" />
               </div>
               <p className="text-sm font-black text-muted-foreground/30 uppercase tracking-widest">
-                {activeSubTab === "todos" 
-                  ? "Sin domicilios activos" 
+                {activeSubTab === "todos"
+                  ? "Sin domicilios activos"
                   : activeSubTab === "cocina"
-                  ? "Sin domicilios en cocina"
-                  : activeSubTab === "listos"
-                  ? "Sin domicilios listos en local"
-                  : "Sin domicilios en camino"}
+                    ? "Sin domicilios en cocina"
+                    : activeSubTab === "listos"
+                      ? "Sin domicilios listos en local"
+                      : "Sin domicilios en camino"}
               </p>
               <p className="text-xs text-muted-foreground/20 mt-1">
-                {activeSubTab === "todos" ? "Crea un nuevo pedido para comenzar" : "No hay pedidos en este estado en este momento"}
+                {activeSubTab === "todos"
+                  ? "Crea un nuevo pedido para comenzar"
+                  : "No hay pedidos en este estado en este momento"}
               </p>
             </div>
           ) : (
@@ -671,7 +715,9 @@ export default function Domicilios() {
                             })}
                           </p>
                           <p className="text-[8px] font-black text-purple-600/70 uppercase tracking-widest truncate max-w-[120px] mt-0.5">
-                            {order.profiles?.name ? `Mesero: ${order.profiles.name}` : "Kiosko"}
+                            {order.profiles?.name
+                              ? `Mesero: ${order.profiles.name}`
+                              : "Kiosko"}
                           </p>
                         </div>
                       </div>
@@ -719,7 +765,9 @@ export default function Domicilios() {
                         variant="outline"
                         size="sm"
                         className="rounded-xl text-[9px] font-black uppercase tracking-widest text-destructive border-destructive/20 hover:bg-destructive/5"
-                        onClick={() => handleStatusChange(order.id, "cancelado")}
+                        onClick={() =>
+                          handleStatusChange(order.id, "cancelado")
+                        }
                         disabled={updatingIds.has(order.id)}
                       >
                         Cancelar
@@ -732,7 +780,10 @@ export default function Domicilios() {
           )}
         </TabsContent>
 
-        <TabsContent value="historial" className="outline-none animate-in fade-in duration-300">
+        <TabsContent
+          value="historial"
+          className="outline-none animate-in fade-in duration-300"
+        >
           <div className="space-y-6">
             {completedDeliveries.length === 0 ? (
               <div className="py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
@@ -745,28 +796,31 @@ export default function Domicilios() {
               </div>
             ) : (
               <div className="grid gap-6">
-              {completedDeliveries.map((order, idx) => {
+                {completedDeliveries.map((order, idx) => {
                   const isEntregado = order.status === "entregado";
                   const hora = new Intl.DateTimeFormat("es-CO", {
                     hour: "2-digit",
                     minute: "2-digit",
                     hour12: true,
                   }).format(
-                    order.created_at
-                      ? new Date(order.created_at)
-                      : new Date(),
+                    order.created_at ? new Date(order.created_at) : new Date(),
                   );
 
                   // Invoice status check
                   const successInvoice = order.siigo_invoices?.find(
                     (inv) => inv.status === "success",
                   );
-                  const hasInvoice = !!successInvoice || !!order.siigo_invoice_id;
-                  const invoiceNumber = successInvoice?.siigo_invoice_number || order.siigo_invoice_number || "Facturado";
+                  const hasInvoice =
+                    !!successInvoice || !!order.siigo_invoice_id;
+                  const invoiceNumber =
+                    successInvoice?.siigo_invoice_number ||
+                    order.siigo_invoice_number ||
+                    "Facturado";
 
                   // Reconstruct breakdown from payment for eligibility check
                   const lastPayment = order.payments?.[0];
-                  const paymentMethod = lastPayment?.method ?? order.payment_method;
+                  const paymentMethod =
+                    lastPayment?.method ?? order.payment_method;
                   const reconstructedBreakdown = lastPayment
                     ? {
                         efectivo: lastPayment.amount_efectivo ?? 0,
@@ -774,12 +828,16 @@ export default function Domicilios() {
                         nequi: lastPayment.amount_nequi ?? 0,
                       }
                     : undefined;
-                  const isFacturacionAllowed = user?.role === "admin" || user?.role === "caja";
+                  const isFacturacionAllowed =
+                    user?.role === "admin" || user?.role === "caja";
                   const canGenerateInvoice =
                     order.status !== "cancelado" &&
                     isFacturacionAllowed &&
                     !hasInvoice &&
-                    shouldGenerateInvoice(paymentMethod ?? "efectivo", reconstructedBreakdown);
+                    shouldGenerateInvoice(
+                      paymentMethod ?? "efectivo",
+                      reconstructedBreakdown,
+                    );
 
                   return (
                     <div
@@ -812,7 +870,9 @@ export default function Domicilios() {
                               {hora}
                             </div>
                             <div className="text-[10px] font-black text-purple-600 uppercase tracking-widest bg-purple-500/5 px-3 py-1.5 rounded-full">
-                              {order.profiles?.name ? `Mesero: ${order.profiles.name}` : "Kiosko"}
+                              {order.profiles?.name
+                                ? `Mesero: ${order.profiles.name}`
+                                : "Kiosko"}
                             </div>
                             {order.delivery_name && (
                               <div className="flex items-center gap-1 text-[10px] font-black text-purple-600 uppercase tracking-widest bg-purple-500/5 px-3 py-1.5 rounded-full">
@@ -856,7 +916,7 @@ export default function Domicilios() {
                         {/* Generate Invoice button */}
                         {canGenerateInvoice && (
                           <Button
-                            className="rounded-2xl h-10 border-2 font-black text-[10px] uppercase tracking-widest px-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white transition-all active:scale-95 shadow-lg shadow-emerald-500/20 border-emerald-400/20"
+                            className="rounded-2xl h-10 border-2 font-black text-[10px] uppercase tracking-widest px-6 bg-linear-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white transition-all active:scale-95 shadow-lg shadow-emerald-500/20 border-emerald-400/20"
                             onClick={() =>
                               setSiigoOrder({
                                 order,
@@ -865,38 +925,45 @@ export default function Domicilios() {
                               })
                             }
                           >
-                            <Zap
-                              className="h-4 w-4 mr-2"
-                              strokeWidth={3}
-                            />
+                            <Zap className="h-4 w-4 mr-2" strokeWidth={3} />
                             Generar Factura
                           </Button>
                         )}
 
-                        {successInvoice && successInvoice.response_payload?.public_url && (
-                          <Button
-                            variant="outline"
-                            className="rounded-2xl h-10 border-2 border-emerald-500/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-emerald-50 text-emerald-600 transition-all active:scale-95 shadow-sm shrink-0"
-                            onClick={() => window.open(successInvoice.response_payload.public_url, '_blank')}
-                          >
-                            <FileText className="h-4 w-4 mr-2" strokeWidth={3} />
-                            PDF Siigo
-                          </Button>
-                        )}
+                        {successInvoice &&
+                          successInvoice.response_payload?.public_url && (
+                            <Button
+                              variant="outline"
+                              className="rounded-2xl h-10 border-2 border-emerald-500/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-emerald-50 text-emerald-600 transition-all active:scale-95 shadow-sm shrink-0"
+                              onClick={() =>
+                                window.open(
+                                  successInvoice.response_payload.public_url,
+                                  "_blank",
+                                )
+                              }
+                            >
+                              <FileText
+                                className="h-4 w-4 mr-2"
+                                strokeWidth={3}
+                              />
+                              PDF Siigo
+                            </Button>
+                          )}
 
-                        {isEntregado && (user?.role === "admin" || user?.role === "caja") && (
-                          <Button
-                            variant="outline"
-                            className="rounded-2xl h-10 border-2 border-accent/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-accent/5 transition-all active:scale-95 shadow-sm shrink-0"
-                            onClick={() => handleReprintCustomer(order)}
-                          >
-                            <RotateCcw
-                              className="h-4 w-4 mr-3"
-                              strokeWidth={3}
-                            />{" "}
-                            REIMPRIMIR FACTURA
-                          </Button>
-                        )}
+                        {isEntregado &&
+                          (user?.role === "admin" || user?.role === "caja") && (
+                            <Button
+                              variant="outline"
+                              className="rounded-2xl h-10 border-2 border-accent/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-accent/5 transition-all active:scale-95 shadow-sm shrink-0"
+                              onClick={() => handleReprintCustomer(order)}
+                            >
+                              <RotateCcw
+                                className="h-4 w-4 mr-3"
+                                strokeWidth={3}
+                              />{" "}
+                              REIMPRIMIR FACTURA
+                            </Button>
+                          )}
                       </div>
                     </div>
                   );
