@@ -157,8 +157,7 @@ export default function Caja() {
         const activeOrder = payingOrder;
 
         // Abrir modal de facturación electrónica Siigo si aplica
-        const isFacturacionAllowed = user?.role === "admin" || user?.role === "caja";
-        const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true" && isFacturacionAllowed;
+        const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true";
         if (siigoEnabled && shouldGenerateInvoice(method, breakdown)) {
           setSiigoOrder({ order: activeOrder, method, breakdown });
         }
@@ -618,8 +617,7 @@ export default function Caja() {
                         nequi: lastPayment.amount_nequi ?? 0,
                       }
                       : undefined;
-                    const isFacturacionAllowed = user?.role === "admin" || user?.role === "caja";
-                    const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true" && isFacturacionAllowed;
+                    const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true";
                     const canGenerateInvoice =
                       siigoEnabled &&
                       !hasInvoice &&
