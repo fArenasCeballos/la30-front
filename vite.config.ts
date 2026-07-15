@@ -15,12 +15,18 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.svg", "logo.svg", "icons.svg", "apple-touch-icon.png"],
+      includeAssets: [
+        "favicon.svg",
+        "logo.svg",
+        "icons.svg",
+        "apple-touch-icon.png",
+      ],
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/render\/image\/.*/i,
+            urlPattern:
+              /^https:\/\/.*\.supabase\.co\/storage\/v1\/render\/image\/.*/i,
             handler: "CacheFirst",
             options: {
               cacheName: "supabase-images",
@@ -85,7 +91,11 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("react") || id.includes("react-dom") || id.includes("react-router")) {
+            if (
+              id.includes("react") ||
+              id.includes("react-dom") ||
+              id.includes("react-router")
+            ) {
               return "vendor-react";
             }
             if (id.includes("@radix-ui")) {

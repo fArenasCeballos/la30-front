@@ -1,0 +1,351 @@
+═══════════════════════════════════════════════════════════════════
+  SIIGO PRODUCT SYNC LOG
+  Started: 2026-05-22T03:15:54.343Z
+═══════════════════════════════════════════════════════════════════
+
+[10:15:54 p. m.] 🔐 Autenticando con Siigo API...
+[10:15:55 p. m.] ✅ Autenticación exitosa
+[10:15:55 p. m.] 📦 Obteniendo productos de Supabase...
+[10:15:56 p. m.]    Total productos en Supabase: 107
+[10:15:56 p. m.]    Códigos únicos a verificar: 98
+[10:15:56 p. m.] 
+[10:15:56 p. m.] 🔍 Verificando qué códigos ya existen en Siigo...
+[10:15:56 p. m.]    101 → Ya existe en Siigo como "Sencillo" ✓ (es nuestro)
+[10:15:56 p. m.]    102 → OCUPADO por "PUNTA D EANCA UNIDAD" ✗ → necesita nuevo código
+[10:15:57 p. m.]    103 → OCUPADO por "HOJAS DE NARANJO ATADO" ✗ → necesita nuevo código
+[10:15:57 p. m.]    104 → OCUPADO por "CADERA" ✗ → necesita nuevo código
+[10:15:58 p. m.]    105 → OCUPADO por "CORAZON" ✗ → necesita nuevo código
+[10:15:58 p. m.]    107 → OCUPADO por "DETERGENTE TIGRE X3000G" ✗ → necesita nuevo código
+[10:15:59 p. m.]    108 → OCUPADO por "BOFE" ✗ → necesita nuevo código
+[10:15:59 p. m.]    109 → OCUPADO por "LIMON  MANDARINO X KG" ✗ → necesita nuevo código
+[10:16:00 p. m.]    110 → OCUPADO por "DORALITAS BBQ" ✗ → necesita nuevo código
+[10:16:00 p. m.]    125 → OCUPADO por "chunchulla" ✗ → necesita nuevo código
+[10:16:01 p. m.]    129 → Ya existe en Siigo como "Hamburguesa Sencilla" ✓ (es nuestro)
+[10:16:01 p. m.]    136 → Ya existe en Siigo como "Hamburguesa Pollo" ✓ (es nuestro)
+[10:16:02 p. m.]    139 → Ya existe en Siigo como "Salchipapa Mediana" ✓ (es nuestro)
+[10:16:02 p. m.]    147 → Ya existe en Siigo como "H2o" ✓ (es nuestro)
+[10:16:03 p. m.]    154 → Ya existe en Siigo como "Gatorade" ✓ (es nuestro)
+[10:16:03 p. m.]    162 → OCUPADO por "AJI X 1000GR X UND" ✗ → necesita nuevo código
+[10:16:04 p. m.]    167 → OCUPADO por "PITAYA X KG" ✗ → necesita nuevo código
+[10:16:04 p. m.]    168 → OCUPADO por "PIÑA ORO MIEL PROMO PELADA" ✗ → necesita nuevo código
+[10:16:05 p. m.]    169 → OCUPADO por "CABLE COAXIAL RG6" ✗ → necesita nuevo código
+[10:16:06 p. m.]    170 → OCUPADO por "CABLE COAXIAL RG6" ✗ → necesita nuevo código
+[10:16:06 p. m.]    171 → OCUPADO por "CABLE COAXIAL RG6" ✗ → necesita nuevo código
+[10:16:07 p. m.]    178 → Ya existe en Siigo como "Hit Lulo" ✓ (es nuestro)
+[10:16:08 p. m.]    179 → OCUPADO por "PULPA MARACUYA" ✗ → necesita nuevo código
+[10:16:08 p. m.]    180 → Ya existe en Siigo como "Postobón Uva" ✓ (es nuestro)
+[10:16:09 p. m.]    181 → OCUPADO por "PULPA PULPI FRESH 125 GR" ✗ → necesita nuevo código
+[10:16:09 p. m.]    182 → OCUPADO por "PULPA PULPI FRESH 500 GR" ✗ → necesita nuevo código
+[10:16:10 p. m.]    183 → OCUPADO por "PULPAS FRUTAS BOLSA UND" ✗ → necesita nuevo código
+[10:16:10 p. m.]    185 → OCUPADO por "RAIZ CHINA GRANDE" ✗ → necesita nuevo código
+[10:16:11 p. m.]    186 → OCUPADO por "REMOLACHA X KL" ✗ → necesita nuevo código
+[10:16:11 p. m.]    187 → OCUPADO por "REPOLLO BLANCO 3x2000" ✗ → necesita nuevo código
+[10:16:12 p. m.]    191 → Ya existe en Siigo como "Queso Mozarella" ✓ (es nuestro)
+[10:16:12 p. m.]    192 → Ya existe en Siigo como "Queso Campesino" ✓ (es nuestro)
+[10:16:13 p. m.]    193 → Ya existe en Siigo como "Carne Hamburguesa" ✓ (es nuestro)
+[10:16:13 p. m.]    197 → Ya existe en Siigo como "Porción de tocineta" ✓ (es nuestro)
+[10:16:14 p. m.]    200 → OCUPADO por "Alimentos Restaurante" ✗ → necesita nuevo código
+[10:16:14 p. m.]    204 → OCUPADO por "Productos" ✗ → necesita nuevo código
+[10:16:15 p. m.]    211 → Ya existe en Siigo como "Perra" ✓ (es nuestro)
+[10:16:15 p. m.]    231 → Ya existe en Siigo como "Perro con americana" ✓ (es nuestro)
+[10:16:16 p. m.]    232 → Ya existe en Siigo como "Instagram Americana" ✓ (es nuestro)
+[10:16:16 p. m.]    233 → Ya existe en Siigo como "Chiquito con americana" ✓ (es nuestro)
+[10:16:17 p. m.]    234 → Ya existe en Siigo como "Instagram Ranchera" ✓ (es nuestro)
+[10:16:17 p. m.]    235 → Ya existe en Siigo como "Perro con ranchera" ✓ (es nuestro)
+[10:16:18 p. m.]    236 → Ya existe en Siigo como "Chiquito con ranchera" ✓ (es nuestro)
+[10:16:18 p. m.]    237 → Ya existe en Siigo como "Perro vegetariano" ✓ (es nuestro)
+[10:16:19 p. m.]    238 → Ya existe en Siigo como "Hamburguesa vegetariana" ✓ (es nuestro)
+[10:16:19 p. m.]    239 → Ya existe en Siigo como "Cachorro" ✓ (es nuestro)
+[10:16:20 p. m.]    240 → Ya existe en Siigo como "Coctel de huevitos" ✓ (es nuestro)
+[10:16:20 p. m.]    241 → Ya existe en Siigo como "Salchihuevo" ✓ (es nuestro)
+[10:16:21 p. m.]    242 → Ya existe en Siigo como "Cachorro con americana" ✓ (es nuestro)
+[10:16:21 p. m.]    243 → Ya existe en Siigo como "Cachorro con ranchera" ✓ (es nuestro)
+[10:16:22 p. m.]    244 → Ya existe en Siigo como "Salchihuevo con americana" ✓ (es nuestro)
+[10:16:22 p. m.]    247 → Ya existe en Siigo como "Chuzo Res" ✓ (es nuestro)
+[10:16:23 p. m.]    248 → Ya existe en Siigo como "Chuzo Cerdo" ✓ (es nuestro)
+[10:16:23 p. m.]    249 → Ya existe en Siigo como "Chuzo Pollo" ✓ (es nuestro)
+[10:16:24 p. m.]    250 → Ya existe en Siigo como "Hamburguesa Doble" ✓ (es nuestro)
+[10:16:24 p. m.]    251 → Ya existe en Siigo como "Hamburguesa Triple" ✓ (es nuestro)
+[10:16:25 p. m.]    252 → Ya existe en Siigo como "Hamburguesa Mixta" ✓ (es nuestro)
+[10:16:25 p. m.]    253 → Ya existe en Siigo como "Hamburguesa de la casa" ✓ (es nuestro)
+[10:16:26 p. m.]    254 → Ya existe en Siigo como "Hamburguesa Ranchera" ✓ (es nuestro)
+[10:16:26 p. m.]    255 → Ya existe en Siigo como "Hamburguesa Americana" ✓ (es nuestro)
+[10:16:27 p. m.]    256 → Ya existe en Siigo como "Arepa Burger" ✓ (es nuestro)
+[10:16:27 p. m.]    257 → Ya existe en Siigo como "Salchipapa Pequeña" ✓ (es nuestro)
+[10:16:30 p. m.]    258 → Ya existe en Siigo como "Salchipapa Grande" ✓ (es nuestro)
+[10:16:31 p. m.]    260 → Ya existe en Siigo como "Pavo Sencilla" ✓ (es nuestro)
+[10:16:31 p. m.]    265 → Ya existe en Siigo como "Pavo Doble" ✓ (es nuestro)
+[10:16:32 p. m.]    266 → Ya existe en Siigo como "Agua con gas" ✓ (es nuestro)
+[10:16:32 p. m.]    267 → Ya existe en Siigo como "Refajo andina" ✓ (es nuestro)
+[10:16:33 p. m.]    268 → Ya existe en Siigo como "Andina" ✓ (es nuestro)
+[10:16:33 p. m.]    273 → Ya existe en Siigo como "Pepsi cero" ✓ (es nuestro)
+[10:16:34 p. m.]    277 → Ya existe en Siigo como "Agua sin gas" ✓ (es nuestro)
+[10:16:34 p. m.]    278 → Ya existe en Siigo como "heineken" ✓ (es nuestro)
+[10:16:35 p. m.]    279 → Ya existe en Siigo como "Bretaña" ✓ (es nuestro)
+[10:16:35 p. m.]    282 → Ya existe en Siigo como "Seven Up" ✓ (es nuestro)
+[10:16:36 p. m.]    283 → Ya existe en Siigo como "Canadá Dry" ✓ (es nuestro)
+[10:16:36 p. m.]    284 → Ya existe en Siigo como "Mr. Tea" ✓ (es nuestro)
+[10:16:37 p. m.]    285 → Ya existe en Siigo como "Postobón manzana" ✓ (es nuestro)
+[10:16:37 p. m.]    286 → Ya existe en Siigo como "Postobón Pepsi" ✓ (es nuestro)
+[10:16:38 p. m.]    287 → Ya existe en Siigo como "Postobón Colombiana" ✓ (es nuestro)
+[10:16:39 p. m.]    289 → Ya existe en Siigo como "Postobón Naranja" ✓ (es nuestro)
+[10:16:39 p. m.]    290 → Ya existe en Siigo como "Postobón uva" ✓ (es nuestro)
+[10:16:40 p. m.]    291 → Ya existe en Siigo como "Hit Naranja Piña" ✓ (es nuestro)
+[10:16:40 p. m.]    292 → Ya existe en Siigo como "Hit Mora" ✓ (es nuestro)
+[10:16:41 p. m.]    294 → Ya existe en Siigo como "Hit Tropical" ✓ (es nuestro)
+[10:16:41 p. m.]    295 → Ya existe en Siigo como "Hit Lulo" ✓ (es nuestro)
+[10:16:42 p. m.]    296 → Ya existe en Siigo como "Ilimitada Dispensador" ✓ (es nuestro)
+[10:16:42 p. m.]    297 → Ya existe en Siigo como "Tea Hatsu" ✓ (es nuestro)
+[10:16:43 p. m.]    327 → Ya existe en Siigo como "Papitas" ✓ (es nuestro)
+[10:16:44 p. m.]    342 → Ya existe en Siigo como "Salchicha Ranchera" ✓ (es nuestro)
+[10:16:44 p. m.]    343 → Ya existe en Siigo como "Salchicha Vegetariana" ✓ (es nuestro)
+[10:16:45 p. m.]    344 → Ya existe en Siigo como "Filete de pollo" ✓ (es nuestro)
+[10:16:47 p. m.]    345 → Ya existe en Siigo como "Maicitos" ✓ (es nuestro)
+[10:16:48 p. m.]    346 → Ya existe en Siigo como "Arepa" ✓ (es nuestro)
+[10:16:48 p. m.]    347 → Ya existe en Siigo como "Carne Vegetariana" ✓ (es nuestro)
+[10:16:49 p. m.]    348 → Ya existe en Siigo como "Salchicha Zenu" ✓ (es nuestro)
+[10:16:49 p. m.]    349 → Ya existe en Siigo como "Salchicha Americana" ✓ (es nuestro)
+[10:16:50 p. m.]    356 → Ya existe en Siigo como "Desgranado Mixto" ✓ (es nuestro)
+[10:16:50 p. m.]    357 → Ya existe en Siigo como "Desgranado Pollo" ✓ (es nuestro)
+[10:16:51 p. m.]    358 → Ya existe en Siigo como "Desgranado Res" ✓ (es nuestro)
+[10:16:51 p. m.] 
+[10:16:51 p. m.] 📊 Resumen de verificación:
+[10:16:51 p. m.]    Ya existen en Siigo (nuestros): 74
+[10:16:51 p. m.]    Códigos libres para crear:      0
+[10:16:51 p. m.]    Códigos ocupados (necesitan nuevo): 24
+[10:16:51 p. m.] 
+[10:17:52 p. m.]    Reasignando 102 → 359 para "Doble "
+[10:17:56 p. m.]    Reasignando 103 → 360 para "Triple"
+[10:17:59 p. m.]    Reasignando 104 → 361 para "Cuádruple"
+[10:17:59 p. m.]    Reasignando 105 → 362 para "Quíntuple"
+[10:18:00 p. m.]    Reasignando 107 → 363 para "Instagram "
+[10:18:00 p. m.]    Reasignando 108 → 364 para "Choriperro "
+[10:18:01 p. m.]    Reasignando 109 → 365 para "El Chiquito"
+[10:18:01 p. m.]    Reasignando 110 → 366 para "Ranchero"
+[10:18:02 p. m.]    Reasignando 125 → 367 para "Salchihuevo con ranchera"
+[10:18:02 p. m.]    Reasignando 162 → 368 para "Hit Mango"
+[10:18:03 p. m.]    Reasignando 167 → 369 para "Soda Hatsu"
+[10:18:03 p. m.]    Reasignando 168 → 370 para "Hit Naranja piña "
+[10:18:04 p. m.]    Reasignando 169 → 371 para "Hit Mora"
+[10:18:04 p. m.]    Reasignando 170 → 372 para "Hit Tropical"
+[10:18:05 p. m.]    Reasignando 171 → 373 para "Hit Mango"
+[10:18:05 p. m.]    Reasignando 179 → 374 para "Postobón Pepsi "
+[10:18:06 p. m.]    Reasignando 181 → 375 para "Postobón Naranja "
+[10:18:06 p. m.]    Reasignando 182 → 376 para "Postobón Manzana "
+[10:18:07 p. m.]    Reasignando 183 → 377 para "Postobón Colombiana"
+[10:18:07 p. m.]    Reasignando 185 → 378 para "Papitas gaseosa "
+[10:18:10 p. m.]    Reasignando 186 → 379 para "Porción de huevos"
+[10:18:10 p. m.]    Reasignando 187 → 380 para "Unidad huevo"
+[10:18:11 p. m.]    Reasignando 200 → 381 para "Chorizo Santa Rosano"
+[10:18:11 p. m.]    Reasignando 204 → 382 para "Desgranado Cerdo"
+[10:18:12 p. m.] 
+[10:18:12 p. m.] 🚀 Creando productos en Siigo...
+[10:18:12 p. m.] 
+───────────────────────────────────────────────────────────────
+  Producto 1/24: Doble 
+  Código anterior en Supabase: 102
+  Código nuevo asignado:       359 ← CAMBIÓ
+  ID Siigo:                    37dd0b68-1e74-4bf1-a34c-c9ba79a3051d
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 2/24: Triple
+  Código anterior en Supabase: 103
+  Código nuevo asignado:       360 ← CAMBIÓ
+  ID Siigo:                    352117a5-01b4-4d99-b455-8984d5a78b9f
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 3/24: Cuádruple
+  Código anterior en Supabase: 104
+  Código nuevo asignado:       361 ← CAMBIÓ
+  ID Siigo:                    232ff6ca-534e-4af3-b65c-7adda8f3583d
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 4/24: Quíntuple
+  Código anterior en Supabase: 105
+  Código nuevo asignado:       362 ← CAMBIÓ
+  ID Siigo:                    059c02bd-3970-452d-8b62-4db7950f7aab
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 5/24: Instagram 
+  Código anterior en Supabase: 107
+  Código nuevo asignado:       363 ← CAMBIÓ
+  ID Siigo:                    8b168491-e48d-4d75-b038-a81205692bf2
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 6/24: Choriperro 
+  Código anterior en Supabase: 108
+  Código nuevo asignado:       364 ← CAMBIÓ
+  ID Siigo:                    37b19fc5-e21d-4481-821f-4bba1081ae14
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 7/24: El Chiquito
+  Código anterior en Supabase: 109
+  Código nuevo asignado:       365 ← CAMBIÓ
+  ID Siigo:                    4d19b620-8e81-46a0-b0a9-54523e3fd71d
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 8/24: Ranchero
+  Código anterior en Supabase: 110
+  Código nuevo asignado:       366 ← CAMBIÓ
+  ID Siigo:                    7c5da9af-f207-47da-8551-14a6b7a263f2
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 9/24: Salchihuevo con ranchera
+  Código anterior en Supabase: 125
+  Código nuevo asignado:       367 ← CAMBIÓ
+  ID Siigo:                    54cc0861-ef77-42f0-83d9-4826295cfa3c
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 10/24: Hit Mango
+  Código anterior en Supabase: 162
+  Código nuevo asignado:       368 ← CAMBIÓ
+  ID Siigo:                    d02ade90-5444-43d4-b978-c9794239f649
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 11/24: Soda Hatsu
+  Código anterior en Supabase: 167
+  Código nuevo asignado:       369 ← CAMBIÓ
+  ID Siigo:                    3b569834-2175-46de-a0f2-571eccc4f9bd
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 12/24: Hit Naranja piña 
+  Código anterior en Supabase: 168
+  Código nuevo asignado:       370 ← CAMBIÓ
+  ID Siigo:                    1a12978a-76d2-4f0c-a216-1328ce3e4fb3
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 13/24: Hit Mora
+  Código anterior en Supabase: 169
+  Código nuevo asignado:       371 ← CAMBIÓ
+  ID Siigo:                    86eb53f0-edc5-4ad6-9c2d-ed842a6b3165
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 14/24: Hit Tropical
+  Código anterior en Supabase: 170
+  Código nuevo asignado:       372 ← CAMBIÓ
+  ID Siigo:                    eb8efd59-4467-4ff9-b002-58381c31db7d
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 15/24: Hit Mango
+  Código anterior en Supabase: 171
+  Código nuevo asignado:       373 ← CAMBIÓ
+  ID Siigo:                    fd81cb6d-9b8a-4807-9c69-31ce9a9d13c0
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 16/24: Postobón Pepsi 
+  Código anterior en Supabase: 179
+  Código nuevo asignado:       374 ← CAMBIÓ
+  ID Siigo:                    e87ca284-7344-4f7f-906c-3b31394ca1a1
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 17/24: Postobón Naranja 
+  Código anterior en Supabase: 181
+  Código nuevo asignado:       375 ← CAMBIÓ
+  ID Siigo:                    b26a0d4d-d1b3-4c02-b123-49c7c710bb9d
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 18/24: Postobón Manzana 
+  Código anterior en Supabase: 182
+  Código nuevo asignado:       376 ← CAMBIÓ
+  ID Siigo:                    8f18b84f-f268-4e6b-b957-4e3b41b0913f
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 19/24: Postobón Colombiana
+  Código anterior en Supabase: 183
+  Código nuevo asignado:       377 ← CAMBIÓ
+  ID Siigo:                    2f521126-1f25-41c3-9e59-628687718067
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 20/24: Papitas gaseosa 
+  Código anterior en Supabase: 185
+  Código nuevo asignado:       378 ← CAMBIÓ
+  ID Siigo:                    b8169212-01e0-4da4-9403-92cf24b9bbf3
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 21/24: Porción de huevos
+  Código anterior en Supabase: 186
+  Código nuevo asignado:       379 ← CAMBIÓ
+  ID Siigo:                    bf66e166-bcf2-4dd3-a497-02eb5e865dba
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 22/24: Unidad huevo
+  Código anterior en Supabase: 187
+  Código nuevo asignado:       380 ← CAMBIÓ
+  ID Siigo:                    5f94dc7b-8ae9-45a2-9918-af35cef517b8
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 23/24: Chorizo Santa Rosano
+  Código anterior en Supabase: 200
+  Código nuevo asignado:       381 ← CAMBIÓ
+  ID Siigo:                    f8d07b27-1843-4ed5-8381-a762616bad00
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────
+  Producto 24/24: Desgranado Cerdo
+  Código anterior en Supabase: 204
+  Código nuevo asignado:       382 ← CAMBIÓ
+  ID Siigo:                    2a8f1db7-54a3-4e2e-a668-bd562841c68e
+  Estado:                      ✅ CREADO
+───────────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════════════
+  RESUMEN FINAL
+═══════════════════════════════════════════════════════════════════
+  Total productos en Supabase:     107
+  Ya existían en Siigo:            74
+  Creados exitosamente:            24
+  Errores:                         0
+  Códigos reasignados:             24
+
+  Códigos reasignados (detalle):
+    102 → 359 (Doble ) [ocupado por: PUNTA D EANCA UNIDAD]
+    103 → 360 (Triple) [ocupado por: HOJAS DE NARANJO ATADO]
+    104 → 361 (Cuádruple) [ocupado por: CADERA]
+    105 → 362 (Quíntuple) [ocupado por: CORAZON]
+    107 → 363 (Instagram ) [ocupado por: DETERGENTE TIGRE X3000G]
+    108 → 364 (Choriperro ) [ocupado por: BOFE]
+    109 → 365 (El Chiquito) [ocupado por: LIMON  MANDARINO X KG]
+    110 → 366 (Ranchero) [ocupado por: DORALITAS BBQ]
+    125 → 367 (Salchihuevo con ranchera) [ocupado por: chunchulla]
+    162 → 368 (Hit Mango) [ocupado por: AJI X 1000GR X UND]
+    167 → 369 (Soda Hatsu) [ocupado por: PITAYA X KG]
+    168 → 370 (Hit Naranja piña ) [ocupado por: PIÑA ORO MIEL PROMO PELADA]
+    169 → 371 (Hit Mora) [ocupado por: CABLE COAXIAL RG6]
+    170 → 372 (Hit Tropical) [ocupado por: CABLE COAXIAL RG6]
+    171 → 373 (Hit Mango) [ocupado por: CABLE COAXIAL RG6]
+    179 → 374 (Postobón Pepsi ) [ocupado por: PULPA MARACUYA]
+    181 → 375 (Postobón Naranja ) [ocupado por: PULPA PULPI FRESH 125 GR]
+    182 → 376 (Postobón Manzana ) [ocupado por: PULPA PULPI FRESH 500 GR]
+    183 → 377 (Postobón Colombiana) [ocupado por: PULPAS FRUTAS BOLSA UND]
+    185 → 378 (Papitas gaseosa ) [ocupado por: RAIZ CHINA GRANDE]
+    186 → 379 (Porción de huevos) [ocupado por: REMOLACHA X KL]
+    187 → 380 (Unidad huevo) [ocupado por: REPOLLO BLANCO 3x2000]
+    200 → 381 (Chorizo Santa Rosano) [ocupado por: Alimentos Restaurante]
+    204 → 382 (Desgranado Cerdo) [ocupado por: Productos]
+═══════════════════════════════════════════════════════════════════
+  Completado: 2026-05-22T03:18:39.434Z
+═══════════════════════════════════════════════════════════════════
+[10:18:39 p. m.] 
+📄 Log guardado en: /Users/devjr1/Documents/Yo/la30-front/scripts/siigo-sync-log.txt

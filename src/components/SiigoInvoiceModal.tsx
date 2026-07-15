@@ -191,45 +191,46 @@ export function SiigoInvoiceModal({
     async (customer?: SiigoCustomer) => {
       setIsProcessing(true);
       setResults([]);
-      const allResults: InvoiceResultEntry[] = [];
+      
+      const runProcess = async () => {
+        const allResults: InvoiceResultEntry[] = [];
+        for (let i = 0; i < invoiceConfigs.length; i++) {
+          const config = invoiceConfigs[i];
+          const result = await generateSiigoInvoice({
+            orderId: order.id,
+            method: config.method,
+            items: order.order_items ?? [],
+            total: order.total,
+            locator: order.locator ?? "",
+            customer,
+            invoiceTotal: config.amount,
+            overrideMethod: config.method,
+            deliveryFee: order.delivery_fee ?? 0,
+          });
 
-      for (let i = 0; i < invoiceConfigs.length; i++) {
-        const config = invoiceConfigs[i];
-        const label =
-          invoiceConfigs.length > 1
-            ? `Generando factura ${i + 1} de ${invoiceConfigs.length}: ${config.method === "tarjeta" ? "Tarjeta" : "Transferencia"}...`
-            : "Generando factura electrónica...";
-        setProgressLabel(label);
+          // Check for Rate Limit (429)
+          if (!result.success && result.error?.includes("Rate limit")) {
+            const match = result.error.match(/(\d+)/);
+            const seconds = match ? parseInt(match[0]) : 5;
+            
+            // Show error with countdown and retry
+            toast.warning(`Límite excedido. Reintentando en ${seconds}s...`);
+            await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+            return runProcess(); // Recursive retry
+          }
 
-        const result = await generateSiigoInvoice({
-          orderId: order.id,
-          method: config.method,
-          items: order.order_items ?? [],
-          total: order.total,
-          locator: order.locator ?? "",
-          customer,
-          invoiceTotal: config.amount,
-          overrideMethod: config.method,
-          deliveryFee: order.delivery_fee ?? 0,
-        });
+          allResults.push({ method: config.method, amount: config.amount, result });
+          setResults([...allResults]);
+        }
 
-        allResults.push({
-          method: config.method,
-          amount: config.amount,
-          result,
-        });
-        setResults([...allResults]);
-      }
+        if (customer && allResults.some((r) => r.result.success)) {
+          saveSiigoCustomer(customer).catch(() => {});
+        }
+        setIsProcessing(false);
+        setStep("result");
+      };
 
-      // Save customer for future autocomplete if manual and at least one succeeded
-      if (customer && allResults.some((r) => r.result.success)) {
-        saveSiigoCustomer(customer).catch(() => {
-          /* silent */
-        });
-      }
-
-      setIsProcessing(false);
-      setStep("result");
+      runProcess();
     },
     [invoiceConfigs, order],
   );
@@ -468,44 +469,44 @@ export function SiigoInvoiceModal({
             </div>
 
             {/* Name fields */}
-            {personType === "Person" ? (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase tracking-widest">
-                    Nombres *
-                  </Label>
-                  <Input
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="Juan"
-                    className="rounded-xl h-9 text-xs font-bold"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase tracking-widest">
-                    Apellidos
-                  </Label>
-                  <Input
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Pérez"
-                    className="rounded-xl h-9 text-xs font-bold"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase tracking-widest">
-                  Razón Social *
-                </Label>
-                <Input
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="Empresa S.A.S."
-                  className="rounded-xl h-9 text-xs font-bold"
-                />
-              </div>
-            )}
+                {personType === "Person" ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-black uppercase tracking-widest">
+                        Nombres *
+                      </Label>
+                      <Input
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder="Juan"
+                        className="rounded-xl h-9 text-xs font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-black uppercase tracking-widest">
+                        Apellidos
+                      </Label>
+                      <Input
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Pérez"
+                        className="rounded-xl h-9 text-xs font-bold"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase tracking-widest">
+                      Razón Social *
+                    </Label>
+                    <Input
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Empresa S.A.S."
+                      className="rounded-xl h-9 text-xs font-bold"
+                    />
+                  </div>
+                )}
 
             {/* Contact info */}
             <div className="grid grid-cols-2 gap-3">
@@ -643,15 +644,31 @@ export function SiigoInvoiceModal({
                       {r.result.success ? "Factura Generada" : "Error"}
                     </p>
                     {r.result.success ? (
-                      <p className="text-xs font-bold text-emerald-700">
-                        N° {r.result.invoiceNumber} ·{" "}
-                        <span className="capitalize">{r.method}</span> ·{" "}
-                        {formatPrice(r.amount)}
-                      </p>
+                      <div className="text-xs font-bold text-emerald-700 space-y-1">
+                        <p>N° {r.result.invoiceNumber} · <span className="capitalize">{r.method}</span> · {formatPrice(r.amount)}</p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="h-auto p-2 text-[10px] font-black uppercase"
+                            onClick={() => window.open(r.result.fullResponse?.public_url, '_blank')}
+                          >
+                            Imprimir PDF
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
-                      <p className="text-xs font-bold text-red-700 truncate">
-                        {r.result.error}
-                      </p>
+                      <div className="text-xs font-bold text-red-700">
+                        <p className="truncate">{r.result.error}</p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-2 w-full text-xs font-black uppercase"
+                          onClick={() => processInvoices()}
+                        >
+                          Reintentar Facturación
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>

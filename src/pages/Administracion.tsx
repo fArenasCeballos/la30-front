@@ -1,3 +1,4 @@
+import { SiigoProductsModal } from "@/components/SiigoProductsModal";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Package,
@@ -110,6 +111,7 @@ export default function Administracion() {
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto max-w-full py-1 premium-scrollbar">
+          <SiigoProductsModal />
           <button
             onClick={() => setSearchParams({})}
             className={cn(

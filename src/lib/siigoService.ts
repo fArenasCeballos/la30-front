@@ -77,6 +77,7 @@ export interface SiigoInvoiceResult {
   success: boolean;
   invoiceNumber?: string;
   invoiceId?: string;
+  fullResponse?: any;
   error?: string;
 }
 
@@ -401,8 +402,9 @@ export async function generateSiigoInvoice(
 
     return {
       success: true,
-      invoiceNumber: data.invoiceNumber,
-      invoiceId: data.invoiceId,
+      invoiceNumber: data.siigoDetail?.name || data.name,
+      invoiceId: data.siigoDetail?.id || data.id,
+      fullResponse: data.siigoDetail || data,
     };
   } catch (err) {
     console.error("[Siigo] Unexpected error:", err);

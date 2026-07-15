@@ -7,17 +7,22 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SIIGO_AUTH_URL = "https://api.siigo.com/auth";
 const SIIGO_API_URL = "https://api.siigo.com/v1";
-const PARTNER_ID = "PosPyH";
+const PARTNER_ID = "PosPyHCM";
 
 // Sandbox defaults — these IDs come from the sandbox account
 // In production, these should be fetched dynamically or configured per-store
 const DEFAULTS = {
-  documentTypeId: 2372, // "documento de ingreso" (sandbox FV)
-  sellerId: 906, // First active seller in sandbox
-  paymentTypeEffective: 8147, // "Efectivo"
-  paymentTypeTarjeta: 8003, // "Contado" (for card payments)
-  paymentTypeNequi: 8026, // "Nequi"
-  paymentTypeTransfer: 10883, // "Trasferencia"
+  documentTypeId: Deno.env.get("SIIGO_DOCUMENT_TYPE_ID")
+    ? Number(Deno.env.get("SIIGO_DOCUMENT_TYPE_ID"))
+    : 2372, // "documento de ingreso" (sandbox FV)
+  sellerId: Deno.env.get("SIIGO_SELLER_ID")
+    ? Number(Deno.env.get("SIIGO_SELLER_ID"))
+    : 15, // First active seller in sandbox
+  paymentTypeEffective: 118, // "CONTADO"
+  paymentTypeTarjetaCredito: 121, // "Tarjeta Crédito"
+  paymentTypeTarjetaDebito: 120, // "Tarjeta Débito"
+  paymentTypeNequi: 7282, // "NEQUI"
+  paymentTypeTransfer: 7283, // "DAVIPLATA"
   genericCustomer: {
     person_type: "Person",
     id_type: "13", // CC - Cédula de Ciudadanía
@@ -78,27 +83,19 @@ async function getSiigoToken(): Promise<string> {
 function mapPaymentType(method: string): number {
   switch (method) {
     case "tarjeta_credito":
-      return Deno.env.get("SIIGO_PAYMENT_TARJETA_CREDITO")
-        ? Number(Deno.env.get("SIIGO_PAYMENT_TARJETA_CREDITO"))
-        : 11070; // "Tarjeta Credito MMA"
+      return DEFAULTS.paymentTypeTarjetaCredito;
     case "tarjeta_debito":
-      return Deno.env.get("SIIGO_PAYMENT_TARJETA_DEBITO")
-        ? Number(Deno.env.get("SIIGO_PAYMENT_TARJETA_DEBITO"))
-        : 11069; // "Tarjeta Debito MMA"
+      return DEFAULTS.paymentTypeTarjetaDebito;
     case "nequi":
-      return Deno.env.get("SIIGO_PAYMENT_NEQUI")
-        ? Number(Deno.env.get("SIIGO_PAYMENT_NEQUI"))
-        : 8026; // "Nequi"
+      return DEFAULTS.paymentTypeNequi;
     case "daviplata":
-      return Deno.env.get("SIIGO_PAYMENT_DAVIPLATA")
-        ? Number(Deno.env.get("SIIGO_PAYMENT_DAVIPLATA"))
-        : 10883; // "Trasferencia"
+      return DEFAULTS.paymentTypeTransfer;
     case "tarjeta":
-      return DEFAULTS.paymentTypeTarjeta; // 8003 (Contado)
+      return DEFAULTS.paymentTypeTarjetaCredito; // fallback
     case "efectivo":
-      return DEFAULTS.paymentTypeEffective; // 8147
+      return DEFAULTS.paymentTypeEffective;
     default:
-      return DEFAULTS.paymentTypeTarjeta;
+      return DEFAULTS.paymentTypeTarjetaCredito;
   }
 }
 
@@ -127,11 +124,17 @@ interface InvoiceRequest {
 }
 
 function buildInvoicePayload(req: InvoiceRequest) {
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  // Use Colombia Time (UTC-5)
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+  }).format(new Date());
 
   // Build items — products are tax-exempt (Excluded)
   const items = req.items.map((item) => ({
-    code: item.products?.siigo_code || item.product_id?.substring(0, 20) || "POS-ITEM",
+    code:
+      item.products?.siigo_code ||
+      item.product_id?.substring(0, 20) ||
+      "POS-ITEM",
     description: item.products?.name || "Producto POS",
     quantity: item.quantity,
     price: item.unit_price,
@@ -149,7 +152,7 @@ function buildInvoicePayload(req: InvoiceRequest) {
       "nequi",
       "tarjeta_credito",
       "tarjeta_debito",
-      "daviplata"
+      "daviplata",
     ];
     for (const key of keys) {
       const val = req.breakdown[key];
@@ -263,7 +266,10 @@ Deno.serve(async (rawReq: Request) => {
         })
         .eq("id", body.orderId);
       if (updateError) {
-        console.error("Error updating order with Siigo invoice details:", updateError);
+        console.error(
+          "Error updating order with Siigo invoice details:",
+          updateError,
+        );
       }
     }
 
@@ -283,9 +289,7 @@ Deno.serve(async (rawReq: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        invoiceId: siigoData.id,
-        invoiceNumber: siigoData.name,
-        date: siigoData.date,
+        siigoDetail: siigoData,
       }),
       { status: 200, headers: corsHeaders },
     );
