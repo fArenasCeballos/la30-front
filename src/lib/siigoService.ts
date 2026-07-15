@@ -156,17 +156,7 @@ export function shouldGenerateInvoice(
     daviplata?: number;
   },
 ): boolean {
-  if (method === "tarjeta" || method === "nequi") return true;
-  if (method === "mixto" && breakdown) {
-    return (
-      (breakdown.tarjeta ?? 0) > 0 ||
-      (breakdown.nequi ?? 0) > 0 ||
-      (breakdown.tarjeta_credito ?? 0) > 0 ||
-      (breakdown.tarjeta_debito ?? 0) > 0 ||
-      (breakdown.daviplata ?? 0) > 0
-    );
-  }
-  return false;
+  return true; // Now all payment methods generate electronic invoices
 }
 
 /**
@@ -189,6 +179,9 @@ export function getInvoiceConfigs(
     daviplata?: number;
   },
 ): Array<{ method: string; amount: number }> {
+  if (method === "efectivo") {
+    return [{ method: "efectivo", amount: total }];
+  }
   if (method === "tarjeta") {
     if (breakdown?.tarjeta_credito) return [{ method: "tarjeta_credito", amount: total }];
     if (breakdown?.tarjeta_debito) return [{ method: "tarjeta_debito", amount: total }];
@@ -202,6 +195,9 @@ export function getInvoiceConfigs(
 
   if (method === "mixto" && breakdown) {
     const configs: Array<{ method: string; amount: number }> = [];
+    if ((breakdown.efectivo ?? 0) > 0) {
+      configs.push({ method: "efectivo", amount: breakdown.efectivo! });
+    }
     if ((breakdown.tarjeta_credito ?? 0) > 0) {
       configs.push({ method: "tarjeta_credito", amount: breakdown.tarjeta_credito! });
     }

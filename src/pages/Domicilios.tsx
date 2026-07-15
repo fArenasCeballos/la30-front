@@ -776,6 +776,7 @@ export default function Domicilios() {
                     : undefined;
                   const isFacturacionAllowed = user?.role === "admin" || user?.role === "caja";
                   const canGenerateInvoice =
+                    order.status !== "cancelado" &&
                     isFacturacionAllowed &&
                     !hasInvoice &&
                     shouldGenerateInvoice(paymentMethod ?? "efectivo", reconstructedBreakdown);

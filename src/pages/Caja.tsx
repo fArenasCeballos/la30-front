@@ -617,6 +617,7 @@ export default function Caja() {
                       }
                       : undefined;
                     const canGenerateInvoice =
+                      order.status !== "cancelado" &&
                       !hasInvoice &&
                       shouldGenerateInvoice(paymentMethod ?? "efectivo", reconstructedBreakdown);
 
