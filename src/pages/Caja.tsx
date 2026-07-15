@@ -694,6 +694,17 @@ export default function Caja() {
                             </Button>
                           )}
 
+                          {successInvoice && successInvoice.response_payload?.public_url && (
+                            <Button
+                              variant="outline"
+                              className="rounded-2xl h-10 border-2 border-emerald-500/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-emerald-50 text-emerald-600 transition-all active:scale-95 shadow-sm"
+                              onClick={() => window.open(successInvoice.response_payload.public_url, '_blank')}
+                            >
+                              <FileText className="h-4 w-4 mr-2" strokeWidth={3} />
+                              PDF Siigo
+                            </Button>
+                          )}
+
                           {isEntregado && (
                             <Button
                               variant="outline"

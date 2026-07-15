@@ -23,6 +23,7 @@ import {
   MapPin,
   Award,
   ListChecks,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -125,6 +126,16 @@ interface ReportOrder {
       categories: { name: string } | null;
     };
   }[];
+  siigo_invoice_id?: string | null;
+  siigo_invoice_number?: string | null;
+  siigo_invoices?: {
+    id: string;
+    siigo_invoice_id: string | null;
+    siigo_invoice_number: string | null;
+    status: string;
+    payment_method: string;
+    response_payload?: any;
+  }[];
 }
 
 interface ReportPayment {
@@ -169,7 +180,7 @@ export default function Reporteria() {
       let query = supabase
         .from("orders")
         .select(
-          "*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*))",
+          "*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*)), siigo_invoices(*)",
         )
         .gte("created_at", from)
         .lte("created_at", to);
@@ -1593,6 +1604,42 @@ export default function Reporteria() {
                                       </div>
                                     </div>
                                   </div>
+
+                                  {/* Facturación Electrónica Siigo */}
+                                  {(() => {
+                                    const successInv = order.siigo_invoices?.find(inv => inv.status === "success");
+                                    if (!successInv) return null;
+                                    return (
+                                      <div className="space-y-4">
+                                        <div className="flex items-center gap-4 px-2">
+                                          <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                          <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">
+                                            FACTURA ELECTRÓNICA SIIGO
+                                          </h4>
+                                        </div>
+                                        <div className="bg-emerald-50 border-4 border-emerald-100 rounded-[2rem] p-6 flex items-center justify-between gap-4">
+                                          <div className="space-y-1">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-600/60">No. FACTURA</p>
+                                            <p className="text-lg font-black text-emerald-700 tracking-tight">
+                                              {successInv.siigo_invoice_number || successInv.siigo_invoice_id || "—"}
+                                            </p>
+                                            <p className="text-[9px] font-bold text-emerald-600/40 uppercase tracking-widest">
+                                              {successInv.payment_method.toUpperCase()}
+                                            </p>
+                                          </div>
+                                          {successInv.response_payload?.public_url && (
+                                            <button
+                                              onClick={() => window.open(successInv.response_payload.public_url, '_blank')}
+                                              className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-md shadow-emerald-500/20"
+                                            >
+                                              <FileText className="h-4 w-4" strokeWidth={3} />
+                                              PDF Siigo
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                             </div>

@@ -38,6 +38,7 @@ export interface SiigoInvoiceRecord {
   payment_method: string;
   status: string;
   error_message: string | null;
+  response_payload?: any;
   created_at: string;
 }
 
