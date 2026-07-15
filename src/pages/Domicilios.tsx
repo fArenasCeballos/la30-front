@@ -387,8 +387,7 @@ export default function Domicilios() {
     if (success) {
       // Abrir modal de facturación electrónica Siigo si aplica
       const isFacturacionAllowed = user?.role === "admin" || user?.role === "caja";
-      const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true" && isFacturacionAllowed;
-      if (siigoEnabled && shouldGenerateInvoice(method, breakdown)) {
+      if (isFacturacionAllowed && shouldGenerateInvoice(method, breakdown)) {
         setSiigoOrder({ order: payingOrder, method, breakdown });
       }
       setPayingOrder(null);
@@ -776,9 +775,8 @@ export default function Domicilios() {
                       }
                     : undefined;
                   const isFacturacionAllowed = user?.role === "admin" || user?.role === "caja";
-                  const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true" && isFacturacionAllowed;
                   const canGenerateInvoice =
-                    siigoEnabled &&
+                    isFacturacionAllowed &&
                     !hasInvoice &&
                     shouldGenerateInvoice(paymentMethod ?? "efectivo", reconstructedBreakdown);
 
