@@ -386,7 +386,8 @@ export default function Domicilios() {
     const success = await processPayment(payingOrder.id, method, received, breakdown, "entregado");
     if (success) {
       // Abrir modal de facturación electrónica Siigo si aplica
-      const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true";
+      const isFacturacionAllowed = user?.role === "admin" || user?.role === "caja";
+      const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true" && isFacturacionAllowed;
       if (siigoEnabled && shouldGenerateInvoice(method, breakdown)) {
         setSiigoOrder({ order: payingOrder, method, breakdown });
       }
@@ -774,7 +775,8 @@ export default function Domicilios() {
                         nequi: lastPayment.amount_nequi ?? 0,
                       }
                     : undefined;
-                  const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true";
+                  const isFacturacionAllowed = user?.role === "admin" || user?.role === "caja";
+                  const siigoEnabled = import.meta.env.VITE_SIIGO_ENABLED === "true" && isFacturacionAllowed;
                   const canGenerateInvoice =
                     siigoEnabled &&
                     !hasInvoice &&
@@ -872,7 +874,7 @@ export default function Domicilios() {
                           </Button>
                         )}
 
-                        {isEntregado && (
+                        {isEntregado && (user?.role === "admin" || user?.role === "caja") && (
                           <Button
                             variant="outline"
                             className="rounded-2xl h-10 border-2 border-accent/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-accent/5 transition-all active:scale-95 shadow-sm shrink-0"
