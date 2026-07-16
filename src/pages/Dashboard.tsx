@@ -1,10 +1,11 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/formatPrice";
 import { Badge } from "@/components/ui/badge";
-import type { OrderRow, Payment } from "@/types";
+import type { OrderRow } from "@/types";
+import { OrderContext } from "@/context/OrderContext";
 import {
   DollarSign,
   Clock,
@@ -30,7 +31,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { getShiftStart, getShiftEnd } from "@/lib/shiftUtils";
+import { getShiftStart } from "@/lib/shiftUtils";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
@@ -64,48 +65,10 @@ export default function Dashboard() {
   }, [user, navigate]);
 
   const shiftStart = useMemo(() => getShiftStart().toISOString(), []);
-  const shiftEnd = useMemo(() => getShiftEnd().toISOString(), []);
 
-  // Fetch all orders for the current shift to calculate metrics locally
-  // This ensures logical consistency with the "Today" (current shift) definition
-  const { data: shiftOrders = [], isLoading: loadingOrders } = useQuery({
-    queryKey: ["dashboard-orders", storeId, shiftStart],
-    queryFn: async () => {
-      let query = supabase
-        .from("orders")
-        .select("*, profiles(name)")
-        .gte("created_at", shiftStart)
-        .lte("created_at", shiftEnd);
-
-      if (storeId) query = query.eq("store_id", storeId);
-
-      const { data, error } = await query.order("created_at", {
-        ascending: false,
-      });
-      if (error) throw error;
-      return (data as DashboardOrder[]) || [];
-    },
-    refetchInterval: 30000,
-  });
-
-  // Fetch payments to get accurate totals by method
-  const { data: shiftPayments = [] } = useQuery({
-    queryKey: ["dashboard-payments", storeId, shiftStart],
-    queryFn: async () => {
-      // Since payments table doesn't have store_id directly, we join or filter by order_ids
-      const orderIds = shiftOrders.map((o) => o.id);
-      if (orderIds.length === 0) return [];
-
-      const { data, error } = await supabase
-        .from("payments")
-        .select("*")
-        .in("order_id", orderIds);
-
-      if (error) throw error;
-      return (data as Payment[]) || [];
-    },
-    enabled: shiftOrders.length > 0,
-  });
+  const orderContext = useContext(OrderContext);
+  const shiftOrders = useMemo(() => orderContext?.orders || [], [orderContext?.orders]);
+  const loadingOrders = orderContext?.loading || false;
 
   // Top Products from RPC (this one is okay as it's more complex to calculate locally)
   const { data: productStats = [], isLoading: loadingProducts } = useQuery({
@@ -137,8 +100,14 @@ export default function Dashboard() {
     const deliveryDelivered = delivered.filter((o) => o.is_delivery === true);
     const cajaDelivered = delivered.filter((o) => o.is_delivery !== true);
 
-    const deliveryRevenue = deliveryDelivered.reduce((acc, o) => acc + (o.total || 0), 0);
-    const cajaRevenue = cajaDelivered.reduce((acc, o) => acc + (o.total || 0), 0);
+    const deliveryRevenue = deliveryDelivered.reduce(
+      (acc, o) => acc + (o.total || 0),
+      0,
+    );
+    const cajaRevenue = cajaDelivered.reduce(
+      (acc, o) => acc + (o.total || 0),
+      0,
+    );
 
     const deliveryCompletedCount = deliveryDelivered.length;
     const cajaCompletedCount = cajaDelivered.length;
@@ -160,21 +129,24 @@ export default function Dashboard() {
     let card = 0;
     let nequi = 0;
 
-    const deliveredIds = new Set(delivered.map((o) => o.id));
-    shiftPayments
-      .filter((p) => deliveredIds.has(p.order_id))
-      .forEach((p) => {
-        if (p.method === "mixto") {
-          cash += p.amount_efectivo || 0;
-          card += p.amount_tarjeta || 0;
-          nequi += p.amount_nequi || 0;
-        } else {
-          if (p.method === "efectivo") cash += p.amount_total;
-          else if (p.method === "tarjeta") card += p.amount_total;
-          else if (p.method === "nequi") nequi += p.amount_total;
-        }
-      });
-
+    delivered.forEach((o) => {
+      if (o.payments) {
+        o.payments.forEach((p) => {
+          if (p.method === "mixto") {
+            cash += p.amount_efectivo || 0;
+            card += p.amount_tarjeta || 0;
+            nequi += p.amount_nequi || 0;
+          } else {
+            if (p.method === "efectivo")
+              cash += p.amount_total || p.amount || 0;
+            else if (p.method === "tarjeta")
+              card += p.amount_total || p.amount || 0;
+            else if (p.method === "nequi")
+              nequi += p.amount_total || p.amount || 0;
+          }
+        });
+      }
+    });
     return {
       revenue,
       activeCount: active.length,
@@ -193,21 +165,24 @@ export default function Dashboard() {
       cajaCompletedCount,
       recentOrders: shiftOrders.slice(0, 8),
     };
-  }, [shiftOrders, shiftPayments]);
+  }, [shiftOrders]);
 
   const isDeliveryStore = activeStore?.slug === "domicilios";
 
   const statusDistribution = useMemo(
-    () => isDeliveryStore ? [
-      { name: "En Camino 🛵", value: stats.dispatchedCount },
-      { name: "Listos en Local", value: stats.readyNotSentCount },
-      { name: "Completados", value: stats.completedCount },
-      { name: "Cancelados", value: stats.cancelledCount },
-    ] : [
-      { name: "Activos", value: stats.activeCount },
-      { name: "Completados", value: stats.completedCount },
-      { name: "Cancelados", value: stats.cancelledCount },
-    ],
+    () =>
+      isDeliveryStore
+        ? [
+            { name: "En Camino 🛵", value: stats.dispatchedCount },
+            { name: "Listos en Local", value: stats.readyNotSentCount },
+            { name: "Completados", value: stats.completedCount },
+            { name: "Cancelados", value: stats.cancelledCount },
+          ]
+        : [
+            { name: "Activos", value: stats.activeCount },
+            { name: "Completados", value: stats.completedCount },
+            { name: "Cancelados", value: stats.cancelledCount },
+          ],
     [stats, isDeliveryStore],
   );
 

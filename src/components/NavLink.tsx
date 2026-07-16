@@ -24,15 +24,6 @@ const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
 
       if (path === "/dashboard") {
         queryClient.prefetchQuery({
-          queryKey: ["dashboard-stats", storeId],
-          queryFn: async () => {
-            const { data } = await supabase.rpc("get_dashboard_stats", {
-              p_store_id: storeId,
-            });
-            return data;
-          },
-        });
-        queryClient.prefetchQuery({
           queryKey: ["top-products", storeId],
           queryFn: async () => {
             const { data } = await supabase.rpc("get_top_products", {
