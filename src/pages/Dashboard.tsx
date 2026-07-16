@@ -82,7 +82,7 @@ export default function Dashboard() {
       if (error) throw error;
       return (data as { product_name: string; quantity: number }[]) || [];
     },
-    refetchInterval: 60000,
+    refetchInterval: 300000,
   });
 
   // Logic calculation: Only "entregado" orders count for revenue

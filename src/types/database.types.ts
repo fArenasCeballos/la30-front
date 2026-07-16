@@ -645,6 +645,15 @@ export type Database = {
         Args: { p_store_id?: string | null };
         Returns: Json;
       };
+      get_reporteria_stats: {
+        Args: {
+          p_start: string;
+          p_end: string;
+          p_store_id?: string | null;
+          p_type_filter?: string | null;
+        };
+        Returns: Json;
+      };
       get_customization_for_category: {
         Args: {
           p_category_name: string;

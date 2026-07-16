@@ -142,7 +142,6 @@ export function saveOfflineQueue(queue: OfflineOrderQueueItem[]) {
   }
 }
 
-
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { activeStore } = useStore();
@@ -172,18 +171,25 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         const shiftStart = getShiftStart().toISOString();
         let query = supabase
           .from("orders")
-          .select("*, order_items(*, products(*, categories(*))), payments(*), siigo_invoices(*), profiles(*)")
+          .select(
+            "*, order_items(*, products(id, name, categories(name))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi), siigo_invoices(id, status, error_message), profiles(id, name)",
+          )
           .gte("created_at", shiftStart)
           .order("created_at", { ascending: false });
         if (storeId) query = query.eq("store_id", storeId);
         const { data, error } = await query;
         if (error) throw error;
         const sanitized = sanitizeOrders((data as unknown[]) ?? []);
-        localStorage.setItem(`la30_cached_orders_${user?.id}_${storeId}`, JSON.stringify(sanitized));
+        localStorage.setItem(
+          `la30_cached_orders_${user?.id}_${storeId}`,
+          JSON.stringify(sanitized),
+        );
         return sanitized;
       } catch (err) {
         console.warn("Error fetching orders, falling back to cache:", err);
-        const cached = localStorage.getItem(`la30_cached_orders_${user?.id}_${storeId}`);
+        const cached = localStorage.getItem(
+          `la30_cached_orders_${user?.id}_${storeId}`,
+        );
         if (cached) return JSON.parse(cached) as Order[];
         return [];
       }
@@ -200,7 +206,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         const shiftStart = getShiftStart().toISOString();
         let query = supabase
           .from("orders")
-          .select("*, order_items(*, products(*, categories(*))), payments(*), siigo_invoices(*), profiles(*)")
+          .select(
+            "*, order_items(*, products(id, name, categories(name))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi), siigo_invoices(id, status, error_message), profiles(id, name)",
+          )
           .in("status", ["pendiente", "confirmado", "en_preparacion", "listo"])
           .gte("created_at", shiftStart)
           .order("created_at", { ascending: true });
@@ -208,14 +216,22 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         const { data, error } = await query;
         if (error) throw error;
         const sanitized = sanitizeOrders((data as unknown[]) ?? []);
-        localStorage.setItem(`la30_cached_active_orders_${user?.id}_${storeId}`, JSON.stringify(sanitized));
+        localStorage.setItem(
+          `la30_cached_active_orders_${user?.id}_${storeId}`,
+          JSON.stringify(sanitized),
+        );
         return sanitized;
       } catch (err) {
-        console.warn("Error fetching active orders, falling back to cache:", err);
-        const cached = localStorage.getItem(`la30_cached_active_orders_${user?.id}_${storeId}`);
-        const localActive = cached ? JSON.parse(cached) as Order[] : [];
+        console.warn(
+          "Error fetching active orders, falling back to cache:",
+          err,
+        );
+        const cached = localStorage.getItem(
+          `la30_cached_active_orders_${user?.id}_${storeId}`,
+        );
+        const localActive = cached ? (JSON.parse(cached) as Order[]) : [];
         const queue = getOfflineQueue();
-        const pendingLocalOrders = queue.map(q => q.order);
+        const pendingLocalOrders = queue.map((q) => q.order);
         return [...localActive, ...pendingLocalOrders];
       }
     },
@@ -225,6 +241,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user?.id) return;
+    let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
+
     const ordersChannel = supabase
       .channel("orders-realtime-speed")
       .on(
@@ -257,10 +275,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                 },
               );
             } else {
-              queryClient.invalidateQueries({ queryKey: ["orders", user.id, storeId] });
-              queryClient.invalidateQueries({
-                queryKey: ["active-orders", user.id, storeId],
-              });
+              if (debounceTimeout) clearTimeout(debounceTimeout);
+              debounceTimeout = setTimeout(() => {
+                queryClient.invalidateQueries({
+                  queryKey: ["orders", user.id, storeId],
+                });
+                queryClient.invalidateQueries({
+                  queryKey: ["active-orders", user.id, storeId],
+                });
+              }, 300);
             }
           } catch (err) {
             console.error("Error handling realtime order:", err);
@@ -272,10 +295,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         { event: "*", schema: "public", table: "order_items" },
         () => {
           try {
-            queryClient.invalidateQueries({ queryKey: ["orders", user.id, storeId] });
-            queryClient.invalidateQueries({
-              queryKey: ["active-orders", user.id, storeId],
-            });
+            if (debounceTimeout) clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+              queryClient.invalidateQueries({
+                queryKey: ["orders", user.id, storeId],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ["active-orders", user.id, storeId],
+              });
+            }, 300);
           } catch (err) {
             console.error("Error handling realtime order item:", err);
           }
@@ -283,6 +311,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       )
       .subscribe();
     return () => {
+      if (debounceTimeout) clearTimeout(debounceTimeout);
       supabase.removeChannel(ordersChannel);
     };
   }, [queryClient, user?.id, storeId]);
@@ -292,10 +321,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const queue = getOfflineQueue();
     if (queue.length === 0) return;
 
-    if ((window as any)._isSyncingOrders) return;
-    (window as any)._isSyncingOrders = true;
+    if ((window as { _isSyncingOrders?: boolean })._isSyncingOrders) return;
+    (window as { _isSyncingOrders?: boolean })._isSyncingOrders = true;
 
-    const toastId = toast.loading("Sincronizando pedidos guardados sin internet...");
+    const toastId = toast.loading(
+      "Sincronizando pedidos guardados sin internet...",
+    );
 
     const failedItems: OfflineOrderQueueItem[] = [];
 
@@ -310,8 +341,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           });
           if (error) throw error;
 
-          const createdOrder = data as unknown as { order_id: string; locator: string };
-          const itemsTotal = item.items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+          const createdOrder = data as unknown as {
+            order_id: string;
+            locator: string;
+          };
+          const itemsTotal = item.items.reduce(
+            (s, i) => s + i.unit_price * i.quantity,
+            0,
+          );
           const grandTotal = itemsTotal + item.deliveryInfo.fee;
 
           const { error: updateError } = await supabase
@@ -337,28 +374,39 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           if (error) throw error;
         }
       } catch (err) {
-        console.error(`Error al sincronizar pedido sin conexión ${item.locator}:`, err);
+        console.error(
+          `Error al sincronizar pedido sin conexión ${item.locator}:`,
+          err,
+        );
         failedItems.push(item);
       }
     }
 
     saveOfflineQueue(failedItems);
-    (window as any)._isSyncingOrders = false;
+    (window as { _isSyncingOrders?: boolean })._isSyncingOrders = false;
 
     if (failedItems.length === 0) {
-      toast.success("¡Todos los pedidos sin conexión han sido sincronizados correctamente!", {
-        id: toastId,
-        duration: 4000,
-      });
+      toast.success(
+        "¡Todos los pedidos sin conexión han sido sincronizados correctamente!",
+        {
+          id: toastId,
+          duration: 4000,
+        },
+      );
     } else {
-      toast.error(`No se pudieron sincronizar ${failedItems.length} pedidos. Se reintentará después.`, {
-        id: toastId,
-        duration: 4000,
-      });
+      toast.error(
+        `No se pudieron sincronizar ${failedItems.length} pedidos. Se reintentará después.`,
+        {
+          id: toastId,
+          duration: 4000,
+        },
+      );
     }
 
     queryClient.invalidateQueries({ queryKey: ["orders", user?.id, storeId] });
-    queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id, storeId] });
+    queryClient.invalidateQueries({
+      queryKey: ["active-orders", user?.id, storeId],
+    });
   }, [queryClient, user?.id, storeId]);
 
   // Escuchar cambio a estado online
@@ -379,7 +427,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [syncOfflineQueue]);
 
-
   const addOrder = useCallback(
     async (locator: string, items: OrderItemInput[], notes?: string) => {
       const tempId = crypto.randomUUID();
@@ -399,17 +446,19 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         isOfflinePending: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        profiles: user ? {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          avatar_url: user.avatar_url,
-          is_active: user.is_active,
-          store_id: user.store_id,
-          created_at: user.created_at,
-          updated_at: user.updated_at
-        } : null,
+        profiles: user
+          ? {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              avatar_url: user.avatar_url,
+              is_active: user.is_active,
+              store_id: user.store_id,
+              created_at: user.created_at,
+              updated_at: user.updated_at,
+            }
+          : null,
         order_items: items.map((i) => ({
           id: crypto.randomUUID(),
           order_id: tempId,
@@ -450,22 +499,28 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           locator,
           items,
           notes,
-          order: newOrderOptimistic
+          order: newOrderOptimistic,
         };
         const queue = getOfflineQueue();
         queue.push(queueItem);
         saveOfflineQueue(queue);
 
-        toast.warning(`Pedido ${locator} guardado localmente (sin internet). Se sincronizará automáticamente al restablecerse la red.`, {
-          duration: 7000,
-        });
+        toast.warning(
+          `Pedido ${locator} guardado localmente (sin internet). Se sincronizará automáticamente al restablecerse la red.`,
+          {
+            duration: 7000,
+          },
+        );
 
         const updateList = (old: Order[] | undefined) => [
           newOrderOptimistic,
           ...(old || []),
         ];
         queryClient.setQueryData(["orders", user?.id, storeId], updateList);
-        queryClient.setQueryData(["active-orders", user?.id, storeId], updateList);
+        queryClient.setQueryData(
+          ["active-orders", user?.id, storeId],
+          updateList,
+        );
         return;
       }
 
@@ -475,7 +530,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         ...(old || []),
       ];
       queryClient.setQueryData(["orders", user?.id, storeId], updateList);
-      queryClient.setQueryData(["active-orders", user?.id, storeId], updateList);
+      queryClient.setQueryData(
+        ["active-orders", user?.id, storeId],
+        updateList,
+      );
 
       try {
         const { data, error } = await supabase.rpc("create_order", {
@@ -489,12 +547,20 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
         const createdOrder = data as unknown as { locator: string };
         toast.success(`Pedido ${createdOrder?.locator || locator} enviado`);
-        queryClient.invalidateQueries({ queryKey: ["orders", user?.id, storeId] });
-        queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id, storeId] });
-      } catch (err: any) {
+        queryClient.invalidateQueries({
+          queryKey: ["orders", user?.id, storeId],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["active-orders", user?.id, storeId],
+        });
+      } catch (e: unknown) {
+        const err = e as { message?: string; status?: number };
         console.warn("Fallo al enviar pedido, analizando conexión:", err);
-        const isNetworkError = !navigator.onLine || err.message?.includes("Failed to fetch") || err.status === 0;
-        
+        const isNetworkError =
+          !navigator.onLine ||
+          err.message?.includes("Failed to fetch") ||
+          err.status === 0;
+
         if (isNetworkError) {
           const queueItem: OfflineOrderQueueItem = {
             id: tempId,
@@ -502,41 +568,62 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             locator,
             items,
             notes,
-            order: newOrderOptimistic
+            order: newOrderOptimistic,
           };
           const queue = getOfflineQueue();
           queue.push(queueItem);
           saveOfflineQueue(queue);
 
-          toast.warning(`Bajón de internet detectado. Pedido ${locator} guardado localmente y en espera de red.`, {
-            duration: 7000,
-          });
+          toast.warning(
+            `Bajón de internet detectado. Pedido ${locator} guardado localmente y en espera de red.`,
+            {
+              duration: 7000,
+            },
+          );
 
           const updateListOffline = (old: Order[] | undefined) => [
             newOrderOptimistic,
-            ...(old || []).filter(o => o.id !== tempId),
+            ...(old || []).filter((o) => o.id !== tempId),
           ];
-          queryClient.setQueryData(["orders", user?.id, storeId], updateListOffline);
-          queryClient.setQueryData(["active-orders", user?.id, storeId], updateListOffline);
+          queryClient.setQueryData(
+            ["orders", user?.id, storeId],
+            updateListOffline,
+          );
+          queryClient.setQueryData(
+            ["active-orders", user?.id, storeId],
+            updateListOffline,
+          );
         } else {
           toast.error(`Error: ${err.message || "Error al crear el pedido"}`);
-          queryClient.invalidateQueries({ queryKey: ["orders", user?.id, storeId] });
-          queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id, storeId] });
+          queryClient.invalidateQueries({
+            queryKey: ["orders", user?.id, storeId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["active-orders", user?.id, storeId],
+          });
         }
       }
     },
-    [queryClient, user?.id, storeId],
+    [user, queryClient, storeId],
   );
 
   const addDeliveryOrder = useCallback(
     async (
       locator: string,
       items: OrderItemInput[],
-      deliveryInfo: { name: string; address: string; phone: string; fee: number },
+      deliveryInfo: {
+        name: string;
+        address: string;
+        phone: string;
+        fee: number;
+      },
       notes?: string,
     ) => {
       const tempId = crypto.randomUUID();
-      const itemsTotal = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+      const itemsTotal = items.reduce(
+        (s, i) => s + i.unit_price * i.quantity,
+        0,
+      );
       const grandTotal = itemsTotal + deliveryInfo.fee;
 
       const newOrderOptimistic = {
@@ -556,17 +643,19 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         delivery_fee: deliveryInfo.fee,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        profiles: user ? {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          avatar_url: user.avatar_url,
-          is_active: user.is_active,
-          store_id: user.store_id,
-          created_at: user.created_at,
-          updated_at: user.updated_at
-        } : null,
+        profiles: user
+          ? {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              avatar_url: user.avatar_url,
+              is_active: user.is_active,
+              store_id: user.store_id,
+              created_at: user.created_at,
+              updated_at: user.updated_at,
+            }
+          : null,
         order_items: items.map((i) => ({
           id: crypto.randomUUID(),
           order_id: tempId,
@@ -601,22 +690,28 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           items,
           notes,
           deliveryInfo,
-          order: newOrderOptimistic
+          order: newOrderOptimistic,
         };
         const queue = getOfflineQueue();
         queue.push(queueItem);
         saveOfflineQueue(queue);
 
-        toast.warning(`Domicilio ${locator} guardado localmente (sin internet). Se enviará al restablecerse la red.`, {
-          duration: 7000,
-        });
+        toast.warning(
+          `Domicilio ${locator} guardado localmente (sin internet). Se enviará al restablecerse la red.`,
+          {
+            duration: 7000,
+          },
+        );
 
         const updateList = (old: Order[] | undefined) => [
           newOrderOptimistic,
           ...(old || []),
         ];
         queryClient.setQueryData(["orders", user?.id, storeId], updateList);
-        queryClient.setQueryData(["active-orders", user?.id, storeId], updateList);
+        queryClient.setQueryData(
+          ["active-orders", user?.id, storeId],
+          updateList,
+        );
         return;
       }
 
@@ -630,7 +725,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
         if (error) throw error;
 
-        const createdOrder = data as unknown as { order_id: string; locator: string };
+        const createdOrder = data as unknown as {
+          order_id: string;
+          locator: string;
+        };
 
         const { error: updateError } = await supabase
           .from("orders")
@@ -646,12 +744,22 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
         if (updateError) throw updateError;
 
-        toast.success(`🛵 Domicilio ${createdOrder?.locator || locator} creado`);
-        queryClient.invalidateQueries({ queryKey: ["orders", user?.id, storeId] });
-        queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id, storeId] });
-      } catch (err: any) {
+        toast.success(
+          `🛵 Domicilio ${createdOrder?.locator || locator} creado`,
+        );
+        queryClient.invalidateQueries({
+          queryKey: ["orders", user?.id, storeId],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["active-orders", user?.id, storeId],
+        });
+      } catch (e: unknown) {
+        const err = e as { message?: string; status?: number };
         console.warn("Fallo al crear domicilio, analizando conexión:", err);
-        const isNetworkError = !navigator.onLine || err.message?.includes("Failed to fetch") || err.status === 0;
+        const isNetworkError =
+          !navigator.onLine ||
+          err.message?.includes("Failed to fetch") ||
+          err.status === 0;
 
         if (isNetworkError) {
           const queueItem: OfflineOrderQueueItem = {
@@ -661,28 +769,37 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             items,
             notes,
             deliveryInfo,
-            order: newOrderOptimistic
+            order: newOrderOptimistic,
           };
           const queue = getOfflineQueue();
           queue.push(queueItem);
           saveOfflineQueue(queue);
 
-          toast.warning(`Bajón de internet. Domicilio ${locator} en cola local para sincronización.`, {
-            duration: 7000,
-          });
+          toast.warning(
+            `Bajón de internet. Domicilio ${locator} en cola local para sincronización.`,
+            {
+              duration: 7000,
+            },
+          );
 
           const updateListOffline = (old: Order[] | undefined) => [
             newOrderOptimistic,
             ...(old || []),
           ];
-          queryClient.setQueryData(["orders", user?.id, storeId], updateListOffline);
-          queryClient.setQueryData(["active-orders", user?.id, storeId], updateListOffline);
+          queryClient.setQueryData(
+            ["orders", user?.id, storeId],
+            updateListOffline,
+          );
+          queryClient.setQueryData(
+            ["active-orders", user?.id, storeId],
+            updateListOffline,
+          );
         } else {
           toast.error(`Error: ${err.message || "Error al crear domicilio"}`);
         }
       }
     },
-    [queryClient, user?.id, storeId],
+    [user, queryClient, storeId],
   );
 
   const updateOrder = useCallback(
@@ -703,15 +820,23 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       toast.success("Pedido actualizado");
-      queryClient.invalidateQueries({ queryKey: ["orders", user?.id, storeId] });
-      queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id, storeId] });
+      queryClient.invalidateQueries({
+        queryKey: ["orders", user?.id, storeId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["active-orders", user?.id, storeId],
+      });
     },
     [queryClient, user?.id, storeId],
   );
 
   const updateOrderStatus = useCallback(
     async (orderId: string, status: OrderStatus) => {
-      const previousOrders = queryClient.getQueryData(["orders", user?.id, storeId]);
+      const previousOrders = queryClient.getQueryData([
+        "orders",
+        user?.id,
+        storeId,
+      ]);
       const previousActive = queryClient.getQueryData([
         "active-orders",
         user?.id,
@@ -735,7 +860,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         toast.error(`Error: ${error.message}`);
         queryClient.setQueryData(["orders", user?.id, storeId], previousOrders);
-        queryClient.setQueryData(["active-orders", user?.id, storeId], previousActive);
+        queryClient.setQueryData(
+          ["active-orders", user?.id, storeId],
+          previousActive,
+        );
         return;
       }
       toast.success(`Pedido: ${STATUS_LABELS[status]}`);
@@ -745,7 +873,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
   const dispatchOrder = useCallback(
     async (orderId: string) => {
-      const previousOrders = queryClient.getQueryData(["orders", user?.id, storeId]);
+      const previousOrders = queryClient.getQueryData([
+        "orders",
+        user?.id,
+        storeId,
+      ]);
       const previousActive = queryClient.getQueryData([
         "active-orders",
         user?.id,
@@ -754,7 +886,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       const updateFn = (old: Order[] | undefined) => {
         if (!old) return old;
-        return old.map((o) => (o.id === orderId ? { ...o, is_dispatched: true } : o));
+        return old.map((o) =>
+          o.id === orderId ? { ...o, is_dispatched: true } : o,
+        );
       };
 
       queryClient.setQueryData(["orders", user?.id, storeId], updateFn);
@@ -768,7 +902,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         toast.error(`Error al despachar: ${error.message}`);
         queryClient.setQueryData(["orders", user?.id, storeId], previousOrders);
-        queryClient.setQueryData(["active-orders", user?.id, storeId], previousActive);
+        queryClient.setQueryData(
+          ["active-orders", user?.id, storeId],
+          previousActive,
+        );
         return;
       }
       toast.success("Domicilio despachado (en camino) 🛵");
@@ -778,7 +915,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
   const toggleOrderItem = useCallback(
     async (itemId: string, completed: boolean) => {
-      const previousOrders = queryClient.getQueryData(["orders", user?.id, storeId]);
+      const previousOrders = queryClient.getQueryData([
+        "orders",
+        user?.id,
+        storeId,
+      ]);
       const previousActive = queryClient.getQueryData([
         "active-orders",
         user?.id,
@@ -788,11 +929,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const updateFn = (old: Order[] | undefined) => {
         if (!old) return old;
         return old.map((order) => {
-          if (!order.order_items?.some(item => item.id === itemId)) return order;
+          if (!order.order_items?.some((item) => item.id === itemId))
+            return order;
           return {
             ...order,
             order_items: order.order_items.map((item) =>
-              item.id === itemId ? { ...item, is_completed: completed } : item
+              item.id === itemId ? { ...item, is_completed: completed } : item,
             ),
           };
         });
@@ -809,7 +951,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         toast.error(`Error: ${error.message}`);
         queryClient.setQueryData(["orders", user?.id, storeId], previousOrders);
-        queryClient.setQueryData(["active-orders", user?.id, storeId], previousActive);
+        queryClient.setQueryData(
+          ["active-orders", user?.id, storeId],
+          previousActive,
+        );
       }
     },
     [queryClient, user?.id, storeId],
@@ -817,8 +962,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
   const processPayment = useCallback(
     async (
-      orderId: string, 
-      method: string, 
+      orderId: string,
+      method: string,
       amountReceived: number,
       breakdown?: {
         efectivo?: number;
@@ -828,9 +973,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         tarjeta_debito?: number;
         daviplata?: number;
       },
-      targetStatus: OrderStatus | null = "en_preparacion"
+      targetStatus: OrderStatus | null = "en_preparacion",
     ) => {
-      const cardAmt = (breakdown?.tarjeta || 0) + (breakdown?.tarjeta_credito || 0) + (breakdown?.tarjeta_debito || 0);
+      const cardAmt =
+        (breakdown?.tarjeta || 0) +
+        (breakdown?.tarjeta_credito || 0) +
+        (breakdown?.tarjeta_debito || 0);
       const transferAmt = (breakdown?.nequi || 0) + (breakdown?.daviplata || 0);
 
       const { error: paymentError } = await supabase.rpc("process_payment", {
@@ -852,7 +1000,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         });
       }
       toast.success("Pago procesado");
-      queryClient.invalidateQueries({ queryKey: ["active-orders", user?.id, storeId] });
+      queryClient.invalidateQueries({
+        queryKey: ["active-orders", user?.id, storeId],
+      });
       return true;
     },
     [queryClient, user?.id, storeId],

@@ -1,11 +1,8 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState, useContext } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/lib/supabase";
-import { getShiftStart } from "@/lib/shiftUtils";
+import { OrderContext } from "@/context/OrderContext";
 import { formatPrice } from "@/lib/formatPrice";
 import { StatusBadge } from "@/components/StatusBadge";
-import type { OrderStatus } from "@/types";
 import {
   ClipboardList,
   ChevronDown,
@@ -16,56 +13,19 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 
-interface WaiterOrder {
-  id: string;
-  locator: string;
-  status: OrderStatus;
-  total: number;
-  created_at: string;
-  order_items: {
-    id: string;
-    quantity: number;
-    unit_price: number;
-    notes: string | null;
-    selected_options: Record<string, string> | null;
-    selected_extras: string[] | null;
-    extras_total: number;
-    products: {
-      name: string;
-      categories: {
-        name: string;
-      };
-    };
-  }[];
-}
-
 export default function MisPedidos() {
   const { user } = useAuth();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const shiftStart = useMemo(() => getShiftStart().toISOString(), []);
+  const orderContext = useContext(OrderContext);
+  const isLoading = orderContext?.loading || false;
 
-  const { data: orders = [], isLoading } = useQuery({
-    queryKey: ["mis-pedidos", user?.id, shiftStart],
-    queryFn: async () => {
-      if (!user) return [];
-
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*, order_items(*, products(*, categories(*)))")
-        .eq("created_by", user.id)
-        .gte("created_at", shiftStart)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("MisPedidos query error:", error);
-        throw error;
-      }
-      return (data as unknown as WaiterOrder[]) || [];
-    },
-    enabled: !!user,
-    refetchInterval: 15000,
-  });
+  const orders = useMemo(() => {
+    if (!user) return [];
+    const rawOrders = orderContext?.orders || [];
+    // Filtramos los pedidos del usuario (mesero) actual
+    return rawOrders.filter((o) => o.user_id === user.id);
+  }, [orderContext?.orders, user]);
 
   const stats = useMemo(() => {
     const active = orders.filter(
@@ -214,26 +174,28 @@ export default function MisPedidos() {
                           {item.products?.categories?.name}
                         </span>
                         {/* Opciones seleccionadas */}
-                        {item.selected_options &&
-                          Object.keys(item.selected_options).length > 0 && (
+                        {item.customizations &&
+                          Object.keys(item.customizations as object).length >
+                            0 && (
                             <div className="ml-5.5 mt-0.5">
-                              {Object.entries(item.selected_options).map(
-                                ([key, val]) => (
-                                  <span
-                                    key={key}
-                                    className="text-[10px] text-muted-foreground block"
-                                  >
-                                    {key}: {val}
-                                  </span>
-                                ),
-                              )}
+                              {Object.entries(
+                                item.customizations as Record<string, string>,
+                              ).map(([key, val]) => (
+                                <span
+                                  key={key}
+                                  className="text-[10px] text-muted-foreground block"
+                                >
+                                  {key}: {val}
+                                </span>
+                              ))}
                             </div>
                           )}
                         {/* Extras */}
-                        {item.selected_extras &&
-                          item.selected_extras.length > 0 && (
+                        {item.extras &&
+                          Array.isArray(item.extras) &&
+                          item.extras.length > 0 && (
                             <p className="text-[10px] text-muted-foreground ml-5.5 mt-0.5">
-                              + {item.selected_extras.join(", ")}
+                              + {(item.extras as string[]).join(", ")}
                             </p>
                           )}
                         {/* Notas */}
@@ -244,10 +206,7 @@ export default function MisPedidos() {
                         )}
                       </div>
                       <span className="text-sm font-medium tabular-nums shrink-0">
-                        {formatPrice(
-                          item.unit_price * item.quantity +
-                            (item.extras_total || 0),
-                        )}
+                        {formatPrice(item.unit_price * item.quantity)}
                       </span>
                     </div>
                   ))}
