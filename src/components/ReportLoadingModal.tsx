@@ -8,7 +8,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 interface ReportLoadingModalProps {
@@ -66,6 +66,9 @@ export function ReportLoadingModal({ isLoading }: ReportLoadingModalProps) {
     >
       <DialogContent className="sm:max-w-md border-none shadow-2xl bg-white/95 backdrop-blur-xl rounded-3xl overflow-hidden p-0 [&>button]:hidden">
         <DialogTitle className="sr-only">Cargando reporte</DialogTitle>
+        <DialogDescription className="sr-only">
+          El sistema está consultando y procesando los datos del rango de fechas seleccionado.
+        </DialogDescription>
         <div className="p-8 flex flex-col items-center justify-center min-h-[340px] text-center relative overflow-hidden">
           {/* Background decoration */}
           <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent pointer-events-none" />

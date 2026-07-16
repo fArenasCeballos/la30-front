@@ -17,6 +17,8 @@ import {
   CreditCard,
   Smartphone,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   User,
   Activity,
   ShoppingBag,
@@ -140,20 +142,31 @@ interface ReportOrder {
   }[];
 }
 
-interface ReportPayment {
-  id: string;
-  order_id: string;
-  method: "efectivo" | "tarjeta" | "nequi" | "mixto";
-  amount_total: number;
-  amount_efectivo: number;
-  amount_tarjeta: number;
-  amount_nequi: number;
-  created_at: string;
+interface ReportStatsData {
+  total_sales: number;
+  active_orders: number;
+  completed_orders: number;
+  cancelled_orders: number;
+  avg_ticket: number;
+  delivery_total: number;
+  delivery_pending: number;
+  caja_total: number;
+  cash_total: number;
+  card_total: number;
+  nequi_total: number;
+  siesa_total: number;
+  transfer_total: number;
+  pending_total: number;
+  items_sold: number;
+  sales_by_day: { date: string; ventas: number }[];
+  sales_by_hour: { hora: string; ventas: number }[];
+  top_products: { product_name: string; quantity: number }[];
+  waiter_stats: { name: string; orders: number; total: number }[];
 }
 
 export default function Reporteria() {
   const { user } = useAuth();
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfDay(new Date()),
     to: startOfDay(new Date()),
@@ -166,6 +179,10 @@ export default function Reporteria() {
     "all",
   );
 
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
+  const [isExporting, setIsExporting] = useState(false);
+
   const shiftRange = useMemo(() => {
     if (!dateRange?.from) return null;
     // Cada día seleccionado representa su turno: 4:00 PM del día → 4:00 AM del día siguiente.
@@ -173,322 +190,286 @@ export default function Reporteria() {
     return getCalendarShiftRange(dateRange.from, dateRange.to);
   }, [dateRange]);
 
-  const { data: reportOrders = [], isLoading } = useQuery({
+  const { data: reportStatsRaw, isLoading: isStatsLoading } = useQuery({
     queryKey: [
-      "report-orders",
+      "report-stats",
       user?.id,
       shiftRange?.from?.toISOString(),
       shiftRange?.to?.toISOString(),
       storeId,
+      typeFilter,
     ],
     queryFn: async () => {
-      if (!shiftRange) return [];
+      if (!shiftRange) return null;
       const from = shiftRange.from.toISOString();
       const to = shiftRange.to.toISOString();
 
-      let allOrders: ReportOrder[] = [];
-      let fromRow = 0;
-      const PAGE_SIZE = 1000;
-      let hasMore = true;
+      const { data, error } = await supabase.rpc("get_reporteria_stats", {
+        p_start: from,
+        p_end: to,
+        p_store_id: activeStore?.slug === "domicilios" ? null : storeId,
+        p_type_filter: typeFilter,
+      });
 
-      while (hasMore) {
-        let query = supabase
-          .from("orders")
-          .select(
-            "*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*)), siigo_invoices(*)",
-          )
-          .gte("created_at", from)
-          .lte("created_at", to)
-          .range(fromRow, fromRow + PAGE_SIZE - 1);
+      if (error) throw error;
+      return data as unknown as ReportStatsData;
+    },
+    enabled: !!user && !!shiftRange,
+  });
 
-        if (storeId) {
-          query = query.eq("store_id", storeId);
-        }
+  const { data: pagedOrdersResponse = { data: [], count: 0 }, isLoading: isOrdersLoading } = useQuery({
+    queryKey: [
+      "paged-orders",
+      user?.id,
+      shiftRange?.from?.toISOString(),
+      shiftRange?.to?.toISOString(),
+      storeId,
+      typeFilter,
+      statusFilter,
+      page,
+    ],
+    queryFn: async () => {
+      if (!shiftRange) return { data: [], count: 0 };
+      const from = shiftRange.from.toISOString();
+      const to = shiftRange.to.toISOString();
 
-        const { data, error } = await query.order("created_at", {
-          ascending: false,
+      let query = supabase
+        .from("orders")
+        .select(
+          "*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*)), siigo_invoices(*)",
+          { count: "exact" }
+        )
+        .gte("created_at", from)
+        .lte("created_at", to)
+        .order("created_at", { ascending: false })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      if (storeId && activeStore?.slug !== "domicilios") {
+        query = query.eq("store_id", storeId);
+      }
+
+      if (activeStore?.slug === "domicilios" && typeFilter !== "all") {
+        if (typeFilter === "delivery") query = query.eq("is_delivery", true);
+        if (typeFilter === "caja")
+          query = query.filter("is_delivery", "in", "(false,null)");
+      }
+
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      return { data: data as unknown as ReportOrder[], count: count ?? 0 };
+    },
+    enabled: !!user && !!shiftRange,
+  });
+
+  // ── Derived state ────────────────────────────────────────────────────────────
+  const isMultiDay =
+    dateRange?.from && dateRange?.to
+      ? !isSameDay(dateRange.from, dateRange.to)
+      : false;
+
+  const isLoading = isStatsLoading || isOrdersLoading || isExporting;
+
+  const reportStats: ReportStatsData =
+    reportStatsRaw ?? ({} as ReportStatsData);
+
+  const summary = {
+    total: reportStats.total_sales ?? 0,
+    avgTicket: reportStats.avg_ticket ?? 0,
+    count:
+      (reportStats.completed_orders ?? 0) +
+      (reportStats.active_orders ?? 0) +
+      (reportStats.cancelled_orders ?? 0),
+    itemsSold: reportStats.items_sold ?? 0,
+    delivered: reportStats.completed_orders ?? 0,
+    cancelled: reportStats.cancelled_orders ?? 0,
+  };
+
+  const cashSummary = {
+    totalSales: reportStats.total_sales ?? 0,
+    deliveredCount: reportStats.completed_orders ?? 0,
+    pendingCount: reportStats.active_orders ?? 0,
+    pendingTotal: reportStats.delivery_pending ?? 0,
+    cancelledCount: reportStats.cancelled_orders ?? 0,
+    cancelledTotal: 0,
+    totalOrders:
+      (reportStats.completed_orders ?? 0) +
+      (reportStats.active_orders ?? 0) +
+      (reportStats.cancelled_orders ?? 0),
+  };
+
+  const paymentSummary = {
+    efectivo: reportStats.cash_total ?? 0,
+    tarjeta: reportStats.card_total ?? 0,
+    nequi: reportStats.nequi_total ?? 0,
+    total:
+      (reportStats.cash_total ?? 0) +
+      (reportStats.card_total ?? 0) +
+      (reportStats.nequi_total ?? 0),
+  };
+
+  const hourlyData: { hora?: string; date?: string; ventas: number }[] =
+    isMultiDay
+      ? (reportStats.sales_by_day ?? [])
+      : (reportStats.sales_by_hour ?? []);
+
+  const waiterData = reportStats.waiter_stats ?? [];
+
+  const pagedOrders = pagedOrdersResponse.data;
+  const totalPages = Math.ceil(pagedOrdersResponse.count / PAGE_SIZE) || 1;
+  const reportOrders = pagedOrders;
+
+  const renderPagination = () => {
+    if (pagedOrdersResponse.count === 0) return null;
+    return (
+      <div className="flex items-center justify-between py-2 border-accent/10">
+        <Button
+          variant="outline"
+          onClick={() => {
+            setPage((p) => Math.max(0, p - 1));
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          disabled={page === 0}
+          className="rounded-xl h-12 px-6 font-bold text-[10px] tracking-widest uppercase border-accent/20 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all"
+        >
+          <ChevronLeft className="w-4 h-4 mr-2" />
+          Anterior
+        </Button>
+        <div className="flex flex-col items-center">
+          <span className="text-[10px] font-black text-foreground uppercase tracking-widest">
+            Página {page + 1} de {totalPages}
+          </span>
+          <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest">
+            {pagedOrdersResponse.count} Registros
+          </span>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setPage((p) => p + 1);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          disabled={page >= totalPages - 1}
+          className="rounded-xl h-12 px-6 font-bold text-[10px] tracking-widest uppercase border-accent/20 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all"
+        >
+          Siguiente
+          <ChevronRight className="w-4 h-4 ml-2" />
+        </Button>
+      </div>
+    );
+  };
+
+  // ── Export helper ─────────────────────────────────────────────────────────────
+  const exportToExcel = async () => {
+    if (!shiftRange) return;
+    setIsExporting(true);
+    try {
+      const from = shiftRange.from.toISOString();
+      const to = shiftRange.to.toISOString();
+
+      let query = supabase
+        .from("orders")
+        .select(
+          "*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*))",
+        )
+        .gte("created_at", from)
+        .lte("created_at", to)
+        .order("created_at", { ascending: false });
+
+      if (storeId && activeStore?.slug !== "domicilios") {
+        query = query.eq("store_id", storeId);
+      }
+
+      if (activeStore?.slug === "domicilios" && typeFilter !== "all") {
+        if (typeFilter === "delivery") query = query.eq("is_delivery", true);
+        if (typeFilter === "caja")
+          query = query.filter("is_delivery", "in", "(false,null)");
+      }
+
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
+
+      const { data: allExportOrders, error } = await query;
+      if (error) throw error;
+
+      const ordersToExport =
+        (allExportOrders as unknown as ReportOrder[]) ?? [];
+
+      const ordersData = ordersToExport.map((o) => ({
+        ID: o.id,
+        Localizador: o.locator,
+        Estado: o.status.toUpperCase(),
+        Total: o.total,
+        "Items Qty": o.order_items?.length ?? 0,
+        Fecha: format(new Date(o.created_at), "PPP pp", { locale: es }),
+        "Creado Por": o.profiles?.name ?? "Sistema",
+      }));
+
+      interface ExcelItemRow {
+        "Order Loc": string;
+        Producto: string | undefined;
+        Cantidad: number;
+        "Precio Unit": number;
+        Extras: number;
+        "Total Item": number;
+        Opciones: string;
+        Adicionales: string;
+        Notas: string;
+        Fecha: string;
+      }
+      const itemsData: ExcelItemRow[] = [];
+      ordersToExport.forEach((o) => {
+        o.order_items?.forEach((item) => {
+          itemsData.push({
+            "Order Loc": o.locator,
+            Producto: item.products?.name,
+            Cantidad: item.quantity,
+            "Precio Unit": item.unit_price,
+            Extras: item.extras_total,
+            "Total Item": (item.unit_price + item.extras_total) * item.quantity,
+            Opciones: item.selected_options
+              ? JSON.stringify(item.selected_options)
+              : "",
+            Adicionales: item.selected_extras
+              ? item.selected_extras.join(", ")
+              : "",
+            Notas: item.notes ?? "",
+            Fecha: format(new Date(o.created_at), "PPP pp", { locale: es }),
+          });
         });
+      });
 
-        if (error) throw error;
+      const wb = XLSX.utils.book_new();
+      const wsOrders = XLSX.utils.json_to_sheet(ordersData);
+      const wsItems = XLSX.utils.json_to_sheet(itemsData);
 
-        if (data && data.length > 0) {
-          allOrders = [...allOrders, ...(data as unknown as ReportOrder[])];
-          fromRow += PAGE_SIZE;
-          if (data.length < PAGE_SIZE) {
-            hasMore = false;
-          }
-        } else {
-          hasMore = false;
-        }
-      }
+      XLSX.utils.book_append_sheet(wb, wsOrders, "Ordenes");
+      XLSX.utils.book_append_sheet(wb, wsItems, "Detalle Productos");
 
-      return (allOrders as unknown as ReportOrder[]) || [];
-    },
-    enabled: !!user && !!shiftRange,
-  });
-
-  const deliveryFilteredOrders = useMemo(() => {
-    if (activeStore?.slug !== "domicilios" || typeFilter === "all") {
-      return reportOrders;
+      XLSX.writeFile(
+        wb,
+        `Reporte_La30_${format(new Date(), "yyyy-MM-dd_HHmm")}.xlsx`,
+      );
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsExporting(false);
     }
-    if (typeFilter === "delivery") {
-      return reportOrders.filter((o) => o.is_delivery === true);
-    }
-    return reportOrders.filter((o) => o.is_delivery !== true);
-  }, [reportOrders, typeFilter, activeStore]);
+  };
 
-  // Query de pagos para el desglose por método
-  const { data: reportPayments = [] } = useQuery({
-    queryKey: [
-      "report-payments",
-      user?.id,
-      shiftRange?.from?.toISOString(),
-      shiftRange?.to?.toISOString(),
-      storeId,
-    ],
-    queryFn: async () => {
-      if (!shiftRange) return [];
-      const from = shiftRange.from.toISOString();
-      const to = shiftRange.to.toISOString();
-
-      let allPayments: ReportPayment[] = [];
-      let fromRow = 0;
-      const PAGE_SIZE = 1000;
-      let hasMore = true;
-
-      while (hasMore) {
-        const query = supabase
-          .from("payments")
-          .select(
-            "id, order_id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi, created_at",
-          )
-          .gte("created_at", from)
-          .lte("created_at", to)
-          .range(fromRow, fromRow + PAGE_SIZE - 1);
-
-        if (storeId) {
-          // We filter payments by joining with orders store_id if possible
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          allPayments = [
-            ...allPayments,
-            ...(data as unknown as ReportPayment[]),
-          ];
-          fromRow += PAGE_SIZE;
-          if (data.length < PAGE_SIZE) {
-            hasMore = false;
-          }
-        } else {
-          hasMore = false;
-        }
-      }
-
-      return (allPayments as unknown as ReportPayment[]) || [];
-    },
-    enabled: !!user && !!shiftRange,
-  });
-
-  const filteredOrders = useMemo(() => {
-    if (statusFilter === "all") return deliveryFilteredOrders;
-    return deliveryFilteredOrders.filter((o) => o.status === statusFilter);
-  }, [deliveryFilteredOrders, statusFilter]);
-
-  const summary = useMemo(() => {
-    // Solo pedidos entregados cuentan para ventas reales
-    const delivered = filteredOrders.filter((o) => o.status === "entregado");
-    const cancelled = filteredOrders.filter((o) => o.status === "cancelado");
-    const total = delivered.reduce((sum, o) => sum + o.total, 0);
-    const avgTicket = delivered.length > 0 ? total / delivered.length : 0;
-    const itemsSold = delivered.reduce(
-      (sum, o) =>
-        sum + (o.order_items?.reduce((s: number, i) => s + i.quantity, 0) || 0),
-      0,
-    );
-    return {
-      total,
-      avgTicket,
-      count: filteredOrders.length,
-      itemsSold,
-      delivered: delivered.length,
-      cancelled: cancelled.length,
-    };
-  }, [filteredOrders]);
-
-  const cashSummary = useMemo(() => {
-    const delivered = deliveryFilteredOrders.filter(
-      (o) => o.status === "entregado",
-    );
-    const pending = deliveryFilteredOrders.filter(
-      (o) => !["entregado", "cancelado"].includes(o.status),
-    );
-    const cancelled = deliveryFilteredOrders.filter(
-      (o) => o.status === "cancelado",
-    );
-    return {
-      totalSales: delivered.reduce((s, o) => s + o.total, 0),
-      deliveredCount: delivered.length,
-      pendingCount: pending.length,
-      pendingTotal: pending.reduce((s, o) => s + o.total, 0),
-      cancelledCount: cancelled.length,
-      cancelledTotal: cancelled.reduce((s, o) => s + o.total, 0),
-      totalOrders: deliveryFilteredOrders.length,
-    };
-  }, [deliveryFilteredOrders]);
-
-  // Desglose por método de pago
-  // SOLO pagos de pedidos ENTREGADOS
-  const paymentSummary = useMemo(() => {
-    let efectivo = 0;
-    let tarjeta = 0;
-    let nequi = 0;
-
-    // Solo contar pagos de pedidos entregados
-    const deliveredOrderIds = new Set(
-      deliveryFilteredOrders
-        .filter((o) => o.status === "entregado")
-        .map((o) => o.id),
-    );
-
-    reportPayments
-      .filter((p) => deliveredOrderIds.has(p.order_id))
-      .forEach((p) => {
-        if (p.method === "mixto") {
-          // Pago mixto: usar sub-montos (representan la división real)
-          efectivo += p.amount_efectivo || 0;
-          tarjeta += p.amount_tarjeta || 0;
-          nequi += p.amount_nequi || 0;
-        } else {
-          // Pago simple: usar method + amount_total (el total real del pedido)
-          switch (p.method) {
-            case "efectivo":
-              efectivo += p.amount_total;
-              break;
-            case "tarjeta":
-              tarjeta += p.amount_total;
-              break;
-            case "nequi":
-              nequi += p.amount_total;
-              break;
-            default:
-              efectivo += p.amount_total;
-              break;
-          }
-        }
-      });
-
-    return { efectivo, tarjeta, nequi, total: efectivo + tarjeta + nequi };
-  }, [reportPayments, deliveryFilteredOrders]);
-
-  const hourlyData = useMemo(() => {
-    const hours: Record<number, number> = {};
-    // Solo pedidos entregados en el gráfico de ventas por hora
-    deliveryFilteredOrders
-      .filter((o) => o.status === "entregado")
-      .forEach((o) => {
-        const h = new Date(o.created_at).getHours();
-        hours[h] = (hours[h] || 0) + o.total;
-      });
-    return Array.from({ length: 24 }, (_, i) => ({
-      hora: `${i}:00`,
-      ventas: hours[i] || 0,
-    })).filter((d) => d.ventas > 0);
-  }, [deliveryFilteredOrders]);
-
-  const waiterData = useMemo(() => {
-    const map: Record<string, { name: string; orders: number; total: number }> =
-      {};
-    // Solo pedidos entregados cuentan como ventas reales por mesero
-    deliveryFilteredOrders
-      .filter((o) => o.status === "entregado")
-      .forEach((o) => {
-        const key = o.created_by;
-        const name = o.profiles?.name || "Sistema";
-        if (!map[key]) {
-          map[key] = { name, orders: 0, total: 0 };
-        }
-        map[key].orders++;
-        map[key].total += o.total;
-      });
-    return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [deliveryFilteredOrders]);
-
+  // ── Quick range helper ────────────────────────────────────────────────────────
   const handleQuickRange = (label: string) => {
     const range = QUICK_RANGES.find((r) => r.label === label);
     if (range) {
       setDateRange(range.getValue());
       setActiveQuick(label);
+      setPage(0);
     }
   };
-
-  const exportToExcel = () => {
-    // 1. Sheet for Orders Summary
-    const ordersData = filteredOrders.map((o) => ({
-      ID: o.id,
-      Localizador: o.locator,
-      Estado: o.status.toUpperCase(),
-      Total: o.total,
-      "Items Qty": o.order_items?.length || 0,
-      Fecha: format(new Date(o.created_at), "PPP pp", { locale: es }),
-      "Creado Por": o.profiles?.name || "Sistema",
-    }));
-
-    // 2. Sheet for Detailed Items
-    interface ExcelItemRow {
-      "Order Loc": string;
-      Producto: string | undefined;
-      Cantidad: number;
-      "Precio Unit": number;
-      Extras: number;
-      "Total Item": number;
-      Opciones: string;
-      Adicionales: string;
-      Notas: string;
-      Fecha: string;
-    }
-    const itemsData: ExcelItemRow[] = [];
-    filteredOrders.forEach((o) => {
-      o.order_items?.forEach((item) => {
-        itemsData.push({
-          "Order Loc": o.locator,
-          Producto: item.products?.name,
-          Cantidad: item.quantity,
-          "Precio Unit": item.unit_price,
-          Extras: item.extras_total,
-          "Total Item": (item.unit_price + item.extras_total) * item.quantity,
-          Opciones: item.selected_options
-            ? JSON.stringify(item.selected_options)
-            : "",
-          Adicionales: item.selected_extras
-            ? item.selected_extras.join(", ")
-            : "",
-          Notas: item.notes || "",
-          Fecha: format(new Date(o.created_at), "PPP pp", { locale: es }),
-        });
-      });
-    });
-
-    const wb = XLSX.utils.book_new();
-    const wsOrders = XLSX.utils.json_to_sheet(ordersData);
-    const wsItems = XLSX.utils.json_to_sheet(itemsData);
-
-    XLSX.utils.book_append_sheet(wb, wsOrders, "Ordenes");
-    XLSX.utils.book_append_sheet(wb, wsItems, "Detalle Productos");
-
-    XLSX.writeFile(
-      wb,
-      `Reporte_La30_${format(new Date(), "yyyy-MM-dd_HHmm")}.xlsx`,
-    );
-  };
-
-  const isMultiDay =
-    dateRange?.from && dateRange?.to
-      ? !isSameDay(dateRange.from, dateRange.to)
-      : false;
 
   return (
     <>
@@ -597,7 +578,7 @@ export default function Reporteria() {
                   </div>
 
                   {/* Status Filter */}
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as OrderStatus | "all")}>
                     <SelectTrigger className="w-32 lg:w-44 h-8 lg:h-10 rounded-xl lg:rounded-2xl border-none bg-accent/5 font-black text-[8px] lg:text-[10px] tracking-widest uppercase shadow-none hover:bg-accent/10 transition-colors shrink-0">
                       <div className="flex items-center gap-1.5">
                         <Filter
@@ -1400,10 +1381,12 @@ export default function Reporteria() {
             {/* ===== DETALLE HISTORICO ===== */}
             <TabsContent
               value="detalle"
-              className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
+              className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both outline-none"
             >
-              <div className="space-y-8 pb-20">
-                {filteredOrders.length === 0 ? (
+              <div className="space-y-6 pb-20">
+                {renderPagination()}
+                
+                {pagedOrders.length === 0 ? (
                   <div className="py-48 flex flex-col items-center justify-center space-y-10 bg-white/40 rounded-[4rem] border-4 border-white shadow-soft group">
                     <div className="h-32 w-32 rounded-[2.5rem] bg-accent/5 flex items-center justify-center text-muted-foreground/20 group-hover:scale-110 transition-transform duration-700">
                       <ShoppingCart className="h-16 w-16" strokeWidth={1.5} />
@@ -1419,7 +1402,7 @@ export default function Reporteria() {
                     </div>
                   </div>
                 ) : (
-                  filteredOrders.map((order, idx) => {
+                  pagedOrders.map((order, idx) => {
                     const isExpanded = expandedDetailId === order.id;
                     const itemCount =
                       order.order_items?.reduce(
@@ -1790,6 +1773,12 @@ export default function Reporteria() {
                       </div>
                     );
                   })
+                )}
+
+                {pagedOrders.length > 0 && (
+                  <div className="pt-4 border-t border-accent/10">
+                    {renderPagination()}
+                  </div>
                 )}
               </div>
             </TabsContent>

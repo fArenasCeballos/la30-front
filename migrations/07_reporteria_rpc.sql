@@ -25,15 +25,16 @@ BEGIN
     'completed_orders', COUNT(*) FILTER (WHERE status = 'entregado'),
     'cancelled_orders', COUNT(*) FILTER (WHERE status = 'cancelado'),
     'avg_ticket',       COALESCE(AVG(total) FILTER (WHERE status = 'entregado'), 0),
-    
+
     'delivery_total',   COALESCE(SUM(total) FILTER (WHERE status = 'entregado' AND is_delivery = true), 0),
     'delivery_pending', COALESCE(SUM(total) FILTER (WHERE status IN ('pendiente', 'confirmado', 'en_preparacion', 'listo') AND is_delivery = true), 0),
     'caja_total',       COALESCE(SUM(total) FILTER (WHERE status = 'entregado' AND (is_delivery IS NULL OR is_delivery = false)), 0),
-    
+
+    -- Castear p.method a TEXT para evitar error de validación del enum con valores legacy
     'cash_total', COALESCE((
-        SELECT SUM(CASE 
-            WHEN p.method = 'efectivo' THEN p.amount_total 
-            WHEN p.method = 'mixto' THEN COALESCE(p.amount_efectivo, 0)
+        SELECT SUM(CASE
+            WHEN p.method::TEXT = 'efectivo' THEN p.amount_total
+            WHEN p.method::TEXT = 'mixto' THEN COALESCE(p.amount_efectivo, 0)
             ELSE 0 END)
         FROM payments p JOIN orders o ON o.id = p.order_id
         WHERE o.created_at >= p_start AND o.created_at <= p_end
@@ -42,9 +43,9 @@ BEGIN
           AND (p_type_filter = 'all' OR (p_type_filter = 'delivery' AND o.is_delivery = true) OR (p_type_filter = 'caja' AND (o.is_delivery IS NULL OR o.is_delivery = false)))
     ), 0),
     'card_total', COALESCE((
-        SELECT SUM(CASE 
-            WHEN p.method IN ('tarjeta', 'tarjeta_debito', 'tarjeta_credito') THEN p.amount_total 
-            WHEN p.method = 'mixto' THEN COALESCE(p.amount_tarjeta, 0)
+        SELECT SUM(CASE
+            WHEN p.method::TEXT IN ('tarjeta', 'tarjeta_debito', 'tarjeta_credito') THEN p.amount_total
+            WHEN p.method::TEXT = 'mixto' THEN COALESCE(p.amount_tarjeta, 0)
             ELSE 0 END)
         FROM payments p JOIN orders o ON o.id = p.order_id
         WHERE o.created_at >= p_start AND o.created_at <= p_end
@@ -53,9 +54,9 @@ BEGIN
           AND (p_type_filter = 'all' OR (p_type_filter = 'delivery' AND o.is_delivery = true) OR (p_type_filter = 'caja' AND (o.is_delivery IS NULL OR o.is_delivery = false)))
     ), 0),
     'nequi_total', COALESCE((
-        SELECT SUM(CASE 
-            WHEN p.method IN ('nequi', 'daviplata') THEN p.amount_total 
-            WHEN p.method = 'mixto' THEN COALESCE(p.amount_nequi, 0)
+        SELECT SUM(CASE
+            WHEN p.method::TEXT IN ('nequi', 'daviplata') THEN p.amount_total
+            WHEN p.method::TEXT = 'mixto' THEN COALESCE(p.amount_nequi, 0)
             ELSE 0 END)
         FROM payments p JOIN orders o ON o.id = p.order_id
         WHERE o.created_at >= p_start AND o.created_at <= p_end
@@ -64,7 +65,7 @@ BEGIN
           AND (p_type_filter = 'all' OR (p_type_filter = 'delivery' AND o.is_delivery = true) OR (p_type_filter = 'caja' AND (o.is_delivery IS NULL OR o.is_delivery = false)))
     ), 0),
     'siesa_total', COALESCE((
-        SELECT SUM(CASE WHEN p.method = 'siesa' THEN p.amount_total ELSE 0 END)
+        SELECT SUM(CASE WHEN p.method::TEXT = 'siesa' THEN p.amount_total ELSE 0 END)
         FROM payments p JOIN orders o ON o.id = p.order_id
         WHERE o.created_at >= p_start AND o.created_at <= p_end
           AND o.status = 'entregado'
@@ -72,7 +73,7 @@ BEGIN
           AND (p_type_filter = 'all' OR (p_type_filter = 'delivery' AND o.is_delivery = true) OR (p_type_filter = 'caja' AND (o.is_delivery IS NULL OR o.is_delivery = false)))
     ), 0),
     'transfer_total', COALESCE((
-        SELECT SUM(CASE WHEN p.method = 'transferencia' THEN p.amount_total ELSE 0 END)
+        SELECT SUM(CASE WHEN p.method::TEXT = 'transferencia' THEN p.amount_total ELSE 0 END)
         FROM payments p JOIN orders o ON o.id = p.order_id
         WHERE o.created_at >= p_start AND o.created_at <= p_end
           AND o.status = 'entregado'
@@ -80,14 +81,14 @@ BEGIN
           AND (p_type_filter = 'all' OR (p_type_filter = 'delivery' AND o.is_delivery = true) OR (p_type_filter = 'caja' AND (o.is_delivery IS NULL OR o.is_delivery = false)))
     ), 0),
     'pending_total', COALESCE((
-        SELECT SUM(CASE WHEN p.method = 'pendiente' THEN p.amount_total ELSE 0 END)
+        SELECT SUM(CASE WHEN p.method::TEXT = 'pendiente' THEN p.amount_total ELSE 0 END)
         FROM payments p JOIN orders o ON o.id = p.order_id
         WHERE o.created_at >= p_start AND o.created_at <= p_end
           AND o.status = 'entregado'
           AND (v_resolved_store IS NULL OR o.store_id = v_resolved_store)
           AND (p_type_filter = 'all' OR (p_type_filter = 'delivery' AND o.is_delivery = true) OR (p_type_filter = 'caja' AND (o.is_delivery IS NULL OR o.is_delivery = false)))
     ), 0),
-    
+
     'items_sold', COALESCE((
         SELECT SUM(oi.quantity)
         FROM order_items oi JOIN orders o ON o.id = oi.order_id
@@ -147,12 +148,12 @@ BEGIN
         FROM (
             SELECT COALESCE(pr.name, 'Sistema') as name, COUNT(*) as orders_count, SUM(o.total) as total_sales
             FROM orders o
-            LEFT JOIN profiles pr ON pr.id = o.user_id
+            LEFT JOIN profiles pr ON pr.id = o.created_by
             WHERE o.created_at >= p_start AND o.created_at <= p_end
               AND o.status = 'entregado'
               AND (v_resolved_store IS NULL OR o.store_id = v_resolved_store)
               AND (p_type_filter = 'all' OR (p_type_filter = 'delivery' AND o.is_delivery = true) OR (p_type_filter = 'caja' AND (o.is_delivery IS NULL OR o.is_delivery = false)))
-            GROUP BY pr.id, pr.name
+            GROUP BY o.created_by, pr.name
             ORDER BY total_sales DESC
         ) sub3
     ), '[]'::json)
