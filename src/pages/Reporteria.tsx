@@ -67,7 +67,8 @@ import { getCalendarShiftRange } from "@/lib/shiftUtils";
 import type { DateRange } from "react-day-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
-import * as XLSX from "xlsx";
+import * as ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { ReportLoadingModal } from "@/components/ReportLoadingModal";
 
 const QUICK_RANGES = [
@@ -396,62 +397,138 @@ export default function Reporteria() {
       const { data: allExportOrders, error } = await query;
       if (error) throw error;
 
-      const ordersToExport =
-        (allExportOrders as unknown as ReportOrder[]) ?? [];
+      const ordersToExport = (allExportOrders as unknown as ReportOrder[]) ?? [];
 
-      const ordersData = ordersToExport.map((o) => ({
-        ID: o.id,
-        Localizador: o.locator,
-        Estado: o.status.toUpperCase(),
-        Total: o.total,
-        "Items Qty": o.order_items?.length ?? 0,
-        Fecha: format(new Date(o.created_at), "PPP pp", { locale: es }),
-        "Creado Por": o.profiles?.name ?? "Sistema",
-      }));
+      const wb = new ExcelJS.Workbook();
+      wb.creator = "La 30";
+      wb.lastModifiedBy = user?.email || "Sistema";
+      wb.created = new Date();
+      wb.modified = new Date();
 
-      interface ExcelItemRow {
-        "Order Loc": string;
-        Producto: string | undefined;
-        Cantidad: number;
-        "Precio Unit": number;
-        Extras: number;
-        "Total Item": number;
-        Opciones: string;
-        Adicionales: string;
-        Notas: string;
-        Fecha: string;
-      }
-      const itemsData: ExcelItemRow[] = [];
+      // ==========================================
+      // HOJA 1: RESUMEN DE ÓRDENES
+      // ==========================================
+      const wsOrders = wb.addWorksheet("Órdenes", {
+        views: [{ state: "frozen", ySplit: 1 }],
+      });
+
+      wsOrders.columns = [
+        { header: "LOCALIZADOR", key: "loc", width: 16 },
+        { header: "ESTADO", key: "status", width: 18 },
+        { header: "TOTAL", key: "total", width: 18 },
+        { header: "CANTIDAD ITEMS", key: "items", width: 18 },
+        { header: "FECHA", key: "date", width: 28 },
+        { header: "CREADO POR", key: "creator", width: 25 },
+      ];
+
+      wsOrders.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      wsOrders.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFEA580C" }, // Naranja (fuerte)
+      };
+      wsOrders.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+      wsOrders.getRow(1).height = 25;
+
+      ordersToExport.forEach((o) => {
+        const row = wsOrders.addRow({
+          loc: o.locator,
+          status: o.status.toUpperCase(),
+          total: o.total,
+          items: o.order_items?.length ?? 0,
+          date: format(new Date(o.created_at), "PPP pp", { locale: es }),
+          creator: o.profiles?.name ?? "Sistema",
+        });
+
+        row.getCell("total").numFmt = '"$"#,##0.00';
+        row.getCell("loc").font = { bold: true };
+      });
+
+      // ==========================================
+      // HOJA 2: DETALLE DE PRODUCTOS
+      // ==========================================
+      const wsItems = wb.addWorksheet("Detalle Productos", {
+        views: [{ state: "frozen", ySplit: 1 }],
+      });
+
+      wsItems.columns = [
+        { header: "ORDEN", key: "loc", width: 15 },
+        { header: "PRODUCTO", key: "product", width: 35 },
+        { header: "CANTIDAD", key: "qty", width: 12 },
+        { header: "PRECIO UNIT", key: "price", width: 16 },
+        { header: "EXTRAS", key: "extras_total", width: 14 },
+        { header: "TOTAL ITEM", key: "total", width: 18 },
+        { header: "OPCIONES", key: "options", width: 30 },
+        { header: "ADICIONALES", key: "addons", width: 30 },
+        { header: "NOTAS", key: "notes", width: 35 },
+        { header: "FECHA", key: "date", width: 28 },
+      ];
+
+      wsItems.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      wsItems.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF0F172A" }, // Slate 900 (Gris oscuro)
+      };
+      wsItems.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+      wsItems.getRow(1).height = 25;
+
       ordersToExport.forEach((o) => {
         o.order_items?.forEach((item) => {
-          itemsData.push({
-            "Order Loc": o.locator,
-            Producto: item.products?.name,
-            Cantidad: item.quantity,
-            "Precio Unit": item.unit_price,
-            Extras: item.extras_total,
-            "Total Item": (item.unit_price + item.extras_total) * item.quantity,
-            Opciones: item.selected_options
+          const row = wsItems.addRow({
+            loc: o.locator,
+            product: item.products?.name,
+            qty: item.quantity,
+            price: item.unit_price,
+            extras_total: item.extras_total,
+            total: (item.unit_price + item.extras_total) * item.quantity,
+            options: item.selected_options
               ? JSON.stringify(item.selected_options)
               : "",
-            Adicionales: item.selected_extras
-              ? item.selected_extras.join(", ")
-              : "",
-            Notas: item.notes ?? "",
-            Fecha: format(new Date(o.created_at), "PPP pp", { locale: es }),
+            addons: item.selected_extras ? item.selected_extras.join(", ") : "",
+            notes: item.notes ?? "",
+            date: format(new Date(o.created_at), "PPP pp", { locale: es }),
+          });
+
+          row.getCell("loc").font = { bold: true };
+          row.getCell("price").numFmt = '"$"#,##0.00';
+          row.getCell("extras_total").numFmt = '"$"#,##0.00';
+          row.getCell("total").numFmt = '"$"#,##0.00';
+        });
+      });
+
+      // Estilos globales (Bordes y alineación)
+      [wsOrders, wsItems].forEach((ws) => {
+        ws.eachRow((row, rowNumber) => {
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: "thin", color: { argb: "FFE2E8F0" } },
+              left: { style: "thin", color: { argb: "FFE2E8F0" } },
+              bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
+              right: { style: "thin", color: { argb: "FFE2E8F0" } },
+            };
+            if (rowNumber > 1) {
+              cell.alignment = {
+                vertical: "middle",
+                horizontal: "left",
+                wrapText: true,
+              };
+              // Alinear montos a la derecha
+              if (cell.numFmt) {
+                cell.alignment.horizontal = "right";
+              }
+            }
           });
         });
       });
 
-      const wb = XLSX.utils.book_new();
-      const wsOrders = XLSX.utils.json_to_sheet(ordersData);
-      const wsItems = XLSX.utils.json_to_sheet(itemsData);
-
-      XLSX.utils.book_append_sheet(wb, wsOrders, "Ordenes");
-      XLSX.utils.book_append_sheet(wb, wsItems, "Detalle Productos");
-
-      XLSX.writeFile(
-        wb,
+      // Exportar a Buffer y Guardar
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(
+        blob,
         `Reporte_La30_${format(new Date(), "yyyy-MM-dd_HHmm")}.xlsx`,
       );
     } catch (e) {
