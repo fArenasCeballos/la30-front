@@ -1411,18 +1411,20 @@ export default function Reporteria() {
                       style={{ animationDelay: `${idx * 40}ms` }}
                     >
                       {/* Header — clickable */}
-                      <button
+                      <div
                         onClick={() =>
                           setExpandedDetailId((prev) =>
                             prev === order.id ? null : order.id,
                           )
                         }
-                        className="w-full flex items-center justify-between gap-6 p-4 lg:p-6 text-left"
+                        className="w-full flex items-center justify-between gap-6 p-4 lg:p-6 text-left cursor-pointer"
+                        role="button"
+                        tabIndex={0}
                       >
-                        <div className="flex items-center gap-6 min-w-0">
+                        <div className="flex items-center gap-6 min-w-0 flex-1">
                           <div
                             className={cn(
-                              "w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 shadow-md transition-all duration-300",
+                              "w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 shadow-md transition-all duration-300 shrink-0",
                               isExpanded
                                 ? "bg-primary text-white border-primary/10"
                                 : "bg-white border-white text-primary",
@@ -1436,34 +1438,70 @@ export default function Reporteria() {
                             </span>
                           </div>
 
-                          <div className="min-w-0 space-y-1">
-                            <div className="flex items-center gap-3 flex-wrap">
-                              <StatusBadge
-                                status={order.status}
-                                className="scale-75 origin-left"
-                              />
-                              <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest bg-white/80 px-3 py-1 rounded-full border border-white">
-                                {itemCount} {itemCount === 1 ? "ART" : "ARTS"} •{" "}
-                                {hora}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <p className="text-xl lg:text-2xl font-black tracking-tighter text-foreground">
-                                {formatPrice(order.total)}
-                              </p>
-                              <div className="flex items-center gap-2 px-3 py-1 bg-primary/5 rounded-lg border border-primary/10">
-                                <User className="h-3 w-3 text-primary/40" />
-                                <span className="text-[8px] font-black text-primary uppercase tracking-widest">
-                                  {order.profiles?.name || "SISTEMA"}
+                          <div className="min-w-0 flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <StatusBadge
+                                  status={order.status}
+                                  className="scale-75 origin-left"
+                                />
+                                <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest bg-white/80 px-3 py-1 rounded-full border border-white">
+                                  {itemCount} {itemCount === 1 ? "ART" : "ARTS"} •{" "}
+                                  {hora}
                                 </span>
                               </div>
+                              <div className="flex items-center gap-4 flex-wrap">
+                                <p className="text-xl lg:text-2xl font-black tracking-tighter text-foreground">
+                                  {formatPrice(order.total)}
+                                </p>
+                                <div className="flex items-center gap-2 px-3 py-1 bg-primary/5 rounded-lg border border-primary/10">
+                                  <User className="h-3 w-3 text-primary/40" />
+                                  <span className="text-[8px] font-black text-primary uppercase tracking-widest">
+                                    {order.profiles?.name || "SISTEMA"}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
+
+                            {/* Siigo Compact Badge */}
+                            {(() => {
+                              const successInv = order.siigo_invoices?.find(inv => inv.status === "success");
+                              if (!successInv) return null;
+                              return (
+                                <div 
+                                  className="flex items-center gap-4 px-4 py-2.5 bg-emerald-50/80 rounded-2xl border border-emerald-100 shrink-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="text-[10px] font-black text-emerald-600/60 uppercase tracking-[0.2em] mb-0.5">
+                                      FACTURA ELECTRÓNICA
+                                    </span>
+                                    <span className="text-sm font-black text-emerald-700 flex items-center gap-2">
+                                      <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                      {successInv.siigo_invoice_number || successInv.siigo_invoice_id || "—"}
+                                    </span>
+                                  </div>
+                                  {successInv.response_payload?.public_url && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(successInv.response_payload.public_url, '_blank');
+                                      }}
+                                      className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-sm shadow-emerald-500/20 ml-2"
+                                    >
+                                      <FileText className="h-4 w-4" strokeWidth={3} />
+                                      PDF
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
 
                         <div
                           className={cn(
-                            "h-10 w-10 rounded-full flex items-center justify-center border transition-all duration-300",
+                            "h-10 w-10 shrink-0 rounded-full flex items-center justify-center border transition-all duration-300",
                             isExpanded
                               ? "bg-primary text-white"
                               : "bg-white text-muted-foreground",
@@ -1477,7 +1515,7 @@ export default function Reporteria() {
                             strokeWidth={3}
                           />
                         </div>
-                      </button>
+                      </div>
 
                       {/* Detailed Content */}
                       <AnimatePresence>
