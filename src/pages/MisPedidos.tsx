@@ -12,6 +12,7 @@ import {
   Loader2,
   UtensilsCrossed,
 } from "lucide-react";
+import type { Order } from "@/types";
 
 export default function MisPedidos() {
   const { user } = useAuth();
@@ -24,7 +25,12 @@ export default function MisPedidos() {
     if (!user) return [];
     const rawOrders = orderContext?.orders || [];
     // Filtramos los pedidos del usuario (mesero) actual
-    return rawOrders.filter((o) => o.user_id === user.id);
+    return rawOrders.filter(
+      (o) =>
+        o.user_id === user.id ||
+        (o as Order & { created_by?: string }).created_by === user.id ||
+        o.profiles?.id === user.id,
+    );
   }, [orderContext?.orders, user]);
 
   const stats = useMemo(() => {
