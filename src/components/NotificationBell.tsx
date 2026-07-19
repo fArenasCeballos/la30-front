@@ -1,6 +1,6 @@
 import { useNotifications } from "@/context/NotificationContext";
 import { Button } from "@/components/ui/button";
-import { Bell, Check, Trash2, Clock } from "lucide-react";
+import { Bell, Check, Trash2, Clock, AlertTriangle } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -105,13 +105,54 @@ export function NotificationBell({
           {filteredNotifications.map((n) => (
             <div
               key={n.id}
-              className={`px-3 py-2.5 border-b last:border-0 text-sm transition-colors ${!n.read ? "bg-accent/50" : ""}`}
+              className={`flex gap-3 px-3 py-3 border-b last:border-0 text-sm transition-colors ${
+                n.type === "warning"
+                  ? "bg-red-50 border-red-100 border-l-4 border-l-red-500"
+                  : !n.read
+                    ? "bg-accent/50"
+                    : ""
+              }`}
             >
-              <p className="leading-snug">{n.message}</p>
-              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {formatNotifTime(n.created_at)}
-              </p>
+              {/* Icon */}
+              <div className="shrink-0 mt-0.5">
+                {n.type === "warning" ? (
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                  </span>
+                ) : (
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-base leading-none">
+                    {n.title?.match(/[\p{Emoji}]/u)?.[0] ?? "🔔"}
+                  </span>
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                {n.type === "warning" ? (
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">
+                      Stock Bajo
+                    </span>
+                  </div>
+                ) : (
+                  n.title && (
+                    <p className="font-semibold text-slate-700 truncate text-xs mb-0.5">
+                      {n.title.replace(/[\p{Emoji}\s]+$/u, "").trim()}
+                    </p>
+                  )
+                )}
+                <p className={`leading-snug ${
+                  n.type === "warning" ? "text-red-900 font-medium" : "text-slate-600"
+                }`}>
+                  {n.message}
+                </p>
+                <p className={`text-xs mt-1 flex items-center gap-1 ${
+                  n.type === "warning" ? "text-red-400" : "text-muted-foreground"
+                }`}>
+                  <Clock className="h-3 w-3" />
+                  {formatNotifTime(n.created_at)}
+                </p>
+              </div>
             </div>
           ))}
         </div>

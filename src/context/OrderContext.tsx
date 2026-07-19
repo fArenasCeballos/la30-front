@@ -1008,6 +1008,19 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
               toast.warning(`⚠️ Alerta de Stock Negativo en: ${result.low_stock_alerts.join(', ')}`, {
                 duration: 6000,
               });
+
+              // Insert notifications for each low stock item
+              result.low_stock_alerts.forEach(async (materialName) => {
+                const { error } = await supabase.from("notifications").insert({
+                  title: "Stock Mínimo Alcanzado",
+                  message: `El insumo ${materialName} se está quedando sin stock tras un pedido reciente.`,
+                  type: "warning",
+                  user_id: user?.id,
+                });
+                if (error) {
+                  console.error("Error creating low stock notification", error);
+                }
+              });
             }
           }).catch((err: unknown) => {
             console.warn("[Inventory] Error al descontar stock:", err);
