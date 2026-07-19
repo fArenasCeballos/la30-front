@@ -38,7 +38,7 @@ export interface SiigoInvoiceRecord {
   payment_method: string;
   status: string;
   error_message: string | null;
-  response_payload?: any;
+  response_payload?: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -62,3 +62,28 @@ export interface CustomOptionWithChoices extends ProductCustomOption {
 
 // User type kept for backward compat in auth context
 export type User = Profile;
+
+// Inventory & Recipe types
+export type {
+  Supplier,
+  SupplierInsert,
+  SupplierUpdate,
+  SupplierPurchaseEntry,
+  RawMaterialCategory,
+  RawMaterialCategoryInsert,
+  RawMaterialCategoryUpdate,
+  RawMaterial,
+  RawMaterialInsert,
+  RawMaterialUpdate,
+  RawMaterialEntry,
+  RawMaterialEntryInsert,
+  Recipe,
+  RecipeInsert,
+  RecipeUpdate,
+  RecipeWithMaterial,
+  RecipeWithProduct,
+  StockMovement,
+  StockMovementType,
+  DeductStockResult,
+  RawMaterialWithAlert,
+} from "./inventory.types";

@@ -91,6 +91,15 @@ const App = () => (
                           }
                         />
                         <Route
+                          path="/bodega"
+                          element={
+                            <Navigate
+                              to="/administracion?tab=bodega"
+                              replace
+                            />
+                          }
+                        />
+                        <Route
                           path="/usuarios"
                           element={
                             <Navigate

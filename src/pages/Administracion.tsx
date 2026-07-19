@@ -7,6 +7,7 @@ import {
   Search,
   ChevronRight,
   Settings,
+  Boxes,
 } from "lucide-react";
 import { lazy, Suspense, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -14,8 +15,8 @@ import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Lazy load heavy administrative sub-modules for instantaneous loading
 const Inventario = lazy(() => import("./Inventario"));
+const Bodega = lazy(() => import("./Bodega"));
 const Reporteria = lazy(() => import("./Reporteria"));
 const Usuarios = lazy(() => import("./Usuarios"));
 const Consultas = lazy(() => import("./Consultas"));
@@ -27,6 +28,13 @@ const TABS = [
     icon: Package,
     component: Inventario,
     desc: "Gestionar productos, categorías y stock del sistema",
+  },
+  {
+    id: "bodega",
+    label: "Bodega",
+    icon: Boxes,
+    component: Bodega,
+    desc: "Materia prima, compras, stock real y recetas",
   },
   {
     id: "reportes",

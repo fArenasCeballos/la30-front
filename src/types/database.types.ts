@@ -9,6 +9,71 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      raw_material_categories: {
+        Row: {
+          id: string;
+          store_id: string;
+          name: string;
+          color: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          name: string;
+          color?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          store_id?: string;
+          name?: string;
+          color?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "raw_material_categories_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      suppliers: {
+        Row: {
+          id: string;
+          store_id: string;
+          nit: string;
+          name: string;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          nit: string;
+          name: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          store_id?: string;
+          nit?: string;
+          name?: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       stores: {
         Row: {
           id: string;
@@ -532,6 +597,206 @@ export type Database = {
           },
         ];
       };
+      raw_materials: {
+        Row: {
+          id: string;
+          store_id: string;
+          category_id: string | null;
+          name: string;
+          unit: string;
+          min_stock: number;
+          current_stock: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          category_id?: string | null;
+          name: string;
+          unit: string;
+          min_stock?: number;
+          current_stock?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          store_id?: string;
+          category_id?: string | null;
+          name?: string;
+          unit?: string;
+          min_stock?: number;
+          current_stock?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "raw_materials_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "raw_materials_category_id_fkey";
+            columns: ["category_id"];
+            referencedRelation: "raw_material_categories";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      raw_material_entries: {
+        Row: {
+          id: string;
+          raw_material_id: string;
+          quantity: number;
+          unit_cost: number;
+          total_cost: number;
+          entry_date: string;
+          supplier_name: string | null;
+          supplier_id: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          raw_material_id: string;
+          quantity: number;
+          unit_cost: number;
+          entry_date?: string;
+          supplier_name?: string | null;
+          supplier_id?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          raw_material_id?: string;
+          quantity?: number;
+          unit_cost?: number;
+          entry_date?: string;
+          supplier_name?: string | null;
+          supplier_id?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "raw_material_entries_raw_material_id_fkey";
+            columns: ["raw_material_id"];
+            referencedRelation: "raw_materials";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "raw_material_entries_supplier_id_fkey";
+            columns: ["supplier_id"];
+            referencedRelation: "suppliers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "raw_material_entries_created_by_fkey";
+            columns: ["created_by"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      recipes: {
+        Row: {
+          id: string;
+          product_id: string;
+          raw_material_id: string;
+          quantity_required: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          raw_material_id: string;
+          quantity_required: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          raw_material_id?: string;
+          quantity_required?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "recipes_product_id_fkey";
+            columns: ["product_id"];
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recipes_raw_material_id_fkey";
+            columns: ["raw_material_id"];
+            referencedRelation: "raw_materials";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      stock_movements: {
+        Row: {
+          id: string;
+          raw_material_id: string;
+          order_id: string | null;
+          entry_id: string | null;
+          quantity: number;
+          movement_type: string;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          raw_material_id: string;
+          order_id?: string | null;
+          entry_id?: string | null;
+          quantity: number;
+          movement_type: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          raw_material_id?: string;
+          order_id?: string | null;
+          entry_id?: string | null;
+          quantity?: number;
+          movement_type?: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_raw_material_id_fkey";
+            columns: ["raw_material_id"];
+            referencedRelation: "raw_materials";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_movements_order_id_fkey";
+            columns: ["order_id"];
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_movements_entry_id_fkey";
+            columns: ["entry_id"];
+            referencedRelation: "raw_material_entries";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -693,6 +958,21 @@ export type Database = {
       auth_user_role: {
         Args: Record<string, never>;
         Returns: string;
+      };
+      deduct_stock_from_order: {
+        Args: {
+          p_order_id: string;
+        };
+        Returns: {
+          status: string;
+          order_id?: string;
+          items_in_order?: number;
+          items_with_recipe?: number;
+          items_without_recipe?: number;
+          materials_deducted?: number;
+          low_stock_alerts?: string[];
+          message?: string;
+        };
       };
     };
     Enums: {

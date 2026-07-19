@@ -15,6 +15,7 @@ import type { Json } from "@/types/database.types";
 import { toast } from "sonner";
 
 import { getShiftStart } from "@/lib/shiftUtils";
+import { deductStockFromOrder } from "@/lib/inventoryService";
 type OrderItemInput = {
   product_id: string;
   quantity: number;
@@ -998,6 +999,20 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           p_order_id: orderId,
           p_status: targetStatus,
         });
+
+        // Fire-and-forget: deducir stock de materia prima vía recetas
+        // No bloquea el flujo de pago — errores se logean silenciosamente
+        if (targetStatus === "en_preparacion") {
+          deductStockFromOrder(orderId).then((result) => {
+            if (result.low_stock_alerts && result.low_stock_alerts.length > 0) {
+              toast.warning(`⚠️ Alerta de Stock Negativo en: ${result.low_stock_alerts.join(', ')}`, {
+                duration: 6000,
+              });
+            }
+          }).catch((err: unknown) => {
+            console.warn("[Inventory] Error al descontar stock:", err);
+          });
+        }
       }
       toast.success("Pago procesado");
       queryClient.invalidateQueries({
