@@ -180,6 +180,12 @@ function buildInvoicePayload(req: InvoiceRequest) {
     date: today,
     customer: req.customer || DEFAULTS.genericCustomer,
     seller: DEFAULTS.sellerId,
+    stamp: {
+      send: true
+    },
+    mail: {
+      send: true
+    },
     observations: `Pedido #${req.locator} — La 30`,
     items,
     payments,
