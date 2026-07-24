@@ -109,7 +109,7 @@ export type Database = {
           id: string;
           name: string;
           email: string;
-          role: "admin" | "caja" | "mesero" | "cocina";
+          role: "admin" | "caja" | "mesero" | "cocina" | "bodega";
           avatar_url: string | null;
           is_active: boolean;
           store_id: string | null;
@@ -120,7 +120,7 @@ export type Database = {
           id: string;
           name: string;
           email: string;
-          role?: "admin" | "caja" | "mesero" | "cocina";
+          role?: "admin" | "caja" | "mesero" | "cocina" | "bodega";
           avatar_url?: string | null;
           is_active?: boolean;
           store_id?: string | null;
@@ -131,7 +131,7 @@ export type Database = {
           id?: string;
           name?: string;
           email?: string;
-          role?: "admin" | "caja" | "mesero" | "cocina";
+          role?: "admin" | "caja" | "mesero" | "cocina" | "bodega";
           avatar_url?: string | null;
           is_active?: boolean;
           store_id?: string | null;
@@ -815,7 +815,7 @@ export type Database = {
           id: string;
           name: string;
           email: string;
-          role: "admin" | "caja" | "mesero" | "cocina";
+          role: "admin" | "caja" | "mesero" | "cocina" | "bodega";
           avatar_url: string | null;
           is_active: boolean;
         }[];
@@ -885,7 +885,7 @@ export type Database = {
           id: string;
           name: string;
           email: string;
-          role: "admin" | "caja" | "mesero" | "cocina";
+          role: "admin" | "caja" | "mesero" | "cocina" | "bodega";
           avatar_url: string | null;
           is_active: boolean;
           created_at: string;
@@ -976,7 +976,7 @@ export type Database = {
       };
     };
     Enums: {
-      user_role: "admin" | "caja" | "mesero" | "cocina";
+      user_role: "admin" | "caja" | "mesero" | "cocina" | "bodega";
       order_status:
         | "pendiente"
         | "confirmado"

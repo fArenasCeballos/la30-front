@@ -44,6 +44,7 @@ const ROLE_COLORS: Record<UserRole, string> = {
   caja: "bg-blue-500/15 text-blue-600 border-blue-500/30",
   mesero: "bg-green-500/15 text-green-600 border-green-500/30",
   cocina: "bg-amber-500/15 text-amber-600 border-amber-500/30",
+  bodega: "bg-purple-500/15 text-purple-600 border-purple-500/30",
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -51,6 +52,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   caja: "Cajero/a",
   mesero: "Mesero/a",
   cocina: "Cocina",
+  bodega: "Bodega",
 };
 
 export default function Usuarios() {
@@ -135,7 +137,7 @@ export default function Usuarios() {
       !confirm(
         `¿Estás seguro de que deseas ${
           p.is_active ? "inactivar" : "activar"
-        } a ${p.name}?`
+        } a ${p.name}?`,
       )
     ) {
       return;
@@ -153,12 +155,12 @@ export default function Usuarios() {
           .from("profiles")
           .update({ is_active: !p.is_active })
           .eq("id", p.id);
-          
+
         if (updateError) throw updateError;
       }
-      
+
       toast.success(
-        `Usuario ${!p.is_active ? "activado" : "inactivado"} correctamente`
+        `Usuario ${!p.is_active ? "activado" : "inactivado"} correctamente`,
       );
       fetchProfiles();
     } catch (err: any) {
@@ -286,14 +288,14 @@ export default function Usuarios() {
             <div className="flex flex-col sm:flex-row items-center gap-4 flex-1 lg:max-w-3xl justify-end">
               <div className="relative w-full sm:max-w-md group">
                 <Search
-                  className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/30 group-focus-within:text-primary transition-all duration-300"
+                  className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 group-focus-within:text-primary transition-all duration-300"
                   strokeWidth={3}
                 />
                 <Input
                   placeholder="Buscar colaborador..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-12 h-14 rounded-2xl border-2 focus-visible:ring-primary/20 bg-white/60 backdrop-blur-md shadow-soft transition-all font-bold border-transparent focus:border-primary/30"
+                  className="pl-12 h-14 rounded-2xl border-2 focus-visible:ring-primary/20 bg-white/60 backdrop-blur-md shadow-soft transition-all font-bold focus:border-primary/30"
                 />
               </div>
 
@@ -328,7 +330,9 @@ export default function Usuarios() {
                       key={u.id}
                       className={cn(
                         "group transition-all duration-300 animate-in fade-in slide-in-from-left-6",
-                        u.is_active === false ? "opacity-60 bg-accent/5 grayscale-[0.5]" : "hover:bg-white/80"
+                        u.is_active === false
+                          ? "opacity-60 bg-accent/5 grayscale-[0.5]"
+                          : "hover:bg-white/80",
                       )}
                       style={{ animationDelay: `${idx * 40}ms` }}
                     >
@@ -341,7 +345,10 @@ export default function Usuarios() {
                             <p className="font-black text-[17px] tracking-tight text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
                               {u.name}
                               {u.is_active === false && (
-                                <Badge variant="destructive" className="text-[9px] px-2 py-0 h-4">
+                                <Badge
+                                  variant="destructive"
+                                  className="text-[9px] px-2 py-0 h-4"
+                                >
                                   INACTIVO
                                 </Badge>
                               )}
@@ -393,13 +400,20 @@ export default function Usuarios() {
                               "h-14 w-14 rounded-2xl transition-all shadow-soft border-none",
                               u.is_active === false
                                 ? "bg-green-500/20 text-green-600 hover:bg-green-500 hover:text-white"
-                                : "bg-red-500/20 text-red-600 hover:bg-red-500 hover:text-white"
+                                : "bg-red-500/20 text-red-600 hover:bg-red-500 hover:text-white",
                             )}
                             onClick={() => toggleUserStatus(u)}
-                            title={u.is_active === false ? "Activar usuario" : "Inactivar usuario"}
+                            title={
+                              u.is_active === false
+                                ? "Activar usuario"
+                                : "Inactivar usuario"
+                            }
                           >
                             {u.is_active === false ? (
-                              <UserCheck className="h-6 w-6" strokeWidth={2.5} />
+                              <UserCheck
+                                className="h-6 w-6"
+                                strokeWidth={2.5}
+                              />
                             ) : (
                               <UserX className="h-6 w-6" strokeWidth={2.5} />
                             )}
@@ -453,7 +467,7 @@ export default function Usuarios() {
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="Ej: Juan Pérez"
-                  className="h-16 rounded-[1.25rem] border-2 bg-accent/5 focus-visible:ring-primary/20 border-transparent focus-visible:border-primary/30 font-bold text-xl px-6 transition-all"
+                  className="h-16 rounded-[1.25rem] border-2 bg-accent/5 focus-visible:ring-primary/20 focus-visible:border-primary/30 font-bold text-xl px-6 transition-all"
                 />
               </div>
 
@@ -468,7 +482,7 @@ export default function Usuarios() {
                       value={formEmail}
                       onChange={(e) => setFormEmail(e.target.value)}
                       placeholder="email@la30.com"
-                      className="h-16 rounded-[1.25rem] border-2 bg-accent/5 focus-visible:ring-primary/20 border-transparent focus-visible:border-primary/30 font-bold text-lg px-6 transition-all"
+                      className="h-16 rounded-[1.25rem] border-2 bg-accent/5 focus-visible:ring-primary/20 focus-visible:border-primary/30 font-bold text-lg px-6 transition-all"
                     />
                   </div>
                   <div className="space-y-4">
@@ -481,7 +495,7 @@ export default function Usuarios() {
                         value={formPassword}
                         onChange={(e) => setFormPassword(e.target.value)}
                         placeholder="Mínimo 6 caracteres"
-                        className="h-16 rounded-[1.25rem] border-2 bg-accent/5 focus-visible:ring-primary/20 border-transparent focus-visible:border-primary/30 pr-16 font-bold text-lg px-6 transition-all"
+                        className="h-16 rounded-[1.25rem] border-2 bg-accent/5 focus-visible:ring-primary/20 focus-visible:border-primary/30 pr-16 font-bold text-lg px-6 transition-all"
                       />
                       <button
                         type="button"
@@ -510,7 +524,7 @@ export default function Usuarios() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Dejar vacío para mantener actual"
-                      className="h-16 rounded-[1.25rem] border-2 bg-accent/5 focus-visible:ring-primary/20 border-transparent focus-visible:border-primary/30 pr-16 font-bold text-lg px-6 transition-all"
+                      className="h-16 rounded-[1.25rem] border-2 bg-accent/5 focus-visible:ring-primary/20 focus-visible:border-primary/30 pr-16 font-bold text-lg px-6 transition-all"
                     />
                     <button
                       type="button"
@@ -568,6 +582,12 @@ export default function Usuarios() {
                         className="rounded-xl font-black py-4 px-5 text-base"
                       >
                         Cocina
+                      </SelectItem>
+                      <SelectItem
+                        value="bodega"
+                        className="rounded-xl font-black py-4 px-5 text-base"
+                      >
+                        Bodega
                       </SelectItem>
                     </SelectContent>
                   </Select>

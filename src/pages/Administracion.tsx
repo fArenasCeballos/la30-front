@@ -82,23 +82,26 @@ export default function Administracion() {
 
   // Role Guard
   useEffect(() => {
-    if (user && user.role !== "admin") {
+    if (user && user.role !== "admin" && user.role !== "bodega") {
       const defaultPaths: Record<string, string> = {
         caja: "/caja",
         cocina: "/cocina",
         mesero: "/kiosko",
       };
       navigate(defaultPaths[user.role] || "/", { replace: true });
+    } else if (user && user.role === "bodega" && currentTab !== "bodega") {
+      navigate("/administracion?tab=bodega", { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, currentTab]);
 
-  const activeTab = TABS.find((t) => t.id === currentTab);
+  const visibleTabs = user?.role === "bodega" ? TABS.filter((t) => t.id === "bodega") : TABS;
+  const activeTab = visibleTabs.find((t) => t.id === currentTab);
 
   const handleTabChange = (tabId: string) => {
     setSearchParams({ tab: tabId });
   };
 
-  if (user?.role !== "admin") return null;
+  if (user?.role !== "admin" && user?.role !== "bodega") return null;
 
   return (
     <div className="min-h-screen bg-slate-50/30">
@@ -120,18 +123,20 @@ export default function Administracion() {
 
         <div className="flex items-center gap-1.5 overflow-x-auto max-w-full py-1 premium-scrollbar">
           <SiigoProductsModal />
-          <button
-            onClick={() => setSearchParams({})}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
-              !currentTab
-                ? "bg-primary text-white shadow-md shadow-primary/20"
-                : "text-muted-foreground/60 hover:bg-accent/40 hover:text-primary",
-            )}
-          >
-            Panel General
-          </button>
-          {TABS.map((tab) => {
+          {user?.role === "admin" && (
+            <button
+              onClick={() => setSearchParams({})}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
+                !currentTab
+                  ? "bg-primary text-white shadow-md shadow-primary/20"
+                  : "text-muted-foreground/60 hover:bg-accent/40 hover:text-primary",
+              )}
+            >
+              Panel General
+            </button>
+          )}
+          {visibleTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = currentTab === tab.id;
             return (
@@ -166,7 +171,7 @@ export default function Administracion() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {TABS.map((tab) => {
+            {visibleTabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <div

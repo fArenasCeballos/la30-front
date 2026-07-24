@@ -7,6 +7,7 @@ const ROLE_ROUTES: Record<string, string> = {
   caja: "/caja",
   mesero: "/kiosko",
   cocina: "/cocina",
+  bodega: "/bodega",
 };
 
 export default function Index() {
@@ -28,8 +29,8 @@ export default function Index() {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  // Admin without an active store → send to store selector
-  if (user?.role === "admin" && !activeStore) {
+  // Admin or Bodega without an active store → send to store selector
+  if ((user?.role === "admin" || user?.role === "bodega") && !activeStore) {
     return <Navigate to="/select-store" replace />;
   }
 
