@@ -430,41 +430,42 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
     }
   });
 
-  // Generar filas de cada pedido
-  const orderRows = entregados
-    .map((order, idx) => {
-      const hora = new Intl.DateTimeFormat("es-CO", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }).format(order.created_at ? new Date(order.created_at) : new Date());
+  // Agrupar productos vendidos
+  const itemSummary = new Map<
+    string,
+    { name: string; qty: number; total: number }
+  >();
 
-      const payment = order.payments?.[0];
-      let methodLabel = "Efectivo";
-      if (payment) {
-        if (payment.method === "mixto") methodLabel = "Mixto";
-        else if (payment.method === "tarjeta") methodLabel = "Tarjeta";
-        else if (payment.method === "nequi") methodLabel = "Nequi";
-        else methodLabel = "Efectivo";
+  entregados.forEach((order) => {
+    (order.order_items ?? []).forEach((item) => {
+      if (!item.products) return;
+
+      const productId = item.products.id;
+      const name = item.products.name;
+      const qty = item.quantity ?? 1;
+      const total = (item.unit_price ?? 0) * qty;
+
+      if (!itemSummary.has(productId)) {
+        itemSummary.set(productId, { name, qty: 0, total: 0 });
       }
+      const existing = itemSummary.get(productId)!;
+      existing.qty += qty;
+      existing.total += total;
+    });
+  });
 
-      const typeLabel = order.is_delivery ? "DOM" : "MESA";
-      const ticketNumber = order.ticket_number ?? "—";
-
+  // Generar filas de productos agrupados
+  const orderRows = Array.from(itemSummary.values())
+    .sort((a, b) => b.qty - a.qty) // Ordenar por cantidad vendida (mayor a menor)
+    .map((item) => {
       return `
-        <div style="margin-bottom:4px; padding-bottom:4px; border-bottom:1px dotted #ccc">
-          <div class="row bold" style="font-size:12px;">
-            <span>${idx + 1}. #${ticketNumber} ${typeLabel} ${order.locator}</span>
-            <span>${hora}</span>
-          </div>
-          <div class="row bold" style="font-size:12px;">
-            <span>${methodLabel}</span>
-            <span>${formatPrice(order.total ?? 0)}</span>
-          </div>
+        <div class="row" style="font-size:12px; margin-bottom:2px;">
+          <span>${item.name.toUpperCase()}: <span class="bold">${item.qty}</span></span>
+          <span class="bold">${formatPrice(item.total)}</span>
         </div>
       `;
     })
-    .join('<div style="border-top:1px dotted #ddd;margin:3px 0"></div>');
+    .join('<div style="border-top:1px dotted #eee;margin:2px 0"></div>');
 
   // Pedidos cancelados
   let cancelledSection = "";
@@ -504,7 +505,7 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
     <div class="row"><span>Cajero:</span><span class="bold">${cajeroName.toUpperCase()}</span></div>
 
     <div class="double-divider">
-      <div class="center bold" style="font-size:13px">DETALLE DE PEDIDOS</div>
+      <div class="center bold" style="font-size:13px">PRODUCTOS VENDIDOS</div>
     </div>
 
     <div class="row bold" style="font-size:11px;border-bottom:1px solid #000;padding-bottom:2px;margin-bottom:4px">
