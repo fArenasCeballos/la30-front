@@ -430,42 +430,89 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
     }
   });
 
-  // Agrupar productos vendidos
-  const itemSummary = new Map<
+  // Agrupar productos vendidos por categoría y luego por producto
+  const categorySummary = new Map<
     string,
-    { name: string; qty: number; total: number }
+    {
+      name: string;
+      sortOrder: number;
+      items: Map<
+        string,
+        { name: string; qty: number; total: number; sortOrder: number }
+      >;
+    }
   >();
 
   entregados.forEach((order) => {
     (order.order_items ?? []).forEach((item) => {
       if (!item.products) return;
 
+      const category = item.products.categories;
+      // Usar category_id directo del producto como clave (más confiable que el join)
+      const categoryId =
+        (item.products as unknown as { category_id?: string | null })
+          .category_id ?? category?.id ?? "otros";
+      const categoryName = category?.name ?? "Otros";
+      const categorySortOrder = category?.sort_order ?? 9999;
+
       const productId = item.products.id;
       const name = item.products.name;
       const qty = item.quantity ?? 1;
       const total = (item.unit_price ?? 0) * qty;
+      const productSortOrder = item.products.sort_order ?? 9999;
 
-      if (!itemSummary.has(productId)) {
-        itemSummary.set(productId, { name, qty: 0, total: 0 });
+      if (!categorySummary.has(categoryId)) {
+        categorySummary.set(categoryId, {
+          name: categoryName,
+          sortOrder: categorySortOrder,
+          items: new Map(),
+        });
       }
-      const existing = itemSummary.get(productId)!;
-      existing.qty += qty;
-      existing.total += total;
+      const catSummary = categorySummary.get(categoryId)!;
+
+      if (!catSummary.items.has(productId)) {
+        catSummary.items.set(productId, {
+          name,
+          qty: 0,
+          total: 0,
+          sortOrder: productSortOrder,
+        });
+      }
+      const existingItem = catSummary.items.get(productId)!;
+      existingItem.qty += qty;
+      existingItem.total += total;
     });
   });
 
-  // Generar filas de productos agrupados
-  const orderRows = Array.from(itemSummary.values())
-    .sort((a, b) => b.qty - a.qty) // Ordenar por cantidad vendida (mayor a menor)
-    .map((item) => {
+  // Generar filas ordenando por sort_order
+  const sortedCategories = Array.from(categorySummary.values()).sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
+
+  const orderRows = sortedCategories
+    .map((catSummary) => {
+      const itemsList = Array.from(catSummary.items.values())
+        .sort((a, b) => a.sortOrder - b.sortOrder) // Ordenar productos por su posición
+        .map((item) => {
+          return `
+            <div class="row" style="font-size:11px; margin-bottom:2px; padding: 0 4px;">
+              <span>${item.name.toUpperCase()}: <span class="bold">${item.qty}</span></span>
+              <span>${formatPrice(item.total)}</span>
+            </div>
+          `;
+        })
+        .join("");
+
       return `
-        <div class="row" style="font-size:12px; margin-bottom:2px;">
-          <span>${item.name.toUpperCase()}: <span class="bold">${item.qty}</span></span>
-          <span class="bold">${formatPrice(item.total)}</span>
+        <div style="margin-top: 6px; margin-bottom: 2px;">
+          <div class="bold center" style="font-size:12px; border-bottom:1px solid #ddd; margin-bottom: 2px; padding-bottom: 2px;">
+            ${catSummary.name.toUpperCase()}
+          </div>
+          ${itemsList}
         </div>
       `;
     })
-    .join('<div style="border-top:1px dotted #eee;margin:2px 0"></div>');
+    .join("");
 
   // Pedidos cancelados
   let cancelledSection = "";
