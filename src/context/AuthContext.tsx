@@ -155,6 +155,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logoutAll = useCallback(async () => {
     try {
+      if (user) {
+        const activeChannel = supabase.getChannels().find((c) => c.topic === `realtime:user-${user.id}`);
+        if (activeChannel) {
+          await activeChannel.send({
+            type: "broadcast",
+            event: "global-logout",
+            payload: {},
+          });
+        }
+      }
+
       const signOutPromise = supabase.auth.signOut({ scope: "global" });
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("TIMEOUT")), 2000),
@@ -167,7 +178,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("la30_active_store");
       setUser(null);
     }
-  }, []);
+  }, [user]);
+
+  // ─── Realtime Global Logout Listener ────────────────────────
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase.channel(`user-${user.id}`);
+
+    channel
+      .on("broadcast", { event: "global-logout" }, () => {
+        toast.info("Sesión cerrada desde otro dispositivo");
+        logout();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, logout]);
 
   // ─── Auto-logout por inactividad (1 hora) ─────────────────
   useEffect(() => {
