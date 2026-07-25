@@ -21,6 +21,7 @@ export interface AuthContextType {
     password: string,
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  logoutAll: () => Promise<void>;
   forceReset: () => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -152,6 +153,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const logoutAll = useCallback(async () => {
+    try {
+      const signOutPromise = supabase.auth.signOut({ scope: "global" });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("TIMEOUT")), 2000),
+      );
+      await Promise.race([signOutPromise, timeoutPromise]);
+      toast.success("Sesión cerrada en todos los dispositivos");
+    } catch {
+      // Siempre limpiamos aunque falle signOut
+    } finally {
+      localStorage.removeItem("la30_active_store");
+      setUser(null);
+    }
+  }, []);
+
   // ─── Auto-logout por inactividad (1 hora) ─────────────────
   useEffect(() => {
     if (!user) return; // Solo rastrear cuando hay sesión activa
@@ -223,10 +240,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     login,
     logout,
+    logoutAll,
     forceReset,
     isAuthenticated: !!user,
     loading,
-  }), [user, login, logout, forceReset, loading]);
+  }), [user, login, logout, logoutAll, forceReset, loading]);
 
   return (
     <AuthContext.Provider value={value}>

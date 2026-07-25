@@ -820,6 +820,10 @@ export type Database = {
           is_active: boolean;
         }[];
       };
+      has_other_sessions: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
       cleanup_old_records: {
         Args: Record<string, never>;
         Returns: undefined;

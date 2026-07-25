@@ -28,10 +28,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useEffect, useState } from "react";
 import { Logo } from "./ui/logo";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/lib/supabase";
 
 const NAV_ITEMS: {
   to: string;
@@ -60,11 +67,17 @@ const NAV_ITEMS: {
     icon: ClipboardList,
     roles: ["mesero", "caja", "admin"],
   },
-  { to: "/administracion", label: "Administración", icon: Settings, roles: ["admin"] },
+  {
+    to: "/administracion",
+    label: "Administración",
+    icon: Settings,
+    roles: ["admin"],
+  },
 ];
 
 export function AppLayout() {
-  const { user, logout, forceReset, isAuthenticated, loading } = useAuth();
+  const { user, logout, logoutAll, forceReset, isAuthenticated, loading } =
+    useAuth();
   const { activeStore, isAdmin, loading: storeLoading } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -74,6 +87,15 @@ export function AppLayout() {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [showRestored, setShowRestored] = useState(false);
+  const [hasOtherSessions, setHasOtherSessions] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      supabase.rpc("has_other_sessions").then(({ data }) => {
+        if (data) setHasOtherSessions(true);
+      });
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -123,7 +145,14 @@ export function AppLayout() {
     ) {
       navigate(user?.role === "admin" ? "/dashboard" : "/");
     }
-  }, [loading, storeLoading, activeStore, location.pathname, navigate, user?.role]);
+  }, [
+    loading,
+    storeLoading,
+    activeStore,
+    location.pathname,
+    navigate,
+    user?.role,
+  ]);
 
   if (loading) {
     return (
@@ -146,12 +175,12 @@ export function AppLayout() {
   const visibleNav = NAV_ITEMS.filter((item) => {
     if (!user) return false;
     if (!item.roles.includes(user.role)) return false;
-    
+
     // Hide Domicilios module from the navbar if the active store is NOT "domicilios"
     if (item.to === "/domicilios" && activeStore?.slug !== "domicilios") {
       return false;
     }
-    
+
     return true;
   });
 
@@ -165,7 +194,7 @@ export function AppLayout() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="w-full bg-red-500/10 border-b border-red-500/20 backdrop-blur-md sticky top-0 z-[100] overflow-hidden"
+            className="w-full bg-red-500/10 border-b border-red-500/20 backdrop-blur-md sticky top-0 z-100 overflow-hidden"
           >
             <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-center gap-3 text-red-700 font-bold text-xs lg:text-sm text-center">
               <span className="relative flex h-2 w-2 shrink-0">
@@ -173,19 +202,21 @@ export function AppLayout() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
               </span>
               <span>
-                <strong>Sin conexión a internet</strong> — Visualizando datos en caché. Los cambios nuevos no se guardarán hasta restablecer la conexión.
+                <strong>Sin conexión a internet</strong> — Visualizando datos en
+                caché. Los cambios nuevos no se guardarán hasta restablecer la
+                conexión.
               </span>
             </div>
           </motion.div>
         )}
-        
+
         {showRestored && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="w-full bg-green-500/10 border-b border-green-500/20 backdrop-blur-md sticky top-0 z-[100] overflow-hidden"
+            className="w-full bg-green-500/10 border-b border-green-500/20 backdrop-blur-md sticky top-0 z-100 overflow-hidden"
           >
             <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-center gap-3 text-green-700 font-bold text-xs lg:text-sm text-center">
               <span className="relative flex h-2 w-2 shrink-0">
@@ -193,7 +224,8 @@ export function AppLayout() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
               </span>
               <span>
-                <strong>¡Conexión de red restablecida!</strong> Datos sincronizados correctamente.
+                <strong>¡Conexión de red restablecida!</strong> Datos
+                sincronizados correctamente.
               </span>
             </div>
           </motion.div>
@@ -322,15 +354,47 @@ export function AppLayout() {
             >
               <Wrench className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-xl h-9 w-9 lg:h-10 lg:w-10 hover:bg-white hover:shadow-soft text-muted-foreground hover:text-destructive transition-all"
-              onClick={logout}
-              title="Cerrar sesión"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+            {hasOtherSessions ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-xl h-9 w-9 lg:h-10 lg:w-10 hover:bg-white hover:shadow-soft text-muted-foreground hover:text-destructive transition-all"
+                    title="Opciones de sesión"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56 rounded-2xl border-none shadow-strong p-2"
+                >
+                  <DropdownMenuItem
+                    onClick={logout}
+                    className="rounded-xl font-bold py-3 focus:bg-red-50 focus:text-red-700 cursor-pointer mb-1"
+                  >
+                    Cerrar sesión actual
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={logoutAll}
+                    className="rounded-xl font-bold py-3 focus:bg-red-50 focus:text-red-700 cursor-pointer"
+                  >
+                    Cerrar de todos los dispositivos
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-xl h-9 w-9 lg:h-10 lg:w-10 hover:bg-white hover:shadow-soft text-muted-foreground hover:text-destructive transition-all"
+                onClick={logout}
+                title="Cerrar sesión"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
       </header>
