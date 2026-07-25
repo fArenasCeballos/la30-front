@@ -13,6 +13,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
   buildCustomerReceiptHTML,
   buildKitchenReceiptHTML,
+  buildShiftClosingReceiptHTML,
   silentPrint,
 } from "@/lib/receiptUtils";
 import type { ReceiptData } from "@/lib/receiptUtils";
@@ -54,6 +55,7 @@ export default function Caja() {
   const { user } = useAuth();
   const { activeStore } = useStore();
   const {
+    orders,
     updateOrderStatus,
     getOrdersByStatus,
     getCompletedOrders,
@@ -84,6 +86,22 @@ export default function Caja() {
     try {
       const now = new Date();
       const shiftStart = getShiftStart();
+
+      // Obtener TODOS los pedidos completados del turno (mesa + domicilios)
+      const allCompletedOrders = orders.filter((o) =>
+        ["entregado", "cancelado"].includes(o.status),
+      );
+
+      // Imprimir tirilla de cierre de turno
+      if (allCompletedOrders.length > 0) {
+        const closingHTML = buildShiftClosingReceiptHTML({
+          orders: allCompletedOrders,
+          cajeroName,
+          shiftStart,
+          shiftEnd: now,
+        });
+        await silentPrint(closingHTML, "Cierre de Turno");
+      }
 
       const { data, error } = await supabase.rpc("generate_cash_closing", {
         p_period_start: shiftStart.toISOString(),
@@ -287,7 +305,7 @@ export default function Caja() {
                   <TabsTrigger
                     key={tab.id}
                     value={tab.id}
-                    className="group rounded-lg lg:rounded-xl px-4 lg:px-8 py-2 lg:py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all font-black text-[9px] lg:text-[11px] uppercase tracking-widest flex items-center gap-2 lg:gap-3 border-2 border-transparent data-[state=active]:border-primary/5 min-w-[120px] lg:min-w-[140px]"
+                    className="group rounded-lg lg:rounded-xl px-4 lg:px-8 py-2 lg:py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all font-black text-[9px] lg:text-[11px] uppercase tracking-widest flex items-center gap-2 lg:gap-3 border-2 data-[state=active]:border-primary/5 min-w-[120px] lg:min-w-[140px]"
                   >
                     <tab.icon
                       className={cn(
@@ -726,13 +744,13 @@ export default function Caja() {
                           )}
 
                           {successInvoice &&
-                            successInvoice.response_payload?.public_url && (
+                            !!(successInvoice.response_payload?.public_url as string) && (
                               <Button
                                 variant="outline"
                                 className="rounded-2xl h-10 border-2 border-emerald-500/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-emerald-50 text-emerald-600 transition-all active:scale-95 shadow-sm"
                                 onClick={() =>
                                   window.open(
-                                    successInvoice.response_payload.public_url,
+                                    successInvoice.response_payload?.public_url as string,
                                     "_blank",
                                   )
                                 }

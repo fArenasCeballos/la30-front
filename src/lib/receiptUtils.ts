@@ -369,6 +369,187 @@ export function buildKitchenReceiptHTML(
   `;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   CIERRE DE TURNO – RECEIPT
+   ══════════════════════════════════════════════════════════════ */
+
+export interface ShiftClosingData {
+  orders: Order[];
+  cajeroName: string;
+  shiftStart: Date;
+  shiftEnd: Date;
+}
+
+/** Genera el HTML completo de la tirilla de cierre de turno */
+export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
+  const { orders, cajeroName, shiftStart, shiftEnd } = data;
+
+  const dateFmt = new Intl.DateTimeFormat("es-CO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const timeFmt = new Intl.DateTimeFormat("es-CO", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const printDate = new Intl.DateTimeFormat("es-CO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(new Date());
+
+  // Solo órdenes entregadas (no canceladas)
+  const entregados = orders.filter((o) => o.status === "entregado");
+  const cancelados = orders.filter((o) => o.status === "cancelado");
+
+  // Totales por método de pago
+  let totalEfectivo = 0;
+  let totalTarjeta = 0;
+  let totalTransferencias = 0;
+  let grandTotal = 0;
+
+  entregados.forEach((order) => {
+    const orderTotal = order.total ?? 0;
+    grandTotal += orderTotal;
+
+    const payment = order.payments?.[0];
+    if (payment) {
+      totalEfectivo += payment.amount_efectivo ?? 0;
+      totalTarjeta += payment.amount_tarjeta ?? 0;
+      totalTransferencias += payment.amount_nequi ?? 0;
+    } else {
+      // Si no hay registro de pago, asumimos efectivo
+      totalEfectivo += orderTotal;
+    }
+  });
+
+  // Generar filas de cada pedido
+  const orderRows = entregados
+    .map((order, idx) => {
+      const hora = new Intl.DateTimeFormat("es-CO", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }).format(order.created_at ? new Date(order.created_at) : new Date());
+
+      const payment = order.payments?.[0];
+      let methodLabel = "Efectivo";
+      if (payment) {
+        if (payment.method === "mixto") methodLabel = "Mixto";
+        else if (payment.method === "tarjeta") methodLabel = "Tarjeta";
+        else if (payment.method === "nequi") methodLabel = "Nequi";
+        else methodLabel = "Efectivo";
+      }
+
+      const typeLabel = order.is_delivery ? "DOM" : "MESA";
+      const ticketNumber = order.ticket_number ?? "—";
+
+      return `
+        <div style="margin-bottom:4px; padding-bottom:4px; border-bottom:1px dotted #ccc">
+          <div class="row bold" style="font-size:12px;">
+            <span>${idx + 1}. #${ticketNumber} ${typeLabel} ${order.locator}</span>
+            <span>${hora}</span>
+          </div>
+          <div class="row bold" style="font-size:12px;">
+            <span>${methodLabel}</span>
+            <span>${formatPrice(order.total ?? 0)}</span>
+          </div>
+        </div>
+      `;
+    })
+    .join('<div style="border-top:1px dotted #ddd;margin:3px 0"></div>');
+
+  // Pedidos cancelados
+  let cancelledSection = "";
+  if (cancelados.length > 0) {
+    const cancelledRows = cancelados
+      .map((order) => {
+        const ticketNumber = order.ticket_number ?? "—";
+        const typeLabel = order.is_delivery ? "DOM" : "MESA";
+        return `<div class="row" style="font-size:11px"><span>#${ticketNumber} ${typeLabel} ${order.locator}</span><span>${formatPrice(order.total ?? 0)}</span></div>`;
+      })
+      .join("");
+
+    const totalCancelado = cancelados.reduce(
+      (sum, o) => sum + (o.total ?? 0),
+      0,
+    );
+
+    cancelledSection = `
+      <div class="divider"></div>
+      <div class="bold" style="font-size:13px;padding:4px 0 2px">PEDIDOS CANCELADOS (${cancelados.length})</div>
+      ${cancelledRows}
+      <div class="row bold" style="font-size:12px;padding-top:2px"><span>Total Cancelado</span><span>${formatPrice(totalCancelado)}</span></div>
+    `;
+  }
+
+  return `
+    <div class="center"><p class="header-title">CIERRE DE TURNO</p></div>
+    <div class="double-divider">
+      <div class="center bold" style="font-size:13px">La 30 Perros y Hamburguesas</div>
+    </div>
+
+    <div class="row" style="font-size:10px"><span>Fecha Hora Impr.:</span><span>${printDate}</span></div>
+    <div class="divider"></div>
+
+    <div class="row"><span>Inicio Turno:</span><span class="bold">${dateFmt.format(shiftStart)} ${timeFmt.format(shiftStart)}</span></div>
+    <div class="row"><span>Cierre Turno:</span><span class="bold">${dateFmt.format(shiftEnd)} ${timeFmt.format(shiftEnd)}</span></div>
+    <div class="row"><span>Cajero:</span><span class="bold">${cajeroName.toUpperCase()}</span></div>
+
+    <div class="double-divider">
+      <div class="center bold" style="font-size:13px">DETALLE DE PEDIDOS</div>
+    </div>
+
+    <div class="row bold" style="font-size:11px;border-bottom:1px solid #000;padding-bottom:2px;margin-bottom:4px">
+      <span>Pedidos Entregados: ${entregados.length}</span>
+      <span>Total: ${formatPrice(grandTotal)}</span>
+    </div>
+
+    ${orderRows}
+
+    ${cancelledSection}
+
+    <div class="double-divider" style="margin-top:6px">
+      <div class="center bold" style="font-size:14px">RESUMEN DE CAJA</div>
+    </div>
+
+    <div class="row" style="font-size:13px;padding:3px 0">
+      <span class="bold">💵 Efectivo:</span>
+      <span class="bold">${formatPrice(totalEfectivo)}</span>
+    </div>
+    <div class="row" style="font-size:13px;padding:3px 0">
+      <span class="bold">💳 Tarjeta:</span>
+      <span class="bold">${formatPrice(totalTarjeta)}</span>
+    </div>
+    <div class="row" style="font-size:13px;padding:3px 0">
+      <span class="bold">📱 Transferencias:</span>
+      <span class="bold">${formatPrice(totalTransferencias)}</span>
+    </div>
+
+    <div class="double-divider"></div>
+    <div class="row total-row" style="padding:4px 0">
+      <span>TOTAL EN CAJA</span>
+      <span class="big-total">${formatPrice(grandTotal)}</span>
+    </div>
+    <div class="divider"></div>
+
+    <div class="center" style="padding:6px 0;font-size:11px">
+      <p>Total Pedidos: <span class="bold">${entregados.length + cancelados.length}</span></p>
+      <p>Entregados: <span class="bold">${entregados.length}</span> | Cancelados: <span class="bold">${cancelados.length}</span></p>
+      <div class="divider" style="margin-top:6px"></div>
+      <p class="bold" style="padding-top:4px">La 30 Perros y Hamburguesas</p>
+      <p style="font-size:10px">Cierre generado automáticamente</p>
+    </div>
+  `;
+}
+
 /** 
  * Impresión mediante la ventana principal: más compatible con PWA/Accesos directos.
  * Oculta la app momentáneamente y muestra solo el contenido a imprimir.

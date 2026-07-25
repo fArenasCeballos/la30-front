@@ -124,7 +124,7 @@ export default function Domicilios() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [cart, setCart] = useState<Map<string, CartItem>>(new Map());
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [selectedCategory, setActiveCategory] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch categories & products for the order form
@@ -162,12 +162,9 @@ export default function Domicilios() {
     enabled: !!storeId,
   });
 
-  // Set first category as active
-  useMemo(() => {
-    if (categories.length > 0 && !activeCategory) {
-      setActiveCategory(categories[0].id);
-    }
-  }, [categories, activeCategory]);
+  // Derive active category directly during render to avoid cascading updates
+  const activeCategory =
+    selectedCategory || (categories.length > 0 ? categories[0].id : null);
 
   const filteredProducts = useMemo(
     () =>
@@ -597,7 +594,7 @@ export default function Domicilios() {
         <TabsList className="bg-white/60 backdrop-blur-xl p-1 rounded-2xl border-2 border-accent/20 shadow-sm mb-6 flex w-full max-w-[320px]">
           <TabsTrigger
             value="activos"
-            className="flex-1 rounded-xl px-4 py-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border-2 border-transparent data-[state=active]:border-purple-500/5"
+            className="flex-1 rounded-xl px-4 py-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border-2 data-[state=active]:border-purple-500/5"
           >
             <Truck className="h-4 w-4" strokeWidth={3} />
             Activos
@@ -607,7 +604,7 @@ export default function Domicilios() {
           </TabsTrigger>
           <TabsTrigger
             value="historial"
-            className="flex-1 rounded-xl px-4 py-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border-2 border-transparent data-[state=active]:border-purple-500/5"
+            className="flex-1 rounded-xl px-4 py-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border-2 data-[state=active]:border-purple-500/5"
           >
             <History className="h-4 w-4" strokeWidth={3} />
             Historial
@@ -648,7 +645,11 @@ export default function Domicilios() {
                       ? "bg-purple-600 text-white hover:bg-purple-700 shadow-md shadow-purple-500/10"
                       : "text-muted-foreground hover:bg-purple-500/5 hover:text-purple-600",
                   )}
-                  onClick={() => setActiveSubTab(tab.id as any)}
+                  onClick={() =>
+                    setActiveSubTab(
+                      tab.id as "todos" | "cocina" | "listos" | "camino",
+                    )
+                  }
                 >
                   {tab.label}
                   <Badge
@@ -931,13 +932,15 @@ export default function Domicilios() {
                         )}
 
                         {successInvoice &&
-                          successInvoice.response_payload?.public_url && (
+                          !!(successInvoice.response_payload
+                            ?.public_url as string) && (
                             <Button
                               variant="outline"
                               className="rounded-2xl h-10 border-2 border-emerald-500/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-emerald-50 text-emerald-600 transition-all active:scale-95 shadow-sm shrink-0"
                               onClick={() =>
                                 window.open(
-                                  successInvoice.response_payload.public_url,
+                                  successInvoice.response_payload
+                                    ?.public_url as string,
                                   "_blank",
                                 )
                               }
