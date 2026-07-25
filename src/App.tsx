@@ -50,7 +50,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster position="top-center" richColors />
+      <Toaster position="bottom-right" richColors />
       <AuthProvider>
         <StoreProvider>
           <NotificationProvider>
