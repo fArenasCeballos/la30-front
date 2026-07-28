@@ -8,6 +8,7 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "@/lib/leaflet-setup";
 import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import { formatPrice } from "@/lib/formatPrice";
