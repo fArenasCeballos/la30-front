@@ -1,4 +1,5 @@
-import type { Tables, Enums } from "./database.types";
+import type { Tables, Enums, Json } from "./database.types";
+export type { Json };
 
 // Re-export database enums as convenient types
 export type UserRole = Enums<"user_role">;
@@ -17,6 +18,23 @@ export type Notification = Tables<"notifications">;
 export type ProductCustomOption = Tables<"product_custom_options">;
 export type ProductCustomChoice = Tables<"product_custom_choices">;
 export type ProductExtra = Tables<"product_extras">;
+
+// Delivery zone coordinate point
+export interface LatLngPoint {
+  lat: number;
+  lng: number;
+}
+
+// Delivery zone with polygon and price
+export interface DeliveryZone {
+  id: string;
+  name: string;
+  price: number;
+  polygon: LatLngPoint[][];
+  color: string;
+  is_active: boolean;
+  created_at: string;
+}
 
 // Product with joined category
 export interface ProductWithCategory extends Product {

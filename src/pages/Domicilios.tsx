@@ -7,9 +7,10 @@ import { useOrders } from "@/context/OrderContext";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/formatPrice";
 import { toast } from "sonner";
-import type { Order, OrderItem, OrderStatus, Category, Product } from "@/types";
+import type { Order, OrderItem, OrderStatus, Category, Product, DeliveryZone } from "@/types";
 import { cn } from "@/lib/utils";
 import { PaymentCalculator } from "@/components/PaymentCalculator";
+import { DeliveryZoneCombobox } from "@/components/DeliveryZoneCombobox";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,6 +127,7 @@ export default function Domicilios() {
   const [cart, setCart] = useState<Map<string, CartItem>>(new Map());
   const [selectedCategory, setActiveCategory] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedZoneId, setSelectedZoneId] = useState<string | undefined>();
 
   // Fetch categories & products for the order form
   const storeId = activeStore?.id;
@@ -287,6 +289,7 @@ export default function Domicilios() {
     setCustomerAddress("");
     setCustomerPhone("");
     setDeliveryFee(0);
+    setSelectedZoneId(undefined);
     setCart(new Map());
     setActiveCategory(categories[0]?.id || null);
   };
@@ -1008,6 +1011,18 @@ export default function Domicilios() {
                 onChange={(e) => setCustomerAddress(e.target.value)}
                 className="rounded-xl border-2 font-bold h-11 focus-visible:ring-purple-500"
               />
+              <DeliveryZoneCombobox
+                selectedZoneId={selectedZoneId}
+                onSelect={(zone: DeliveryZone | null) => {
+                  if (zone) {
+                    setSelectedZoneId(zone.id);
+                    setDeliveryFee(zone.price);
+                  } else {
+                    setSelectedZoneId(undefined);
+                    setDeliveryFee(0);
+                  }
+                }}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   placeholder="Celular"
@@ -1017,10 +1032,13 @@ export default function Domicilios() {
                   className="rounded-xl border-2 font-bold h-11 focus-visible:ring-purple-500"
                 />
                 <Input
-                  placeholder="Costo envío"
+                  placeholder="Costo envío (manual)"
                   type="number"
                   value={deliveryFee || ""}
-                  onChange={(e) => setDeliveryFee(Number(e.target.value) || 0)}
+                  onChange={(e) => {
+                    setDeliveryFee(Number(e.target.value) || 0);
+                    setSelectedZoneId(undefined);
+                  }}
                   className="rounded-xl border-2 font-bold h-11 focus-visible:ring-purple-500"
                 />
               </div>

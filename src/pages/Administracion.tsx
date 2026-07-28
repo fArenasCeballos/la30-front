@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Settings,
   Boxes,
+  Map,
 } from "lucide-react";
 import { lazy, Suspense, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -20,6 +21,7 @@ const Bodega = lazy(() => import("./Bodega"));
 const Reporteria = lazy(() => import("./Reporteria"));
 const Usuarios = lazy(() => import("./Usuarios"));
 const Consultas = lazy(() => import("./Consultas"));
+const ZonasDomicilio = lazy(() => import("./ZonasDomicilio"));
 
 const TABS = [
   {
@@ -56,6 +58,13 @@ const TABS = [
     icon: Search,
     component: Consultas,
     desc: "Búsqueda quirúrgica y control detallado de órdenes del día",
+  },
+  {
+    id: "zonas-domicilio",
+    label: "Zonas Domicilio",
+    icon: Map,
+    component: ZonasDomicilio,
+    desc: "Configurar zonas geográficas y precios de domicilio en el mapa",
   },
 ];
 

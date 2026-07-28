@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      delivery_zones: {
+        Row: {
+          id: string;
+          name: string;
+          price: number;
+          polygon: Json;
+          color: string;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          price: number;
+          polygon?: Json;
+          color?: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          price?: number;
+          polygon?: Json;
+          color?: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       raw_material_categories: {
         Row: {
           id: string;

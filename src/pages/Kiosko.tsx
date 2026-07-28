@@ -3,7 +3,13 @@ import { cn } from "@/lib/utils";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { formatPrice } from "@/lib/formatPrice";
-import type { Product, Category, ProductWithCategory } from "@/types";
+import type {
+  Product,
+  Category,
+  ProductWithCategory,
+  DeliveryZone,
+  LatLngPoint,
+} from "@/types";
 import { useOrders } from "@/context/OrderContext";
 import { useStore } from "@/context/StoreContext";
 import { ProductCustomizer } from "@/components/ProductCustomizer";
@@ -12,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { DeliveryZoneCombobox } from "@/components/DeliveryZoneCombobox";
+import { DeliveryZonePickerMap } from "@/components/DeliveryZonePickerMap";
 import {
   Sheet,
   SheetContent,
@@ -59,6 +67,12 @@ interface CartDraft {
     notes?: string;
     unitPrice: number;
   }[];
+  isDeliveryOrder?: boolean;
+  deliveryName?: string;
+  deliveryAddress?: string;
+  deliveryPhone?: string;
+  deliveryFee?: number;
+  selectedZoneId?: string;
 }
 
 function saveDraft(draft: CartDraft) {
@@ -87,6 +101,38 @@ export default function Kiosko() {
   const [searchParams] = useSearchParams();
   const editOrderId = searchParams.get("edit");
   const { addOrder, addDeliveryOrder, updateOrder, orders } = useOrders();
+  const { data: zones = [] } = useQuery<DeliveryZone[]>({
+    queryKey: ["delivery-zones-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("delivery_zones")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+
+      return (data as unknown as {
+        id: string;
+        name: string;
+        price: number;
+        polygon: LatLngPoint[][];
+        color: string;
+        is_active: boolean;
+        created_at: string;
+      }[]).map((row): DeliveryZone => ({
+        id: row.id,
+        name: row.name,
+        price: Number(row.price),
+        polygon: row.polygon,
+        color: row.color,
+        is_active: row.is_active,
+        created_at: row.created_at,
+      }));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { activeStore } = useStore();
   const storeId = activeStore?.id;
   const isDeliveryMode = activeStore?.slug === "domicilios";
@@ -100,19 +146,30 @@ export default function Kiosko() {
   const [step, setStep] = useState<"locator" | "menu" | "confirm">(
     savedDraft?.step ?? "locator",
   );
-  const [isDeliveryOrder, setIsDeliveryOrder] = useState(false);
+  const [isDeliveryOrder, setIsDeliveryOrder] = useState(
+    savedDraft?.isDeliveryOrder ?? false,
+  );
+  const [deliveryName, setDeliveryName] = useState(
+    savedDraft?.deliveryName ?? "",
+  );
+  const [deliveryAddress, setDeliveryAddress] = useState(
+    savedDraft?.deliveryAddress ?? "",
+  );
+  const [deliveryPhone, setDeliveryPhone] = useState(
+    savedDraft?.deliveryPhone ?? "",
+  );
+  const [deliveryFee, setDeliveryFee] = useState<number>(
+    savedDraft?.deliveryFee ?? 0,
+  );
+  const [selectedZoneId, setSelectedZoneId] = useState<string | undefined>(
+    savedDraft?.selectedZoneId,
+  );
   const [orderNotes, setOrderNotes] = useState(savedDraft?.orderNotes ?? "");
   const [customizingProduct, setCustomizingProduct] =
     useState<ProductWithCategory | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
-
-  // Delivery-specific state
-  const [deliveryName, setDeliveryName] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [deliveryPhone, setDeliveryPhone] = useState("");
-  const [deliveryFee, setDeliveryFee] = useState(0);
 
   // Auto-generate locator for delivery orders (sequential per shift)
   const nextDeliveryLocator = useMemo(() => {
@@ -134,11 +191,16 @@ export default function Kiosko() {
         if (storeId) query = query.contains("store_ids", [storeId]);
         const { data, error } = await query;
         if (error) throw error;
-        localStorage.setItem(`la30_cached_categories_${storeId}`, JSON.stringify(data));
+        localStorage.setItem(
+          `la30_cached_categories_${storeId}`,
+          JSON.stringify(data),
+        );
         return (data || []) as Category[];
       } catch (err) {
         console.warn("Error fetching categories, falling back to cache:", err);
-        const cached = localStorage.getItem(`la30_cached_categories_${storeId}`);
+        const cached = localStorage.getItem(
+          `la30_cached_categories_${storeId}`,
+        );
         if (cached) return JSON.parse(cached) as Category[];
         return [];
       }
@@ -157,62 +219,63 @@ export default function Kiosko() {
         if (storeId) query = query.contains("store_ids", [storeId]);
         const { data, error } = await query;
         if (error) throw error;
-        localStorage.setItem(`la30_cached_products_${storeId}`, JSON.stringify(data));
+        localStorage.setItem(
+          `la30_cached_products_${storeId}`,
+          JSON.stringify(data),
+        );
         return (data || []) as unknown as ProductWithCategory[];
       } catch (err) {
         console.warn("Error fetching products, falling back to cache:", err);
         const cached = localStorage.getItem(`la30_cached_products_${storeId}`);
-        if (cached) return JSON.parse(cached) as unknown as ProductWithCategory[];
+        if (cached)
+          return JSON.parse(cached) as unknown as ProductWithCategory[];
         return [];
       }
     },
   });
 
-  // Set default active category when data loads
-  useEffect(() => {
-    if (categories.length > 0 && !activeCategory) {
-      setActiveCategory(categories[0].name);
-    }
-  }, [categories, activeCategory]);
-
   // Rehydrate cart from sessionStorage once products are loaded
   useEffect(() => {
     if (draftHydrated || editOrderId || products.length === 0) return;
     const draft = loadDraft();
-    if (!draft || draft.items.length === 0) {
-      setDraftHydrated(true);
-      return;
-    }
-    const rehydrated: CartItem[] = [];
-    const skipped: string[] = [];
-    for (const saved of draft.items) {
-      const product = products.find((p) => p.id === saved.productId);
-      if (!product) {
-        skipped.push(saved.productId);
-        continue;
+
+    // Use setTimeout to avoid synchronous cascading renders
+    setTimeout(() => {
+      if (!draft || draft.items.length === 0) {
+        setDraftHydrated(true);
+        return;
       }
-      const cartKey = `${product.id}-${saved.notes || ""}`;
-      rehydrated.push({
-        id: cartKey,
-        product,
-        quantity: saved.quantity,
-        notes: saved.notes,
-        unit_price: product.price, // always use current price
-      });
-    }
-    if (rehydrated.length > 0) {
-      setCart(rehydrated);
-      toast.info(`Carrito restaurado (${rehydrated.length} productos)`, {
-        duration: 2000,
-      });
-    }
-    if (skipped.length > 0) {
-      toast.warning(
-        `${skipped.length} producto(s) ya no disponibles fueron removidos`,
-        { duration: 3000 },
-      );
-    }
-    setDraftHydrated(true);
+      const rehydrated: CartItem[] = [];
+      const skipped: string[] = [];
+      for (const saved of draft.items) {
+        const product = products.find((p) => p.id === saved.productId);
+        if (!product) {
+          skipped.push(saved.productId);
+          continue;
+        }
+        const cartKey = `${product.id}-${saved.notes || ""}`;
+        rehydrated.push({
+          id: cartKey,
+          product,
+          quantity: saved.quantity,
+          notes: saved.notes,
+          unit_price: product.price, // always use current price
+        });
+      }
+      if (rehydrated.length > 0) {
+        setCart(rehydrated);
+        toast.info(`Carrito restaurado (${rehydrated.length} productos)`, {
+          duration: 2000,
+        });
+      }
+      if (skipped.length > 0) {
+        toast.warning(
+          `${skipped.length} producto(s) ya no disponibles fueron removidos`,
+          { duration: 3000 },
+        );
+      }
+      setDraftHydrated(true);
+    }, 0);
   }, [products, draftHydrated, editOrderId]);
 
   // Persist cart state to sessionStorage on every change
@@ -227,6 +290,12 @@ export default function Kiosko() {
       locator,
       step,
       orderNotes,
+      isDeliveryOrder,
+      deliveryName,
+      deliveryAddress,
+      deliveryPhone,
+      deliveryFee,
+      selectedZoneId,
       items: cart.map((item) => ({
         productId: item.product.id,
         quantity: item.quantity,
@@ -234,7 +303,20 @@ export default function Kiosko() {
         unitPrice: item.unit_price,
       })),
     });
-  }, [cart, locator, step, orderNotes, draftHydrated, editOrderId]);
+  }, [
+    cart,
+    locator,
+    step,
+    orderNotes,
+    draftHydrated,
+    editOrderId,
+    isDeliveryOrder,
+    deliveryName,
+    deliveryAddress,
+    deliveryPhone,
+    deliveryFee,
+    selectedZoneId,
+  ]);
 
   // Cargar pedido para editar si existe editOrderId
   useEffect(() => {
@@ -246,26 +328,28 @@ export default function Kiosko() {
           window.history.replaceState({}, "", "/kiosko");
           return;
         }
-        setLocator(orderToEdit.locator || "");
-        setOrderNotes(orderToEdit.notes || "");
+        setTimeout(() => {
+          setLocator(orderToEdit.locator || "");
+          setOrderNotes(orderToEdit.notes || "");
 
-        // Transformar order_items a CartItem
-        const initialCart = (orderToEdit.order_items || [])
-          .map((item) => {
-            const product = item.products;
-            if (!product) return null;
-            const cartKey = `${product.id}-${item.notes || ""}`;
-            return {
-              id: cartKey,
-              product: product as ProductWithCategory,
-              quantity: item.quantity,
-              notes: item.notes || undefined,
-              unit_price: item.unit_price,
-            };
-          })
-          .filter(Boolean) as CartItem[];
-        setCart(initialCart);
-        setStep("menu"); // Ir directo al menú al editar
+          // Transformar order_items a CartItem
+          const initialCart = (orderToEdit.order_items || [])
+            .map((item) => {
+              const product = item.products;
+              if (!product) return null;
+              const cartKey = `${product.id}-${item.notes || ""}`;
+              return {
+                id: cartKey,
+                product: product as ProductWithCategory,
+                quantity: item.quantity,
+                notes: item.notes || undefined,
+                unit_price: item.unit_price,
+              };
+            })
+            .filter(Boolean) as CartItem[];
+          setCart(initialCart);
+          setStep("menu"); // Ir directo al menú al editar
+        }, 0);
       }
     }
   }, [editOrderId, orders]);
@@ -707,6 +791,28 @@ export default function Kiosko() {
                     placeholder="Dirección de entrega"
                     className="rounded-2xl border-2 border-white p-4 h-12 shadow-soft focus:border-purple-500 transition-all bg-white font-bold text-sm placeholder:text-muted-foreground/30"
                   />
+                  <div className="flex flex-col gap-2">
+                    <DeliveryZoneCombobox
+                      selectedZoneId={selectedZoneId}
+                      onSelect={(zone: DeliveryZone | null) => {
+                        if (zone) {
+                          setSelectedZoneId(zone.id);
+                          setDeliveryFee(zone.price);
+                        } else {
+                          setSelectedZoneId(undefined);
+                          setDeliveryFee(0);
+                        }
+                      }}
+                    />
+                    <DeliveryZonePickerMap
+                      zones={zones}
+                      selectedZoneId={selectedZoneId}
+                      onSelectZone={(zone) => {
+                        setSelectedZoneId(zone.id);
+                        setDeliveryFee(zone.price);
+                      }}
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <Input
                       value={deliveryPhone}
@@ -717,10 +823,11 @@ export default function Kiosko() {
                     />
                     <Input
                       value={deliveryFee || ""}
-                      onChange={(e) =>
-                        setDeliveryFee(Number(e.target.value) || 0)
-                      }
-                      placeholder="Costo envío"
+                      onChange={(e) => {
+                        setDeliveryFee(Number(e.target.value) || 0);
+                        setSelectedZoneId(undefined);
+                      }}
+                      placeholder="Costo envío (manual)"
                       type="number"
                       className="rounded-2xl border-2 border-white p-4 h-12 shadow-soft focus:border-purple-500 transition-all bg-white font-bold text-sm placeholder:text-muted-foreground/30"
                     />
