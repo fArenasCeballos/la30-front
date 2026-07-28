@@ -90,6 +90,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes("leaflet-draw")) {
+            return; // Let Vite handle it (lazy load)
+          }
           if (id.includes("node_modules")) {
             if (
               id.includes("react") ||
