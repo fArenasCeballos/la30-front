@@ -8,8 +8,6 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import "@/lib/leaflet-setup";
-import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import { formatPrice } from "@/lib/formatPrice";
 import type { DeliveryZone, LatLngPoint } from "@/types";
@@ -83,54 +81,65 @@ export function ZoneMapEditor({
 
   // Setup draw control imperatively
   useEffect(() => {
+    let isMounted = true;
     const map = mapRef.current;
     if (!map) return;
 
-    // Clean up previous draw control
-    if (drawControlRef.current) {
-      map.removeControl(drawControlRef.current);
-      drawControlRef.current = null;
-    }
+    // Make sure L is available globally before dynamically importing leaflet-draw
+    // @ts-ignore
+    window.L = window.L || L;
 
-    const fg = featureGroupRef.current;
-    if (!fg) return;
+    import("leaflet-draw").then(() => {
+      if (!isMounted) return;
 
-    const drawControl = new L.Control.Draw({
-      position: "topright",
-      draw: {
-        polygon: {
-          allowIntersection: true,
-          showArea: true,
-          shapeOptions: {
-            color: ZONE_COLORS[zones.length % ZONE_COLORS.length],
-            weight: 2,
-            fillOpacity: 0.3,
+      // Clean up previous draw control
+      if (drawControlRef.current) {
+        map.removeControl(drawControlRef.current);
+        drawControlRef.current = null;
+      }
+
+      const fg = featureGroupRef.current;
+      if (!fg) return;
+
+      const drawControl = new L.Control.Draw({
+        position: "topright",
+        draw: {
+          polygon: {
+            allowIntersection: true,
+            showArea: true,
+            shapeOptions: {
+              color: ZONE_COLORS[zones.length % ZONE_COLORS.length],
+              weight: 2,
+              fillOpacity: 0.3,
+            },
           },
+          circle: false,
+          rectangle: false,
+          polyline: false,
+          circlemarker: false,
+          marker: false,
         },
-        circle: false,
-        rectangle: false,
-        polyline: false,
-        circlemarker: false,
-        marker: false,
-      },
-      edit: {
-        featureGroup: fg,
-        remove: false,
-        edit: false,
-      },
+        edit: {
+          featureGroup: fg,
+          remove: false,
+          edit: false,
+        },
+      });
+
+      map.addControl(drawControl);
+      drawControlRef.current = drawControl;
+
+      map.on(L.Draw.Event.CREATED, handleCreated);
+      map.on(L.Draw.Event.DRAWSTART, () => setIsDrawing(true));
+      map.on(L.Draw.Event.DRAWSTOP, () => setIsDrawing(false));
     });
 
-    map.addControl(drawControl);
-    drawControlRef.current = drawControl;
-
-    map.on(L.Draw.Event.CREATED, handleCreated);
-    map.on(L.Draw.Event.DRAWSTART, () => setIsDrawing(true));
-    map.on(L.Draw.Event.DRAWSTOP, () => setIsDrawing(false));
-
     return () => {
-      map.off(L.Draw.Event.CREATED, handleCreated);
-      map.off(L.Draw.Event.DRAWSTART);
-      map.off(L.Draw.Event.DRAWSTOP);
+      isMounted = false;
+      // Use raw string events since L.Draw.Event might not be loaded if cleanup runs early
+      map.off("draw:created" as any, handleCreated);
+      map.off("draw:drawstart" as any);
+      map.off("draw:drawstop" as any);
       if (drawControlRef.current) {
         map.removeControl(drawControlRef.current);
         drawControlRef.current = null;
