@@ -101,7 +101,7 @@ export function DeliveryZonePickerMap({
           Escoger en el mapa
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[95vw] sm:max-w-[720px] p-0 gap-0 overflow-hidden rounded-2xl border-2 shadow-2xl">
+      <DialogContent className="max-w-[95vw] sm:max-w-180 p-0 gap-0 overflow-hidden rounded-2xl border-2 shadow-2xl">
         <DialogHeader className="px-5 py-4 border-b-2 bg-white">
           <DialogTitle className="font-black text-base flex items-center gap-2">
             <MapPin className="w-4 h-4 text-purple-600" />
@@ -111,8 +111,8 @@ export function DeliveryZonePickerMap({
 
         {outsideZone && (
           <div className="px-5 py-2 bg-red-50 border-b-2 border-red-200 text-xs font-bold text-red-600">
-            ⚠️ Esta ubicación no está en ninguna zona configurada. Intenta dentro
-            de las áreas coloreadas.
+            ⚠️ Esta ubicación no está en ninguna zona configurada. Intenta
+            dentro de las áreas coloreadas.
           </div>
         )}
 

@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import pkg from "../../package.json";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/formatPrice";
@@ -67,7 +68,10 @@ export default function Dashboard() {
   const shiftStart = useMemo(() => getShiftStart().toISOString(), []);
 
   const orderContext = useContext(OrderContext);
-  const shiftOrders = useMemo(() => orderContext?.orders || [], [orderContext?.orders]);
+  const shiftOrders = useMemo(
+    () => orderContext?.orders || [],
+    [orderContext?.orders],
+  );
   const loadingOrders = orderContext?.loading || false;
 
   // Top Products from RPC (this one is okay as it's more complex to calculate locally)
@@ -331,6 +335,12 @@ export default function Dashboard() {
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               Sincronizado
             </Badge>
+            <Badge
+              variant="outline"
+              className="px-3 py-1.5 rounded-xl font-black gap-2 bg-white/50 text-muted-foreground border-accent/20"
+            >
+              v{pkg.version}
+            </Badge>
           </div>
         </div>
 
@@ -418,7 +428,7 @@ export default function Dashboard() {
           <div className="lg:col-span-2 space-y-8">
             <div className="pos-card bg-white p-6 lg:p-8">
               <h3 className="text-xl font-bold mb-8">Productos más vendidos</h3>
-              <div className="h-[300px] w-full">
+              <div className="h-75 w-full">
                 {loadingProducts ? (
                   <div className="h-full flex items-center justify-center">
                     Cargando...
@@ -459,7 +469,7 @@ export default function Dashboard() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
-              <div className="pos-card bg-white p-8 h-[250px]">
+              <div className="pos-card bg-white p-8 h-62.5">
                 <h3 className="text-lg font-bold mb-4 text-center">
                   Estados de Pedido
                 </h3>

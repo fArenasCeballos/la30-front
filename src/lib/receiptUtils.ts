@@ -171,6 +171,11 @@ export interface ReceiptData {
   paymentReceived?: number;
   paymentChange?: number;
   paymentBreakdown?: { efectivo?: number; tarjeta?: number; nequi?: number };
+  sharedPayments?: Array<{
+    method: string;
+    subMethod?: string;
+    amount: number;
+  }>;
 }
 
 /** Genera el HTML completo de la factura del cliente */
@@ -203,7 +208,28 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
   let paymentSection = "";
   if (paymentMethod) {
     let breakdownDetails = "";
-    if (paymentMethod === "mixto" && data.paymentBreakdown) {
+
+    // Shared payment: show individual entries
+    if (
+      paymentMethod === "mixto" &&
+      data.sharedPayments &&
+      data.sharedPayments.length > 0
+    ) {
+      const getLabel = (m: string, sub?: string) => {
+        if (sub === "tarjeta_credito") return "T. Crédito";
+        if (sub === "tarjeta_debito") return "T. Débito";
+        if (sub === "daviplata") return "Daviplata";
+        if (sub === "nequi") return "Nequi";
+        if (m === "efectivo") return "Efectivo";
+        if (m === "tarjeta") return "Tarjeta";
+        return "Nequi";
+      };
+      breakdownDetails += `<div class="center bold" style="font-size:12px;padding:2px 0">PAGO COMPARTIDO</div>`;
+      data.sharedPayments.forEach((p, idx) => {
+        breakdownDetails += `<div class="row" style="font-size:11px"><span>Pago ${idx + 1}: ${getLabel(p.method, p.subMethod)}</span><span>${formatPrice(p.amount)}</span></div>`;
+      });
+    } else if (paymentMethod === "mixto" && data.paymentBreakdown) {
+      // Fallback: aggregated breakdown (for reprints from DB)
       const b = data.paymentBreakdown;
       if (b.efectivo)
         breakdownDetails += `<div class="row"><span>Efectivo:</span><span>${formatPrice(b.efectivo)}</span></div>`;
@@ -237,7 +263,9 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
     `;
   }
 
-  const headerTitle = order.is_delivery ? "VENTA A DOMICILIO" : "VENTA A LA MESA";
+  const headerTitle = order.is_delivery
+    ? "VENTA A DOMICILIO"
+    : "VENTA A LA MESA";
   const locatorLabel = order.is_delivery ? "Domicilio No." : "Mesa No.";
 
   let deliveryInfo = "";
@@ -451,7 +479,9 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
       // Usar category_id directo del producto como clave (más confiable que el join)
       const categoryId =
         (item.products as unknown as { category_id?: string | null })
-          .category_id ?? category?.id ?? "otros";
+          .category_id ??
+        category?.id ??
+        "otros";
       const categoryName = category?.name ?? "Otros";
       const categorySortOrder = category?.sort_order ?? 9999;
 
@@ -598,89 +628,164 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
   `;
 }
 
-/** 
+/**
  * Impresión mediante la ventana principal: más compatible con PWA/Accesos directos.
  * Oculta la app momentáneamente y muestra solo el contenido a imprimir.
  */
-export async function silentPrint(bodyHTML: string, _title?: string): Promise<void> {
+export async function silentPrint(
+  bodyHTML: string,
+  _title?: string,
+): Promise<void> {
   return new Promise((resolve) => {
-    // 1. Crear o recuperar el contenedor de montaje
-    let mount = document.getElementById("print-mount");
-    if (!mount) {
-      mount = document.createElement("div");
-      mount.id = "print-mount";
-      document.body.appendChild(mount);
+    const iframe = document.createElement("iframe");
+    // Ocultar el iframe fuera de la vista
+    iframe.style.position = "absolute";
+    iframe.style.top = "-9999px";
+    iframe.style.left = "-9999px";
+    iframe.style.width = "0px";
+    iframe.style.height = "0px";
+    iframe.style.border = "none";
+    
+    document.body.appendChild(iframe);
+    
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      resolve();
+      return;
     }
 
-    // 2. Inyectar estilos de impresión y el contenido
-    mount.innerHTML = `
-      <style>
-        @media screen {
-          #print-mount { display: none !important; }
-        }
-
-        @media print {
-          /* REGLA MAESTRA: Ocultar todo lo que sea hijo directo del body excepto el mount */
-          body > *:not(#print-mount) {
-            display: none !important;
-            height: 0 !important;
-            overflow: hidden !important;
-            visibility: hidden !important;
-          }
-
-          /* Asegurar que html y body no tengan scroll ni márgenes extraños */
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: auto !important;
-            background: #fff !important;
-          }
-
-          /* El contenedor de impresión debe ser visible y ocupar el ancho */
-          #print-mount {
-            display: block !important;
-            visibility: visible !important;
-            width: 100% !important;
-          }
-
-          #print-mount * {
-            visibility: visible !important;
-          }
-
-          /* Estilos específicos del ticket */
-          ${PRINT_STYLES}
-        }
-      </style>
-      <div class="print-ticket-wrapper">
-        ${bodyHTML}
-      </div>
-    `;
+    // Inyectar el contenido y estilos en el iframe
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <style>
+            ${PRINT_STYLES}
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #fff !important;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-ticket-wrapper">
+            ${bodyHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
 
     let resolved = false;
-
-    // 3. Escuchar cuando el usuario cierra el cuadro de impresión
-    const handleAfterPrint = () => {
+    const cleanup = () => {
       if (resolved) return;
       resolved = true;
-      window.removeEventListener("afterprint", handleAfterPrint);
-      if (timeoutId) clearTimeout(timeoutId);
-      mount!.innerHTML = ""; // Limpiar contenido
-      setTimeout(resolve, 300);
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+      resolve();
     };
 
-    window.addEventListener("afterprint", handleAfterPrint);
-
-    // Timeout de seguridad de 10 segundos para evitar que la UI quede congelada si afterprint no se dispara
-    const timeoutId = setTimeout(() => {
-      if (!resolved) {
-        console.warn("silentPrint: window.afterprint event timed out, resolving manually.");
-        handleAfterPrint();
-      }
-    }, 10000);
-
-    // 4. Lanzar impresión con un delay para asegurar renderizado de fuentes y estilos
+    // Dar tiempo a que el navegador renderice el contenido del iframe
     setTimeout(() => {
-      window.print();
-    }, 800);
+      const win = iframe.contentWindow;
+      if (win) {
+        win.addEventListener("afterprint", cleanup);
+        
+        // Timeout de seguridad de 10s en caso de que afterprint no dispare
+        setTimeout(cleanup, 10000);
+
+        try {
+          win.focus();
+          win.print();
+        } catch (e) {
+          console.error("Error al imprimir desde iframe:", e);
+          cleanup();
+        }
+      } else {
+        cleanup();
+      }
+    }, 500);
   });
+}
+
+/** Genera un comprobante individual (mini recibo) para un pago parcial específico */
+export function buildPartialPaymentReceiptHTML(
+  data: ReceiptData,
+  payment: { method: string; subMethod?: string; amount: number },
+  index: number,
+  totalPayments: number,
+): string {
+  const { order, cajeroName } = data;
+  const { printDate } = getReceiptDates(order);
+  const ticketNumber = order.ticket_number ?? "—";
+
+  const getLabel = (m: string, sub?: string) => {
+    if (sub === "tarjeta_credito") return "T. Crédito";
+    if (sub === "tarjeta_debito") return "T. Débito";
+    if (sub === "daviplata") return "Daviplata";
+    if (sub === "nequi") return "Nequi";
+    if (m === "efectivo") return "Efectivo";
+    if (m === "tarjeta") return "Tarjeta";
+    return "Nequi";
+  };
+
+  const paymentLabel = getLabel(payment.method, payment.subMethod);
+
+  const partialReceipt = `
+    <div class="center">
+      <p class="header-title">COMPROBANTE DE PAGO</p>
+      <p style="font-size:12px; margin-top:4px;">(PAGO PARCIAL ${index} de ${totalPayments})</p>
+    </div>
+
+    <div class="double-divider">
+      <div class="row">
+        <span class="bold">TIQUETE DE CONSUMO</span>
+        <span class="bold">${ticketNumber}</span>
+      </div>
+    </div>
+
+    <div class="row" style="font-size:10px">
+      <span>Fecha Hora Impr.:</span>
+      <span>${printDate}</span>
+    </div>
+    <div class="divider"></div>
+
+    <div class="row">
+      <span>${order.is_delivery ? "Domicilio No." : "Mesa No."}:</span>
+      <span class="bold">${order.locator}</span>
+    </div>
+
+    <div class="row">
+      <span>Cajero :</span>
+      <span class="bold">${cajeroName.toUpperCase()}</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="center" style="padding:10px 0;">
+      <p style="font-size:16px; font-weight:bold;">${paymentLabel.toUpperCase()}</p>
+      <p style="font-size:24px; font-weight:black; margin-top:5px;">${formatPrice(payment.amount)}</p>
+    </div>
+
+    <div class="divider"></div>
+    <div class="center" style="padding:4px 0;">
+      <p style="font-size:11px;">Conserve este comprobante</p>
+    </div>
+  `;
+
+  return `
+    <html>
+      <head>
+        <style>${PRINT_STYLES}</style>
+      </head>
+      <body>
+        <div class="receipt">
+          ${partialReceipt}
+        </div>
+      </body>
+    </html>
+  `;
 }

@@ -37,6 +37,7 @@ import {
   CheckCircle,
   Edit3,
   Loader2,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -112,23 +113,27 @@ export default function Kiosko() {
 
       if (error) throw error;
 
-      return (data as unknown as {
-        id: string;
-        name: string;
-        price: number;
-        polygon: LatLngPoint[][];
-        color: string;
-        is_active: boolean;
-        created_at: string;
-      }[]).map((row): DeliveryZone => ({
-        id: row.id,
-        name: row.name,
-        price: Number(row.price),
-        polygon: row.polygon,
-        color: row.color,
-        is_active: row.is_active,
-        created_at: row.created_at,
-      }));
+      return (
+        data as unknown as {
+          id: string;
+          name: string;
+          price: number;
+          polygon: LatLngPoint[][];
+          color: string;
+          is_active: boolean;
+          created_at: string;
+        }[]
+      ).map(
+        (row): DeliveryZone => ({
+          id: row.id,
+          name: row.name,
+          price: Number(row.price),
+          polygon: row.polygon,
+          color: row.color,
+          is_active: row.is_active,
+          created_at: row.created_at,
+        }),
+      );
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -358,11 +363,18 @@ export default function Kiosko() {
   const currentCategory =
     activeCategory || (categories.length > 0 ? categories[0].name : "");
 
-  const filteredProducts = useMemo(
-    () =>
-      (products || []).filter((p) => p?.categories?.name === currentCategory),
-    [products, currentCategory],
-  );
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredProducts = useMemo(() => {
+    const allProducts = products || [];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return allProducts.filter(
+        (p) => p.name.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q)
+      );
+    }
+    return allProducts.filter((p) => p?.categories?.name === currentCategory);
+  }, [products, currentCategory, searchQuery]);
 
   const total = useMemo(
     () => cart.reduce((sum, item) => sum + item.unit_price * item.quantity, 0),
@@ -544,7 +556,7 @@ export default function Kiosko() {
                   <h1 className="text-xl sm:text-2xl font-black tracking-tight">
                     ¿Tipo de Pedido?
                   </h1>
-                  <p className="text-muted-foreground font-medium text-[10px] sm:text-xs max-w-[260px] sm:max-w-sm mx-auto px-2">
+                  <p className="text-muted-foreground font-medium text-[10px] sm:text-xs max-w-65 sm:max-w-sm mx-auto px-2">
                     Selecciona si el cliente come aquí o es un domicilio.
                   </p>
                 </div>
@@ -557,7 +569,7 @@ export default function Kiosko() {
                       setLocator("");
                     }}
                     className={cn(
-                      "group flex items-center gap-3 p-3 sm:p-4 rounded-xl border-2 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] w-[140px] sm:w-[180px] justify-center",
+                      "group flex items-center gap-3 p-3 sm:p-4 rounded-xl border-2 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] w-35 sm:w-45 justify-center",
                       !isDeliveryOrder && locator !== ""
                         ? "border-primary bg-primary/5 shadow-xl shadow-primary/10"
                         : "border-accent/20 bg-white shadow-soft hover:border-primary/30 hover:shadow-medium",
@@ -583,7 +595,7 @@ export default function Kiosko() {
                       setLocator(nextDeliveryLocator);
                       setStep("menu");
                     }}
-                    className="group flex items-center gap-3 p-3 sm:p-4 rounded-xl border-2 border-purple-500/20 bg-purple-500/5 shadow-soft hover:border-purple-500/40 hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] w-[140px] sm:w-[180px] justify-center"
+                    className="group flex items-center gap-3 p-3 sm:p-4 rounded-xl border-2 border-purple-500/20 bg-purple-500/5 shadow-soft hover:border-purple-500/40 hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] w-35 sm:w-45 justify-center"
                   >
                     <span className="text-xl sm:text-2xl group-hover:scale-110 transition-transform duration-300">
                       🛵
@@ -643,7 +655,7 @@ export default function Kiosko() {
                   <h1 className="text-xl sm:text-2xl font-black tracking-tight">
                     Identifica el Pedido
                   </h1>
-                  <p className="text-muted-foreground font-medium text-[10px] sm:text-xs max-w-[260px] sm:max-w-sm mx-auto px-2">
+                  <p className="text-muted-foreground font-medium text-[10px] sm:text-xs max-w-65 sm:max-w-sm mx-auto px-2">
                     Ingresa el número de localizador asignado para comenzar la
                     selección.
                   </p>
@@ -736,7 +748,7 @@ export default function Kiosko() {
                   </div>
                 </div>
 
-                <div className="p-6 sm:p-8 max-h-[450px] overflow-y-auto premium-scrollbar space-y-6">
+                <div className="p-6 sm:p-8 max-h-112.5 overflow-y-auto premium-scrollbar space-y-6">
                   {cart.map((item) => (
                     <div
                       key={item.id}
@@ -1013,7 +1025,7 @@ export default function Kiosko() {
                 </SheetTrigger>
                 <SheetContent
                   side="right"
-                  className="w-full sm:w-[450px] p-0 flex flex-col border-none shadow-strong h-dvh overflow-hidden"
+                  className="w-full sm:w-112.5 p-0 flex flex-col border-none shadow-strong h-dvh overflow-hidden"
                   aria-describedby={undefined}
                 >
                   <SheetHeader className="p-4 sm:p-8 border-b bg-primary text-white shrink-0">
@@ -1037,8 +1049,18 @@ export default function Kiosko() {
               </Sheet>
             </div>
 
-            {/* Categories Navigation */}
-            <div className="flex gap-3 lg:gap-4 overflow-x-auto pb-4 no-scrollbar scroll-smooth">
+            {/* Search & Categories Navigation */}
+            <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 pb-4">
+              <div className="relative shrink-0 w-full sm:w-64 lg:w-72">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/60" />
+                <Input
+                  placeholder="Buscar producto..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-11 h-12 lg:h-14 rounded-xl lg:rounded-2xl border-2 font-medium bg-white shadow-soft transition-all focus-visible:ring-primary/20 focus-visible:border-primary"
+                />
+              </div>
+              <div className="flex gap-3 lg:gap-4 overflow-x-auto no-scrollbar scroll-smooth flex-1">
               {loadingCats
                 ? [1, 2, 3, 4, 5].map((i) => (
                     <Skeleton
@@ -1071,6 +1093,7 @@ export default function Kiosko() {
                       </Button>
                     );
                   })}
+              </div>
             </div>
           </div>
 
@@ -1145,7 +1168,7 @@ export default function Kiosko() {
         </div>
 
         {/* Desktop Cart Sidebar */}
-        <aside className="hidden lg:flex w-[400px] bg-accent/20 flex-col overflow-hidden">
+        <aside className="hidden lg:flex w-100 bg-accent/20 flex-col overflow-hidden">
           <div className="p-8 border-b flex items-center justify-between bg-white/50 backdrop-blur-md">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -1220,7 +1243,7 @@ function CartContent({
               <p className="font-black text-sm uppercase tracking-widest text-muted-foreground">
                 Carrito Vacío
               </p>
-              <p className="text-xs font-medium text-muted-foreground/60 max-w-[180px]">
+              <p className="text-xs font-medium text-muted-foreground/60 max-w-45">
                 Toca cualquier producto para empezar a armar el pedido.
               </p>
             </div>

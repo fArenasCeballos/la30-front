@@ -17,10 +17,20 @@ import {
   CheckCircle,
   Receipt,
   Delete,
+  Users,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type PaymentMethod = "efectivo" | "tarjeta" | "nequi" | "mixto";
+type SubMethod = "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata";
+type BaseMethod = "efectivo" | "tarjeta" | "nequi";
+
+export interface SharedPaymentEntry {
+  method: BaseMethod;
+  subMethod?: SubMethod;
+  amount: number;
+}
 
 const PAYMENT_METHODS: {
   key: PaymentMethod;
@@ -48,13 +58,8 @@ const PAYMENT_METHODS: {
   },
   {
     key: "mixto",
-    label: "COMBINADO",
-    icon: (
-      <div className="flex -space-x-2 lg:-space-x-4">
-        <Banknote className="h-4 w-4 lg:h-7 lg:w-7" />
-        <Smartphone className="h-4 w-4 lg:h-7 lg:w-7" />
-      </div>
-    ),
+    label: "COMPARTIDO",
+    icon: <Users className="h-5 w-5 lg:h-7 lg:w-7" />,
     color: "bg-amber-500/10 text-amber-600 border-amber-500/20",
   },
 ];
@@ -68,7 +73,15 @@ interface PaymentCalculatorProps {
   onPaymentComplete: (
     method: PaymentMethod,
     received: number,
-    breakdown?: { efectivo?: number; tarjeta?: number; nequi?: number },
+    breakdown?: {
+      efectivo?: number;
+      tarjeta?: number;
+      nequi?: number;
+      tarjeta_credito?: number;
+      tarjeta_debito?: number;
+      daviplata?: number;
+    },
+    sharedPayments?: SharedPaymentEntry[],
   ) => Promise<boolean> | boolean | Promise<void> | void;
 }
 
@@ -80,107 +93,98 @@ export function PaymentCalculator({
 }: PaymentCalculatorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [method, setMethod] = useState<PaymentMethod | null>(null);
-  const [subMethod, setSubMethod] = useState<
-    "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata" | null
-  >(null);
-  const [firstSubMethod, setFirstSubMethod] = useState<
-    "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata" | null
-  >(null);
-  const [secondSubMethod, setSecondSubMethod] = useState<
-    "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata" | null
-  >(null);
-  const [pendingSplit, setPendingSplit] = useState<"first" | "second" | null>(null);
-
+  const [subMethod, setSubMethod] = useState<SubMethod | null>(null);
   const [received, setReceived] = useState("");
+
+  // Shared (multi-person) payment state
+  const [partialPayments, setPartialPayments] = useState<SharedPaymentEntry[]>(
+    [],
+  );
+  const [currentPartialMethod, setCurrentPartialMethod] =
+    useState<BaseMethod | null>(null);
+  const [currentPartialSubMethod, setCurrentPartialSubMethod] =
+    useState<SubMethod | null>(null);
+
   const [step, setStep] = useState<
     | "method"
     | "amount"
-    | "split_first"
-    | "split_amount"
-    | "split_second"
     | "sub_method_tarjeta"
     | "sub_method_transfer"
+    | "shared_method"
+    | "shared_amount"
     | "done"
   >("method");
 
-  // States for mixed payment
-  const [firstMethod, setFirstMethod] = useState<Exclude<
-    PaymentMethod,
-    "mixto"
-  > | null>(null);
-  const [firstAmount, setFirstAmount] = useState("");
-  const [secondMethod, setSecondMethod] = useState<Exclude<
-    PaymentMethod,
-    "mixto"
-  > | null>(null);
-
-  const firstAmountNum = useMemo(
-    () => parseInt(firstAmount) || 0,
-    [firstAmount],
-  );
   const receivedNum = useMemo(() => parseInt(received) || 0, [received]);
 
-  // Remaining total if it's a mixed payment
+  // Total already covered by partial payments
+  const partialTotal = useMemo(
+    () => partialPayments.reduce((sum, p) => sum + p.amount, 0),
+    [partialPayments],
+  );
+
+  // Amount still to be paid
   const remainingTotal = useMemo(() => {
-    if (method === "mixto") return Math.max(0, order.total - firstAmountNum);
+    if (method === "mixto") return Math.max(0, order.total - partialTotal);
     return order.total;
-  }, [method, order.total, firstAmountNum]);
+  }, [method, order.total, partialTotal]);
 
   const change = useMemo(() => {
-    if (method === "mixto" && secondMethod === "efectivo") {
+    if (method === "mixto" && step === "shared_amount") {
       return Math.max(0, receivedNum - remainingTotal);
     }
-    return Math.max(
-      0,
-      receivedNum + (method === "mixto" ? firstAmountNum : 0) - order.total,
-    );
-  }, [
-    receivedNum,
-    firstAmountNum,
-    order.total,
-    method,
-    secondMethod,
-    remainingTotal,
-  ]);
-
-  const canConfirm = useMemo(() => {
-    if (method === "mixto") {
-      if (secondMethod === "efectivo") return receivedNum >= remainingTotal;
-      return true; // Simple confirmation for non-cash second method as it's exact
+    if (method !== "mixto" && step === "amount") {
+      return Math.max(0, receivedNum - order.total);
     }
-    return receivedNum >= order.total;
-  }, [method, secondMethod, receivedNum, remainingTotal, order.total]);
+    return 0;
+  }, [receivedNum, order.total, method, remainingTotal, step]);
+
+  // Can finalize the entire payment (last partial covers remaining)
+  const canConfirm = useMemo(() => {
+    if (method === "mixto" && step === "shared_amount") {
+      return receivedNum >= remainingTotal && remainingTotal > 0;
+    }
+    if (step === "amount" && method === "efectivo") {
+      return receivedNum >= order.total;
+    }
+    return false;
+  }, [method, step, receivedNum, remainingTotal, order.total]);
+
+  // Can add current amount as a partial (not the last one)
+  const canAddPartial = useMemo(() => {
+    if (step !== "shared_amount") return false;
+    return receivedNum > 0 && receivedNum < remainingTotal;
+  }, [step, receivedNum, remainingTotal]);
 
   const handleNumpad = useCallback(
     (val: string) => {
       if (isSubmitting) return;
-      const setter = step === "split_amount" ? setFirstAmount : setReceived;
       if (val === "C") {
-        setter("");
+        setReceived("");
       } else if (val === "DEL") {
-        setter((prev) => prev.slice(0, -1));
+        setReceived((prev) => prev.slice(0, -1));
       } else {
-        setter((prev) => (prev + val).slice(0, 10));
+        setReceived((prev) => (prev + val).slice(0, 10));
       }
     },
-    [step, isSubmitting],
+    [isSubmitting],
   );
 
-  const handleQuickAmount = useCallback((amount: number) => {
-    if (isSubmitting) return;
-    setReceived((prev) => String((parseInt(prev) || 0) + amount));
-  }, [isSubmitting]);
+  const handleQuickAmount = useCallback(
+    (amount: number) => {
+      if (isSubmitting) return;
+      setReceived((prev) => String((parseInt(prev) || 0) + amount));
+    },
+    [isSubmitting],
+  );
 
   const resetState = useCallback(() => {
     setMethod(null);
     setSubMethod(null);
-    setFirstSubMethod(null);
-    setSecondSubMethod(null);
-    setPendingSplit(null);
     setReceived("");
-    setFirstMethod(null);
-    setFirstAmount("");
-    setSecondMethod(null);
+    setPartialPayments([]);
+    setCurrentPartialMethod(null);
+    setCurrentPartialSubMethod(null);
     setStep("method");
     setIsSubmitting(false);
   }, []);
@@ -190,13 +194,40 @@ export function PaymentCalculator({
     setReceived(String(remainingTotal));
   }, [remainingTotal, isSubmitting]);
 
+  // Add the current entry as a partial payment and continue
+  const addPartialPayment = useCallback(() => {
+    if (
+      !currentPartialMethod ||
+      receivedNum <= 0 ||
+      receivedNum >= remainingTotal
+    )
+      return;
+    const newPartial: SharedPaymentEntry = {
+      method: currentPartialMethod,
+      subMethod: currentPartialSubMethod ?? undefined,
+      amount: receivedNum,
+    };
+    setPartialPayments((prev) => [...prev, newPartial]);
+    setReceived("");
+    setCurrentPartialMethod(null);
+    setCurrentPartialSubMethod(null);
+    setStep("shared_method");
+  }, [
+    currentPartialMethod,
+    currentPartialSubMethod,
+    receivedNum,
+    remainingTotal,
+  ]);
+
+  const removePartialPayment = useCallback((index: number) => {
+    setPartialPayments((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
   const handleConfirmPayment = useCallback(
     async (
       overrideReceived?: number,
-      overrideSecondMethod?: Exclude<PaymentMethod, "mixto">,
       overrideMethod?: PaymentMethod,
-      overrideSubMethod?: "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata" | null,
-      overrideSecondSubMethod?: "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata" | null,
+      overrideSubMethod?: SubMethod | null,
     ) => {
       const activeMethod = overrideMethod || method;
       if (!activeMethod || isSubmitting) return;
@@ -204,15 +235,7 @@ export function PaymentCalculator({
 
       const currentReceived =
         overrideReceived !== undefined ? overrideReceived : receivedNum;
-      const currentSecondMethod =
-        overrideSecondMethod !== undefined
-          ? overrideSecondMethod
-          : secondMethod;
 
-      const finalReceived =
-        activeMethod === "mixto" ? firstAmountNum + currentReceived : currentReceived;
-
-      // Build breakdown
       const breakdown: {
         efectivo?: number;
         tarjeta?: number;
@@ -222,35 +245,52 @@ export function PaymentCalculator({
         daviplata?: number;
       } = {};
 
+      let finalReceived = currentReceived;
+      let finalSharedPayments: SharedPaymentEntry[] | undefined;
+
       if (activeMethod === "mixto") {
-        if (firstMethod) {
-          if (firstMethod === "efectivo") {
-            breakdown.efectivo = firstAmountNum;
-          } else {
-            const finalSub = overrideSubMethod || firstSubMethod || (firstMethod as "tarjeta" | "nequi");
-            breakdown[finalSub] = firstAmountNum;
+        // Build all payments: existing partials + the current (final) entry
+        const allPayments: SharedPaymentEntry[] = [...partialPayments];
+        if (currentPartialMethod && currentReceived > 0) {
+          allPayments.push({
+            method: currentPartialMethod,
+            subMethod: currentPartialSubMethod ?? undefined,
+            amount: currentReceived,
+          });
+        }
+
+        // Aggregate into breakdown by method for DB
+        allPayments.forEach((p) => {
+          if (p.method === "efectivo") {
+            breakdown.efectivo = (breakdown.efectivo || 0) + p.amount;
+          } else if (p.subMethod) {
+            breakdown[p.subMethod] = (breakdown[p.subMethod] || 0) + p.amount;
+          } else if (p.method === "tarjeta") {
+            breakdown.tarjeta = (breakdown.tarjeta || 0) + p.amount;
+          } else if (p.method === "nequi") {
+            breakdown.nequi = (breakdown.nequi || 0) + p.amount;
           }
-        }
-        if (currentSecondMethod) {
-          const val = currentSecondMethod === "efectivo" ? currentReceived : remainingTotal;
-          if (currentSecondMethod === "efectivo") {
-            breakdown.efectivo = val;
-          } else {
-            const finalSub = overrideSecondSubMethod || secondSubMethod || (currentSecondMethod as "tarjeta" | "nequi");
-            breakdown[finalSub] = val;
-          }
-        }
-      } else if (activeMethod) {
-        if (activeMethod === "efectivo") {
-          breakdown.efectivo = currentReceived;
-        } else {
-          const finalSub = overrideSubMethod || subMethod || (activeMethod as "tarjeta" | "nequi");
-          breakdown[finalSub] = currentReceived;
-        }
+        });
+
+        finalReceived = allPayments.reduce((sum, p) => sum + p.amount, 0);
+        finalSharedPayments = allPayments;
+      } else if (activeMethod === "efectivo") {
+        breakdown.efectivo = currentReceived;
+      } else {
+        const finalSub =
+          overrideSubMethod ||
+          subMethod ||
+          (activeMethod as "tarjeta" | "nequi");
+        breakdown[finalSub] = currentReceived;
       }
 
       try {
-        const success = await onPaymentComplete(activeMethod, finalReceived, breakdown);
+        const success = await onPaymentComplete(
+          activeMethod,
+          finalReceived,
+          breakdown,
+          finalSharedPayments,
+        );
         if (success !== false) {
           setStep("done");
           setTimeout(() => {
@@ -269,13 +309,10 @@ export function PaymentCalculator({
       method,
       isSubmitting,
       receivedNum,
-      secondMethod,
-      firstMethod,
-      firstAmountNum,
-      remainingTotal,
+      partialPayments,
+      currentPartialMethod,
+      currentPartialSubMethod,
       subMethod,
-      firstSubMethod,
-      secondSubMethod,
       onPaymentComplete,
       resetState,
       onClose,
@@ -290,13 +327,9 @@ export function PaymentCalculator({
       else if (e.key === "Backspace") handleNumpad("DEL");
       else if (e.key === "Escape" || e.key === "Delete") handleNumpad("C");
       else if (e.key === "Enter") {
-        if (step === "amount" && canConfirm) handleConfirmPayment();
-        else if (
-          step === "split_amount" &&
-          firstAmountNum > 0 &&
-          firstAmountNum < order.total
-        )
-          setStep("split_second");
+        if ((step === "amount" || step === "shared_amount") && canConfirm)
+          handleConfirmPayment();
+        else if (step === "shared_amount" && canAddPartial) addPartialPayment();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -305,10 +338,10 @@ export function PaymentCalculator({
     open,
     step,
     canConfirm,
-    firstAmountNum,
-    order.total,
+    canAddPartial,
     handleNumpad,
     handleConfirmPayment,
+    addPartialPayment,
     isSubmitting,
   ]);
 
@@ -321,47 +354,76 @@ export function PaymentCalculator({
   const selectMethod = (m: PaymentMethod) => {
     if (isSubmitting) return;
     setMethod(m);
-    setPendingSplit(null);
     if (m === "mixto") {
-      setStep("split_first");
+      setStep("shared_method");
     } else if (m === "tarjeta") {
       setStep("sub_method_tarjeta");
     } else if (m === "nequi") {
       setStep("sub_method_transfer");
     } else {
-      // Efectivo: mostrar calculadora para ingresar monto recibido
       setStep("amount");
     }
   };
 
-  const selectSubMethodTarjeta = (sub: "tarjeta_credito" | "tarjeta_debito") => {
-    if (pendingSplit === "first") {
-      setFirstSubMethod(sub);
-      setStep("split_amount");
-    } else if (pendingSplit === "second") {
-      setSecondSubMethod(sub);
-      setReceived(String(remainingTotal));
-      handleConfirmPayment(remainingTotal, "tarjeta", undefined, firstSubMethod, sub);
+  const selectSharedMethod = (m: BaseMethod) => {
+    setCurrentPartialMethod(m);
+    setCurrentPartialSubMethod(null);
+    setReceived("");
+    if (m === "tarjeta") {
+      setStep("sub_method_tarjeta");
+    } else if (m === "nequi") {
+      setStep("sub_method_transfer");
+    } else {
+      setStep("shared_amount");
+    }
+  };
+
+  const selectSubMethodTarjeta = (
+    sub: "tarjeta_credito" | "tarjeta_debito",
+  ) => {
+    if (method === "mixto") {
+      setCurrentPartialSubMethod(sub);
+      setStep("shared_amount");
     } else {
       setSubMethod(sub);
       setReceived(String(order.total));
-      handleConfirmPayment(order.total, undefined, "tarjeta", sub);
+      handleConfirmPayment(order.total, "tarjeta", sub);
     }
   };
 
   const selectSubMethodTransfer = (sub: "nequi" | "daviplata") => {
-    if (pendingSplit === "first") {
-      setFirstSubMethod(sub);
-      setStep("split_amount");
-    } else if (pendingSplit === "second") {
-      setSecondSubMethod(sub);
-      setReceived(String(remainingTotal));
-      handleConfirmPayment(remainingTotal, "nequi", undefined, firstSubMethod, sub);
+    if (method === "mixto") {
+      setCurrentPartialSubMethod(sub);
+      setStep("shared_amount");
     } else {
       setSubMethod(sub);
       setReceived(String(order.total));
-      handleConfirmPayment(order.total, undefined, "nequi", sub);
+      handleConfirmPayment(order.total, "nequi", sub);
     }
+  };
+
+  const getMethodLabel = (m: BaseMethod, sub?: SubMethod) => {
+    if (sub === "tarjeta_credito") return "T. Crédito";
+    if (sub === "tarjeta_debito") return "T. Débito";
+    if (sub === "daviplata") return "Daviplata";
+    if (sub === "nequi") return "Nequi";
+    if (m === "efectivo") return "Efectivo";
+    if (m === "tarjeta") return "Tarjeta";
+    return "Nequi";
+  };
+
+  const getMethodIcon = (m: BaseMethod) => {
+    if (m === "efectivo") return <Banknote className="h-3.5 w-3.5" />;
+    if (m === "tarjeta") return <CreditCard className="h-3.5 w-3.5" />;
+    return <Smartphone className="h-3.5 w-3.5" />;
+  };
+
+  const getMethodColor = (m: BaseMethod) => {
+    if (m === "efectivo")
+      return "bg-green-500/10 text-green-700 border-green-500/20";
+    if (m === "tarjeta")
+      return "bg-blue-500/10 text-blue-700 border-blue-500/20";
+    return "bg-purple-500/10 text-purple-700 border-purple-500/20";
   };
 
   return (
@@ -373,9 +435,25 @@ export function PaymentCalculator({
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
               <div className="relative w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/5 shadow-inner">
-                <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  className="animate-spin h-8 w-8 text-primary"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
               </div>
             </div>
@@ -384,7 +462,8 @@ export function PaymentCalculator({
                 Procesando Transacción
               </h3>
               <p className="text-muted-foreground font-medium text-xs lg:text-sm max-w-xs mx-auto">
-                Por favor, espera un momento mientras registramos el pago de forma segura...
+                Por favor, espera un momento mientras registramos el pago de
+                forma segura...
               </p>
             </div>
           </div>
@@ -413,7 +492,7 @@ export function PaymentCalculator({
           </div>
         )}
 
-        {/* Method selection */}
+        {/* ═══════ Method selection ═══════ */}
         {step === "method" && (
           <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
             <DialogHeader className="p-4 lg:p-6 pb-2 lg:pb-3">
@@ -448,7 +527,7 @@ export function PaymentCalculator({
                       {order.order_items?.length} ITEMS
                     </span>
                   </div>
-                  <div className="space-y-2 max-h-[100px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-2 max-h-25 overflow-y-auto pr-2 custom-scrollbar">
                     {order.order_items?.map((item) => (
                       <div
                         key={item.id}
@@ -512,44 +591,98 @@ export function PaymentCalculator({
           </div>
         )}
 
-        {/* Split First Method */}
-        {step === "split_first" && (
+        {/* ═══════ Shared: Select method for next partial ═══════ */}
+        {step === "shared_method" && (
           <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-4 lg:p-6">
             <div className="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setStep("method")}
+                onClick={() => {
+                  setStep("method");
+                  setMethod(null);
+                  setPartialPayments([]);
+                  setCurrentPartialMethod(null);
+                  setCurrentPartialSubMethod(null);
+                  setReceived("");
+                }}
                 className="h-14 w-14 rounded-2xl bg-accent/10"
               >
                 <ArrowLeft className="h-6 w-6" strokeWidth={3} />
               </Button>
               <div className="space-y-0.5">
-                <div className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
-                  PASO 01 / 02
+                <div className="text-amber-600 font-black uppercase tracking-[0.3em] text-[10px]">
+                  PAGO COMPARTIDO • PAGO #{partialPayments.length + 1}
                 </div>
-                <h3 className="text-4xl font-black tracking-tighter">
-                  Primer Medio
+                <h3 className="text-2xl lg:text-4xl font-black tracking-tighter">
+                  ¿Cómo paga?
                 </h3>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+
+            {/* Show remaining */}
+            <div className="bg-amber-500/5 rounded-2xl lg:rounded-3xl p-4 lg:p-6 mb-4 lg:mb-6 border-2 border-amber-500/10 border-dashed text-center">
+              <p className="text-xs font-black text-amber-600/60 uppercase tracking-widest mb-1">
+                {partialPayments.length === 0
+                  ? "TOTAL A PAGAR"
+                  : "MONTO RESTANTE"}
+              </p>
+              <div className="text-3xl lg:text-4xl font-black tracking-tighter text-amber-600">
+                {formatPrice(remainingTotal)}
+              </div>
+            </div>
+
+            {/* Show already added partials */}
+            {partialPayments.length > 0 && (
+              <div className="space-y-2 mb-4 lg:mb-6">
+                <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                  PAGOS REGISTRADOS
+                </p>
+                {partialPayments.map((p, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-xl border-2 animate-in fade-in slide-in-from-left-4 duration-300",
+                      getMethodColor(p.method),
+                    )}
+                    style={{ animationDelay: `${idx * 50}ms` }}
+                  >
+                    <div className="flex items-center gap-2">
+                      {getMethodIcon(p.method)}
+                      <span className="text-xs font-black">
+                        Pago {idx + 1}: {getMethodLabel(p.method, p.subMethod)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-sm">
+                        {formatPrice(p.amount)}
+                      </span>
+                      <button
+                        onClick={() => removePartialPayment(idx)}
+                        className="h-6 w-6 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 flex items-center justify-center transition-all active:scale-90"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between pt-2 border-t border-accent/10 mt-2">
+                  <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                    ACUMULADO
+                  </span>
+                  <span className="text-sm font-black text-foreground">
+                    {formatPrice(partialTotal)} / {formatPrice(order.total)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Method buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
               {PAYMENT_METHODS.filter((pm) => pm.key !== "mixto").map((pm) => (
                 <button
                   key={pm.key}
-                  onClick={() => {
-                    const selected = pm.key as Exclude<PaymentMethod, "mixto">;
-                    setFirstMethod(selected);
-                    if (selected === "tarjeta") {
-                      setPendingSplit("first");
-                      setStep("sub_method_tarjeta");
-                    } else if (selected === "nequi") {
-                      setPendingSplit("first");
-                      setStep("sub_method_transfer");
-                    } else {
-                      setStep("split_amount");
-                    }
-                  }}
+                  onClick={() => selectSharedMethod(pm.key as BaseMethod)}
                   className={cn(
                     "flex flex-col items-center justify-center gap-4 p-6 lg:p-8 rounded-2xl lg:rounded-3xl border-2 transition-all duration-500 hover:scale-[1.05] shadow-soft hover:shadow-xl",
                     pm.color,
@@ -565,46 +698,123 @@ export function PaymentCalculator({
           </div>
         )}
 
-        {/* Split First Amount */}
-        {step === "split_amount" && (
+        {/* ═══════ Shared: Amount entry ═══════ */}
+        {step === "shared_amount" && currentPartialMethod && (
           <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-4 lg:p-6">
-            <div className="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
+            <div className="flex items-center gap-2 lg:gap-6 mb-2 lg:mb-4">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setStep("split_first")}
-                className="h-14 w-14 rounded-2xl bg-accent/10"
+                onClick={() => {
+                  setReceived("");
+                  setCurrentPartialMethod(null);
+                  setCurrentPartialSubMethod(null);
+                  setStep("shared_method");
+                }}
+                className="h-10 w-10 lg:h-14 lg:w-14 rounded-xl lg:rounded-2xl bg-accent/10 animate-none"
               >
-                <ArrowLeft className="h-6 w-6" strokeWidth={3} />
+                <ArrowLeft className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
               </Button>
               <div className="space-y-0.5">
-                <div className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
-                  MONTO PARA {firstMethod?.toUpperCase()}
+                <div className="text-amber-600 font-black uppercase tracking-[0.3em] text-[8px] lg:text-[10px]">
+                  PAGO #{partialPayments.length + 1} •{" "}
+                  {getMethodLabel(
+                    currentPartialMethod,
+                    currentPartialSubMethod ?? undefined,
+                  ).toUpperCase()}
                 </div>
-                <h3 className="text-4xl font-black tracking-tighter">
-                  ¿Cuánto recibiste?
+                <h3 className="text-xl lg:text-2xl font-black tracking-tighter">
+                  ¿Cuánto paga esta persona?
                 </h3>
               </div>
             </div>
 
-            <div className="space-y-4 lg:space-y-6">
-              <div className="rounded-2xl lg:rounded-3xl bg-accent/5 p-4 lg:p-6 text-center space-y-1 lg:space-y-2 border-2 border-accent/5 shadow-inner">
-                <p className="text-[11px] font-black text-muted-foreground/40 uppercase tracking-widest">
-                  INGRESAR VALOR
-                </p>
-                <p className="text-4xl lg:text-5xl font-black tracking-tighter text-foreground">
-                  {firstAmount ? formatPrice(firstAmountNum) : "$0"}
-                </p>
-                <div className="pt-4 border-t border-accent/10 mt-4">
-                  <p className="text-xs font-bold text-muted-foreground/60">
-                    Total Pedido:{" "}
-                    <span className="text-foreground font-black">
-                      {formatPrice(order.total)}
-                    </span>
+            {/* Show existing partials summary */}
+            {partialPayments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {partialPayments.map((p, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-black",
+                      getMethodColor(p.method),
+                    )}
+                  >
+                    {getMethodIcon(p.method)}
+                    <span>{formatPrice(p.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="space-y-3 lg:space-y-4">
+              {/* Display */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-8">
+                <div className="rounded-2xl lg:rounded-3xl bg-accent/5 p-4 lg:p-6 text-center space-y-1 lg:space-y-3 border-2 border-accent/5 shadow-inner">
+                  <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                    MONTO DE ESTE PAGO
                   </p>
+                  <p className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground">
+                    {received ? formatPrice(receivedNum) : "$0"}
+                  </p>
+                  {receivedNum > 0 &&
+                    receivedNum >= remainingTotal &&
+                    currentPartialMethod === "efectivo" && (
+                      <div className="pt-3 border-t border-accent/10 mt-3 flex flex-col items-center gap-1">
+                        <p className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest leading-none">
+                          CAMBIO PARA EL CLIENTE
+                        </p>
+                        <p className="text-lg lg:text-2xl font-black tracking-tighter text-green-500">
+                          {formatPrice(change)}
+                        </p>
+                      </div>
+                    )}
+                  <div className="pt-2 mt-2 border-t border-accent/5">
+                    <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
+                      RESTANTE:{" "}
+                      <span className="text-foreground font-black ml-1">
+                        {formatPrice(remainingTotal)}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExact}
+                      className="h-10 lg:h-12 rounded-xl lg:rounded-2xl border-2 font-black uppercase tracking-widest text-[8px] lg:text-[10px] shadow-soft"
+                    >
+                      MONTO EXACTO
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setReceived("50000")}
+                      className="h-10 lg:h-12 rounded-xl lg:rounded-2xl border-2 font-black text-sm shadow-soft"
+                    >
+                      $50.000
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {QUICK_AMOUNTS.slice(2, 6).map((a) => (
+                      <Button
+                        key={a}
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleQuickAmount(a)}
+                        className="h-10 lg:h-12 rounded-xl lg:rounded-2xl font-black text-sm shadow-soft bg-white border-2 border-accent/5"
+                      >
+                        +{formatPrice(a)}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
+              {/* Numpad */}
               <div className="grid grid-cols-3 gap-2">
                 {[
                   "1",
@@ -624,7 +834,7 @@ export function PaymentCalculator({
                     key={key}
                     variant="secondary"
                     className={cn(
-                      "h-11 lg:h-14 rounded-xl lg:rounded-2xl font-black text-xl transition-all active:scale-95 shadow-soft border-2 border-transparent",
+                      "h-10 lg:h-11 rounded-xl lg:rounded-2xl font-black text-lg transition-all active:scale-95 shadow-soft border-2 border-transparent",
                       key === "C"
                         ? "text-destructive hover:bg-destructive/5 hover:border-destructive/10"
                         : key === "DEL"
@@ -634,7 +844,7 @@ export function PaymentCalculator({
                     onClick={() => handleNumpad(key)}
                   >
                     {key === "DEL" ? (
-                      <Delete className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={2.5} />
+                      <Delete className="h-5 w-5" strokeWidth={2.5} />
                     ) : (
                       key
                     )}
@@ -642,84 +852,79 @@ export function PaymentCalculator({
                 ))}
               </div>
 
-              <Button
-                size="lg"
-                className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-widest shadow-strong shadow-primary/20 transition-all active:scale-95"
-                disabled={firstAmountNum <= 0 || firstAmountNum >= order.total}
-                onClick={() => setStep("split_second")}
-              >
-                CONTINUAR (FALTAN {formatPrice(order.total - firstAmountNum)})
-              </Button>
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2">
+                {canAddPartial && (
+                  <Button
+                    size="lg"
+                    className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.15em] shadow-strong shadow-amber-500/20 transition-all active:scale-95"
+                    onClick={addPartialPayment}
+                  >
+                    <Users
+                      className="h-5 w-5 lg:h-6 lg:w-6 mr-2"
+                      strokeWidth={3}
+                    />
+                    AGREGAR PAGO Y CONTINUAR (FALTAN{" "}
+                    {formatPrice(remainingTotal - receivedNum)})
+                  </Button>
+                )}
+                {canConfirm && (
+                  <Button
+                    size="lg"
+                    className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.15em] shadow-strong shadow-primary/20 transition-all active:scale-95"
+                    disabled={isSubmitting}
+                    onClick={() => handleConfirmPayment()}
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center gap-3 justify-center">
+                        <svg
+                          className="animate-spin h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        PROCESANDO PAGO...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle
+                          className="h-5 w-5 lg:h-6 lg:w-6"
+                          strokeWidth={3}
+                        />
+                        CONFIRMAR PAGO FINAL
+                      </div>
+                    )}
+                  </Button>
+                )}
+                {!canAddPartial && !canConfirm && (
+                  <Button
+                    size="lg"
+                    disabled
+                    className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl font-black text-[10px] lg:text-xs uppercase tracking-[0.2em]"
+                  >
+                    INGRESA UN MONTO
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Split Second Method */}
-        {step === "split_second" && (
-          <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-4 lg:p-6">
-            <div className="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setStep("split_amount")}
-                className="h-14 w-14 rounded-2xl bg-accent/10"
-              >
-                <ArrowLeft className="h-6 w-6" strokeWidth={3} />
-              </Button>
-              <div className="space-y-0.5">
-                <div className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
-                  PASO 02 / 02
-                </div>
-                <h3 className="text-4xl font-black tracking-tighter">
-                  ¿Cómo paga el resto?
-                </h3>
-              </div>
-            </div>
-
-            <div className="bg-primary/5 rounded-2xl lg:rounded-3xl p-4 lg:p-6 mb-4 lg:mb-6 border-2 border-primary/10 border-dashed text-center">
-              <p className="text-xs font-black text-primary/60 uppercase tracking-widest mb-1">
-                MONTO RESTANTE
-              </p>
-              <div className="text-3xl lg:text-4xl font-black tracking-tighter text-primary">
-                {formatPrice(order.total - firstAmountNum)}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {PAYMENT_METHODS.filter(
-                (pm) => pm.key !== "mixto" && pm.key !== firstMethod,
-              ).map((pm) => (
-                <button
-                  key={pm.key}
-                  onClick={() => {
-                    const selected = pm.key as Exclude<PaymentMethod, "mixto">;
-                    setSecondMethod(selected);
-                    if (selected === "efectivo") {
-                      setStep("amount");
-                    } else if (selected === "tarjeta") {
-                      setPendingSplit("second");
-                      setStep("sub_method_tarjeta");
-                    } else if (selected === "nequi") {
-                      setPendingSplit("second");
-                      setStep("sub_method_transfer");
-                    }
-                  }}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-4 p-6 lg:p-8 rounded-2xl lg:rounded-3xl border-2 transition-all duration-500 hover:scale-[1.05] shadow-soft hover:shadow-xl",
-                    pm.color,
-                  )}
-                >
-                  {pm.icon}
-                  <span className="text-[10px] font-black tracking-widest">
-                    {pm.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Sub Method Tarjeta */}
+        {/* ═══════ Sub Method Tarjeta ═══════ */}
         {step === "sub_method_tarjeta" && (
           <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-4 lg:p-6">
             <div className="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
@@ -727,8 +932,7 @@ export function PaymentCalculator({
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  if (pendingSplit === "first") setStep("split_first");
-                  else if (pendingSplit === "second") setStep("split_second");
+                  if (method === "mixto") setStep("shared_method");
                   else setStep("method");
                 }}
                 className="h-14 w-14 rounded-2xl bg-accent/10"
@@ -767,7 +971,7 @@ export function PaymentCalculator({
           </div>
         )}
 
-        {/* Sub Method Transfer */}
+        {/* ═══════ Sub Method Transfer ═══════ */}
         {step === "sub_method_transfer" && (
           <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-4 lg:p-6">
             <div className="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
@@ -775,8 +979,7 @@ export function PaymentCalculator({
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  if (pendingSplit === "first") setStep("split_first");
-                  else if (pendingSplit === "second") setStep("split_second");
+                  if (method === "mixto") setStep("shared_method");
                   else setStep("method");
                 }}
                 className="h-14 w-14 rounded-2xl bg-accent/10"
@@ -815,16 +1018,15 @@ export function PaymentCalculator({
           </div>
         )}
 
-        {/* Amount / calculator */}
-        {step === "amount" && (method || secondMethod) && (
+        {/* ═══════ Amount / calculator (single efectivo only) ═══════ */}
+        {step === "amount" && method === "efectivo" && (
           <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 p-4 lg:p-6">
             <div className="flex items-center gap-2 lg:gap-6 mb-2 lg:mb-4">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  if (method === "mixto") setStep("split_second");
-                  else setStep("method");
+                  setStep("method");
                   setReceived("");
                 }}
                 className="h-10 w-10 lg:h-14 lg:w-14 rounded-xl lg:rounded-2xl bg-accent/10 animate-none"
@@ -833,12 +1035,10 @@ export function PaymentCalculator({
               </Button>
               <div className="space-y-0.5">
                 <div className="text-primary font-black uppercase tracking-[0.3em] text-[8px] lg:text-[10px]">
-                  {method === "mixto"
-                    ? "FINALIZAR PAGO MIXTO"
-                    : "REGISTRAR EFECTIVO"}
+                  REGISTRAR EFECTIVO
                 </div>
                 <h3 className="text-xl lg:text-2xl font-black tracking-tighter">
-                  {method === "mixto" ? `Efectivo Faltante` : `Monto Recibido`}
+                  Monto Recibido
                 </h3>
               </div>
             </div>
@@ -866,7 +1066,7 @@ export function PaymentCalculator({
                       >
                         {canConfirm
                           ? formatPrice(change)
-                          : `Falta ${formatPrice(remainingTotal - receivedNum)}`}
+                          : `Falta ${formatPrice(order.total - receivedNum)}`}
                       </p>
                     </div>
                   )}
@@ -874,7 +1074,7 @@ export function PaymentCalculator({
                     <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
                       DEBE PAGAR:{" "}
                       <span className="text-foreground font-black ml-1">
-                        {formatPrice(remainingTotal)}
+                        {formatPrice(order.total)}
                       </span>
                     </p>
                   </div>
@@ -961,9 +1161,25 @@ export function PaymentCalculator({
               >
                 {isSubmitting ? (
                   <div className="flex items-center gap-3 justify-center">
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     PROCESANDO PAGO...
                   </div>

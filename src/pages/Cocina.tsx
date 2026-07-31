@@ -1,11 +1,63 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOrders } from "@/context/OrderContext";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ChefHat, Loader2, CheckCircle, Flame, BellRing } from "lucide-react";
+import { ChefHat, Loader2, CheckCircle, Flame, BellRing, Clock, AlertTriangle, AlertCircle } from "lucide-react";
 import type { OrderStatus, Order } from "@/types";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { cn } from "@/lib/utils";
+
+const OrderTimer = ({ createdAt }: { createdAt: string }) => {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const start = new Date(createdAt).getTime();
+    const tick = () => {
+      setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+    };
+    tick();
+    const intervalId = setInterval(tick, 1000);
+    return () => clearInterval(intervalId);
+  }, [createdAt]);
+
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
+
+  let state: "normal" | "warning" | "danger" = "normal";
+  if (minutes >= 10) state = "danger";
+  else if (minutes >= 5) state = "warning";
+
+  const config = {
+    normal: {
+      colors: "text-muted-foreground/60 bg-white/50 border-accent/10",
+      icon: <Clock className="h-3 w-3" />,
+    },
+    warning: {
+      colors: "text-yellow-600 font-bold bg-yellow-500/10 border-yellow-500/30",
+      icon: <AlertTriangle className="h-3 w-3" />,
+    },
+    danger: {
+      colors:
+        "text-red-600 font-black bg-red-500/10 border-red-500/30 animate-pulse shadow-sm",
+      icon: <AlertCircle className="h-3 w-3" />,
+    },
+  }[state];
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1.5 text-[11px] font-mono tracking-widest px-2 py-0.5 rounded-md border shrink-0 transition-colors duration-300",
+        config.colors,
+      )}
+    >
+      {config.icon}
+      <span>
+        {minutes.toString().padStart(2, "0")}:
+        {seconds.toString().padStart(2, "0")}
+      </span>
+    </div>
+  );
+};
 
 export default function Cocina() {
   const { getOrdersByStatus, updateOrderStatus, toggleOrderItem } = useOrders();
@@ -52,11 +104,11 @@ export default function Cocina() {
         )}
         style={{ animationDelay: `${idx * 50}ms` }}
       >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
+        <div className="flex items-start justify-between mb-3 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <div
               className={cn(
-                "h-8 w-8 lg:h-10 lg:w-10 rounded-lg flex items-center justify-center font-black text-sm lg:text-base shadow-inner",
+                "h-10 w-10 shrink-0 rounded-xl flex items-center justify-center font-black text-base shadow-inner",
                 isSalida
                   ? "bg-green-500 text-white"
                   : "bg-preparing/10 text-preparing",
@@ -64,25 +116,27 @@ export default function Cocina() {
             >
               {order.locator}
             </div>
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5 text-[7px] font-black text-muted-foreground/40 tracking-widest uppercase">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1.5 text-[8px] font-black text-muted-foreground/40 tracking-widest uppercase mb-0.5">
                 {isSalida ? (
-                  <BellRing className="h-2 w-2" />
+                  <BellRing className="h-2.5 w-2.5 shrink-0" />
                 ) : (
-                  <Flame className="h-2 w-2 animate-pulse" />
+                  <Flame className="h-2.5 w-2.5 animate-pulse shrink-0" />
                 )}
-                {isSalida ? "LISTO" : "PREPARANDO"}
+                <span className="truncate">{isSalida ? "LISTO" : "FUEGO"}</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <StatusBadge
-                  status={order.status}
-                  className="h-4 text-[8px] px-1.5"
-                />
-                <span className="text-[8px] font-black text-primary/60 uppercase tracking-widest truncate max-w-[100px]">
-                  {order.profiles?.name ? `Mesero: ${order.profiles.name}` : "Kiosko"}
-                </span>
-              </div>
+              <span className="text-[10px] font-black text-primary/70 uppercase truncate">
+                {order.profiles?.name || "Kiosko"}
+              </span>
             </div>
+          </div>
+          
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <OrderTimer createdAt={order.created_at} />
+            <StatusBadge
+              status={order.status}
+              className="h-4 text-[7px] px-1.5 py-0"
+            />
           </div>
         </div>
 
@@ -228,7 +282,7 @@ export default function Cocina() {
                 {enPreparacion.length} EN COLA
               </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
               {enPreparacion.map((order, idx) => renderOrderCard(order, idx))}
               {enPreparacion.length === 0 && (
                 <div className="col-span-full py-20 flex flex-col items-center justify-center opacity-20 grayscale scale-75">

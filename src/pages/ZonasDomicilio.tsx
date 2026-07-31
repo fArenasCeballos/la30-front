@@ -260,7 +260,7 @@ export default function ZonasDomicilio() {
       {/* Map + Form Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Map */}
-        <div className="lg:col-span-2 h-[400px] lg:h-[550px]">
+        <div className="lg:col-span-2 h-100 lg:h-137.5">
           <ZoneMapEditor
             zones={zones}
             editingZone={editingZone}
@@ -349,7 +349,8 @@ export default function ZonasDomicilio() {
                           : "Dibuja una zona en el mapa"}
                       </p>
                       <p className="text-[9px] text-amber-600 mt-1">
-                        Usa las herramientas arriba a la derecha para trazar polígonos, cuadrados o círculos.
+                        Usa las herramientas arriba a la derecha para trazar
+                        polígonos, cuadrados o círculos.
                       </p>
                     </div>
                   ) : (
@@ -412,7 +413,7 @@ export default function ZonasDomicilio() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto premium-scrollbar pr-1">
+              <div className="space-y-2 max-h-100 overflow-y-auto premium-scrollbar pr-1">
                 {zones.map((zone) => (
                   <div
                     key={zone.id}

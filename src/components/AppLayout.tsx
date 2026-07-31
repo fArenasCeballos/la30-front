@@ -60,7 +60,12 @@ const NAV_ITEMS: {
     icon: Truck,
     roles: ["caja", "admin"],
   },
-  { to: "/cocina", label: "Cocina", icon: ChefHat, roles: ["cocina", "admin"] },
+  {
+    to: "/cocina",
+    label: "Cocina",
+    icon: ChefHat,
+    roles: ["cocina", "admin", "caja"],
+  },
   {
     to: "/mis-pedidos",
     label: "Mis Pedidos",
@@ -416,7 +421,7 @@ export function AppLayout() {
           <NavLink
             key={item.to}
             to={item.to}
-            className="flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-200 relative group min-w-[40px]"
+            className="flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-200 relative group min-w-10"
             activeClassName="text-white"
           >
             {({ isActive }) => (

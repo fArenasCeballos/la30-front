@@ -7,7 +7,14 @@ import { useOrders } from "@/context/OrderContext";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/formatPrice";
 import { toast } from "sonner";
-import type { Order, OrderItem, OrderStatus, Category, Product, DeliveryZone } from "@/types";
+import type {
+  Order,
+  OrderItem,
+  OrderStatus,
+  Category,
+  Product,
+  DeliveryZone,
+} from "@/types";
 import { cn } from "@/lib/utils";
 import { PaymentCalculator } from "@/components/PaymentCalculator";
 import { DeliveryZoneCombobox } from "@/components/DeliveryZoneCombobox";
@@ -65,6 +72,11 @@ interface ReceiptState {
   paymentReceived?: number;
   paymentChange?: number;
   paymentBreakdown?: { efectivo?: number; tarjeta?: number; nequi?: number };
+  sharedPayments?: Array<{
+    method: string;
+    subMethod?: string;
+    amount: number;
+  }>;
 }
 
 export default function Domicilios() {
@@ -601,7 +613,7 @@ export default function Domicilios() {
           >
             <Truck className="h-4 w-4" strokeWidth={3} />
             Activos
-            <Badge className="bg-purple-500 text-white border-none rounded-xl h-5 min-w-[20px] px-1.5 flex items-center justify-center font-black text-[9px] ml-1 shadow-md">
+            <Badge className="bg-purple-500 text-white border-none rounded-xl h-5 min-w-5 px-1.5 flex items-center justify-center font-black text-[9px] ml-1 shadow-md">
               {deliveryOrders.length}
             </Badge>
           </TabsTrigger>
@@ -611,7 +623,7 @@ export default function Domicilios() {
           >
             <History className="h-4 w-4" strokeWidth={3} />
             Historial
-            <Badge className="bg-purple-500 text-white border-none rounded-xl h-5 min-w-[20px] px-1.5 flex items-center justify-center font-black text-[9px] ml-1 shadow-md">
+            <Badge className="bg-purple-500 text-white border-none rounded-xl h-5 min-w-5 px-1.5 flex items-center justify-center font-black text-[9px] ml-1 shadow-md">
               {completedDeliveries.length}
             </Badge>
           </TabsTrigger>
@@ -657,7 +669,7 @@ export default function Domicilios() {
                   {tab.label}
                   <Badge
                     className={cn(
-                      "ml-2 rounded-full px-1.5 py-0.5 text-[9px] font-black border-none shrink-0 h-4 min-w-[16px] flex items-center justify-center",
+                      "ml-2 rounded-full px-1.5 py-0.5 text-[9px] font-black border-none shrink-0 h-4 min-w-4 flex items-center justify-center",
                       activeSubTab === tab.id
                         ? "bg-white text-purple-600"
                         : "bg-purple-100 text-purple-600",
@@ -718,7 +730,7 @@ export default function Domicilios() {
                               minute: "2-digit",
                             })}
                           </p>
-                          <p className="text-[8px] font-black text-purple-600/70 uppercase tracking-widest truncate max-w-[120px] mt-0.5">
+                          <p className="text-[8px] font-black text-purple-600/70 uppercase tracking-widest truncate max-w-30 mt-0.5">
                             {order.profiles?.name
                               ? `Mesero: ${order.profiles.name}`
                               : "Kiosko"}
@@ -1197,6 +1209,7 @@ export default function Domicilios() {
           paymentReceived={receipt.paymentReceived}
           paymentChange={receipt.paymentChange}
           paymentBreakdown={receipt.paymentBreakdown}
+          sharedPayments={receipt.sharedPayments}
         />
       )}
 

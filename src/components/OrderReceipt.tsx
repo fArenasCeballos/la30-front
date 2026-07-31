@@ -26,6 +26,7 @@ interface OrderReceiptProps {
   paymentReceived?: number;
   paymentChange?: number;
   paymentBreakdown?: { efectivo?: number; tarjeta?: number; nequi?: number };
+  sharedPayments?: Array<{ method: string; subMethod?: string; amount: number }>;
 }
 
 export function OrderReceipt({
@@ -37,6 +38,7 @@ export function OrderReceipt({
   paymentReceived,
   paymentChange,
   paymentBreakdown,
+  sharedPayments,
 }: OrderReceiptProps) {
   const printRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -87,6 +89,7 @@ export function OrderReceipt({
       paymentReceived,
       paymentChange,
       paymentBreakdown,
+      sharedPayments,
     };
 
     if (type === "customer") {
@@ -258,26 +261,47 @@ export function OrderReceipt({
           </div>
 
           <div style={{ fontSize: "11px", padding: "4px 0 0" }}>
-            {paymentMethod === "mixto" && paymentBreakdown ? (
+            {paymentMethod === "mixto" && sharedPayments && sharedPayments.length > 0 ? (
               <div className="space-y-0.5">
-                {paymentBreakdown.efectivo && (
+                <div className="center bold" style={{ fontSize: "12px", padding: "2px 0" }}>PAGO COMPARTIDO</div>
+                {sharedPayments.map((p, idx) => {
+                  const getLabel = (m: string, sub?: string) => {
+                    if (sub === "tarjeta_credito") return "T. Crédito";
+                    if (sub === "tarjeta_debito") return "T. Débito";
+                    if (sub === "daviplata") return "Daviplata";
+                    if (sub === "nequi") return "Nequi";
+                    if (m === "efectivo") return "Efectivo";
+                    if (m === "tarjeta") return "Tarjeta";
+                    return "Nequi";
+                  };
+                  return (
+                    <div key={idx} className="row">
+                      <span>Pago {idx + 1}: {getLabel(p.method, p.subMethod)}</span>
+                      <span>{formatPrice(p.amount)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : paymentMethod === "mixto" && paymentBreakdown ? (
+              <div className="space-y-0.5">
+                {paymentBreakdown.efectivo ? (
                   <div className="row">
                     <span>Efectivo:</span>
                     <span>{formatPrice(paymentBreakdown.efectivo)}</span>
                   </div>
-                )}
-                {paymentBreakdown.tarjeta && (
+                ) : null}
+                {paymentBreakdown.tarjeta ? (
                   <div className="row">
                     <span>Tarjeta:</span>
                     <span>{formatPrice(paymentBreakdown.tarjeta)}</span>
                   </div>
-                )}
-                {paymentBreakdown.nequi && (
+                ) : null}
+                {paymentBreakdown.nequi ? (
                   <div className="row">
                     <span>Nequi:</span>
                     <span>{formatPrice(paymentBreakdown.nequi)}</span>
                   </div>
-                )}
+                ) : null}
               </div>
             ) : (
               <div className="row">

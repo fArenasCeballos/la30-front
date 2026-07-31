@@ -14,6 +14,7 @@ import {
   buildCustomerReceiptHTML,
   buildKitchenReceiptHTML,
   buildShiftClosingReceiptHTML,
+  buildPartialPaymentReceiptHTML,
   silentPrint,
 } from "@/lib/receiptUtils";
 import type { ReceiptData } from "@/lib/receiptUtils";
@@ -48,6 +49,11 @@ interface ReceiptState {
   paymentReceived?: number;
   paymentChange?: number;
   paymentBreakdown?: { efectivo?: number; tarjeta?: number; nequi?: number };
+  sharedPayments?: Array<{
+    method: string;
+    subMethod?: string;
+    amount: number;
+  }>;
 }
 
 export default function Caja() {
@@ -169,6 +175,11 @@ export default function Caja() {
       tarjeta_debito?: number;
       daviplata?: number;
     },
+    sharedPayments?: Array<{
+      method: string;
+      subMethod?: string;
+      amount: number;
+    }>,
   ): Promise<boolean> => {
     if (!payingOrder) return false;
     const change = Math.max(0, received - payingOrder.total);
@@ -198,8 +209,21 @@ export default function Caja() {
           paymentReceived: received,
           paymentChange: change,
           paymentBreakdown: breakdown,
+          sharedPayments,
         };
 
+        // Si es pago mixto/compartido, imprimir primero cada voucher individual
+        if (method === "mixto" && sharedPayments && sharedPayments.length > 0) {
+          for (let i = 0; i < sharedPayments.length; i++) {
+            const p = sharedPayments[i];
+            await silentPrint(
+              buildPartialPaymentReceiptHTML(receiptData, p, i + 1, sharedPayments.length),
+              `Voucher Parcial ${i + 1} - ${activeOrder.locator}`
+            );
+          }
+        }
+
+        // Luego imprimir factura completa del cliente
         await silentPrint(
           buildCustomerReceiptHTML(receiptData),
           `Recibo - ${activeOrder.locator}`,
@@ -305,7 +329,7 @@ export default function Caja() {
                   <TabsTrigger
                     key={tab.id}
                     value={tab.id}
-                    className="group rounded-lg lg:rounded-xl px-4 lg:px-8 py-2 lg:py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all font-black text-[9px] lg:text-[11px] uppercase tracking-widest flex items-center gap-2 lg:gap-3 border-2 data-[state=active]:border-primary/5 min-w-[120px] lg:min-w-[140px]"
+                    className="group rounded-lg lg:rounded-xl px-4 lg:px-8 py-2 lg:py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all font-black text-[9px] lg:text-[11px] uppercase tracking-widest flex items-center gap-2 lg:gap-3 border-2 data-[state=active]:border-primary/5 min-w-30 lg:min-w-35"
                   >
                     <tab.icon
                       className={cn(
@@ -315,7 +339,7 @@ export default function Caja() {
                       strokeWidth={2.5}
                     />
                     {tab.label}
-                    <Badge className="bg-primary text-white border-none rounded-xl h-6 min-w-[24px] px-1.5 flex items-center justify-center font-black text-[10px] ml-auto shadow-md">
+                    <Badge className="bg-primary text-white border-none rounded-xl h-6 min-w-6 px-1.5 flex items-center justify-center font-black text-[10px] ml-auto shadow-md">
                       {tab.count}
                     </Badge>
                   </TabsTrigger>
@@ -744,13 +768,15 @@ export default function Caja() {
                           )}
 
                           {successInvoice &&
-                            !!(successInvoice.response_payload?.public_url as string) && (
+                            !!(successInvoice.response_payload
+                              ?.public_url as string) && (
                               <Button
                                 variant="outline"
                                 className="rounded-2xl h-10 border-2 border-emerald-500/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-emerald-50 text-emerald-600 transition-all active:scale-95 shadow-sm"
                                 onClick={() =>
                                   window.open(
-                                    successInvoice.response_payload?.public_url as string,
+                                    successInvoice.response_payload
+                                      ?.public_url as string,
                                     "_blank",
                                   )
                                 }
