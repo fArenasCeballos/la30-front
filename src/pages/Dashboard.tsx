@@ -142,11 +142,11 @@ export default function Dashboard() {
             nequi += p.amount_nequi || 0;
           } else {
             if (p.method === "efectivo")
-              cash += p.amount_total || p.amount || 0;
+              cash += p.amount_total || 0;
             else if (p.method === "tarjeta")
-              card += p.amount_total || p.amount || 0;
+              card += p.amount_total || 0;
             else if (p.method === "nequi")
-              nequi += p.amount_total || p.amount || 0;
+              nequi += p.amount_total || 0;
           }
         });
       }

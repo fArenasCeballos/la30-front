@@ -35,7 +35,7 @@ export function OrderCard({
   );
 
   const previouslyPaid =
-    order.payments?.reduce((sum, p) => sum + (Number(p.amount) || Number(p.amount_total) || ((Number(p.amount_efectivo) || 0) + (Number(p.amount_tarjeta) || 0) + (Number(p.amount_nequi) || 0)) || 0), 0) || 0;
+    order.payments?.reduce((sum, p) => sum + (Number(p.amount_total) || ((Number(p.amount_efectivo) || 0) + (Number(p.amount_tarjeta) || 0) + (Number(p.amount_nequi) || 0)) || 0), 0) || 0;
   const baseRemaining = Math.max(0, (order.total || 0) - previouslyPaid);
 
   return (
