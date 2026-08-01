@@ -19,10 +19,11 @@ import {
   Delete,
   Users,
   Trash2,
+  PiSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type PaymentMethod = "efectivo" | "tarjeta" | "nequi" | "mixto";
+type PaymentMethod = "efectivo" | "tarjeta" | "nequi" | "mixto" | "compartido";
 type SubMethod = "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata";
 type BaseMethod = "efectivo" | "tarjeta" | "nequi";
 
@@ -58,6 +59,12 @@ const PAYMENT_METHODS: {
   },
   {
     key: "mixto",
+    label: "MIXTO",
+    icon: <PiSquare className="h-5 w-5 lg:h-8 lg:w-8" />,
+    color: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+  },
+  {
+    key: "compartido",
     label: "COMPARTIDO",
     icon: <Users className="h-5 w-5 lg:h-7 lg:w-7" />,
     color: "bg-amber-500/10 text-amber-600 border-amber-500/20",
@@ -147,7 +154,8 @@ export function PaymentCalculator({
 
   // Amount still to be paid
   const remainingTotal = useMemo(() => {
-    if (method === "mixto") return Math.max(0, baseRemaining - partialTotal);
+    if (method === "mixto" || method === "compartido")
+      return Math.max(0, baseRemaining - partialTotal);
     return baseRemaining;
   }, [method, baseRemaining, partialTotal]);
 
@@ -172,14 +180,17 @@ export function PaymentCalculator({
   }, [open, order.id]);
 
   const change = useMemo(() => {
-    if (method === "mixto" && step === "shared_amount") {
+    if (
+      (method === "mixto" || method === "compartido") &&
+      step === "shared_amount"
+    ) {
       if (currentPartialMethod === "efectivo") {
         const toPay = itemsAmount > 0 ? itemsAmount : remainingTotal;
         return Math.max(0, receivedNum - toPay);
       }
       return Math.max(0, receivedNum - remainingTotal);
     }
-    if (method !== "mixto" && step === "amount") {
+    if (method !== "mixto" && method !== "compartido" && step === "amount") {
       return Math.max(0, receivedNum - baseRemaining);
     }
     return 0;
@@ -195,7 +206,10 @@ export function PaymentCalculator({
 
   // Can finalize the entire payment or partial
   const canConfirm = useMemo(() => {
-    if (method === "mixto" && step === "shared_amount") {
+    if (
+      (method === "mixto" || method === "compartido") &&
+      step === "shared_amount"
+    ) {
       if (currentPartialMethod === "efectivo" && itemsAmount > 0) {
         // For cash: receivedNum is what client hands over, must be >= itemsAmount
         return (
@@ -286,10 +300,7 @@ export function PaymentCalculator({
   // Add the current entry as a partial payment and continue
   const addPartialPayment = useCallback(() => {
     // Use itemsAmount if pre-calculated (from item selector), else fall back to receivedNum
-    const paymentAmount =
-      itemsAmount > 0
-        ? itemsAmount
-        : receivedNum;
+    const paymentAmount = itemsAmount > 0 ? itemsAmount : receivedNum;
     if (
       !currentPartialMethod ||
       paymentAmount <= 0 ||
@@ -353,14 +364,11 @@ export function PaymentCalculator({
       let finalReceived = currentReceived;
       let finalSharedPayments: SharedPaymentEntry[] | undefined;
 
-      if (activeMethod === "mixto") {
+      if (activeMethod === "mixto" || activeMethod === "compartido") {
         // Build all payments: existing partials + the current (final) entry
         const allPayments: SharedPaymentEntry[] = [...partialPayments];
         // For cash in shared mode, the actual payment amount is itemsAmount (if set)
-        const finalAmount =
-          itemsAmount > 0
-            ? itemsAmount
-            : currentReceived;
+        const finalAmount = itemsAmount > 0 ? itemsAmount : currentReceived;
         if (currentPartialMethod && finalAmount > 0) {
           allPayments.push({
             method: currentPartialMethod,
@@ -395,8 +403,10 @@ export function PaymentCalculator({
       }
 
       try {
+        const backendMethod =
+          activeMethod === "compartido" ? "mixto" : activeMethod;
         const success = await onPaymentComplete(
-          activeMethod,
+          backendMethod as "efectivo" | "tarjeta" | "nequi" | "mixto",
           finalReceived,
           breakdown,
           finalSharedPayments,
@@ -404,7 +414,10 @@ export function PaymentCalculator({
         if (success !== false) {
           if (finalReceived >= remainingTotal) {
             localStorage.removeItem(`paid_items_${order.id}`);
-          } else if (activeMethod === "mixto") {
+          } else if (
+            activeMethod === "mixto" ||
+            activeMethod === "compartido"
+          ) {
             const finalPaidItems = new Set([
               ...alreadyPaidItemIds,
               ...currentPersonItemIds,
@@ -481,10 +494,12 @@ export function PaymentCalculator({
   const selectMethod = (m: PaymentMethod) => {
     if (isSubmitting) return;
     setMethod(m);
-    if (m === "mixto") {
+    if (m === "compartido") {
       setSelectedItemIds(new Set());
       setCurrentPersonItemIds(new Set());
       setStep("shared_items");
+    } else if (m === "mixto") {
+      setStep("shared_method");
     } else if (m === "tarjeta") {
       setStep("sub_method_tarjeta");
     } else if (m === "nequi") {
@@ -509,7 +524,7 @@ export function PaymentCalculator({
   const selectSubMethodTarjeta = (
     sub: "tarjeta_credito" | "tarjeta_debito",
   ) => {
-    if (method === "mixto") {
+    if (method === "mixto" || method === "compartido") {
       setCurrentPartialSubMethod(sub);
       setStep("shared_amount");
     } else {
@@ -520,7 +535,7 @@ export function PaymentCalculator({
   };
 
   const selectSubMethodTransfer = (sub: "nequi" | "daviplata") => {
-    if (method === "mixto") {
+    if (method === "mixto" || method === "compartido") {
       setCurrentPartialSubMethod(sub);
       setStep("shared_amount");
     } else {
@@ -807,7 +822,14 @@ export function PaymentCalculator({
                         </div>
                         <div>
                           <span className="font-bold block">
-                            {item.products?.name} {item.quantity > 1 ? <span className="text-muted-foreground/60 font-normal">({idx + 1}/{item.quantity})</span> : ""}
+                            {item.products?.name}{" "}
+                            {item.quantity > 1 ? (
+                              <span className="text-muted-foreground/60 font-normal">
+                                ({idx + 1}/{item.quantity})
+                              </span>
+                            ) : (
+                              ""
+                            )}
                           </span>
                           <span className="text-xs font-black text-muted-foreground/60">
                             1x • {formatPrice(item.unit_price)}
@@ -1062,16 +1084,37 @@ export function PaymentCalculator({
                   >
                     {isSubmitting ? (
                       <div className="flex items-center gap-3 justify-center">
-                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <svg
+                          className="animate-spin h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
                         </svg>
                         PROCESANDO...
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
-                        {itemsAmount >= remainingTotal ? "✓ CONFIRMAR PAGO FINAL" : "✓ OK, COBRAR"}
+                        <CheckCircle
+                          className="h-5 w-5 lg:h-6 lg:w-6"
+                          strokeWidth={3}
+                        />
+                        {itemsAmount >= remainingTotal
+                          ? "✓ CONFIRMAR PAGO FINAL"
+                          : "✓ OK, COBRAR"}
                       </div>
                     )}
                   </Button>
@@ -1214,7 +1257,18 @@ export function PaymentCalculator({
                 {/* Numpad */}
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    "1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "DEL",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6",
+                    "7",
+                    "8",
+                    "9",
+                    "C",
+                    "0",
+                    "DEL",
                   ].map((key) => (
                     <Button
                       key={key}
@@ -1246,9 +1300,19 @@ export function PaymentCalculator({
                       className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.15em] shadow-strong shadow-amber-500/20 transition-all active:scale-95"
                       onClick={addPartialPayment}
                     >
-                      <Users className="h-5 w-5 lg:h-6 lg:w-6 mr-2" strokeWidth={3} />
+                      <Users
+                        className="h-5 w-5 lg:h-6 lg:w-6 mr-2"
+                        strokeWidth={3}
+                      />
                       AGREGAR PAGO Y CONTINUAR (FALTAN{" "}
-                      {formatPrice(remainingTotal - (currentPartialMethod === "efectivo" && itemsAmount > 0 ? itemsAmount : receivedNum))})
+                      {formatPrice(
+                        remainingTotal -
+                          (currentPartialMethod === "efectivo" &&
+                          itemsAmount > 0
+                            ? itemsAmount
+                            : receivedNum),
+                      )}
+                      )
                     </Button>
                   )}
                   {canConfirm && (
@@ -1260,15 +1324,34 @@ export function PaymentCalculator({
                     >
                       {isSubmitting ? (
                         <div className="flex items-center gap-3 justify-center">
-                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                            className="animate-spin h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           PROCESANDO PAGO...
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <CheckCircle className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
+                          <CheckCircle
+                            className="h-5 w-5 lg:h-6 lg:w-6"
+                            strokeWidth={3}
+                          />
                           {receivedNum >= remainingTotal
                             ? "CONFIRMAR PAGO FINAL"
                             : "CONFIRMAR PAGO PARCIAL"}
@@ -1291,7 +1374,6 @@ export function PaymentCalculator({
           </div>
         )}
 
-
         {/* ═══════ Sub Method Tarjeta ═══════ */}
         {step === "sub_method_tarjeta" && (
           <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-4 lg:p-6">
@@ -1300,7 +1382,8 @@ export function PaymentCalculator({
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  if (method === "mixto") setStep("shared_method");
+                  if (method === "mixto" || method === "compartido")
+                    setStep("shared_method");
                   else setStep("method");
                 }}
                 className="h-14 w-14 rounded-2xl bg-accent/10"
@@ -1347,7 +1430,8 @@ export function PaymentCalculator({
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  if (method === "mixto") setStep("shared_method");
+                  if (method === "mixto" || method === "compartido")
+                    setStep("shared_method");
                   else setStep("method");
                 }}
                 className="h-14 w-14 rounded-2xl bg-accent/10"
