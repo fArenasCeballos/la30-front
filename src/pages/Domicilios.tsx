@@ -415,21 +415,33 @@ export default function Domicilios() {
     },
   ): Promise<boolean> => {
     if (!payingOrder) return false;
+
+    const previouslyPaid =
+      payingOrder.payments?.reduce(
+        (sum, p) => sum + (Number(p.amount) || 0),
+        0,
+      ) || 0;
+    const baseRemaining = Math.max(0, payingOrder.total - previouslyPaid);
+    const isFullyPaid = received >= baseRemaining;
+    const targetStatus = isFullyPaid ? "entregado" : null;
+
     const success = await processPayment(
       payingOrder.id,
       method,
       received,
       breakdown,
-      "entregado",
+      targetStatus,
     );
+
     if (success) {
-      // Abrir modal de facturación electrónica Siigo si aplica
-      const isFacturacionAllowed =
-        user?.role === "admin" || user?.role === "caja";
-      if (isFacturacionAllowed && shouldGenerateInvoice(method, breakdown)) {
-        setSiigoOrder({ order: payingOrder, method, breakdown });
+      if (isFullyPaid) {
+        // Abrir modal de facturación electrónica Siigo si aplica
+        const isFacturacionAllowed =
+          user?.role === "admin" || user?.role === "caja";
+        if (isFacturacionAllowed && shouldGenerateInvoice(method, breakdown)) {
+          setSiigoOrder({ order: payingOrder, method, breakdown });
+        }
       }
-      setPayingOrder(null);
       return true;
     }
     return false;

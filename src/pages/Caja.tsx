@@ -182,12 +182,20 @@ export default function Caja() {
     }>,
   ): Promise<boolean> => {
     if (!payingOrder) return false;
-    const change = Math.max(0, received - payingOrder.total);
+
+    const previouslyPaid = payingOrder.payments?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
+    const baseRemaining = Math.max(0, payingOrder.total - previouslyPaid);
+    const change = Math.max(0, received - baseRemaining);
+    const isFullyPaid = received >= baseRemaining;
+    
+    const targetStatus = isFullyPaid ? (payingOrder.status === 'pendiente' || payingOrder.status === 'confirmado' ? 'en_preparacion' : payingOrder.status) : null;
+
     const success = await processPayment(
       payingOrder.id,
       method,
       received,
       breakdown,
+      targetStatus
     );
     if (!success) return false;
 
@@ -223,39 +231,41 @@ export default function Caja() {
           }
         }
 
-        // Luego imprimir factura completa del cliente
-        await silentPrint(
-          buildCustomerReceiptHTML(receiptData),
-          `Recibo - ${activeOrder.locator}`,
-        );
-
-        // Agrupar productos por categoría para comandas separadas
-        const items = (activeOrder.order_items ?? []).filter(
-          (i) => i.products != null,
-        );
-
-        const categoryGroups: Record<string, OrderItem[]> = {};
-
-        items.forEach((item) => {
-          const catName = item.products?.categories?.name || "General";
-          if (!categoryGroups[catName]) categoryGroups[catName] = [];
-          categoryGroups[catName].push(item);
-        });
-
-        const categoryKeys = Object.keys(categoryGroups);
-
-        // Auto-imprimir comanda de cocina agrupada en un único diálogo
-        if (categoryKeys.length > 0) {
-          const kitchenHTMLs = categoryKeys.map((catName) =>
-            buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
+        if (isFullyPaid) {
+          // Luego imprimir factura completa del cliente
+          await silentPrint(
+            buildCustomerReceiptHTML(receiptData),
+            `Recibo - ${activeOrder.locator}`,
           );
 
-          // Combinar todos los HTMLs interconectados por un separador de salto de página
-          const combinedKitchenHTML = kitchenHTMLs.join(
-            '<div class="print-page-break"></div>',
+          // Agrupar productos por categoría para comandas separadas
+          const items = (activeOrder.order_items ?? []).filter(
+            (i) => i.products != null,
           );
 
-          await silentPrint(combinedKitchenHTML);
+          const categoryGroups: Record<string, OrderItem[]> = {};
+
+          items.forEach((item) => {
+            const catName = item.products?.categories?.name || "General";
+            if (!categoryGroups[catName]) categoryGroups[catName] = [];
+            categoryGroups[catName].push(item);
+          });
+
+          const categoryKeys = Object.keys(categoryGroups);
+
+          // Auto-imprimir comanda de cocina agrupada en un único diálogo
+          if (categoryKeys.length > 0) {
+            const kitchenHTMLs = categoryKeys.map((catName) =>
+              buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
+            );
+
+            // Combinar todos los HTMLs interconectados por un separador de salto de página
+            const combinedKitchenHTML = kitchenHTMLs.join(
+              '<div class="print-page-break"></div>',
+            );
+
+            await silentPrint(combinedKitchenHTML);
+          }
         }
       } catch (err) {
         console.error("Error in post-payment printing/Siigo pipeline:", err);

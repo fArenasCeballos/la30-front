@@ -105,11 +105,16 @@ export function PaymentCalculator({
   const [currentPartialSubMethod, setCurrentPartialSubMethod] =
     useState<SubMethod | null>(null);
 
+  const [alreadyPaidItemIds, setAlreadyPaidItemIds] = useState<Set<string>>(new Set());
+  const [currentPersonItemIds, setCurrentPersonItemIds] = useState<Set<string>>(new Set());
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+
   const [step, setStep] = useState<
     | "method"
     | "amount"
     | "sub_method_tarjeta"
     | "sub_method_transfer"
+    | "shared_items"
     | "shared_method"
     | "shared_amount"
     | "done"
@@ -117,7 +122,17 @@ export function PaymentCalculator({
 
   const receivedNum = useMemo(() => parseInt(received) || 0, [received]);
 
-  // Total already covered by partial payments
+  // Total previously paid (from DB)
+  const previouslyPaid = useMemo(() => {
+    if (!order.payments) return 0;
+    return order.payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  }, [order.payments]);
+
+  const baseRemaining = useMemo(() => {
+    return Math.max(0, order.total - previouslyPaid);
+  }, [order.total, previouslyPaid]);
+
+  // Total already covered by partial payments in this modal session
   const partialTotal = useMemo(
     () => partialPayments.reduce((sum, p) => sum + p.amount, 0),
     [partialPayments],
@@ -125,30 +140,50 @@ export function PaymentCalculator({
 
   // Amount still to be paid
   const remainingTotal = useMemo(() => {
-    if (method === "mixto") return Math.max(0, order.total - partialTotal);
-    return order.total;
-  }, [method, order.total, partialTotal]);
+    if (method === "mixto") return Math.max(0, baseRemaining - partialTotal);
+    return baseRemaining;
+  }, [method, baseRemaining, partialTotal]);
+
+  useEffect(() => {
+    if (open && order.id) {
+      try {
+        const stored = localStorage.getItem(`paid_items_${order.id}`);
+        if (stored) {
+          setTimeout(() => {
+            const parsed = JSON.parse(stored);
+            setAlreadyPaidItemIds(new Set(parsed));
+            if (parsed.length > 0) {
+              setMethod("mixto");
+              setStep("shared_items");
+            }
+          }, 0);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [open, order.id]);
 
   const change = useMemo(() => {
     if (method === "mixto" && step === "shared_amount") {
       return Math.max(0, receivedNum - remainingTotal);
     }
     if (method !== "mixto" && step === "amount") {
-      return Math.max(0, receivedNum - order.total);
+      return Math.max(0, receivedNum - baseRemaining);
     }
     return 0;
-  }, [receivedNum, order.total, method, remainingTotal, step]);
+  }, [receivedNum, baseRemaining, method, remainingTotal, step]);
 
-  // Can finalize the entire payment (last partial covers remaining)
+  // Can finalize the entire payment or partial
   const canConfirm = useMemo(() => {
     if (method === "mixto" && step === "shared_amount") {
-      return receivedNum >= remainingTotal && remainingTotal > 0;
+      return receivedNum > 0 && receivedNum <= remainingTotal;
     }
     if (step === "amount" && method === "efectivo") {
-      return receivedNum >= order.total;
+      return receivedNum >= baseRemaining;
     }
     return false;
-  }, [method, step, receivedNum, remainingTotal, order.total]);
+  }, [method, step, receivedNum, remainingTotal, baseRemaining]);
 
   // Can add current amount as a partial (not the last one)
   const canAddPartial = useMemo(() => {
@@ -185,6 +220,9 @@ export function PaymentCalculator({
     setPartialPayments([]);
     setCurrentPartialMethod(null);
     setCurrentPartialSubMethod(null);
+    setAlreadyPaidItemIds(new Set());
+    setCurrentPersonItemIds(new Set());
+    setSelectedItemIds(new Set());
     setStep("method");
     setIsSubmitting(false);
   }, []);
@@ -208,15 +246,24 @@ export function PaymentCalculator({
       amount: receivedNum,
     };
     setPartialPayments((prev) => [...prev, newPartial]);
+    setAlreadyPaidItemIds((prev) => {
+      const next = new Set([...prev, ...currentPersonItemIds]);
+      localStorage.setItem(`paid_items_${order.id}`, JSON.stringify([...next]));
+      return next;
+    });
     setReceived("");
     setCurrentPartialMethod(null);
     setCurrentPartialSubMethod(null);
-    setStep("shared_method");
+    setCurrentPersonItemIds(new Set());
+    setSelectedItemIds(new Set());
+    setStep("shared_items");
   }, [
     currentPartialMethod,
     currentPartialSubMethod,
     receivedNum,
     remainingTotal,
+    currentPersonItemIds,
+    order.id,
   ]);
 
   const removePartialPayment = useCallback((index: number) => {
@@ -292,6 +339,12 @@ export function PaymentCalculator({
           finalSharedPayments,
         );
         if (success !== false) {
+          if (finalReceived >= remainingTotal) {
+            localStorage.removeItem(`paid_items_${order.id}`);
+          } else if (activeMethod === "mixto") {
+            const finalPaidItems = new Set([...alreadyPaidItemIds, ...currentPersonItemIds]);
+            localStorage.setItem(`paid_items_${order.id}`, JSON.stringify([...finalPaidItems]));
+          }
           setStep("done");
           setTimeout(() => {
             resetState();
@@ -316,6 +369,10 @@ export function PaymentCalculator({
       onPaymentComplete,
       resetState,
       onClose,
+      remainingTotal,
+      order.id,
+      alreadyPaidItemIds,
+      currentPersonItemIds,
     ],
   );
 
@@ -355,7 +412,9 @@ export function PaymentCalculator({
     if (isSubmitting) return;
     setMethod(m);
     if (m === "mixto") {
-      setStep("shared_method");
+      setSelectedItemIds(new Set());
+      setCurrentPersonItemIds(new Set());
+      setStep("shared_items");
     } else if (m === "tarjeta") {
       setStep("sub_method_tarjeta");
     } else if (m === "nequi") {
@@ -368,7 +427,6 @@ export function PaymentCalculator({
   const selectSharedMethod = (m: BaseMethod) => {
     setCurrentPartialMethod(m);
     setCurrentPartialSubMethod(null);
-    setReceived("");
     if (m === "tarjeta") {
       setStep("sub_method_tarjeta");
     } else if (m === "nequi") {
@@ -386,8 +444,8 @@ export function PaymentCalculator({
       setStep("shared_amount");
     } else {
       setSubMethod(sub);
-      setReceived(String(order.total));
-      handleConfirmPayment(order.total, "tarjeta", sub);
+      setReceived(String(baseRemaining));
+      handleConfirmPayment(baseRemaining, "tarjeta", sub);
     }
   };
 
@@ -397,8 +455,8 @@ export function PaymentCalculator({
       setStep("shared_amount");
     } else {
       setSubMethod(sub);
-      setReceived(String(order.total));
-      handleConfirmPayment(order.total, "nequi", sub);
+      setReceived(String(baseRemaining));
+      handleConfirmPayment(baseRemaining, "nequi", sub);
     }
   };
 
@@ -548,11 +606,16 @@ export function PaymentCalculator({
                   <div className="border-t-2 border-accent/10 pt-4 flex justify-between items-end">
                     <div className="space-y-1">
                       <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">
-                        TOTAL A RECAUDAR
+                        {previouslyPaid > 0 ? "RESTANTE A RECAUDAR" : "TOTAL A RECAUDAR"}
                       </span>
                       <div className="text-2xl lg:text-4xl font-black tracking-tighter text-primary">
-                        {formatPrice(order.total)}
+                        {formatPrice(baseRemaining)}
                       </div>
+                      {previouslyPaid > 0 && (
+                        <div className="text-xs font-bold text-muted-foreground mt-1">
+                          TOTAL ORIGINAL: {formatPrice(order.total)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -591,6 +654,116 @@ export function PaymentCalculator({
           </div>
         )}
 
+        {/* ═══════ Shared: Item Selector ═══════ */}
+        {step === "shared_items" && (
+          <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-4 lg:p-6 flex flex-col h-[60vh] lg:h-[70vh]">
+            <div className="flex items-center gap-4 mb-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setStep("method");
+                  setMethod(null);
+                  setPartialPayments([]);
+                  setReceived("");
+                  try {
+                    const stored = localStorage.getItem(`paid_items_${order.id}`);
+                    setAlreadyPaidItemIds(stored ? new Set(JSON.parse(stored)) : new Set());
+                  } catch (e) {
+                    setAlreadyPaidItemIds(new Set());
+                  }
+                }}
+                className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl bg-accent/10"
+              >
+                <ArrowLeft className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
+              </Button>
+              <div className="space-y-0.5">
+                <div className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
+                  PAGO COMPARTIDO • PAGO #{partialPayments.length + 1}
+                </div>
+                <h3 className="text-xl lg:text-2xl font-black tracking-tighter">
+                  ¿Qué ítems va a pagar?
+                </h3>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+              {order.order_items?.map((item) => {
+                const isSelected = selectedItemIds.has(item.id);
+                const isAlreadyPaid = alreadyPaidItemIds.has(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    disabled={isAlreadyPaid}
+                    onClick={() => {
+                      if (isAlreadyPaid) return;
+                      setSelectedItemIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(item.id)) next.delete(item.id);
+                        else next.add(item.id);
+                        return next;
+                      });
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between p-3 lg:p-4 rounded-xl lg:rounded-2xl border-2 transition-all text-left",
+                      isAlreadyPaid ? "opacity-50 grayscale cursor-not-allowed bg-accent/5" :
+                      isSelected
+                        ? "bg-primary/10 border-primary/30"
+                        : "bg-white hover:bg-accent/5 border-accent/10"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-6 h-6 rounded-md flex items-center justify-center border-2 transition-colors shrink-0",
+                        isAlreadyPaid ? "bg-accent/20 border-accent/30 text-muted-foreground" :
+                        isSelected ? "bg-primary border-primary text-white" : "border-accent/30"
+                      )}>
+                        {(isSelected || isAlreadyPaid) && <CheckCircle className="h-4 w-4" strokeWidth={3} />}
+                      </div>
+                      <div>
+                        <span className="font-bold block">{item.products?.name}</span>
+                        <span className="text-xs font-black text-muted-foreground/60">{item.quantity}x • {formatPrice(item.unit_price)} c/u</span>
+                      </div>
+                    </div>
+                    <span className="font-black text-primary">
+                      {isAlreadyPaid ? "PAGADO" : formatPrice(item.unit_price * item.quantity)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="pt-4 mt-4 border-t border-accent/10 shrink-0 space-y-2">
+              <Button
+                size="lg"
+                className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-widest shadow-strong"
+                onClick={() => {
+                  let sum = 0;
+                  order.order_items?.forEach((item) => {
+                    if (selectedItemIds.has(item.id)) sum += (item.unit_price * item.quantity);
+                  });
+                  setReceived(String(sum));
+                  setCurrentPersonItemIds(new Set(selectedItemIds));
+                  setStep("shared_method");
+                }}
+              >
+                CONTINUAR CON {selectedItemIds.size > 0 ? "ÍTEMS" : "CERO (0)"}
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl border-2 font-black text-[10px] shadow-soft bg-transparent text-muted-foreground border-accent/20 uppercase"
+                onClick={() => {
+                  setReceived("");
+                  setCurrentPersonItemIds(new Set());
+                  setSelectedItemIds(new Set());
+                  setStep("shared_method");
+                }}
+              >
+                DIGITAR MONTO MANUALMENTE
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* ═══════ Shared: Select method for next partial ═══════ */}
         {step === "shared_method" && (
           <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-4 lg:p-6">
@@ -599,12 +772,7 @@ export function PaymentCalculator({
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  setStep("method");
-                  setMethod(null);
-                  setPartialPayments([]);
-                  setCurrentPartialMethod(null);
-                  setCurrentPartialSubMethod(null);
-                  setReceived("");
+                  setStep("shared_items");
                 }}
                 className="h-14 w-14 rounded-2xl bg-accent/10"
               >
@@ -623,13 +791,20 @@ export function PaymentCalculator({
             {/* Show remaining */}
             <div className="bg-amber-500/5 rounded-2xl lg:rounded-3xl p-4 lg:p-6 mb-4 lg:mb-6 border-2 border-amber-500/10 border-dashed text-center">
               <p className="text-xs font-black text-amber-600/60 uppercase tracking-widest mb-1">
-                {partialPayments.length === 0
+                {receivedNum > 0
+                  ? "TOTAL SELECCIONADO"
+                  : partialPayments.length === 0
                   ? "TOTAL A PAGAR"
                   : "MONTO RESTANTE"}
               </p>
               <div className="text-3xl lg:text-4xl font-black tracking-tighter text-amber-600">
-                {formatPrice(remainingTotal)}
+                {formatPrice(receivedNum > 0 ? receivedNum : remainingTotal)}
               </div>
+              {receivedNum > 0 && receivedNum !== remainingTotal && (
+                <p className="text-[10px] font-bold text-amber-600/40 mt-2 uppercase tracking-wider">
+                  SALDO DESPUÉS DE ESTE PAGO: {formatPrice(Math.max(0, remainingTotal - receivedNum))}
+                </p>
+              )}
             </div>
 
             {/* Show already added partials */}
@@ -905,7 +1080,7 @@ export function PaymentCalculator({
                           className="h-5 w-5 lg:h-6 lg:w-6"
                           strokeWidth={3}
                         />
-                        CONFIRMAR PAGO FINAL
+                        {receivedNum >= remainingTotal ? "CONFIRMAR PAGO FINAL" : "CONFIRMAR PAGO PARCIAL"}
                       </div>
                     )}
                   </Button>
@@ -1201,6 +1376,7 @@ export function PaymentCalculator({
             </div>
           </div>
         )}
+
       </DialogContent>
     </Dialog>
   );
