@@ -189,8 +189,7 @@ export default function Caja() {
       payingOrder.payments?.reduce(
         (sum, p) =>
           sum +
-          (Number(p.amount) ||
-            Number(p.amount_total) ||
+          (Number(p.amount_total) ||
             (Number(p.amount_efectivo) || 0) +
               (Number(p.amount_tarjeta) || 0) +
               (Number(p.amount_nequi) || 0) ||
@@ -486,8 +485,7 @@ export default function Caja() {
                     order.payments?.reduce(
                       (sum, p) =>
                         sum +
-                        (Number(p.amount) ||
-                          Number(p.amount_total) ||
+                        (Number(p.amount_total) ||
                           (Number(p.amount_efectivo) || 0) +
                             (Number(p.amount_tarjeta) || 0) +
                             (Number(p.amount_nequi) || 0) ||
@@ -843,8 +841,7 @@ export default function Caja() {
                       order.payments?.reduce(
                         (sum, p) =>
                           sum +
-                          (Number(p.amount) ||
-                            Number(p.amount_total) ||
+                          (Number(p.amount_total) ||
                             (Number(p.amount_efectivo) || 0) +
                               (Number(p.amount_tarjeta) || 0) +
                               (Number(p.amount_nequi) || 0) ||

@@ -541,7 +541,6 @@ export type Database = {
       };
       payments: {
         Row: {
-          amount: number;
           id: string;
           order_id: string;
           method: "efectivo" | "tarjeta" | "nequi" | "mixto";
