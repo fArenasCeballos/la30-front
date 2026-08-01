@@ -183,7 +183,7 @@ export default function Caja() {
   ): Promise<boolean> => {
     if (!payingOrder) return false;
 
-    const previouslyPaid = payingOrder.payments?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
+    const previouslyPaid = payingOrder.payments?.reduce((sum, p) => sum + (Number(p.amount) || Number(p.amount_total) || ((Number(p.amount_efectivo) || 0) + (Number(p.amount_tarjeta) || 0) + (Number(p.amount_nequi) || 0)) || 0), 0) || 0;
     const baseRemaining = Math.max(0, payingOrder.total - previouslyPaid);
     const change = Math.max(0, received - baseRemaining);
     const isFullyPaid = received >= baseRemaining;
@@ -459,27 +459,102 @@ export default function Caja() {
                 </div>
               ) : (
                 confirmados.map((order) => (
-                  <OrderCard
-                    key={order.id}
-                    order={order}
-                    className="bg-white/80 backdrop-blur-md border-primary/20 shadow-xl shadow-primary/5"
-                    actions={
-                      <button
-                        className="w-full rounded-xl h-10 font-black text-[10px] uppercase tracking-[0.2em] bg-primary hover:bg-primary/90 text-white shadow-sm group relative overflow-hidden transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
-                        onClick={() => setPayingOrder(order)}
-                        disabled={order.isOptimistic}
-                      >
-                        <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                        {order.isOptimistic ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    const previouslyPaid =
+                      order.payments?.reduce(
+                        (sum, p) => sum + (Number(p.amount) || Number(p.amount_total) || ((Number(p.amount_efectivo) || 0) + (Number(p.amount_tarjeta) || 0) + (Number(p.amount_nequi) || 0)) || 0),
+                        0,
+                      ) || 0;
+                    const isFullyPaid = previouslyPaid >= (order.total || 0);
+
+                    return (
+                      <OrderCard
+                        key={order.id}
+                        order={order}
+                        className="bg-white/80 backdrop-blur-md border-primary/20 shadow-xl shadow-primary/5"
+                        actions={
+                        isFullyPaid ? (
+                          <button
+                            className="w-full rounded-xl h-10 font-black text-[10px] uppercase tracking-[0.2em] bg-green-500 hover:bg-green-600 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
+                            onClick={async () => {
+                              try {
+                                await supabase.rpc("update_order_status", {
+                                  p_order_id: order.id,
+                                  p_status: "en_preparacion",
+                                });
+                                deductStockFromOrder(order.id).catch(console.warn);
+                                toast.success("Enviado a cocina");
+                                
+                                const pMethod = order.payments?.[0]?.method || "efectivo";
+                                const pBreakdown = order.payments?.[0] ? {
+                                  efectivo: order.payments[0].amount_efectivo || 0,
+                                  tarjeta: order.payments[0].amount_tarjeta || 0,
+                                  nequi: order.payments[0].amount_nequi || 0,
+                                } : undefined;
+                                
+                                if (shouldGenerateInvoice(pMethod, pBreakdown)) {
+                                  setSiigoOrder({ order, method: pMethod, breakdown: pBreakdown });
+                                }
+                                
+                                const receiptData: ReceiptData = {
+                                  order,
+                                  cajeroName,
+                                  paymentMethod: pMethod,
+                                  paymentReceived: order.total || 0,
+                                  paymentChange: 0,
+                                  paymentBreakdown: pBreakdown,
+                                };
+                                
+                                await silentPrint(
+                                  buildCustomerReceiptHTML(receiptData),
+                                  `Recibo - ${order.locator}`,
+                                );
+                                
+                                const items = (order.order_items ?? []).filter((i) => i.products != null);
+                                const categoryGroups: Record<string, OrderItem[]> = {};
+                                items.forEach((item) => {
+                                  const catName = item.products?.categories?.name || "General";
+                                  if (!categoryGroups[catName]) categoryGroups[catName] = [];
+                                  categoryGroups[catName].push(item);
+                                });
+                                
+                                for (const [catName, catItems] of Object.entries(categoryGroups)) {
+                                  await silentPrint(
+                                    buildKitchenTicketHTML(order, catItems, catName),
+                                    `Comanda ${catName} - ${order.locator}`,
+                                  );
+                                }
+                              } catch (err) {
+                                console.error(err);
+                                toast.error("Error al enviar a cocina");
+                              }
+                            }}
+                            disabled={order.isOptimistic}
+                          >
+                            {order.isOptimistic ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Check className="h-4 w-4 mr-2" strokeWidth={3} />
+                            )}
+                            ENVIAR A COCINA
+                          </button>
                         ) : (
-                          <DollarSign
-                            className="h-4 w-4 mr-2 group-hover:scale-125 transition-transform duration-200"
-                            strokeWidth={3}
-                          />
-                        )}
-                        COBRAR Y ENVIAR
-                      </button>
+                          <button
+                            className="w-full rounded-xl h-10 font-black text-[10px] uppercase tracking-[0.2em] bg-primary hover:bg-primary/90 text-white shadow-sm group relative overflow-hidden transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
+                            onClick={() => setPayingOrder(order)}
+                            disabled={order.isOptimistic}
+                          >
+                            <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                            {order.isOptimistic ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <DollarSign
+                                className="h-4 w-4 mr-2 group-hover:scale-125 transition-transform duration-200"
+                                strokeWidth={3}
+                              />
+                            )}
+                            COBRAR Y ENVIAR
+                          </button>
+                        )
                     }
                   />
                 ))
@@ -705,6 +780,17 @@ export default function Caja() {
                         reconstructedBreakdown,
                       );
 
+                    const previouslyPaid =
+                      order.payments?.reduce(
+                        (sum, p) => sum + (Number(p.amount) || Number(p.amount_total) || ((Number(p.amount_efectivo) || 0) + (Number(p.amount_tarjeta) || 0) + (Number(p.amount_nequi) || 0)) || 0),
+                        0,
+                      ) || 0;
+                    const baseRemaining = Math.max(
+                      0,
+                      (order.total || 0) - previouslyPaid,
+                    );
+
+
                     return (
                       <div
                         key={order.id}
@@ -748,10 +834,15 @@ export default function Caja() {
                                 </div>
                               )}
                             </div>
-                            <div className="flex items-baseline gap-2">
+                            <div className="flex items-baseline gap-2 flex-wrap">
                               <p className="text-xl lg:text-2xl font-black tracking-tighter text-foreground">
-                                {formatPrice(order.total ?? 0)}
+                                {formatPrice(baseRemaining)}
                               </p>
+                              {previouslyPaid > 0 && (
+                                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                  RESTANTE (Pagado: {formatPrice(previouslyPaid)})
+                                </span>
+                              )}
                               <span className="text-xs font-bold text-muted-foreground/40 uppercase tracking-widest">
                                 • {(order.order_items ?? []).length} ITEMS
                               </span>

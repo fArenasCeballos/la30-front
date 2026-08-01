@@ -34,6 +34,10 @@ export function OrderCard({
     (item) => item != null && item.products != null,
   );
 
+  const previouslyPaid =
+    order.payments?.reduce((sum, p) => sum + (Number(p.amount) || Number(p.amount_total) || ((Number(p.amount_efectivo) || 0) + (Number(p.amount_tarjeta) || 0) + (Number(p.amount_nequi) || 0)) || 0), 0) || 0;
+  const baseRemaining = Math.max(0, (order.total || 0) - previouslyPaid);
+
   return (
     <div
       className={cn(
@@ -57,8 +61,10 @@ export function OrderCard({
               <span>{timeAgo(order.created_at)}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <p className="text-[8px] font-black text-primary/60 uppercase tracking-widest truncate max-w-[120px]">
-                {order.profiles?.name ? `Mesero: ${order.profiles.name}` : "Kiosko"}
+              <p className="text-[8px] font-black text-primary/60 uppercase tracking-widest truncate max-w-30">
+                {order.profiles?.name
+                  ? `Mesero: ${order.profiles.name}`
+                  : "Kiosko"}
               </p>
               {order.isOfflinePending && (
                 <span className="inline-flex items-center gap-0.5 text-[6px] font-black text-amber-600 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full uppercase tracking-widest animate-pulse shrink-0">
@@ -112,7 +118,10 @@ export function OrderCard({
                   {item.choices && Object.keys(item.choices).length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {Object.values(item.choices).map(
-                        (choice: { label: string; icon?: string }, idx: number) => (
+                        (
+                          choice: { label: string; icon?: string },
+                          idx: number,
+                        ) => (
                           <span
                             key={idx}
                             className="text-[7px] font-black uppercase tracking-widest px-1 py-0.5 rounded-sm bg-white border border-accent/10 text-muted-foreground/60 shadow-sm"
@@ -139,8 +148,13 @@ export function OrderCard({
             TOTAL
           </span>
           <span className="font-black text-base lg:text-lg tracking-tighter text-primary group-hover:scale-105 origin-left transition-all duration-500">
-            {formatPrice(order.total ?? 0)}
+            {formatPrice(baseRemaining)}
           </span>
+          {previouslyPaid > 0 && (
+            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1 mt-1">
+              RESTANTE (Pagado: {formatPrice(previouslyPaid)})
+            </span>
+          )}
         </div>
         {compact && (
           <div className="flex items-center gap-1.5 text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest bg-accent/10 px-2 py-1 rounded-full">

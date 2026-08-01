@@ -173,7 +173,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         let query = supabase
           .from("orders")
           .select(
-            "*, order_items(*, products(id, name, siigo_code, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi), siigo_invoices(id, status, error_message), profiles(id, name)",
+            "*, order_items(*, products(id, name, siigo_code, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount, amount_total, amount_efectivo, amount_tarjeta, amount_nequi), siigo_invoices(id, status, error_message), profiles(id, name)",
           )
           .gte("created_at", shiftStart)
           .order("created_at", { ascending: false });
@@ -208,7 +208,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         let query = supabase
           .from("orders")
           .select(
-            "*, order_items(*, products(id, name, siigo_code, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi), siigo_invoices(id, status, error_message), profiles(id, name)",
+            "*, order_items(*, products(id, name, siigo_code, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount, amount_total, amount_efectivo, amount_tarjeta, amount_nequi), siigo_invoices(id, status, error_message), profiles(id, name)",
           )
           .in("status", ["pendiente", "confirmado", "en_preparacion", "listo"])
           .gte("created_at", shiftStart)

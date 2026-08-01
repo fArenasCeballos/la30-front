@@ -403,7 +403,7 @@ export default function Domicilios() {
   };
 
   const handlePaymentComplete = async (
-    method: "efectivo" | "tarjeta" | "nequi" | "mixto",
+    method: string,
     received: number,
     breakdown?: {
       efectivo?: number;
@@ -418,7 +418,14 @@ export default function Domicilios() {
 
     const previouslyPaid =
       payingOrder.payments?.reduce(
-        (sum, p) => sum + (Number(p.amount) || 0),
+        (sum, p) =>
+          sum +
+          (Number(p.amount) ||
+            Number(p.amount_total) ||
+            (Number(p.amount_efectivo) || 0) +
+              (Number(p.amount_tarjeta) || 0) +
+              (Number(p.amount_nequi) || 0) ||
+            0),
         0,
       ) || 0;
     const baseRemaining = Math.max(0, payingOrder.total - previouslyPaid);
@@ -867,6 +874,23 @@ export default function Domicilios() {
                       reconstructedBreakdown,
                     );
 
+                  const previouslyPaid =
+                    order.payments?.reduce(
+                      (sum, p) =>
+                        sum +
+                        (Number(p.amount) ||
+                          Number(p.amount_total) ||
+                          (Number(p.amount_efectivo) || 0) +
+                            (Number(p.amount_tarjeta) || 0) +
+                            (Number(p.amount_nequi) || 0) ||
+                          0),
+                      0,
+                    ) || 0;
+                  const baseRemaining = Math.max(
+                    0,
+                    (order.total || 0) - previouslyPaid,
+                  );
+
                   return (
                     <div
                       key={order.id}
@@ -922,10 +946,16 @@ export default function Domicilios() {
                             )}
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
-                            <div className="flex items-baseline gap-2">
+                            <div className="flex items-baseline gap-2 flex-wrap">
                               <p className="text-xl lg:text-2xl font-black tracking-tighter text-foreground">
-                                {formatPrice(order.total ?? 0)}
+                                {formatPrice(baseRemaining)}
                               </p>
+                              {previouslyPaid > 0 && (
+                                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                  RESTANTE (Pagado:{" "}
+                                  {formatPrice(previouslyPaid)})
+                                </span>
+                              )}
                               <span className="text-xs font-bold text-muted-foreground/40 uppercase tracking-widest">
                                 • {(order.order_items ?? []).length} ITEMS
                               </span>
