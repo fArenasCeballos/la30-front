@@ -105,9 +105,16 @@ export function PaymentCalculator({
   const [currentPartialSubMethod, setCurrentPartialSubMethod] =
     useState<SubMethod | null>(null);
 
-  const [alreadyPaidItemIds, setAlreadyPaidItemIds] = useState<Set<string>>(new Set());
-  const [currentPersonItemIds, setCurrentPersonItemIds] = useState<Set<string>>(new Set());
-  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+  const [alreadyPaidItemIds, setAlreadyPaidItemIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [currentPersonItemIds, setCurrentPersonItemIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [itemsAmount, setItemsAmount] = useState<number>(0); // pre-calculated from item selection
 
   const [step, setStep] = useState<
     | "method"
@@ -166,30 +173,73 @@ export function PaymentCalculator({
 
   const change = useMemo(() => {
     if (method === "mixto" && step === "shared_amount") {
+      if (currentPartialMethod === "efectivo") {
+        const toPay = itemsAmount > 0 ? itemsAmount : remainingTotal;
+        return Math.max(0, receivedNum - toPay);
+      }
       return Math.max(0, receivedNum - remainingTotal);
     }
     if (method !== "mixto" && step === "amount") {
       return Math.max(0, receivedNum - baseRemaining);
     }
     return 0;
-  }, [receivedNum, baseRemaining, method, remainingTotal, step]);
+  }, [
+    method,
+    step,
+    currentPartialMethod,
+    receivedNum,
+    remainingTotal,
+    itemsAmount,
+    baseRemaining,
+  ]);
 
   // Can finalize the entire payment or partial
   const canConfirm = useMemo(() => {
     if (method === "mixto" && step === "shared_amount") {
+      if (currentPartialMethod === "efectivo" && itemsAmount > 0) {
+        // For cash: receivedNum is what client hands over, must be >= itemsAmount
+        return (
+          receivedNum > 0 &&
+          receivedNum >= itemsAmount &&
+          itemsAmount <= remainingTotal
+        );
+      }
+      if (currentPartialMethod !== "efectivo" && itemsAmount > 0) {
+        // Non-cash: itemsAmount pre-set, no user input needed
+        return itemsAmount <= remainingTotal;
+      }
       return receivedNum > 0 && receivedNum <= remainingTotal;
     }
     if (step === "amount" && method === "efectivo") {
       return receivedNum >= baseRemaining;
     }
     return false;
-  }, [method, step, receivedNum, remainingTotal, baseRemaining]);
+  }, [
+    method,
+    step,
+    receivedNum,
+    remainingTotal,
+    baseRemaining,
+    itemsAmount,
+    currentPartialMethod,
+  ]);
 
   // Can add current amount as a partial (not the last one)
   const canAddPartial = useMemo(() => {
     if (step !== "shared_amount") return false;
+    if (currentPartialMethod === "efectivo" && itemsAmount > 0) {
+      return (
+        receivedNum > 0 &&
+        receivedNum >= itemsAmount &&
+        itemsAmount < remainingTotal
+      );
+    }
+    if (currentPartialMethod !== "efectivo" && itemsAmount > 0) {
+      // Non-cash: the actual amount is itemsAmount
+      return itemsAmount < remainingTotal;
+    }
     return receivedNum > 0 && receivedNum < remainingTotal;
-  }, [step, receivedNum, remainingTotal]);
+  }, [step, receivedNum, remainingTotal, currentPartialMethod, itemsAmount]);
 
   const handleNumpad = useCallback(
     (val: string) => {
@@ -223,6 +273,7 @@ export function PaymentCalculator({
     setAlreadyPaidItemIds(new Set());
     setCurrentPersonItemIds(new Set());
     setSelectedItemIds(new Set());
+    setItemsAmount(0);
     setStep("method");
     setIsSubmitting(false);
   }, []);
@@ -234,16 +285,21 @@ export function PaymentCalculator({
 
   // Add the current entry as a partial payment and continue
   const addPartialPayment = useCallback(() => {
+    // Use itemsAmount if pre-calculated (from item selector), else fall back to receivedNum
+    const paymentAmount =
+      itemsAmount > 0
+        ? itemsAmount
+        : receivedNum;
     if (
       !currentPartialMethod ||
-      receivedNum <= 0 ||
-      receivedNum >= remainingTotal
+      paymentAmount <= 0 ||
+      paymentAmount >= remainingTotal
     )
       return;
     const newPartial: SharedPaymentEntry = {
       method: currentPartialMethod,
       subMethod: currentPartialSubMethod ?? undefined,
-      amount: receivedNum,
+      amount: paymentAmount,
     };
     setPartialPayments((prev) => [...prev, newPartial]);
     setAlreadyPaidItemIds((prev) => {
@@ -252,6 +308,7 @@ export function PaymentCalculator({
       return next;
     });
     setReceived("");
+    setItemsAmount(0);
     setCurrentPartialMethod(null);
     setCurrentPartialSubMethod(null);
     setCurrentPersonItemIds(new Set());
@@ -264,6 +321,7 @@ export function PaymentCalculator({
     remainingTotal,
     currentPersonItemIds,
     order.id,
+    itemsAmount,
   ]);
 
   const removePartialPayment = useCallback((index: number) => {
@@ -298,11 +356,16 @@ export function PaymentCalculator({
       if (activeMethod === "mixto") {
         // Build all payments: existing partials + the current (final) entry
         const allPayments: SharedPaymentEntry[] = [...partialPayments];
-        if (currentPartialMethod && currentReceived > 0) {
+        // For cash in shared mode, the actual payment amount is itemsAmount (if set)
+        const finalAmount =
+          itemsAmount > 0
+            ? itemsAmount
+            : currentReceived;
+        if (currentPartialMethod && finalAmount > 0) {
           allPayments.push({
             method: currentPartialMethod,
             subMethod: currentPartialSubMethod ?? undefined,
-            amount: currentReceived,
+            amount: finalAmount,
           });
         }
 
@@ -342,8 +405,14 @@ export function PaymentCalculator({
           if (finalReceived >= remainingTotal) {
             localStorage.removeItem(`paid_items_${order.id}`);
           } else if (activeMethod === "mixto") {
-            const finalPaidItems = new Set([...alreadyPaidItemIds, ...currentPersonItemIds]);
-            localStorage.setItem(`paid_items_${order.id}`, JSON.stringify([...finalPaidItems]));
+            const finalPaidItems = new Set([
+              ...alreadyPaidItemIds,
+              ...currentPersonItemIds,
+            ]);
+            localStorage.setItem(
+              `paid_items_${order.id}`,
+              JSON.stringify([...finalPaidItems]),
+            );
           }
           setStep("done");
           setTimeout(() => {
@@ -373,6 +442,7 @@ export function PaymentCalculator({
       order.id,
       alreadyPaidItemIds,
       currentPersonItemIds,
+      itemsAmount,
     ],
   );
 
@@ -606,7 +676,9 @@ export function PaymentCalculator({
                   <div className="border-t-2 border-accent/10 pt-4 flex justify-between items-end">
                     <div className="space-y-1">
                       <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">
-                        {previouslyPaid > 0 ? "RESTANTE A RECAUDAR" : "TOTAL A RECAUDAR"}
+                        {previouslyPaid > 0
+                          ? "RESTANTE A RECAUDAR"
+                          : "TOTAL A RECAUDAR"}
                       </span>
                       <div className="text-2xl lg:text-4xl font-black tracking-tighter text-primary">
                         {formatPrice(baseRemaining)}
@@ -667,8 +739,12 @@ export function PaymentCalculator({
                   setPartialPayments([]);
                   setReceived("");
                   try {
-                    const stored = localStorage.getItem(`paid_items_${order.id}`);
-                    setAlreadyPaidItemIds(stored ? new Set(JSON.parse(stored)) : new Set());
+                    const stored = localStorage.getItem(
+                      `paid_items_${order.id}`,
+                    );
+                    setAlreadyPaidItemIds(
+                      stored ? new Set(JSON.parse(stored)) : new Set(),
+                    );
                   } catch (e) {
                     setAlreadyPaidItemIds(new Set());
                   }
@@ -705,27 +781,41 @@ export function PaymentCalculator({
                     }}
                     className={cn(
                       "w-full flex items-center justify-between p-3 lg:p-4 rounded-xl lg:rounded-2xl border-2 transition-all text-left",
-                      isAlreadyPaid ? "opacity-50 grayscale cursor-not-allowed bg-accent/5" :
-                      isSelected
-                        ? "bg-primary/10 border-primary/30"
-                        : "bg-white hover:bg-accent/5 border-accent/10"
+                      isAlreadyPaid
+                        ? "opacity-50 grayscale cursor-not-allowed bg-accent/5"
+                        : isSelected
+                          ? "bg-primary/10 border-primary/30"
+                          : "bg-white hover:bg-accent/5 border-accent/10",
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-6 h-6 rounded-md flex items-center justify-center border-2 transition-colors shrink-0",
-                        isAlreadyPaid ? "bg-accent/20 border-accent/30 text-muted-foreground" :
-                        isSelected ? "bg-primary border-primary text-white" : "border-accent/30"
-                      )}>
-                        {(isSelected || isAlreadyPaid) && <CheckCircle className="h-4 w-4" strokeWidth={3} />}
+                      <div
+                        className={cn(
+                          "w-6 h-6 rounded-md flex items-center justify-center border-2 transition-colors shrink-0",
+                          isAlreadyPaid
+                            ? "bg-accent/20 border-accent/30 text-muted-foreground"
+                            : isSelected
+                              ? "bg-primary border-primary text-white"
+                              : "border-accent/30",
+                        )}
+                      >
+                        {(isSelected || isAlreadyPaid) && (
+                          <CheckCircle className="h-4 w-4" strokeWidth={3} />
+                        )}
                       </div>
                       <div>
-                        <span className="font-bold block">{item.products?.name}</span>
-                        <span className="text-xs font-black text-muted-foreground/60">{item.quantity}x • {formatPrice(item.unit_price)} c/u</span>
+                        <span className="font-bold block">
+                          {item.products?.name}
+                        </span>
+                        <span className="text-xs font-black text-muted-foreground/60">
+                          {item.quantity}x • {formatPrice(item.unit_price)} c/u
+                        </span>
                       </div>
                     </div>
                     <span className="font-black text-primary">
-                      {isAlreadyPaid ? "PAGADO" : formatPrice(item.unit_price * item.quantity)}
+                      {isAlreadyPaid
+                        ? "PAGADO"
+                        : formatPrice(item.unit_price * item.quantity)}
                     </span>
                   </button>
                 );
@@ -738,9 +828,11 @@ export function PaymentCalculator({
                 onClick={() => {
                   let sum = 0;
                   order.order_items?.forEach((item) => {
-                    if (selectedItemIds.has(item.id)) sum += (item.unit_price * item.quantity);
+                    if (selectedItemIds.has(item.id))
+                      sum += item.unit_price * item.quantity;
                   });
-                  setReceived(String(sum));
+                  setItemsAmount(sum); // store pre-calculated amount
+                  setReceived(""); // clear so user types cash they receive
                   setCurrentPersonItemIds(new Set(selectedItemIds));
                   setStep("shared_method");
                 }}
@@ -794,15 +886,16 @@ export function PaymentCalculator({
                 {receivedNum > 0
                   ? "TOTAL SELECCIONADO"
                   : partialPayments.length === 0
-                  ? "TOTAL A PAGAR"
-                  : "MONTO RESTANTE"}
+                    ? "TOTAL A PAGAR"
+                    : "MONTO RESTANTE"}
               </p>
               <div className="text-3xl lg:text-4xl font-black tracking-tighter text-amber-600">
                 {formatPrice(receivedNum > 0 ? receivedNum : remainingTotal)}
               </div>
               {receivedNum > 0 && receivedNum !== remainingTotal && (
                 <p className="text-[10px] font-bold text-amber-600/40 mt-2 uppercase tracking-wider">
-                  SALDO DESPUÉS DE ESTE PAGO: {formatPrice(Math.max(0, remainingTotal - receivedNum))}
+                  SALDO DESPUÉS DE ESTE PAGO:{" "}
+                  {formatPrice(Math.max(0, remainingTotal - receivedNum))}
                 </p>
               )}
             </div>
@@ -899,7 +992,9 @@ export function PaymentCalculator({
                   ).toUpperCase()}
                 </div>
                 <h3 className="text-xl lg:text-2xl font-black tracking-tighter">
-                  ¿Cuánto paga esta persona?
+                  {currentPartialMethod === "efectivo"
+                    ? "¿Cuánto paga esta persona?"
+                    : "Confirmar cobro"}
                 </h3>
               </div>
             </div>
@@ -922,182 +1017,274 @@ export function PaymentCalculator({
               </div>
             )}
 
-            <div className="space-y-3 lg:space-y-4">
-              {/* Display */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-8">
-                <div className="rounded-2xl lg:rounded-3xl bg-accent/5 p-4 lg:p-6 text-center space-y-1 lg:space-y-3 border-2 border-accent/5 shadow-inner">
-                  <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
-                    MONTO DE ESTE PAGO
+            {/* ── NON-CASH + pre-calculated itemsAmount → simple confirm card ── */}
+            {currentPartialMethod !== "efectivo" && itemsAmount > 0 ? (
+              <div className="space-y-4">
+                {/* Amount card */}
+                <div className="rounded-2xl bg-primary/5 border-2 border-primary/15 p-6 flex flex-col items-center gap-2 text-center">
+                  <p className="text-[10px] font-black text-primary/50 uppercase tracking-widest">
+                    MONTO A COBRAR
                   </p>
-                  <p className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground">
-                    {received ? formatPrice(receivedNum) : "$0"}
+                  <p className="text-4xl lg:text-5xl font-black tracking-tighter text-primary">
+                    {formatPrice(itemsAmount)}
                   </p>
-                  {receivedNum > 0 &&
-                    receivedNum >= remainingTotal &&
-                    currentPartialMethod === "efectivo" && (
-                      <div className="pt-3 border-t border-accent/10 mt-3 flex flex-col items-center gap-1">
-                        <p className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest leading-none">
-                          CAMBIO PARA EL CLIENTE
-                        </p>
-                        <p className="text-lg lg:text-2xl font-black tracking-tighter text-green-500">
-                          {formatPrice(change)}
-                        </p>
-                      </div>
-                    )}
-                  <div className="pt-2 mt-2 border-t border-accent/5">
-                    <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
-                      RESTANTE:{" "}
-                      <span className="text-foreground font-black ml-1">
-                        {formatPrice(remainingTotal)}
-                      </span>
+                  {itemsAmount < remainingTotal && (
+                    <p className="text-xs font-bold text-muted-foreground/50 mt-1">
+                      SALDO DESPUÉS: {formatPrice(remainingTotal - itemsAmount)}
                     </p>
-                  </div>
+                  )}
                 </div>
 
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+                {/* Action buttons */}
+                <div className="flex flex-col gap-2">
+                  {itemsAmount < remainingTotal && (
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExact}
-                      className="h-10 lg:h-12 rounded-xl lg:rounded-2xl border-2 font-black uppercase tracking-widest text-[8px] lg:text-[10px] shadow-soft"
+                      size="lg"
+                      className="w-full h-14 rounded-xl lg:rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-[0.15em] shadow-strong shadow-amber-500/20 transition-all active:scale-95"
+                      disabled={isSubmitting}
+                      onClick={addPartialPayment}
                     >
-                      MONTO EXACTO
+                      <Users className="h-5 w-5 mr-2" strokeWidth={3} />
+                      REGISTRAR PAGO Y COBRAR AL SIGUIENTE
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setReceived("50000")}
-                      className="h-10 lg:h-12 rounded-xl lg:rounded-2xl border-2 font-black text-sm shadow-soft"
-                    >
-                      $50.000
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {QUICK_AMOUNTS.slice(2, 6).map((a) => (
-                      <Button
-                        key={a}
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleQuickAmount(a)}
-                        className="h-10 lg:h-12 rounded-xl lg:rounded-2xl font-black text-sm shadow-soft bg-white border-2 border-accent/5"
-                      >
-                        +{formatPrice(a)}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Numpad */}
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  "1",
-                  "2",
-                  "3",
-                  "4",
-                  "5",
-                  "6",
-                  "7",
-                  "8",
-                  "9",
-                  "C",
-                  "0",
-                  "DEL",
-                ].map((key) => (
-                  <Button
-                    key={key}
-                    variant="secondary"
-                    className={cn(
-                      "h-10 lg:h-11 rounded-xl lg:rounded-2xl font-black text-lg transition-all active:scale-95 shadow-soft border-2 border-transparent",
-                      key === "C"
-                        ? "text-destructive hover:bg-destructive/5 hover:border-destructive/10"
-                        : key === "DEL"
-                          ? "hover:bg-accent/10"
-                          : "hover:border-primary/20",
-                    )}
-                    onClick={() => handleNumpad(key)}
-                  >
-                    {key === "DEL" ? (
-                      <Delete className="h-5 w-5" strokeWidth={2.5} />
-                    ) : (
-                      key
-                    )}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-2">
-                {canAddPartial && (
+                  )}
                   <Button
                     size="lg"
-                    className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.15em] shadow-strong shadow-amber-500/20 transition-all active:scale-95"
-                    onClick={addPartialPayment}
-                  >
-                    <Users
-                      className="h-5 w-5 lg:h-6 lg:w-6 mr-2"
-                      strokeWidth={3}
-                    />
-                    AGREGAR PAGO Y CONTINUAR (FALTAN{" "}
-                    {formatPrice(remainingTotal - receivedNum)})
-                  </Button>
-                )}
-                {canConfirm && (
-                  <Button
-                    size="lg"
-                    className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.15em] shadow-strong shadow-primary/20 transition-all active:scale-95"
+                    className="w-full h-14 rounded-xl lg:rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-[0.15em] shadow-strong shadow-primary/20 transition-all active:scale-95"
                     disabled={isSubmitting}
                     onClick={() => handleConfirmPayment()}
                   >
                     {isSubmitting ? (
                       <div className="flex items-center gap-3 justify-center">
-                        <svg
-                          className="animate-spin h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
+                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        PROCESANDO PAGO...
+                        PROCESANDO...
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <CheckCircle
-                          className="h-5 w-5 lg:h-6 lg:w-6"
-                          strokeWidth={3}
-                        />
-                        {receivedNum >= remainingTotal ? "CONFIRMAR PAGO FINAL" : "CONFIRMAR PAGO PARCIAL"}
+                        <CheckCircle className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
+                        {itemsAmount >= remainingTotal ? "✓ CONFIRMAR PAGO FINAL" : "✓ OK, COBRAR"}
                       </div>
                     )}
                   </Button>
-                )}
-                {!canAddPartial && !canConfirm && (
-                  <Button
-                    size="lg"
-                    disabled
-                    className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl font-black text-[10px] lg:text-xs uppercase tracking-[0.2em]"
-                  >
-                    INGRESA UN MONTO
-                  </Button>
-                )}
+                </div>
               </div>
-            </div>
+            ) : (
+              /* ── CASH or manual entry → full calculator ── */
+              <div className="space-y-3 lg:space-y-4">
+                {/* Display */}
+                {currentPartialMethod === "efectivo" && itemsAmount > 0 ? (
+                  <div className="space-y-2">
+                    {/* Row 1: amount to charge */}
+                    <div className="rounded-2xl bg-primary/5 p-3 lg:p-4 flex justify-between items-center border-2 border-primary/10">
+                      <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest">
+                        MONTO A COBRAR
+                      </p>
+                      <p className="text-xl lg:text-2xl font-black tracking-tighter text-primary">
+                        {formatPrice(itemsAmount)}
+                      </p>
+                    </div>
+                    {/* Row 2: client gives */}
+                    <div className="rounded-2xl bg-accent/5 p-3 lg:p-4 flex justify-between items-center border-2 border-accent/10">
+                      <p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-widest">
+                        RECIBE DEL CLIENTE
+                      </p>
+                      <p className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground">
+                        {received ? (
+                          formatPrice(receivedNum)
+                        ) : (
+                          <span className="text-muted-foreground/30">$0</span>
+                        )}
+                      </p>
+                    </div>
+                    {/* Row 3: change */}
+                    <div
+                      className={cn(
+                        "rounded-2xl p-3 lg:p-4 flex justify-between items-center border-2 transition-all",
+                        change > 0
+                          ? "bg-green-50 border-green-200"
+                          : receivedNum > 0 && receivedNum < itemsAmount
+                            ? "bg-red-50 border-red-200"
+                            : "bg-accent/5 border-accent/10",
+                      )}
+                    >
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">
+                        DEVUELTA AL CLIENTE
+                      </p>
+                      <p
+                        className={cn(
+                          "text-2xl lg:text-3xl font-black tracking-tighter",
+                          change > 0
+                            ? "text-green-600"
+                            : receivedNum > 0 && receivedNum < itemsAmount
+                              ? "text-red-500"
+                              : "text-muted-foreground/30",
+                        )}
+                      >
+                        {change > 0
+                          ? formatPrice(change)
+                          : receivedNum > 0 && receivedNum < itemsAmount
+                            ? `— FALTAN ${formatPrice(itemsAmount - receivedNum)}`
+                            : "$0"}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-8">
+                    <div className="rounded-2xl lg:rounded-3xl bg-accent/5 p-4 lg:p-6 text-center space-y-1 lg:space-y-3 border-2 border-accent/5 shadow-inner">
+                      <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                        MONTO DE ESTE PAGO
+                      </p>
+                      <p className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground">
+                        {received ? formatPrice(receivedNum) : "$0"}
+                      </p>
+                      <div className="pt-2 mt-2 border-t border-accent/5">
+                        <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
+                          RESTANTE:{" "}
+                          <span className="text-foreground font-black ml-1">
+                            {formatPrice(remainingTotal)}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleExact}
+                          className="h-10 lg:h-12 rounded-xl lg:rounded-2xl border-2 font-black uppercase tracking-widest text-[8px] lg:text-[10px] shadow-soft"
+                        >
+                          MONTO EXACTO
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setReceived("50000")}
+                          className="h-10 lg:h-12 rounded-xl lg:rounded-2xl border-2 font-black text-sm shadow-soft"
+                        >
+                          $50.000
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {QUICK_AMOUNTS.slice(2, 6).map((a) => (
+                          <Button
+                            key={a}
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleQuickAmount(a)}
+                            className="h-10 lg:h-12 rounded-xl lg:rounded-2xl font-black text-sm shadow-soft bg-white border-2 border-accent/5"
+                          >
+                            +{formatPrice(a)}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Quick amounts shortcut for cash mode */}
+                {currentPartialMethod === "efectivo" && itemsAmount > 0 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {[5000, 10000, 20000, 50000].map((a) => (
+                      <Button
+                        key={a}
+                        variant="secondary"
+                        size="sm"
+                        onClick={() =>
+                          setReceived(String((parseInt(received) || 0) + a))
+                        }
+                        className="h-10 rounded-xl font-black text-xs shadow-soft bg-white border-2 border-accent/5"
+                      >
+                        +{formatPrice(a)}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Numpad */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    "1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "DEL",
+                  ].map((key) => (
+                    <Button
+                      key={key}
+                      variant="secondary"
+                      className={cn(
+                        "h-10 lg:h-11 rounded-xl lg:rounded-2xl font-black text-lg transition-all active:scale-95 shadow-soft border-2 border-transparent",
+                        key === "C"
+                          ? "text-destructive hover:bg-destructive/5 hover:border-destructive/10"
+                          : key === "DEL"
+                            ? "hover:bg-accent/10"
+                            : "hover:border-primary/20",
+                      )}
+                      onClick={() => handleNumpad(key)}
+                    >
+                      {key === "DEL" ? (
+                        <Delete className="h-5 w-5" strokeWidth={2.5} />
+                      ) : (
+                        key
+                      )}
+                    </Button>
+                  ))}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-2">
+                  {canAddPartial && (
+                    <Button
+                      size="lg"
+                      className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.15em] shadow-strong shadow-amber-500/20 transition-all active:scale-95"
+                      onClick={addPartialPayment}
+                    >
+                      <Users className="h-5 w-5 lg:h-6 lg:w-6 mr-2" strokeWidth={3} />
+                      AGREGAR PAGO Y CONTINUAR (FALTAN{" "}
+                      {formatPrice(remainingTotal - (currentPartialMethod === "efectivo" && itemsAmount > 0 ? itemsAmount : receivedNum))})
+                    </Button>
+                  )}
+                  {canConfirm && (
+                    <Button
+                      size="lg"
+                      className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.15em] shadow-strong shadow-primary/20 transition-all active:scale-95"
+                      disabled={isSubmitting}
+                      onClick={() => handleConfirmPayment()}
+                    >
+                      {isSubmitting ? (
+                        <div className="flex items-center gap-3 justify-center">
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          PROCESANDO PAGO...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
+                          {receivedNum >= remainingTotal
+                            ? "CONFIRMAR PAGO FINAL"
+                            : "CONFIRMAR PAGO PARCIAL"}
+                        </div>
+                      )}
+                    </Button>
+                  )}
+                  {!canAddPartial && !canConfirm && (
+                    <Button
+                      size="lg"
+                      disabled
+                      className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl font-black text-[10px] lg:text-xs uppercase tracking-[0.2em]"
+                    >
+                      INGRESA UN MONTO
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
+
 
         {/* ═══════ Sub Method Tarjeta ═══════ */}
         {step === "sub_method_tarjeta" && (
@@ -1376,7 +1563,6 @@ export function PaymentCalculator({
             </div>
           </div>
         )}
-
       </DialogContent>
     </Dialog>
   );
