@@ -763,62 +763,65 @@ export function PaymentCalculator({
               </div>
             </div>
             <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
-              {order.order_items?.map((item) => {
-                const isSelected = selectedItemIds.has(item.id);
-                const isAlreadyPaid = alreadyPaidItemIds.has(item.id);
-                return (
-                  <button
-                    key={item.id}
-                    disabled={isAlreadyPaid}
-                    onClick={() => {
-                      if (isAlreadyPaid) return;
-                      setSelectedItemIds((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(item.id)) next.delete(item.id);
-                        else next.add(item.id);
-                        return next;
-                      });
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between p-3 lg:p-4 rounded-xl lg:rounded-2xl border-2 transition-all text-left",
-                      isAlreadyPaid
-                        ? "opacity-50 grayscale cursor-not-allowed bg-accent/5"
-                        : isSelected
-                          ? "bg-primary/10 border-primary/30"
-                          : "bg-white hover:bg-accent/5 border-accent/10",
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "w-6 h-6 rounded-md flex items-center justify-center border-2 transition-colors shrink-0",
-                          isAlreadyPaid
-                            ? "bg-accent/20 border-accent/30 text-muted-foreground"
-                            : isSelected
-                              ? "bg-primary border-primary text-white"
-                              : "border-accent/30",
-                        )}
-                      >
-                        {(isSelected || isAlreadyPaid) && (
-                          <CheckCircle className="h-4 w-4" strokeWidth={3} />
-                        )}
+              {order.order_items?.flatMap((item) => {
+                return Array.from({ length: item.quantity }).map((_, idx) => {
+                  const uniqueId = `${item.id}-${idx}`;
+                  const isSelected = selectedItemIds.has(uniqueId);
+                  const isAlreadyPaid = alreadyPaidItemIds.has(uniqueId);
+                  return (
+                    <button
+                      key={uniqueId}
+                      disabled={isAlreadyPaid}
+                      onClick={() => {
+                        if (isAlreadyPaid) return;
+                        setSelectedItemIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(uniqueId)) next.delete(uniqueId);
+                          else next.add(uniqueId);
+                          return next;
+                        });
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-between p-3 lg:p-4 rounded-xl lg:rounded-2xl border-2 transition-all text-left",
+                        isAlreadyPaid
+                          ? "opacity-50 grayscale cursor-not-allowed bg-accent/5"
+                          : isSelected
+                            ? "bg-primary/10 border-primary/30"
+                            : "bg-white hover:bg-accent/5 border-accent/10",
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "w-6 h-6 rounded-md flex items-center justify-center border-2 transition-colors shrink-0",
+                            isAlreadyPaid
+                              ? "bg-accent/20 border-accent/30 text-muted-foreground"
+                              : isSelected
+                                ? "bg-primary border-primary text-white"
+                                : "border-accent/30",
+                          )}
+                        >
+                          {(isSelected || isAlreadyPaid) && (
+                            <CheckCircle className="h-4 w-4" strokeWidth={3} />
+                          )}
+                        </div>
+                        <div>
+                          <span className="font-bold block">
+                            {item.products?.name} {item.quantity > 1 ? <span className="text-muted-foreground/60 font-normal">({idx + 1}/{item.quantity})</span> : ""}
+                          </span>
+                          <span className="text-xs font-black text-muted-foreground/60">
+                            1x • {formatPrice(item.unit_price)}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="font-bold block">
-                          {item.products?.name}
-                        </span>
-                        <span className="text-xs font-black text-muted-foreground/60">
-                          {item.quantity}x • {formatPrice(item.unit_price)} c/u
-                        </span>
-                      </div>
-                    </div>
-                    <span className="font-black text-primary">
-                      {isAlreadyPaid
-                        ? "PAGADO"
-                        : formatPrice(item.unit_price * item.quantity)}
-                    </span>
-                  </button>
-                );
+                      <span className="font-black text-primary">
+                        {isAlreadyPaid
+                          ? "PAGADO"
+                          : formatPrice(item.unit_price)}
+                      </span>
+                    </button>
+                  );
+                });
               })}
             </div>
             <div className="pt-4 mt-4 border-t border-accent/10 shrink-0 space-y-2">
@@ -828,8 +831,11 @@ export function PaymentCalculator({
                 onClick={() => {
                   let sum = 0;
                   order.order_items?.forEach((item) => {
-                    if (selectedItemIds.has(item.id))
-                      sum += item.unit_price * item.quantity;
+                    for (let i = 0; i < item.quantity; i++) {
+                      if (selectedItemIds.has(`${item.id}-${i}`)) {
+                        sum += item.unit_price;
+                      }
+                    }
                   });
                   setItemsAmount(sum); // store pre-calculated amount
                   setReceived(""); // clear so user types cash they receive

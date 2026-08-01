@@ -1,3 +1,4 @@
+import pkg from "../../package.json";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -37,8 +38,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#0A0A0A]">
       {/* Dynamic Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[120px] animate-pulse" />
-        <div className="absolute -bottom-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-orange-600/10 blur-[120px] animate-pulse delay-1000" />
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-orange-600/10 blur-[120px] animate-pulse delay-1000" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.05)_0%,transparent_70%)]" />
       </div>
 
@@ -135,7 +136,7 @@ export default function Login() {
 
         <div className="text-center space-y-4">
           <p className="text-white/30 text-xs font-medium uppercase tracking-widest">
-            Sistema de Gestión v2.0
+            Sistema de Gestión v{pkg.version}
           </p>
           <div className="flex items-center justify-center gap-4">
             <div className="h-px w-8 bg-white/10" />
