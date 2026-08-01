@@ -645,9 +645,9 @@ export async function silentPrint(
     iframe.style.width = "0px";
     iframe.style.height = "0px";
     iframe.style.border = "none";
-    
+
     document.body.appendChild(iframe);
-    
+
     const doc = iframe.contentWindow?.document;
     if (!doc) {
       document.body.removeChild(iframe);
@@ -693,7 +693,7 @@ export async function silentPrint(
       const win = iframe.contentWindow;
       if (win) {
         win.addEventListener("afterprint", cleanup);
-        
+
         // Timeout de seguridad de 10s en caso de que afterprint no dispare
         setTimeout(cleanup, 10000);
 

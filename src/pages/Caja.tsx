@@ -34,6 +34,7 @@ import {
   Clock,
   FileText,
   Zap,
+  Check,
 } from "lucide-react";
 import { formatPrice } from "@/lib/formatPrice";
 import type { Order, OrderItem, OrderStatus } from "@/types";
@@ -41,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/StatusBadge";
 import { shouldGenerateInvoice } from "@/lib/siigoService";
 import { SiigoInvoiceModal } from "@/components/SiigoInvoiceModal";
+import { deductStockFromOrder } from "@/lib/inventoryService";
 
 interface ReceiptState {
   order: Order;
@@ -183,19 +185,35 @@ export default function Caja() {
   ): Promise<boolean> => {
     if (!payingOrder) return false;
 
-    const previouslyPaid = payingOrder.payments?.reduce((sum, p) => sum + (Number(p.amount) || Number(p.amount_total) || ((Number(p.amount_efectivo) || 0) + (Number(p.amount_tarjeta) || 0) + (Number(p.amount_nequi) || 0)) || 0), 0) || 0;
+    const previouslyPaid =
+      payingOrder.payments?.reduce(
+        (sum, p) =>
+          sum +
+          (Number(p.amount) ||
+            Number(p.amount_total) ||
+            (Number(p.amount_efectivo) || 0) +
+              (Number(p.amount_tarjeta) || 0) +
+              (Number(p.amount_nequi) || 0) ||
+            0),
+        0,
+      ) || 0;
     const baseRemaining = Math.max(0, payingOrder.total - previouslyPaid);
     const change = Math.max(0, received - baseRemaining);
     const isFullyPaid = received >= baseRemaining;
-    
-    const targetStatus = isFullyPaid ? (payingOrder.status === 'pendiente' || payingOrder.status === 'confirmado' ? 'en_preparacion' : payingOrder.status) : null;
+
+    const targetStatus = isFullyPaid
+      ? payingOrder.status === "pendiente" ||
+        payingOrder.status === "confirmado"
+        ? "en_preparacion"
+        : payingOrder.status
+      : null;
 
     const success = await processPayment(
       payingOrder.id,
       method,
       received,
       breakdown,
-      targetStatus
+      targetStatus,
     );
     if (!success) return false;
 
@@ -225,8 +243,13 @@ export default function Caja() {
           for (let i = 0; i < sharedPayments.length; i++) {
             const p = sharedPayments[i];
             await silentPrint(
-              buildPartialPaymentReceiptHTML(receiptData, p, i + 1, sharedPayments.length),
-              `Voucher Parcial ${i + 1} - ${activeOrder.locator}`
+              buildPartialPaymentReceiptHTML(
+                receiptData,
+                p,
+                i + 1,
+                sharedPayments.length,
+              ),
+              `Voucher Parcial ${i + 1} - ${activeOrder.locator}`,
             );
           }
         }
@@ -458,20 +481,27 @@ export default function Caja() {
                   </p>
                 </div>
               ) : (
-                confirmados.map((order) => (
-                    const previouslyPaid =
-                      order.payments?.reduce(
-                        (sum, p) => sum + (Number(p.amount) || Number(p.amount_total) || ((Number(p.amount_efectivo) || 0) + (Number(p.amount_tarjeta) || 0) + (Number(p.amount_nequi) || 0)) || 0),
-                        0,
-                      ) || 0;
-                    const isFullyPaid = previouslyPaid >= (order.total || 0);
+                confirmados.map((order) => {
+                  const previouslyPaid =
+                    order.payments?.reduce(
+                      (sum, p) =>
+                        sum +
+                        (Number(p.amount) ||
+                          Number(p.amount_total) ||
+                          (Number(p.amount_efectivo) || 0) +
+                            (Number(p.amount_tarjeta) || 0) +
+                            (Number(p.amount_nequi) || 0) ||
+                          0),
+                      0,
+                    ) || 0;
+                  const isFullyPaid = previouslyPaid >= (order.total || 0);
 
-                    return (
-                      <OrderCard
-                        key={order.id}
-                        order={order}
-                        className="bg-white/80 backdrop-blur-md border-primary/20 shadow-xl shadow-primary/5"
-                        actions={
+                  return (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      className="bg-white/80 backdrop-blur-md border-primary/20 shadow-xl shadow-primary/5"
+                      actions={
                         isFullyPaid ? (
                           <button
                             className="w-full rounded-xl h-10 font-black text-[10px] uppercase tracking-[0.2em] bg-green-500 hover:bg-green-600 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
@@ -481,20 +511,34 @@ export default function Caja() {
                                   p_order_id: order.id,
                                   p_status: "en_preparacion",
                                 });
-                                deductStockFromOrder(order.id).catch(console.warn);
+                                deductStockFromOrder(order.id).catch(
+                                  console.warn,
+                                );
                                 toast.success("Enviado a cocina");
-                                
-                                const pMethod = order.payments?.[0]?.method || "efectivo";
-                                const pBreakdown = order.payments?.[0] ? {
-                                  efectivo: order.payments[0].amount_efectivo || 0,
-                                  tarjeta: order.payments[0].amount_tarjeta || 0,
-                                  nequi: order.payments[0].amount_nequi || 0,
-                                } : undefined;
-                                
-                                if (shouldGenerateInvoice(pMethod, pBreakdown)) {
-                                  setSiigoOrder({ order, method: pMethod, breakdown: pBreakdown });
+
+                                const pMethod =
+                                  order.payments?.[0]?.method || "efectivo";
+                                const pBreakdown = order.payments?.[0]
+                                  ? {
+                                      efectivo:
+                                        order.payments[0].amount_efectivo || 0,
+                                      tarjeta:
+                                        order.payments[0].amount_tarjeta || 0,
+                                      nequi:
+                                        order.payments[0].amount_nequi || 0,
+                                    }
+                                  : undefined;
+
+                                if (
+                                  shouldGenerateInvoice(pMethod, pBreakdown)
+                                ) {
+                                  setSiigoOrder({
+                                    order,
+                                    method: pMethod,
+                                    breakdown: pBreakdown,
+                                  });
                                 }
-                                
+
                                 const receiptData: ReceiptData = {
                                   order,
                                   cajeroName,
@@ -503,23 +547,37 @@ export default function Caja() {
                                   paymentChange: 0,
                                   paymentBreakdown: pBreakdown,
                                 };
-                                
+
                                 await silentPrint(
                                   buildCustomerReceiptHTML(receiptData),
                                   `Recibo - ${order.locator}`,
                                 );
-                                
-                                const items = (order.order_items ?? []).filter((i) => i.products != null);
-                                const categoryGroups: Record<string, OrderItem[]> = {};
+
+                                const items = (order.order_items ?? []).filter(
+                                  (i) => i.products != null,
+                                );
+                                const categoryGroups: Record<
+                                  string,
+                                  OrderItem[]
+                                > = {};
                                 items.forEach((item) => {
-                                  const catName = item.products?.categories?.name || "General";
-                                  if (!categoryGroups[catName]) categoryGroups[catName] = [];
+                                  const catName =
+                                    item.products?.categories?.name ||
+                                    "General";
+                                  if (!categoryGroups[catName])
+                                    categoryGroups[catName] = [];
                                   categoryGroups[catName].push(item);
                                 });
-                                
-                                for (const [catName, catItems] of Object.entries(categoryGroups)) {
+
+                                for (const [
+                                  catName,
+                                  catItems,
+                                ] of Object.entries(categoryGroups)) {
                                   await silentPrint(
-                                    buildKitchenTicketHTML(order, catItems, catName),
+                                    buildKitchenReceiptHTML(
+                                      receiptData,
+                                      catItems,
+                                    ),
                                     `Comanda ${catName} - ${order.locator}`,
                                   );
                                 }
@@ -555,9 +613,10 @@ export default function Caja() {
                             COBRAR Y ENVIAR
                           </button>
                         )
-                    }
-                  />
-                ))
+                      }
+                    />
+                  );
+                })
               )}
             </div>
           </TabsContent>
@@ -782,14 +841,20 @@ export default function Caja() {
 
                     const previouslyPaid =
                       order.payments?.reduce(
-                        (sum, p) => sum + (Number(p.amount) || Number(p.amount_total) || ((Number(p.amount_efectivo) || 0) + (Number(p.amount_tarjeta) || 0) + (Number(p.amount_nequi) || 0)) || 0),
+                        (sum, p) =>
+                          sum +
+                          (Number(p.amount) ||
+                            Number(p.amount_total) ||
+                            (Number(p.amount_efectivo) || 0) +
+                              (Number(p.amount_tarjeta) || 0) +
+                              (Number(p.amount_nequi) || 0) ||
+                            0),
                         0,
                       ) || 0;
                     const baseRemaining = Math.max(
                       0,
                       (order.total || 0) - previouslyPaid,
                     );
-
 
                     return (
                       <div
@@ -840,7 +905,8 @@ export default function Caja() {
                               </p>
                               {previouslyPaid > 0 && (
                                 <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                  RESTANTE (Pagado: {formatPrice(previouslyPaid)})
+                                  RESTANTE (Pagado:{" "}
+                                  {formatPrice(previouslyPaid)})
                                 </span>
                               )}
                               <span className="text-xs font-bold text-muted-foreground/40 uppercase tracking-widest">
