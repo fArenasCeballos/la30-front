@@ -447,14 +447,22 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
     const orderTotal = order.total ?? 0;
     grandTotal += orderTotal;
 
-    const payment = order.payments?.[0];
-    if (payment) {
-      totalEfectivo += payment.amount_efectivo ?? 0;
-      totalTarjeta += payment.amount_tarjeta ?? 0;
-      totalTransferencias += payment.amount_nequi ?? 0;
-    } else {
-      // Si no hay registro de pago, asumimos efectivo
-      totalEfectivo += orderTotal;
+    if (order.payments && order.payments.length > 0) {
+      order.payments.forEach((p) => {
+        if (p.method === "mixto") {
+          totalEfectivo += p.amount_efectivo || 0;
+          totalTarjeta += p.amount_tarjeta || 0;
+          totalTransferencias += p.amount_nequi || 0;
+        } else {
+          if (p.method === "efectivo") {
+            totalEfectivo += p.amount_total || 0;
+          } else if (p.method === "tarjeta") {
+            totalTarjeta += p.amount_total || 0;
+          } else if (p.method === "nequi") {
+            totalTransferencias += p.amount_total || 0;
+          }
+        }
+      });
     }
   });
 
