@@ -40,25 +40,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const loadedStores = (data || []).map((s: Store) => ({
+      let loadedStores = (data || []).map((s: Store) => ({
         ...s,
         name: s.name === "Carrito Móvil" ? "Tráiler" : s.name,
       }));
+
+      // Filter accessible stores for non-admin users
+      if (user.role !== "admin") {
+        const profile = user as Profile;
+        if (profile.allowed_store_ids && profile.allowed_store_ids.length > 0) {
+          loadedStores = loadedStores.filter(s => profile.allowed_store_ids!.includes(s.id));
+        } else if (profile.store_id) {
+          // Fallback to legacy single store_id if allowed_store_ids is empty
+          loadedStores = loadedStores.filter(s => s.id === profile.store_id);
+        }
+      }
+
       setStores(loadedStores);
 
       // Resolve active store
       let storeToSet: Store | null = null;
       
-      if (user.role === "admin") {
-        const savedSlug = localStorage.getItem(STORAGE_KEY);
-        if (savedSlug) {
-          storeToSet = loadedStores.find((s) => s.slug === savedSlug) || null;
-        }
-      } else {
-        const userStoreId = (user as Profile).store_id;
-        if (userStoreId) {
-          storeToSet = loadedStores.find((s) => s.id === userStoreId) || null;
-        }
+      const savedSlug = localStorage.getItem(STORAGE_KEY);
+      if (savedSlug) {
+        storeToSet = loadedStores.find((s) => s.slug === savedSlug) || null;
+      }
+      
+      // If no valid saved store is found among accessible stores, default to the first one
+      if (!storeToSet && loadedStores.length > 0) {
+        storeToSet = loadedStores[0];
       }
 
       // Only update state if different to prevent unnecessary renders and infinite loops

@@ -8,7 +8,6 @@ import {
   Pencil,
   Eye,
   EyeOff,
-  MapPin,
   Search,
   PlusCircle,
   Loader2,
@@ -26,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -69,7 +69,10 @@ export default function Usuarios() {
   const [formEmail, setFormEmail] = useState("");
   const [formPassword, setFormPassword] = useState("");
   const [formRole, setFormRole] = useState<UserRole>("mesero");
-  const [formStoreId, setFormStoreId] = useState<string>("all");
+
+  const [formStoreIds, setFormStoreIds] = useState<string[]>([]);
+  const [isGlobalAccess, setIsGlobalAccess] = useState<boolean>(false);
+
   const { stores } = useStore();
   const [newPassword, setNewPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -116,7 +119,8 @@ export default function Usuarios() {
     setFormEmail("");
     setFormPassword("");
     setFormRole("mesero");
-    setFormStoreId("all");
+    setFormStoreIds([]);
+    setIsGlobalAccess(false);
     setNewPassword("");
     setShowPassword(false);
     setShowForm(true);
@@ -126,7 +130,21 @@ export default function Usuarios() {
     setEditingProfile(p);
     setFormName(p.name || "");
     setFormRole((p.role as UserRole) || "mesero");
-    setFormStoreId(p.store_id || "all");
+
+    if (p.role === "admin" || (p.allowed_store_ids === null && !p.store_id)) {
+      setIsGlobalAccess(true);
+      setFormStoreIds([]);
+    } else {
+      setIsGlobalAccess(false);
+      if (p.allowed_store_ids && p.allowed_store_ids.length > 0) {
+        setFormStoreIds(p.allowed_store_ids);
+      } else if (p.store_id) {
+        setFormStoreIds([p.store_id]);
+      } else {
+        setFormStoreIds([]);
+      }
+    }
+
     setNewPassword("");
     setShowPassword(false);
     setShowForm(true);
@@ -163,8 +181,8 @@ export default function Usuarios() {
         `Usuario ${!p.is_active ? "activado" : "inactivado"} correctamente`,
       );
       fetchProfiles();
-    } catch (err: any) {
-      toast.error(`Error al cambiar estado: ${err.message}`);
+    } catch (err) {
+      toast.error(`Error al cambiar estado: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -181,13 +199,20 @@ export default function Usuarios() {
         .update({
           name: formName,
           role: formRole,
-          store_id: formStoreId === "all" ? null : formStoreId,
+          store_id: isGlobalAccess ? null : formStoreIds[0] || null, // legacy compat
         })
         .eq("id", editingProfile.id);
 
       if (error) {
         toast.error(`Error: ${error.message}`);
       } else {
+        // Guardar las tiendas permitidas
+        await supabase.rpc("update_user_allowed_stores", {
+          p_user_id: editingProfile.id,
+          p_store_ids:
+            isGlobalAccess || formRole === "admin" ? null : formStoreIds,
+        });
+
         if (newPassword.trim()) {
           const { error: pwdError } = await supabase.rpc(
             "admin_update_user_password",
@@ -228,14 +253,14 @@ export default function Usuarios() {
           },
         );
 
-        const { error } = await tempSupabase.auth.signUp({
+        const { data: signUpData, error } = await tempSupabase.auth.signUp({
           email: formEmail,
           password: formPassword,
           options: {
             data: {
               full_name: formName,
               role: formRole,
-              store_id: formStoreId === "all" ? null : formStoreId,
+              store_id: isGlobalAccess ? null : formStoreIds[0] || null,
             },
           },
         });
@@ -243,6 +268,13 @@ export default function Usuarios() {
         if (error) {
           toast.error(`Error al crear usuario: ${error.message}`);
         } else {
+          if (signUpData.user) {
+            await supabase.rpc("update_user_allowed_stores", {
+              p_user_id: signUpData.user.id,
+              p_store_ids:
+                isGlobalAccess || formRole === "admin" ? null : formStoreIds,
+            });
+          }
           toast.success("Usuario creado exitosamente.");
           setTimeout(fetchProfiles, 1500);
           setShowForm(false);
@@ -342,7 +374,7 @@ export default function Usuarios() {
                             {u.name?.charAt(0)}
                           </div>
                           <div className="space-y-1">
-                            <p className="font-black text-[17px] tracking-tight text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                            <div className="font-black text-[17px] tracking-tight text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
                               {u.name}
                               {u.is_active === false && (
                                 <Badge
@@ -352,7 +384,7 @@ export default function Usuarios() {
                                   INACTIVO
                                 </Badge>
                               )}
-                            </p>
+                            </div>
                             <p className="text-[12px] text-muted-foreground/60 font-bold tracking-tight">
                               {u.email}
                             </p>
@@ -371,15 +403,45 @@ export default function Usuarios() {
                         </Badge>
                       </td>
                       <td className="px-10 py-7">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-lg bg-accent/20 flex items-center justify-center text-muted-foreground/40">
-                            <MapPin className="h-4 w-4" />
-                          </div>
-                          <span className="text-[14px] font-black text-muted-foreground/70">
-                            {u.store_id
-                              ? stores.find((s) => s.id === u.store_id)?.name
-                              : "Acceso Global"}
-                          </span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {u.role === "admin" ||
+                          (!u.store_id &&
+                            (!u.allowed_store_ids ||
+                              u.allowed_store_ids.length === 0)) ? (
+                            <Badge
+                              variant="outline"
+                              className="text-[11px] font-black bg-accent/10 border-accent/20"
+                            >
+                              Acceso Global
+                            </Badge>
+                          ) : (
+                            <>
+                              {u.allowed_store_ids &&
+                              u.allowed_store_ids.length > 0 ? (
+                                stores
+                                  .filter((s) =>
+                                    u.allowed_store_ids!.includes(s.id),
+                                  )
+                                  .map((store) => (
+                                    <Badge
+                                      key={store.id}
+                                      variant="outline"
+                                      className="text-[10px] font-black bg-primary/5 border-primary/20 text-primary truncate max-w-30"
+                                    >
+                                      {store.name}
+                                    </Badge>
+                                  ))
+                              ) : u.store_id ? (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] font-black bg-primary/5 border-primary/20 text-primary truncate max-w-30"
+                                >
+                                  {stores.find((s) => s.id === u.store_id)
+                                    ?.name || "Desconocido"}
+                                </Badge>
+                              ) : null}
+                            </>
+                          )}
                         </div>
                       </td>
                       <td className="px-10 py-7 text-right">
@@ -550,8 +612,9 @@ export default function Usuarios() {
                     value={formRole}
                     onValueChange={(v) => {
                       setFormRole(v as UserRole);
-                      if (v !== "admin" && formStoreId === "all") {
-                        setFormStoreId(stores.length > 0 ? stores[0].id : "");
+                      if (v === "admin") {
+                        setIsGlobalAccess(true);
+                        setFormStoreIds([]);
                       }
                     }}
                   >
@@ -595,32 +658,72 @@ export default function Usuarios() {
 
                 <div className="space-y-4">
                   <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 text-muted-foreground/60">
-                    TIENDA ASIGNADA
+                    TIENDAS PERMITIDAS
                   </Label>
-                  <Select value={formStoreId} onValueChange={setFormStoreId}>
-                    <SelectTrigger className="h-16 rounded-[1.25rem] border-2 bg-accent/5 border-transparent font-bold text-lg px-6 hover:bg-accent/10 transition-all">
-                      <SelectValue placeholder="Seleccionar" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-3xl border-none shadow-strong p-3">
-                      {formRole === "admin" && (
-                        <SelectItem
-                          value="all"
-                          className="rounded-xl font-black py-4 px-5 text-base"
+                  <div className="rounded-[1.25rem] border-2 bg-accent/5 p-4 space-y-4 max-h-55 overflow-y-auto">
+                    {formRole === "admin" ? (
+                      <div className="text-sm font-bold text-muted-foreground p-2">
+                        Los administradores siempre tienen acceso global a todas
+                        las tiendas.
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center space-x-3 pb-4 border-b-2 border-accent/10">
+                          <Checkbox
+                            id="global-access"
+                            checked={isGlobalAccess}
+                            onCheckedChange={(checked) => {
+                              setIsGlobalAccess(!!checked);
+                              if (checked) {
+                                setFormStoreIds([]);
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor="global-access"
+                            className="text-sm font-black leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            Acceso Global (Todas las tiendas presentes y
+                            futuras)
+                          </label>
+                        </div>
+
+                        <div
+                          className={cn(
+                            "space-y-3 transition-opacity",
+                            isGlobalAccess && "opacity-50 pointer-events-none",
+                          )}
                         >
-                          Todas (Acceso Global)
-                        </SelectItem>
-                      )}
-                      {stores.map((s) => (
-                        <SelectItem
-                          key={s.id}
-                          value={s.id}
-                          className="rounded-xl font-black py-4 px-5 text-base"
-                        >
-                          {s.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                          {stores.map((s) => (
+                            <div
+                              key={s.id}
+                              className="flex items-center space-x-3"
+                            >
+                              <Checkbox
+                                id={`store-${s.id}`}
+                                checked={formStoreIds.includes(s.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setFormStoreIds((prev) => [...prev, s.id]);
+                                  } else {
+                                    setFormStoreIds((prev) =>
+                                      prev.filter((id) => id !== s.id),
+                                    );
+                                  }
+                                }}
+                              />
+                              <label
+                                htmlFor={`store-${s.id}`}
+                                className="text-sm font-bold leading-none cursor-pointer"
+                              >
+                                {s.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

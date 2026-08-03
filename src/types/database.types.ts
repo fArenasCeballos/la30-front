@@ -143,6 +143,7 @@ export type Database = {
           avatar_url: string | null;
           is_active: boolean;
           store_id: string | null;
+          allowed_store_ids: string[] | null;
           created_at: string;
           updated_at: string;
         };
@@ -154,6 +155,7 @@ export type Database = {
           avatar_url?: string | null;
           is_active?: boolean;
           store_id?: string | null;
+          allowed_store_ids?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -165,6 +167,7 @@ export type Database = {
           avatar_url?: string | null;
           is_active?: boolean;
           store_id?: string | null;
+          allowed_store_ids?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1006,6 +1009,13 @@ export type Database = {
           low_stock_alerts?: string[];
           message?: string;
         };
+      };
+      update_user_allowed_stores: {
+        Args: {
+          p_user_id: string;
+          p_store_ids: string[] | null;
+        };
+        Returns: void;
       };
     };
     Enums: {
