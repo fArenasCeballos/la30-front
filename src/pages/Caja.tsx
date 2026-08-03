@@ -95,10 +95,32 @@ export default function Caja() {
       const now = new Date();
       const shiftStart = getShiftStart();
 
-      // Obtener TODOS los pedidos completados del turno (mesa + domicilios)
-      const allCompletedOrders = orders.filter((o) =>
-        ["entregado", "cancelado"].includes(o.status),
-      );
+      // Consultar órdenes del turno directamente desde la BD con payments incluidos
+      // para garantizar que el efectivo de la tirilla coincida con la reportería.
+      let closingQuery = supabase
+        .from("orders")
+        .select(
+          "*, order_items(*, products(id, name, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi)",
+        )
+        .gte("created_at", shiftStart.toISOString())
+        .lte("created_at", now.toISOString())
+        .in("status", ["entregado", "cancelado"]);
+
+      if (activeStore?.id) {
+        closingQuery = closingQuery.eq("store_id", activeStore.id);
+      }
+
+      const { data: dbOrders, error: fetchError } = await closingQuery;
+
+      if (fetchError) throw fetchError;
+
+      // Fallback al estado en memoria si la consulta no devuelve resultados
+      const allCompletedOrders =
+        dbOrders && dbOrders.length > 0
+          ? (dbOrders as unknown as Order[])
+          : orders.filter((o) =>
+              ["entregado", "cancelado"].includes(o.status),
+            );
 
       // Imprimir tirilla de cierre de turno
       if (allCompletedOrders.length > 0) {
