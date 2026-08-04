@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      delivery_drivers: {
+        Row: {
+          id: string;
+          first_name: string;
+          last_name: string;
+          phone: string;
+          motorcycle_plate: string;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          first_name: string;
+          last_name: string;
+          phone: string;
+          motorcycle_plate: string;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          first_name?: string;
+          last_name?: string;
+          phone?: string;
+          motorcycle_plate?: string;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       delivery_zones: {
         Row: {
           id: string;
@@ -415,6 +448,7 @@ export type Database = {
           delivery_fee: number;
           is_delivery: boolean;
           is_dispatched: boolean;
+          driver_id: string | null;
           created_at: string;
           updated_at: string;
           siigo_invoice_id: string | null;
@@ -441,6 +475,7 @@ export type Database = {
           delivery_fee?: number;
           is_delivery?: boolean;
           is_dispatched?: boolean;
+          driver_id?: string | null;
           created_at?: string;
           updated_at?: string;
           siigo_invoice_id?: string | null;
@@ -467,6 +502,7 @@ export type Database = {
           delivery_fee?: number;
           is_delivery?: boolean;
           is_dispatched?: boolean;
+          driver_id?: string | null;
           created_at?: string;
           updated_at?: string;
           siigo_invoice_id?: string | null;
@@ -474,15 +510,21 @@ export type Database = {
         };
         Relationships: [
           {
+            foreignKeyName: "orders_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "orders_user_id_fkey";
             columns: ["user_id"];
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "orders_store_id_fkey";
-            columns: ["store_id"];
-            referencedRelation: "stores";
+            foreignKeyName: "orders_driver_id_fkey";
+            columns: ["driver_id"];
+            referencedRelation: "delivery_drivers";
             referencedColumns: ["id"];
           },
         ];

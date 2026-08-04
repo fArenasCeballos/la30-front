@@ -9,6 +9,7 @@ import {
   Settings,
   Boxes,
   Map,
+  Bike,
 } from "lucide-react";
 import { lazy, Suspense, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -22,6 +23,7 @@ const Reporteria = lazy(() => import("./Reporteria"));
 const Usuarios = lazy(() => import("./Usuarios"));
 const Consultas = lazy(() => import("./Consultas"));
 const ZonasDomicilio = lazy(() => import("./ZonasDomicilio"));
+const DomiciliariosAdmin = lazy(() => import("./DomiciliariosAdmin"));
 
 const TABS = [
   {
@@ -65,6 +67,13 @@ const TABS = [
     icon: Map,
     component: ZonasDomicilio,
     desc: "Configurar zonas geográficas y precios de domicilio en el mapa",
+  },
+  {
+    id: "domiciliarios",
+    label: "Domiciliarios",
+    icon: Bike,
+    component: DomiciliariosAdmin,
+    desc: "Gestionar repartidores, motocicletas e historial de entregas",
   },
 ];
 
