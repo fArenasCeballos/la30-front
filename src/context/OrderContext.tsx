@@ -87,9 +87,9 @@ function sanitizeOrders(raw: unknown[]): Order[] {
     )
     .map((o) => {
       const total_amount =
-        (o.total_amount as number | null | undefined) ??
+        Number((o.total_amount as number | null | undefined) ??
         (o.total as number | null | undefined) ??
-        0;
+        0) || 0;
       return {
         ...o,
         created_at: (o.created_at as string) ?? new Date().toISOString(),
@@ -104,11 +104,11 @@ function sanitizeOrders(raw: unknown[]): Order[] {
           )
           .map((item) => ({
             ...item,
-            quantity: (item.quantity as number | null | undefined) ?? 1,
-            unit_price: (item.unit_price as number | null | undefined) ?? 0,
+            quantity: Number((item.quantity as number | null | undefined) ?? 1) || 1,
+            unit_price: Number((item.unit_price as number | null | undefined) ?? 0) || 0,
             subtotal:
-              (item.subtotal as number | null | undefined) ??
-              (item.quantity as number) * (item.unit_price as number),
+              Number((item.subtotal as number | null | undefined) ??
+              (Number(item.quantity) || 1) * (Number(item.unit_price) || 0)) || 0,
           })),
       };
     }) as unknown as Order[];
@@ -432,7 +432,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     async (locator: string, items: OrderItemInput[], notes?: string) => {
       const tempId = crypto.randomUUID();
       const total_amount = items.reduce(
-        (sum, i) => sum + i.unit_price * i.quantity,
+        (sum, i) => sum + (Number(i.unit_price) || 0) * (Number(i.quantity) || 0),
         0,
       );
       const newOrderOptimistic = {
@@ -622,10 +622,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     ) => {
       const tempId = crypto.randomUUID();
       const itemsTotal = items.reduce(
-        (s, i) => s + i.unit_price * i.quantity,
+        (s, i) => s + (Number(i.unit_price) || 0) * (Number(i.quantity) || 0),
         0,
       );
-      const grandTotal = itemsTotal + deliveryInfo.fee;
+      const grandTotal = itemsTotal + (Number(deliveryInfo.fee) || 0);
 
       const newOrderOptimistic = {
         id: tempId,

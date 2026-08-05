@@ -143,8 +143,8 @@ export function PaymentCalculator({
   }, [order.payments]);
 
   const baseRemaining = useMemo(() => {
-    return Math.max(0, order.total - previouslyPaid);
-  }, [order.total, previouslyPaid]);
+    return Math.max(0, (Number(order.total) || Number(order.total_amount) || 0) - previouslyPaid);
+  }, [order.total, order.total_amount, previouslyPaid]);
 
   // Total already covered by partial payments in this modal session
   const partialTotal = useMemo(
@@ -855,7 +855,7 @@ export function PaymentCalculator({
                   order.order_items?.forEach((item) => {
                     for (let i = 0; i < item.quantity; i++) {
                       if (selectedItemIds.has(`${item.id}-${i}`)) {
-                        sum += item.unit_price;
+                        sum += (Number(item.unit_price) || 0);
                       }
                     }
                   });
@@ -872,6 +872,7 @@ export function PaymentCalculator({
                 size="lg"
                 className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl border-2 font-black text-[10px] shadow-soft bg-transparent text-muted-foreground border-accent/20 uppercase"
                 onClick={() => {
+                  setItemsAmount(0);
                   setReceived("");
                   setCurrentPersonItemIds(new Set());
                   setSelectedItemIds(new Set());
@@ -911,21 +912,37 @@ export function PaymentCalculator({
             {/* Show remaining */}
             <div className="bg-amber-500/5 rounded-2xl lg:rounded-3xl p-4 lg:p-6 mb-4 lg:mb-6 border-2 border-amber-500/10 border-dashed text-center">
               <p className="text-xs font-black text-amber-600/60 uppercase tracking-widest mb-1">
-                {receivedNum > 0
+                {itemsAmount > 0
                   ? "TOTAL SELECCIONADO"
-                  : partialPayments.length === 0
-                    ? "TOTAL A PAGAR"
-                    : "MONTO RESTANTE"}
+                  : receivedNum > 0
+                    ? "MONTO INGRESADO"
+                    : partialPayments.length === 0
+                      ? "TOTAL A PAGAR"
+                      : "MONTO RESTANTE"}
               </p>
               <div className="text-3xl lg:text-4xl font-black tracking-tighter text-amber-600">
-                {formatPrice(receivedNum > 0 ? receivedNum : remainingTotal)}
+                {formatPrice(
+                  itemsAmount > 0
+                    ? itemsAmount
+                    : receivedNum > 0
+                      ? receivedNum
+                      : remainingTotal,
+                )}
               </div>
-              {receivedNum > 0 && receivedNum !== remainingTotal && (
-                <p className="text-[10px] font-bold text-amber-600/40 mt-2 uppercase tracking-wider">
-                  SALDO DESPUÉS DE ESTE PAGO:{" "}
-                  {formatPrice(Math.max(0, remainingTotal - receivedNum))}
-                </p>
-              )}
+              {(itemsAmount > 0 || receivedNum > 0) &&
+                (itemsAmount > 0 ? itemsAmount : receivedNum) !==
+                  remainingTotal && (
+                  <p className="text-[10px] font-bold text-amber-600/40 mt-2 uppercase tracking-wider">
+                    SALDO DESPUÉS DE ESTE PAGO:{" "}
+                    {formatPrice(
+                      Math.max(
+                        0,
+                        remainingTotal -
+                          (itemsAmount > 0 ? itemsAmount : receivedNum),
+                      ),
+                    )}
+                  </p>
+                )}
             </div>
 
             {/* Show already added partials */}
@@ -1518,7 +1535,7 @@ export function PaymentCalculator({
                       >
                         {canConfirm
                           ? formatPrice(change)
-                          : `Falta ${formatPrice(order.total - receivedNum)}`}
+                          : `Falta ${formatPrice((Number(order.total) || 0) - receivedNum)}`}
                       </p>
                     </div>
                   )}

@@ -218,7 +218,10 @@ export default function Reporteria() {
     enabled: !!user && !!shiftRange,
   });
 
-  const { data: pagedOrdersResponse = { data: [], count: 0 }, isLoading: isOrdersLoading } = useQuery({
+  const {
+    data: pagedOrdersResponse = { data: [], count: 0 },
+    isLoading: isOrdersLoading,
+  } = useQuery({
     queryKey: [
       "paged-orders",
       user?.id,
@@ -238,7 +241,7 @@ export default function Reporteria() {
         .from("orders")
         .select(
           "*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*)), siigo_invoices(*)",
-          { count: "exact" }
+          { count: "exact" },
         )
         .gte("created_at", from)
         .lte("created_at", to)
@@ -397,7 +400,8 @@ export default function Reporteria() {
       const { data: allExportOrders, error } = await query;
       if (error) throw error;
 
-      const ordersToExport = (allExportOrders as unknown as ReportOrder[]) ?? [];
+      const ordersToExport =
+        (allExportOrders as unknown as ReportOrder[]) ?? [];
 
       const wb = new ExcelJS.Workbook();
       wb.creator = "La 30";
@@ -427,7 +431,10 @@ export default function Reporteria() {
         pattern: "solid",
         fgColor: { argb: "FFEA580C" }, // Naranja (fuerte)
       };
-      wsOrders.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+      wsOrders.getRow(1).alignment = {
+        vertical: "middle",
+        horizontal: "center",
+      };
       wsOrders.getRow(1).height = 25;
 
       ordersToExport.forEach((o) => {
@@ -470,7 +477,10 @@ export default function Reporteria() {
         pattern: "solid",
         fgColor: { argb: "FF0F172A" }, // Slate 900 (Gris oscuro)
       };
-      wsItems.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+      wsItems.getRow(1).alignment = {
+        vertical: "middle",
+        horizontal: "center",
+      };
       wsItems.getRow(1).height = 25;
 
       ordersToExport.forEach((o) => {
@@ -655,7 +665,12 @@ export default function Reporteria() {
                   </div>
 
                   {/* Status Filter */}
-                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as OrderStatus | "all")}>
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(v) =>
+                      setStatusFilter(v as OrderStatus | "all")
+                    }
+                  >
                     <SelectTrigger className="w-32 lg:w-44 h-8 lg:h-10 rounded-xl lg:rounded-2xl border-none bg-accent/5 font-black text-[8px] lg:text-[10px] tracking-widest uppercase shadow-none hover:bg-accent/10 transition-colors shrink-0">
                       <div className="flex items-center gap-1.5">
                         <Filter
@@ -944,7 +959,7 @@ export default function Reporteria() {
                       CURVA DE VENTAS
                     </h3>
                   </div>
-                  <div className="pos-card p-6 lg:p-8 h-[380px] border-2 bg-white/80 backdrop-blur-xl relative overflow-hidden group shadow-md">
+                  <div className="pos-card p-6 lg:p-8 h-95 border-2 bg-white/80 backdrop-blur-xl relative overflow-hidden group shadow-md">
                     <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary/20 to-transparent" />
 
                     <div className="flex items-center justify-between mb-8">
@@ -1378,7 +1393,7 @@ export default function Reporteria() {
                       DESEMPEÑO POR PERSONAL
                     </h3>
                   </div>
-                  <div className="pos-card p-4 lg:p-6 h-[300px] border-2 shadow-md bg-white/80 backdrop-blur-md relative overflow-hidden group">
+                  <div className="pos-card p-4 lg:p-6 h-75 border-2 shadow-md bg-white/80 backdrop-blur-md relative overflow-hidden group">
                     <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary/20 to-transparent" />
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
@@ -1462,7 +1477,7 @@ export default function Reporteria() {
             >
               <div className="space-y-6 pb-20">
                 {renderPagination()}
-                
+
                 {pagedOrders.length === 0 ? (
                   <div className="py-48 flex flex-col items-center justify-center space-y-10 bg-white/40 rounded-[4rem] border-4 border-white shadow-soft group">
                     <div className="h-32 w-32 rounded-[2.5rem] bg-accent/5 flex items-center justify-center text-muted-foreground/20 group-hover:scale-110 transition-transform duration-700">

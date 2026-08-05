@@ -264,7 +264,7 @@ export default function Kiosko() {
           product,
           quantity: saved.quantity,
           notes: saved.notes,
-          unit_price: product.price, // always use current price
+          unit_price: Number(product.price) || 0, // always use current price
         });
       }
       if (rehydrated.length > 0) {
@@ -377,7 +377,7 @@ export default function Kiosko() {
   }, [products, currentCategory, searchQuery]);
 
   const total = useMemo(
-    () => cart.reduce((sum, item) => sum + item.unit_price * item.quantity, 0),
+    () => cart.reduce((sum, item) => sum + (Number(item.unit_price) || 0) * (Number(item.quantity) || 0), 0),
     [cart],
   );
 
@@ -401,7 +401,7 @@ export default function Kiosko() {
     extraCost: number,
     customizationValues: CustomizationValues,
   ) => {
-    const unitPrice = product.price + extraCost;
+    const unitPrice = (Number(product.price) || 0) + (Number(extraCost) || 0);
     const cartKey = `${product.id}-${notes}`;
 
     // If editing an existing cart item, replace it
