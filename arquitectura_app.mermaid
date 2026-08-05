@@ -1,0 +1,45 @@
+flowchart TB
+    subgraph Cliente["📱 App Cliente - React Native + Expo (iOS y Android)"]
+        A1[Catálogo con fotos]
+        A2[Carrito y Checkout]
+        A3[Recoger en punto o Domicilio]
+        A4[Cupones y Promociones]
+    end
+
+    subgraph Supabase["🗄️ Supabase - Backend unificado, ya existente"]
+        B1[(PostgreSQL + PostGIS<br/>Productos / Combos / Pedidos / Cupones)]
+        B2[Auth<br/>Login por celular + OTP]
+        B3[Storage<br/>Fotos del menú + CDN]
+        B4[Edge Functions<br/>Lógica de pedidos y pagos]
+        B5[Realtime<br/>Eventos en vivo]
+    end
+
+    subgraph Externos["🔌 Servicios externos"]
+        C1[Wompi - PSE / Nequi / Tarjetas<br/>Pasarela de pagos]
+        C2[Google Maps API<br/>Direcciones y cobertura]
+        C3[Firebase Cloud Messaging<br/>Notificaciones push]
+        C4[SMS OTP + WhatsApp Business API<br/>Verificación y avisos]
+    end
+
+    subgraph PWA["🖥️ PWA existente en React"]
+        D1[Caja]
+        D2[Kiosko]
+        D3[Cocina]
+    end
+
+    A1 -->|Lee productos y fotos| B1
+    B3 -->|Sirve imágenes| A1
+    A2 -->|Login| B2
+    B2 -->|Envía código| C4
+    A3 -->|Valida dirección| C2
+    A2 -->|Crea pedido| B4
+    A4 -->|Valida cupón| B4
+    B4 -->|Cobra el pedido| C1
+    C1 -->|Webhook confirma pago| B4
+    B4 -->|Guarda pedido pagado| B1
+    B1 -->|Trigger de nuevo pedido| B5
+    B5 -->|Pedido en vivo| D1
+    B5 -->|Pedido en vivo| D2
+    B5 -->|Pedido en vivo| D3
+    B4 -->|Cambia estado del pedido| C3
+    C3 -->|Notifica al cliente| A1
