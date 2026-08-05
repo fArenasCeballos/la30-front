@@ -10,6 +10,7 @@ import type {
   DeliveryZone,
   LatLngPoint,
 } from "@/types";
+import type { Tables } from "@/types/database.types";
 import { useOrders } from "@/context/OrderContext";
 import { useStore } from "@/context/StoreContext";
 import { ProductCustomizer } from "@/components/ProductCustomizer";
@@ -81,6 +82,7 @@ interface CartDraft {
   deliveryPhone?: string;
   deliveryFee?: number;
   selectedZoneId?: string;
+  driverId?: string;
 }
 
 function saveDraft(draft: CartDraft) {
@@ -176,6 +178,9 @@ export default function Kiosko() {
   const [selectedZoneId, setSelectedZoneId] = useState<string | undefined>(
     savedDraft?.selectedZoneId,
   );
+  const [driverId, setDriverId] = useState<string | undefined>(
+    savedDraft?.driverId,
+  );
   const [orderNotes, setOrderNotes] = useState(savedDraft?.orderNotes ?? "");
   const [customizingProduct, setCustomizingProduct] =
     useState<ProductWithCategory | null>(null);
@@ -183,12 +188,26 @@ export default function Kiosko() {
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
 
-  // Auto-generate locator for delivery orders (sequential per shift)
   const nextDeliveryLocator = useMemo(() => {
     if (!isDeliveryMode) return "";
     const deliveryCount = orders.filter((o) => o.is_delivery).length;
     return String(deliveryCount + 1);
   }, [isDeliveryMode, orders]);
+
+  const { data: drivers = [], isLoading: loadingDrivers } = useQuery({
+    queryKey: ["delivery-drivers-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("delivery_drivers")
+        .select("*")
+        .eq("is_active", true)
+        .order("first_name");
+
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Queries con React Query
   const { data: categories = [], isLoading: loadingCats } = useQuery({
@@ -308,6 +327,7 @@ export default function Kiosko() {
       deliveryPhone,
       deliveryFee,
       selectedZoneId,
+      driverId,
       items: cart.map((item) => ({
         productId: item.product.id,
         quantity: item.quantity,
@@ -328,6 +348,7 @@ export default function Kiosko() {
     deliveryPhone,
     deliveryFee,
     selectedZoneId,
+    driverId,
   ]);
 
   // Cargar pedido para editar si existe editOrderId
@@ -524,6 +545,7 @@ export default function Kiosko() {
             address: deliveryAddress,
             phone: deliveryPhone,
             fee: deliveryFee,
+            driver_id: driverId,
           },
           orderNotes || `📍 ${deliveryAddress}`,
         );
@@ -531,6 +553,7 @@ export default function Kiosko() {
         setDeliveryAddress("");
         setDeliveryPhone("");
         setDeliveryFee(0);
+        setDriverId(undefined);
       } else {
         await addOrder(locator, itemsForDb, orderNotes);
       }
@@ -857,6 +880,34 @@ export default function Kiosko() {
                       type="number"
                       className="rounded-2xl border-2 border-white p-4 h-12 shadow-soft focus:border-purple-500 transition-all bg-white font-bold text-sm placeholder:text-muted-foreground/30"
                     />
+                  </div>
+                  <div className="w-full">
+                    {loadingDrivers ? (
+                      <Skeleton className="h-12 w-full rounded-2xl" />
+                    ) : (
+                      <Select
+                        value={driverId || "unassigned"}
+                        onValueChange={(val) => setDriverId(val === "unassigned" ? undefined : val)}
+                      >
+                        <SelectTrigger className="h-12 w-full rounded-2xl border-2 border-white shadow-soft transition-all focus:ring-purple-500/20 focus:border-purple-500 bg-white font-bold text-sm text-purple-700">
+                          <SelectValue placeholder="Asignar Domiciliario (Opcional)" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-2">
+                          <SelectItem value="unassigned" className="font-bold text-sm py-3 text-muted-foreground">
+                            Sin asignar
+                          </SelectItem>
+                          {drivers.map((driver: Tables<"delivery_drivers">) => (
+                            <SelectItem
+                              key={driver.id}
+                              value={driver.id}
+                              className="font-bold text-sm py-3"
+                            >
+                              {driver.first_name} {driver.last_name} {driver.motorcycle_plate ? `(${driver.motorcycle_plate})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 </div>
               )}

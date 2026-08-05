@@ -36,7 +36,13 @@ export interface OrderContextType {
   addDeliveryOrder: (
     locator: string,
     items: OrderItemInput[],
-    deliveryInfo: { name: string; address: string; phone: string; fee: number },
+    deliveryInfo: {
+      name: string;
+      address: string;
+      phone: string;
+      fee: number;
+      driver_id?: string;
+    },
     notes?: string,
   ) => Promise<void>;
   updateOrder: (
@@ -87,9 +93,11 @@ function sanitizeOrders(raw: unknown[]): Order[] {
     )
     .map((o) => {
       const total_amount =
-        Number((o.total_amount as number | null | undefined) ??
-        (o.total as number | null | undefined) ??
-        0) || 0;
+        Number(
+          (o.total_amount as number | null | undefined) ??
+            (o.total as number | null | undefined) ??
+            0,
+        ) || 0;
       return {
         ...o,
         created_at: (o.created_at as string) ?? new Date().toISOString(),
@@ -104,11 +112,15 @@ function sanitizeOrders(raw: unknown[]): Order[] {
           )
           .map((item) => ({
             ...item,
-            quantity: Number((item.quantity as number | null | undefined) ?? 1) || 1,
-            unit_price: Number((item.unit_price as number | null | undefined) ?? 0) || 0,
+            quantity:
+              Number((item.quantity as number | null | undefined) ?? 1) || 1,
+            unit_price:
+              Number((item.unit_price as number | null | undefined) ?? 0) || 0,
             subtotal:
-              Number((item.subtotal as number | null | undefined) ??
-              (Number(item.quantity) || 1) * (Number(item.unit_price) || 0)) || 0,
+              Number(
+                (item.subtotal as number | null | undefined) ??
+                  (Number(item.quantity) || 1) * (Number(item.unit_price) || 0),
+              ) || 0,
           })),
       };
     }) as unknown as Order[];
@@ -432,7 +444,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     async (locator: string, items: OrderItemInput[], notes?: string) => {
       const tempId = crypto.randomUUID();
       const total_amount = items.reduce(
-        (sum, i) => sum + (Number(i.unit_price) || 0) * (Number(i.quantity) || 0),
+        (sum, i) =>
+          sum + (Number(i.unit_price) || 0) * (Number(i.quantity) || 0),
         0,
       );
       const newOrderOptimistic = {
@@ -617,6 +630,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         address: string;
         phone: string;
         fee: number;
+        driver_id?: string;
       },
       notes?: string,
     ) => {
@@ -642,6 +656,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         delivery_address: deliveryInfo.address,
         delivery_phone: deliveryInfo.phone,
         delivery_fee: deliveryInfo.fee,
+        driver_id: deliveryInfo.driver_id || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         profiles: user
@@ -738,6 +753,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             delivery_address: deliveryInfo.address,
             delivery_phone: deliveryInfo.phone,
             delivery_fee: deliveryInfo.fee,
+            driver_id: deliveryInfo.driver_id || null,
             is_delivery: true,
             total: grandTotal,
           })
@@ -1003,28 +1019,41 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         // Fire-and-forget: deducir stock de materia prima vía recetas
         // No bloquea el flujo de pago — errores se logean silenciosamente
         if (targetStatus === "en_preparacion") {
-          deductStockFromOrder(orderId).then((result) => {
-            if (result.low_stock_alerts && result.low_stock_alerts.length > 0) {
-              toast.warning(`⚠️ Alerta de Stock Negativo en: ${result.low_stock_alerts.join(', ')}`, {
-                duration: 6000,
-              });
+          deductStockFromOrder(orderId)
+            .then((result) => {
+              if (
+                result.low_stock_alerts &&
+                result.low_stock_alerts.length > 0
+              ) {
+                toast.warning(
+                  `⚠️ Alerta de Stock Negativo en: ${result.low_stock_alerts.join(", ")}`,
+                  {
+                    duration: 6000,
+                  },
+                );
 
-              // Insert notifications for each low stock item
-              result.low_stock_alerts.forEach(async (materialName) => {
-                const { error } = await supabase.from("notifications").insert({
-                  title: "Stock Mínimo Alcanzado",
-                  message: `El insumo ${materialName} se está quedando sin stock tras un pedido reciente.`,
-                  type: "warning",
-                  user_id: user?.id,
+                // Insert notifications for each low stock item
+                result.low_stock_alerts.forEach(async (materialName) => {
+                  const { error } = await supabase
+                    .from("notifications")
+                    .insert({
+                      title: "Stock Mínimo Alcanzado",
+                      message: `El insumo ${materialName} se está quedando sin stock tras un pedido reciente.`,
+                      type: "warning",
+                      user_id: user?.id,
+                    });
+                  if (error) {
+                    console.error(
+                      "Error creating low stock notification",
+                      error,
+                    );
+                  }
                 });
-                if (error) {
-                  console.error("Error creating low stock notification", error);
-                }
-              });
-            }
-          }).catch((err: unknown) => {
-            console.warn("[Inventory] Error al descontar stock:", err);
-          });
+              }
+            })
+            .catch((err: unknown) => {
+              console.warn("[Inventory] Error al descontar stock:", err);
+            });
         }
       }
       toast.success("Pago procesado");
