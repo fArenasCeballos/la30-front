@@ -28,6 +28,13 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Plus,
   Minus,
   Trash2,
@@ -370,14 +377,21 @@ export default function Kiosko() {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return allProducts.filter(
-        (p) => p.name.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q)
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q),
       );
     }
     return allProducts.filter((p) => p?.categories?.name === currentCategory);
   }, [products, currentCategory, searchQuery]);
 
   const total = useMemo(
-    () => cart.reduce((sum, item) => sum + (Number(item.unit_price) || 0) * (Number(item.quantity) || 0), 0),
+    () =>
+      cart.reduce(
+        (sum, item) =>
+          sum + (Number(item.unit_price) || 0) * (Number(item.quantity) || 0),
+        0,
+      ),
     [cart],
   );
 
@@ -1060,39 +1074,33 @@ export default function Kiosko() {
                   className="pl-11 h-12 lg:h-14 rounded-xl lg:rounded-2xl border-2 font-medium bg-white shadow-soft transition-all focus-visible:ring-primary/20 focus-visible:border-primary"
                 />
               </div>
-              <div className="flex gap-3 lg:gap-4 overflow-x-auto no-scrollbar scroll-smooth flex-1">
-              {loadingCats
-                ? [1, 2, 3, 4, 5].map((i) => (
-                    <Skeleton
-                      key={i}
-                      className="h-12 lg:h-14 w-32 lg:w-36 rounded-xl lg:rounded-2xl shrink-0"
-                    />
-                  ))
-                : categories.map((cat) => {
-                    const isActive = currentCategory === cat.name;
-                    return (
-                      <Button
-                        key={cat.id}
-                        variant={isActive ? "default" : "outline"}
-                        onClick={() => setActiveCategory(cat.name)}
-                        className={cn(
-                          "h-12 lg:h-14 px-5 lg:px-8 rounded-xl lg:rounded-2xl font-black text-xs lg:text-sm transition-all shrink-0 border-2",
-                          isActive
-                            ? "shadow-strong shadow-primary/20 scale-[1.05] z-10"
-                            : "bg-white border-accent shadow-soft hover:border-primary/30 text-muted-foreground hover:text-primary",
-                        )}
-                      >
-                        <div className="flex items-center gap-2 lg:gap-3">
-                          <span className="text-lg lg:text-xl group-hover:scale-125 transition-transform">
-                            {cat.icon}
-                          </span>
-                          <span className="uppercase tracking-widest text-[10px] lg:text-xs">
-                            {cat.label}
-                          </span>
-                        </div>
-                      </Button>
-                    );
-                  })}
+              <div className="flex-1 w-full min-w-50">
+                {loadingCats ? (
+                  <Skeleton className="h-12 lg:h-14 w-full rounded-xl lg:rounded-2xl" />
+                ) : (
+                  <Select
+                    value={currentCategory}
+                    onValueChange={setActiveCategory}
+                  >
+                    <SelectTrigger className="h-12 lg:h-14 w-full rounded-xl lg:rounded-2xl border-2 font-black text-xs lg:text-sm bg-white shadow-soft transition-all focus:ring-primary/20">
+                      <SelectValue placeholder="Selecciona una categoría" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-2">
+                      {categories.map((cat) => (
+                        <SelectItem
+                          key={cat.id}
+                          value={cat.name}
+                          className="font-black text-xs lg:text-sm uppercase py-3 cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{cat.icon}</span>
+                            <span>{cat.label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
           </div>
