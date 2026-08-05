@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import type { Order } from "@/types";
+import type { Order, OrderItem } from "@/types";
 import { formatPrice } from "@/lib/formatPrice";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,7 @@ export interface SharedPaymentEntry {
   method: BaseMethod;
   subMethod?: SubMethod;
   amount: number;
+  items?: Partial<OrderItem>[];
 }
 
 const PAYMENT_METHODS: {
@@ -139,11 +140,23 @@ export function PaymentCalculator({
   // Total previously paid (from DB)
   const previouslyPaid = useMemo(() => {
     if (!order.payments) return 0;
-    return order.payments.reduce((sum, p) => sum + (Number(p.amount_total) || ((Number(p.amount_efectivo) || 0) + (Number(p.amount_tarjeta) || 0) + (Number(p.amount_nequi) || 0)) || 0), 0);
+    return order.payments.reduce(
+      (sum, p) =>
+        sum +
+        (Number(p.amount_total) ||
+          (Number(p.amount_efectivo) || 0) +
+            (Number(p.amount_tarjeta) || 0) +
+            (Number(p.amount_nequi) || 0) ||
+          0),
+      0,
+    );
   }, [order.payments]);
 
   const baseRemaining = useMemo(() => {
-    return Math.max(0, (Number(order.total) || Number(order.total_amount) || 0) - previouslyPaid);
+    return Math.max(
+      0,
+      (Number(order.total) || Number(order.total_amount) || 0) - previouslyPaid,
+    );
   }, [order.total, order.total_amount, previouslyPaid]);
 
   // Total already covered by partial payments in this modal session
@@ -307,10 +320,31 @@ export function PaymentCalculator({
       paymentAmount >= remainingTotal
     )
       return;
+    const paymentItems: Partial<OrderItem>[] = [];
+    order.order_items?.forEach((item) => {
+      let qty = 0;
+      for (let i = 0; i < item.quantity; i++) {
+        // En pago parcial en curso, los ítems están en currentPersonItemIds (porque dimos CONTINUAR)
+        if (currentPersonItemIds.has(`${item.id}-${i}`)) {
+          qty++;
+        }
+      }
+      if (qty > 0) {
+        paymentItems.push({
+          ...item,
+          quantity: qty,
+          unit_price: item.unit_price,
+          products: item.products,
+          notes: item.notes,
+        });
+      }
+    });
+
     const newPartial: SharedPaymentEntry = {
       method: currentPartialMethod,
       subMethod: currentPartialSubMethod ?? undefined,
       amount: paymentAmount,
+      items: paymentItems,
     };
     setPartialPayments((prev) => [...prev, newPartial]);
     setAlreadyPaidItemIds((prev) => {
@@ -326,13 +360,14 @@ export function PaymentCalculator({
     setSelectedItemIds(new Set());
     setStep("shared_items");
   }, [
-    currentPartialMethod,
-    currentPartialSubMethod,
-    receivedNum,
-    remainingTotal,
-    currentPersonItemIds,
-    order.id,
     itemsAmount,
+    receivedNum,
+    currentPartialMethod,
+    remainingTotal,
+    order.order_items,
+    order.id,
+    currentPartialSubMethod,
+    currentPersonItemIds,
   ]);
 
   const removePartialPayment = useCallback((index: number) => {
@@ -370,10 +405,34 @@ export function PaymentCalculator({
         // For cash in shared mode, the actual payment amount is itemsAmount (if set)
         const finalAmount = itemsAmount > 0 ? itemsAmount : currentReceived;
         if (currentPartialMethod && finalAmount > 0) {
+          const paymentItems: Partial<OrderItem>[] = [];
+          order.order_items?.forEach((item) => {
+            let qty = 0;
+            for (let i = 0; i < item.quantity; i++) {
+              // Puede estar en selectedItemIds (si es pago único rápido) o en currentPersonItemIds
+              if (
+                selectedItemIds.has(`${item.id}-${i}`) ||
+                currentPersonItemIds.has(`${item.id}-${i}`)
+              ) {
+                qty++;
+              }
+            }
+            if (qty > 0) {
+              paymentItems.push({
+                ...item,
+                quantity: qty,
+                unit_price: item.unit_price,
+                products: item.products,
+                notes: item.notes,
+              });
+            }
+          });
+
           allPayments.push({
             method: currentPartialMethod,
             subMethod: currentPartialSubMethod ?? undefined,
             amount: finalAmount,
+            items: paymentItems,
           });
         }
 
@@ -445,17 +504,19 @@ export function PaymentCalculator({
       isSubmitting,
       receivedNum,
       partialPayments,
+      itemsAmount,
       currentPartialMethod,
+      order.order_items,
+      order.id,
       currentPartialSubMethod,
+      selectedItemIds,
+      currentPersonItemIds,
       subMethod,
       onPaymentComplete,
+      remainingTotal,
+      alreadyPaidItemIds,
       resetState,
       onClose,
-      remainingTotal,
-      order.id,
-      alreadyPaidItemIds,
-      currentPersonItemIds,
-      itemsAmount,
     ],
   );
 
@@ -855,7 +916,7 @@ export function PaymentCalculator({
                   order.order_items?.forEach((item) => {
                     for (let i = 0; i < item.quantity; i++) {
                       if (selectedItemIds.has(`${item.id}-${i}`)) {
-                        sum += (Number(item.unit_price) || 0);
+                        sum += Number(item.unit_price) || 0;
                       }
                     }
                   });
@@ -992,7 +1053,9 @@ export function PaymentCalculator({
 
             {/* Method buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
-              {PAYMENT_METHODS.filter((pm) => pm.key !== "mixto" && pm.key !== "compartido").map((pm) => (
+              {PAYMENT_METHODS.filter(
+                (pm) => pm.key !== "mixto" && pm.key !== "compartido",
+              ).map((pm) => (
                 <button
                   key={pm.key}
                   onClick={() => selectSharedMethod(pm.key as BaseMethod)}

@@ -722,7 +722,12 @@ export async function silentPrint(
 /** Genera un comprobante individual (mini recibo) para un pago parcial específico */
 export function buildPartialPaymentReceiptHTML(
   data: ReceiptData,
-  payment: { method: string; subMethod?: string; amount: number },
+  payment: {
+    method: string;
+    subMethod?: string;
+    amount: number;
+    items?: Partial<OrderItem>[];
+  },
   index: number,
   totalPayments: number,
 ): string {
@@ -777,6 +782,38 @@ export function buildPartialPaymentReceiptHTML(
       <p style="font-size:16px; font-weight:bold;">${paymentLabel.toUpperCase()}</p>
       <p style="font-size:24px; font-weight:black; margin-top:5px;">${formatPrice(payment.amount)}</p>
     </div>
+    ${
+      payment.items && payment.items.length > 0
+        ? `
+    <div class="divider"></div>
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th style="text-align:left">Desc</th>
+          <th style="text-align:center">Cant</th>
+          <th style="text-align:right">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${payment.items
+          .map(
+            (item) => `
+        <tr>
+          <td>
+            ${(item.products?.name ?? "Producto").toUpperCase()}
+            ${item.notes ? `<div class="item-notes">${item.notes}</div>` : ""}
+          </td>
+          <td style="text-align:center">${item.quantity}</td>
+          <td>${formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}</td>
+        </tr>
+        `,
+          )
+          .join("")}
+      </tbody>
+    </table>
+    `
+        : ""
+    }
 
     <div class="divider"></div>
     <div class="center" style="padding:4px 0;">
