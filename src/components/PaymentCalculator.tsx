@@ -992,7 +992,7 @@ export function PaymentCalculator({
 
             {/* Method buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
-              {PAYMENT_METHODS.filter((pm) => pm.key !== "mixto").map((pm) => (
+              {PAYMENT_METHODS.filter((pm) => pm.key !== "mixto" && pm.key !== "compartido").map((pm) => (
                 <button
                   key={pm.key}
                   onClick={() => selectSharedMethod(pm.key as BaseMethod)}
