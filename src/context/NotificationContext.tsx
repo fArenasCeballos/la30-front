@@ -91,7 +91,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const notifications = React.useMemo(() => {
     if (!activeStore?.slug) return allNotifications;
     return allNotifications.filter((n) => isNotificationForStore(n, activeStore.slug));
-  }, [allNotifications, activeStore?.slug]);
+  }, [allNotifications, activeStore]);
+
 
   useEffect(() => {
     if (!user?.id) return;

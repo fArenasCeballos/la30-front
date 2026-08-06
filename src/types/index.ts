@@ -105,3 +105,86 @@ export type {
   DeductStockResult,
   RawMaterialWithAlert,
 } from "./inventory.types";
+
+// Mobile App Types
+export interface AppCustomer {
+  id: string;
+  auth_user_id: string;
+  phone: string;
+  first_name: string;
+  last_name: string;
+  email?: string | null;
+  avatar_url?: string | null;
+  is_verified: boolean;
+  push_token?: string | null;
+  default_address_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AppCustomerAddress {
+  id: string;
+  customer_id: string;
+  label: string;
+  address_text: string;
+  lat: number;
+  lng: number;
+  delivery_zone_id?: string | null;
+  additional_info?: string | null;
+  is_default: boolean;
+  created_at: string;
+}
+
+export interface Combo {
+  id: string;
+  name: string;
+  description?: string | null;
+  image_url?: string | null;
+  combo_price: number;
+  original_price: number;
+  store_ids: string[];
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  description?: string | null;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
+  min_order_total?: number;
+  max_uses?: number | null;
+  uses_count: number;
+  max_uses_per_customer?: number;
+  valid_from: string;
+  valid_until?: string | null;
+  is_active: boolean;
+  store_ids?: string[];
+  created_at: string;
+}
+
+export interface AppPayment {
+  id: string;
+  order_id: string;
+  customer_id: string;
+  wompi_transaction_id?: string | null;
+  wompi_reference?: string | null;
+  method: string;
+  amount: number;
+  currency: string;
+  status: "pending" | "approved" | "declined" | "voided" | "error";
+  webhook_payload?: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface StoreOperatingHour {
+  id: string;
+  store_id: string;
+  day_of_week: number;
+  open_time: string;
+  close_time: string;
+  is_open: boolean;
+  created_at: string;
+}

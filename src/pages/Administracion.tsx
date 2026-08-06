@@ -10,6 +10,7 @@ import {
   Boxes,
   Map,
   Bike,
+  Smartphone,
 } from "lucide-react";
 import { lazy, Suspense, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -24,6 +25,7 @@ const Usuarios = lazy(() => import("./Usuarios"));
 const Consultas = lazy(() => import("./Consultas"));
 const ZonasDomicilio = lazy(() => import("./ZonasDomicilio"));
 const DomiciliariosAdmin = lazy(() => import("./DomiciliariosAdmin"));
+const AppConfigAdmin = lazy(() => import("./AppConfigAdmin"));
 
 const TABS = [
   {
@@ -39,6 +41,13 @@ const TABS = [
     icon: Boxes,
     component: Bodega,
     desc: "Materia prima, compras, stock real y recetas",
+  },
+  {
+    id: "config-app",
+    label: "App Móvil",
+    icon: Smartphone,
+    component: AppConfigAdmin,
+    desc: "Configurar catálogo, combos, cupones y horarios de la App Móvil",
   },
   {
     id: "reportes",
@@ -76,6 +85,7 @@ const TABS = [
     desc: "Gestionar repartidores, motocicletas e historial de entregas",
   },
 ];
+
 
 const TabLoading = () => (
   <div className="p-8 space-y-6 animate-pulse max-w-5xl mx-auto">

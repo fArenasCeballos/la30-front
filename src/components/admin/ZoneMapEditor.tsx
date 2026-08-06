@@ -86,8 +86,8 @@ export function ZoneMapEditor({
     if (!map) return;
 
     // Make sure L is available globally before dynamically importing leaflet-draw
-    // @ts-ignore
     window.L = window.L || L;
+
 
     import("leaflet-draw").then(() => {
       if (!isMounted) return;

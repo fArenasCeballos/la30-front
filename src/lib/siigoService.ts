@@ -77,9 +77,10 @@ export interface SiigoInvoiceResult {
   success: boolean;
   invoiceNumber?: string;
   invoiceId?: string;
-  fullResponse?: any;
+  fullResponse?: Record<string, unknown>;
   error?: string;
 }
+
 
 // ─── Customer Persistence ──────────────────────────────────────────────────────
 

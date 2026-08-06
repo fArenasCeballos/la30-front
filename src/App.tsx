@@ -108,6 +108,16 @@ const App = () => (
                             />
                           }
                         />
+                        <Route
+                          path="/app-config"
+                          element={
+                            <Navigate
+                              to="/administracion?tab=config-app"
+                              replace
+                            />
+                          }
+                        />
+
                         <Route path="/mis-pedidos" element={<MisPedidos />} />
                         <Route
                           path="/consultas"

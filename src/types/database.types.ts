@@ -9,7 +9,77 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      combos: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          image_url: string | null;
+          combo_price: number;
+          original_price: number;
+          store_ids: string[];
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          image_url?: string | null;
+          combo_price: number;
+          original_price: number;
+          store_ids?: string[];
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          image_url?: string | null;
+          combo_price?: number;
+          original_price?: number;
+          store_ids?: string[];
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      coupons: {
+        Row: {
+          id: string;
+          code: string;
+          discount_type: "percentage" | "fixed";
+          discount_value: number;
+          min_order_total: number;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          discount_type: "percentage" | "fixed";
+          discount_value: number;
+          min_order_total?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          discount_type?: "percentage" | "fixed";
+          discount_value?: number;
+          min_order_total?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       delivery_drivers: {
+
         Row: {
           id: string;
           first_name: string;
