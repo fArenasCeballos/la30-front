@@ -1133,8 +1133,23 @@ export default function Kiosko() {
                     value={currentCategory}
                     onValueChange={setActiveCategory}
                   >
-                    <SelectTrigger className="h-12 lg:h-14 w-full rounded-xl lg:rounded-2xl border-2 font-black text-xs lg:text-sm bg-white shadow-soft transition-all focus:ring-primary/20">
-                      <SelectValue placeholder="Selecciona una categoría" />
+                    <SelectTrigger className="h-12 lg:h-14 w-full rounded-xl lg:rounded-2xl border-2 font-black text-xs lg:text-sm bg-white shadow-soft transition-all focus:ring-primary/20 [&>span]:line-clamp-none [&>span]:flex [&>span]:items-center [&>span]:gap-2">
+                      <SelectValue placeholder="Selecciona una categoría">
+                        {(() => {
+                          const selected = categories.find(
+                            (c) => c.name === currentCategory,
+                          );
+                          if (!selected) return null;
+                          return (
+                            <span className="inline-flex items-center gap-2">
+                              {selected.icon && (
+                                <span className="text-lg">{selected.icon}</span>
+                              )}
+                              <span>{selected.label || selected.name}</span>
+                            </span>
+                          );
+                        })()}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-2">
                       {categories.map((cat) => (
@@ -1143,10 +1158,12 @@ export default function Kiosko() {
                           value={cat.name}
                           className="font-black text-xs lg:text-sm uppercase py-3 cursor-pointer"
                         >
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">{cat.icon}</span>
-                            <span>{cat.label}</span>
-                          </div>
+                          <span className="inline-flex items-center gap-2">
+                            {cat.icon && (
+                              <span className="text-lg">{cat.icon}</span>
+                            )}
+                            <span>{cat.label || cat.name}</span>
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
