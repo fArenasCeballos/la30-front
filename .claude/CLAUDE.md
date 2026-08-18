@@ -79,15 +79,21 @@ migrations/           # SQL idempotentes para Supabase
 supabase/functions/   # Edge Functions (Deno) - siigo-invoice, siigo-get-products
 ```
 
-## Consulta rápida de Skills
-Revisa `.agents/skills/` para documentación detallada de:
-- `supabase-migration` — Crear migraciones SQL
-- `new-feature` — Desarrollar features completas
-- `supabase-edge-function` — Edge Functions Deno
-- `payment-and-invoice` — Flujo de pagos y facturación
-- `inventory-system` — Sistema de inventario
-- `order-management` — Ciclo de vida de pedidos
-- `reporting-and-dashboard` — Reportería y KPIs
-- `ui-component` — Componentes UI
-- `auth-and-multistore` — Auth, roles y multi-tienda
-- `debugging` — Diagnóstico de problemas
+## Consulta rápida de Skills, Reglas y Comandos
+Revisa `.agents/` para documentación detallada:
+- **Reglas modulares**: `.agents/rules/` (`01-architecture-and-stack.md`, `02-business-logic-and-shifts.md`, `03-database-and-migrations.md`, `04-payments-and-invoicing.md`, `05-security-and-best-practices.md`, `06-testing-and-code-quality.md`).
+- **Comandos & Prompts**: `.agents/commands/` (`new-feature.md`, `create-migration.md`, `debug-issue.md`, `validate-all.md`, `verify-and-build.md`, `test-offline-sync.md`).
+- **Skills**:
+  - `code-quality-and-testing` — Verificación rigurosa (typecheck + lint + test + build)
+  - `supabase-migration` — Crear migraciones SQL
+  - `new-feature` — Desarrollar features completas
+  - `supabase-edge-function` — Edge Functions Deno
+  - `payment-and-invoice` — Flujo de pagos y facturación
+  - `inventory-system` — Sistema de inventario
+  - `order-management` — Ciclo de vida de pedidos
+  - `reporting-and-dashboard` — Reportería y KPIs
+  - `ui-component` — Componentes UI
+  - `auth-and-multistore` — Auth, roles y multi-tienda
+  - `debugging` — Diagnóstico de problemas
+
+

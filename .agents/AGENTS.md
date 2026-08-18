@@ -299,3 +299,22 @@ pnpm lint             # ESLint
 - Mensajes al usuario, toasts, labels: siempre en español.
 - Nombres de variables, funciones, tipos: en **inglés** (convención de código).
 - Comentarios en código: pueden ser en español o inglés, pero consistentes dentro del archivo.
+
+---
+
+## 14. Índice de Customizaciones para Agentes (.agents/)
+
+* **Reglas Modulares (`.agents/rules/`):**
+  * `01-architecture-and-stack.md`: Stack, Vite, Tailwind 4, convenciones.
+  * `02-business-logic-and-shifts.md`: Turnos a las 12 PM, multi-tienda, offline sync.
+  * `03-database-and-migrations.md`: RLS, migraciones idempotentes, RPCs seguras.
+  * `04-payments-and-invoicing.md`: Siigo, Wompi, recibos térmicos.
+  * `05-security-and-best-practices.md`: Roles, sin secretos en frontend, política de stock.
+  * `06-testing-and-code-quality.md`: Tolerancia cero: TypeScript (`pnpm typecheck`), ESLint (`pnpm lint`), tests con Vitest (`pnpm test`).
+* **Comandos y Prompts (`.agents/commands/`):**
+  * `new-feature.md`, `create-migration.md`, `debug-issue.md`, `validate-all.md`, `verify-and-build.md`, `test-offline-sync.md`.
+* **Skills Especializados (`.agents/skills/`):**
+  * `code-quality-and-testing`: Runbook de validación integral (typecheck + lint + test + build).
+  * Ver runbooks en cada carpeta de `skills/` para flujos paso a paso.
+
+
