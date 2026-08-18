@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useContext } from "react";
+import { useMemo, useEffect, useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import pkg from "../../package.json";
 import { useQuery } from "@tanstack/react-query";
@@ -17,7 +17,11 @@ import {
   Smartphone,
   Truck,
   ShoppingBag,
+  Sparkles,
 } from "lucide-react";
+import { AdminNewsModal } from "@/components/admin/AdminNewsModal";
+import { AdminNewsBanner } from "@/components/admin/AdminNewsBanner";
+import { LATEST_UPDATE_ID } from "@/data/appUpdates";
 
 type DashboardOrder = OrderRow & { profiles: { name: string } | null };
 import {
@@ -52,6 +56,36 @@ export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const storeId = activeStore?.id || null;
+
+  // News / Updates Modal State
+  const [newsModalOpen, setNewsModalOpen] = useState(false);
+  const [selectedUpdateId, setSelectedUpdateId] = useState<string | null>(null);
+  const [isUnreadNews, setIsUnreadNews] = useState(false);
+
+  useEffect(() => {
+    try {
+      const lastViewed = localStorage.getItem("la30_last_viewed_update");
+      if (lastViewed !== LATEST_UPDATE_ID) {
+        setIsUnreadNews(true);
+      }
+    } catch {
+      // ignore localStorage errors
+    }
+  }, []);
+
+  const handleMarkAsRead = () => {
+    try {
+      localStorage.setItem("la30_last_viewed_update", LATEST_UPDATE_ID);
+      setIsUnreadNews(false);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleOpenNews = (updateId?: string) => {
+    setSelectedUpdateId(updateId || null);
+    setNewsModalOpen(true);
+  };
 
   // Role Guard
   useEffect(() => {
@@ -327,7 +361,23 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 bg-white/50 border p-1 rounded-2xl shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 bg-white/50 border p-1 rounded-2xl shadow-sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenNews()}
+              className="relative px-3 py-1.5 h-auto rounded-xl font-black gap-2 bg-gradient-to-r from-orange-500/10 to-amber-500/10 hover:from-orange-500/20 hover:to-amber-500/20 border-primary/20 text-foreground transition-all shadow-xs cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
+              <span>Novedades</span>
+              {isUnreadNews && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                </span>
+              )}
+            </Button>
+
             <Badge
               variant="secondary"
               className="px-3 py-1.5 rounded-xl font-bold gap-2 bg-white shadow-sm border-primary/10"
@@ -343,6 +393,12 @@ export default function Dashboard() {
             </Badge>
           </div>
         </div>
+
+        {/* Admin Updates Poster Banner */}
+        <AdminNewsBanner
+          onOpenFullModal={(id) => handleOpenNews(id)}
+          isUnread={isUnreadNews}
+        />
 
         {/* Primary Metrics Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
@@ -566,6 +622,14 @@ export default function Dashboard() {
             </Button>
           </div>
         </div>
+
+        {/* Modal Poster de Novedades */}
+        <AdminNewsModal
+          open={newsModalOpen}
+          onOpenChange={setNewsModalOpen}
+          selectedUpdateId={selectedUpdateId}
+          onMarkAsRead={handleMarkAsRead}
+        />
       </div>
     </ErrorBoundary>
   );
