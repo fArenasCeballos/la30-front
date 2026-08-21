@@ -35,14 +35,16 @@ El proyecto utiliza el sistema unificado de agentes en `.agents/`:
 │   ├── 03-database-and-migrations.md
 │   ├── 04-payments-and-invoicing.md
 │   ├── 05-security-and-best-practices.md
-│   └── 06-testing-and-code-quality.md
+│   ├── 06-testing-and-code-quality.md
+│   └── 07-versioning-and-release-protocol.md
 ├── commands/               # Prompts y plantillas de comandos para agentes
 │   ├── new-feature.md
 │   ├── create-migration.md
 │   ├── debug-issue.md
 │   ├── validate-all.md
 │   ├── verify-and-build.md
-│   └── test-offline-sync.md
+│   ├── test-offline-sync.md
+│   └── release-version.md
 └── skills/                 # Procedimientos y runbooks especializados
     ├── auth-and-multistore/
     ├── code-quality-and-testing/
@@ -51,6 +53,7 @@ El proyecto utiliza el sistema unificado de agentes en `.agents/`:
     ├── new-feature/
     ├── order-management/
     ├── payment-and-invoice/
+    ├── release-version/
     ├── reporting-and-dashboard/
     ├── supabase-edge-function/
     ├── supabase-migration/
@@ -71,6 +74,11 @@ El proyecto utiliza el sistema unificado de agentes en `.agents/`:
 6. **Gestión de Stock:** El inventario permite stock negativo (nunca bloquear una venta física en caja/kiosko por falta de stock registrado en sistema).
 7. **Rutas y Lazy Loading:** Toda página nueva en `App.tsx` debe cargarse con `React.lazy()` y `Suspense`.
 8. **Tolerancia Cero en Calidad:** Todo código entregado debe pasar `pnpm validate` (0 errores de TypeScript, 0 errores de ESLint, 100% pruebas de Vitest pasando).
+9. **Protocolo Obligatorio de Lanzamiento (Regla 07 & Skill release-version):** Antes de realizar commit y push de cambios o nuevas funciones:
+   - 1) Subir la versión en `package.json`.
+   - 2) Alternar el color/tema del banner (`gradientTheme` en `src/data/appUpdates.ts`).
+   - 3) Registrar las nuevas características en `APP_UPDATES` de `src/data/appUpdates.ts`.
+   - 4) Avisar explícitamente al usuario sobre la nueva versión y el tema visual asignado.
 
 ---
 
