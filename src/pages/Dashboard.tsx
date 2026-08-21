@@ -398,6 +398,7 @@ export default function Dashboard() {
         <AdminNewsBanner
           onOpenFullModal={(id) => handleOpenNews(id)}
           isUnread={isUnreadNews}
+          onInteract={handleMarkAsRead}
         />
 
         {/* Primary Metrics Grid */}

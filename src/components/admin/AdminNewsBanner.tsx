@@ -10,6 +10,7 @@ interface AdminNewsBannerProps {
   onOpenFullModal: (updateId?: string) => void;
   update?: AppUpdate;
   isUnread?: boolean;
+  onInteract?: () => void;
 }
 
 const BANNER_THEMES: Record<
@@ -25,6 +26,8 @@ const BANNER_THEMES: Record<
     unreadText: string;
     unreadBg: string;
     highlightBorder: string;
+    glowShadow: string;
+    glowBorder: string;
   }
 > = {
   purple: {
@@ -38,6 +41,8 @@ const BANNER_THEMES: Record<
     unreadText: "text-purple-700",
     unreadBg: "bg-purple-500/15 border border-purple-500/20",
     highlightBorder: "border-purple-500/15",
+    glowShadow: "rgba(147, 51, 234, 0.45)",
+    glowBorder: "rgba(147, 51, 234, 0.8)",
   },
   sunset: {
     containerBg: "from-orange-500/10 via-amber-500/10 to-rose-500/10",
@@ -50,6 +55,8 @@ const BANNER_THEMES: Record<
     unreadText: "text-amber-600",
     unreadBg: "bg-amber-500/15",
     highlightBorder: "border-primary/10",
+    glowShadow: "rgba(249, 115, 22, 0.45)",
+    glowBorder: "rgba(249, 115, 22, 0.8)",
   },
   ocean: {
     containerBg: "from-blue-500/15 via-indigo-500/10 to-cyan-500/15",
@@ -62,6 +69,8 @@ const BANNER_THEMES: Record<
     unreadText: "text-blue-700",
     unreadBg: "bg-blue-500/15 border border-blue-500/20",
     highlightBorder: "border-blue-500/15",
+    glowShadow: "rgba(37, 99, 235, 0.45)",
+    glowBorder: "rgba(37, 99, 235, 0.8)",
   },
   emerald: {
     containerBg: "from-emerald-500/15 via-teal-500/10 to-green-500/15",
@@ -74,6 +83,8 @@ const BANNER_THEMES: Record<
     unreadText: "text-emerald-700",
     unreadBg: "bg-emerald-500/15 border border-emerald-500/20",
     highlightBorder: "border-emerald-500/15",
+    glowShadow: "rgba(5, 150, 105, 0.45)",
+    glowBorder: "rgba(5, 150, 105, 0.8)",
   },
   midnight: {
     containerBg: "from-slate-800/15 via-zinc-800/10 to-slate-900/15",
@@ -86,6 +97,8 @@ const BANNER_THEMES: Record<
     unreadText: "text-slate-800",
     unreadBg: "bg-slate-500/15 border border-slate-500/20",
     highlightBorder: "border-slate-700/15",
+    glowShadow: "rgba(100, 116, 139, 0.45)",
+    glowBorder: "rgba(100, 116, 139, 0.8)",
   },
 };
 
@@ -93,9 +106,32 @@ export function AdminNewsBanner({
   onOpenFullModal,
   update = APP_UPDATES[0],
   isUnread = false,
+  onInteract,
 }: AdminNewsBannerProps) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isBlinking, setIsBlinking] = useState(() => {
+    try {
+      const interacted = localStorage.getItem(
+        `la30_banner_interacted_${update?.id}`,
+      );
+      return isUnread && interacted !== "true";
+    } catch {
+      return isUnread;
+    }
+  });
+
+  const stopBlinking = () => {
+    if (isBlinking) {
+      setIsBlinking(false);
+      try {
+        localStorage.setItem(`la30_banner_interacted_${update.id}`, "true");
+      } catch {
+        // ignore
+      }
+      onInteract?.();
+    }
+  };
 
   if (isDismissed || !update) return null;
 
@@ -104,10 +140,44 @@ export function AdminNewsBanner({
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={
+        isBlinking
+          ? {
+              opacity: 1,
+              y: 0,
+              boxShadow: [
+                "0 0 0 0 rgba(0,0,0,0)",
+                `0 0 28px 5px ${theme.glowShadow}`,
+                "0 0 0 0 rgba(0,0,0,0)",
+              ],
+              borderColor: [
+                "rgba(147, 51, 234, 0.2)",
+                theme.glowBorder,
+                "rgba(147, 51, 234, 0.2)",
+              ],
+              scale: [1, 1.008, 1],
+            }
+          : {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              boxShadow:
+                "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+            }
+      }
+      transition={
+        isBlinking
+          ? {
+              duration: 1.8,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }
+          : { duration: 0.3 }
+      }
       exit={{ opacity: 0, height: 0 }}
+      onClick={stopBlinking}
       className={cn(
-        "relative overflow-hidden rounded-3xl border bg-gradient-to-r backdrop-blur-sm p-4 sm:p-5 shadow-sm",
+        "relative overflow-hidden rounded-3xl border bg-gradient-to-r backdrop-blur-sm p-4 sm:p-5 shadow-sm transition-all",
         theme.border,
         theme.containerBg,
       )}
@@ -179,7 +249,11 @@ export function AdminNewsBanner({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={(e) => {
+              e.stopPropagation();
+              stopBlinking();
+              setIsExpanded(!isExpanded);
+            }}
             className="text-xs font-bold text-muted-foreground hover:text-foreground rounded-xl h-8 px-2 sm:px-3"
           >
             {isExpanded ? (
@@ -197,7 +271,11 @@ export function AdminNewsBanner({
 
           <Button
             size="sm"
-            onClick={() => onOpenFullModal(update.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              stopBlinking();
+              onOpenFullModal(update.id);
+            }}
             className={cn(
               "font-extrabold text-xs rounded-xl h-8 px-3.5 gap-1.5 shadow-sm",
               theme.buttonBg,
@@ -210,7 +288,11 @@ export function AdminNewsBanner({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setIsDismissed(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              stopBlinking();
+              setIsDismissed(true);
+            }}
             className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-black/5"
             title="Ocultar aviso"
           >
