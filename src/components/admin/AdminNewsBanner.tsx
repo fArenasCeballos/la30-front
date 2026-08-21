@@ -146,21 +146,19 @@ export function AdminNewsBanner({
               opacity: 1,
               y: 0,
               boxShadow: [
-                "0 0 0 0 rgba(0,0,0,0)",
-                `0 0 28px 5px ${theme.glowShadow}`,
-                "0 0 0 0 rgba(0,0,0,0)",
+                "0 2px 5px rgba(0,0,0,0.05)",
+                `0 0 24px 4px ${theme.glowShadow}`,
+                "0 2px 5px rgba(0,0,0,0.05)",
               ],
               borderColor: [
-                "rgba(147, 51, 234, 0.2)",
+                "rgba(147, 51, 234, 0.3)",
                 theme.glowBorder,
-                "rgba(147, 51, 234, 0.2)",
+                "rgba(147, 51, 234, 0.3)",
               ],
-              scale: [1, 1.008, 1],
             }
           : {
               opacity: 1,
               y: 0,
-              scale: 1,
               boxShadow:
                 "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
             }
@@ -168,7 +166,7 @@ export function AdminNewsBanner({
       transition={
         isBlinking
           ? {
-              duration: 1.8,
+              duration: 2,
               repeat: Infinity,
               ease: "easeInOut",
             }
@@ -177,7 +175,7 @@ export function AdminNewsBanner({
       exit={{ opacity: 0, height: 0 }}
       onClick={stopBlinking}
       className={cn(
-        "relative overflow-hidden rounded-3xl border bg-gradient-to-r backdrop-blur-sm p-4 sm:p-5 shadow-sm transition-all",
+        "relative overflow-hidden rounded-3xl border bg-gradient-to-r backdrop-blur-sm p-4 sm:p-5 shadow-sm transition-colors",
         theme.border,
         theme.containerBg,
       )}
