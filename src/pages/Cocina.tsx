@@ -2,7 +2,19 @@ import { useState, useEffect } from "react";
 import { useOrders } from "@/context/OrderContext";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ChefHat, Loader2, CheckCircle, Flame, BellRing, Clock, AlertTriangle, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import {
+  ChefHat,
+  Loader2,
+  CheckCircle,
+  Flame,
+  BellRing,
+  Clock,
+  AlertTriangle,
+  AlertCircle,
+  Truck,
+  MapPin,
+} from "lucide-react";
 import type { OrderStatus, Order } from "@/types";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { cn } from "@/lib/utils";
@@ -62,9 +74,33 @@ const OrderTimer = ({ createdAt }: { createdAt: string }) => {
 export default function Cocina() {
   const { getOrdersByStatus, updateOrderStatus, toggleOrderItem } = useOrders();
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
+  const [dismissedSalidaIds, setDismissedSalidaIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("kds_dismissed_salida");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
-  const enPreparacion = getOrdersByStatus("en_preparacion") || [];
-  const listos = getOrdersByStatus("listo") || [];
+  const enPreparacion =
+    getOrdersByStatus("en_preparacion", "confirmado") || [];
+  const listos = (getOrdersByStatus("listo") || []).filter(
+    (o) => !dismissedSalidaIds.has(o.id) && (!o.is_delivery || !o.is_dispatched),
+  );
+
+  const handleDismissDeliveryFromKitchen = (orderId: string) => {
+    setDismissedSalidaIds((prev) => {
+      const next = new Set(prev).add(orderId);
+      try {
+        localStorage.setItem("kds_dismissed_salida", JSON.stringify([...next]));
+      } catch (err) {
+        console.warn("Error saving dismissed salida:", err);
+      }
+      return next;
+    });
+    toast.success("Domicilio listo y retirado de cocina");
+  };
 
   const handleUpdateStatus = async (orderId: string, status: OrderStatus) => {
     if (updatingIds.has(orderId)) return;
@@ -98,39 +134,54 @@ export default function Cocina() {
         key={order.id}
         className={cn(
           "pos-card overflow-hidden border-2 p-2 lg:p-3 group animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both flex flex-col min-h-fit",
-          isSalida
-            ? "border-l-4 border-l-green-500 bg-green-50/10"
-            : "border-l-4 border-l-preparing",
+          order.is_delivery
+            ? "border-l-4 border-l-purple-600 bg-purple-50/15 border-purple-500/20"
+            : isSalida
+              ? "border-l-4 border-l-green-500 bg-green-50/10"
+              : "border-l-4 border-l-preparing",
         )}
         style={{ animationDelay: `${idx * 50}ms` }}
       >
-        <div className="flex items-start justify-between mb-3 gap-2">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-start justify-between mb-2.5 gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <div
               className={cn(
                 "h-10 w-10 shrink-0 rounded-xl flex items-center justify-center font-black text-base shadow-inner",
-                isSalida
-                  ? "bg-green-500 text-white"
-                  : "bg-preparing/10 text-preparing",
+                order.is_delivery
+                  ? "bg-purple-600 text-white shadow-purple-500/20"
+                  : isSalida
+                    ? "bg-green-500 text-white"
+                    : "bg-preparing/10 text-preparing",
               )}
             >
               {order.locator}
             </div>
-            <div className="flex flex-col min-w-0">
+            <div className="flex flex-col min-w-0 flex-1">
               <div className="flex items-center gap-1.5 text-[8px] font-black text-muted-foreground/40 tracking-widest uppercase mb-0.5">
-                {isSalida ? (
-                  <BellRing className="h-2.5 w-2.5 shrink-0" />
+                {order.is_delivery ? (
+                  <span className="inline-flex items-center gap-1 text-[7px] font-black bg-purple-600 text-white px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">
+                    <Truck className="h-2.5 w-2.5" strokeWidth={2.5} /> DOMICILIO
+                  </span>
+                ) : isSalida ? (
+                  <>
+                    <BellRing className="h-2.5 w-2.5 shrink-0" />
+                    <span className="truncate">LISTO</span>
+                  </>
                 ) : (
-                  <Flame className="h-2.5 w-2.5 animate-pulse shrink-0" />
+                  <>
+                    <Flame className="h-2.5 w-2.5 animate-pulse shrink-0" />
+                    <span className="truncate">FUEGO</span>
+                  </>
                 )}
-                <span className="truncate">{isSalida ? "LISTO" : "FUEGO"}</span>
               </div>
               <span className="text-[10px] font-black text-primary/70 uppercase truncate">
-                {order.profiles?.name || "Kiosko"}
+                {order.is_delivery
+                  ? `Cliente: ${order.delivery_name || "Domicilio"}`
+                  : (order.profiles?.name || "Kiosko")}
               </span>
             </div>
           </div>
-          
+
           <div className="flex flex-col items-end gap-1.5 shrink-0">
             <OrderTimer createdAt={order.created_at} />
             <StatusBadge
@@ -140,12 +191,21 @@ export default function Cocina() {
           </div>
         </div>
 
+        {order.is_delivery && order.delivery_address && (
+          <div className="flex items-center gap-1 text-[8px] font-semibold text-purple-700/80 bg-purple-500/5 px-2 py-1 rounded-md border border-purple-500/10 mb-2 truncate">
+            <MapPin className="h-2.5 w-2.5 shrink-0 text-purple-500" />
+            <span className="truncate">{order.delivery_address}</span>
+          </div>
+        )}
+
         <div
           className={cn(
             "space-y-1 mb-3 p-2 rounded-lg border shadow-inner flex-1",
-            isSalida
-              ? "bg-white/60 border-green-500/10"
-              : "bg-preparing/5 border-preparing/10",
+            order.is_delivery
+              ? "bg-white/70 border-purple-500/10"
+              : isSalida
+                ? "bg-white/60 border-green-500/10"
+                : "bg-preparing/5 border-preparing/10",
           )}
         >
           {validItems.map((item) => (
@@ -196,14 +256,23 @@ export default function Cocina() {
           className={cn(
             "w-full rounded-lg h-8 font-black text-[9px] uppercase tracking-widest shadow-sm transition-all active:scale-95",
             isSalida
-              ? "bg-green-500 hover:bg-green-600 text-white"
+              ? order.is_delivery
+                ? "bg-purple-600 hover:bg-purple-700 text-white"
+                : "bg-green-500 hover:bg-green-600 text-white"
               : allChecked
                 ? "bg-green-500 hover:bg-green-600 text-white"
                 : "bg-accent/20 text-muted-foreground/30 cursor-not-allowed",
           )}
           onClick={() => {
-            if (isSalida) handleUpdateStatus(order.id, "entregado");
-            else if (allChecked) handleUpdateStatus(order.id, "listo");
+            if (isSalida) {
+              if (order.is_delivery) {
+                handleDismissDeliveryFromKitchen(order.id);
+              } else {
+                handleUpdateStatus(order.id, "entregado");
+              }
+            } else if (allChecked) {
+              handleUpdateStatus(order.id, "listo");
+            }
           }}
           disabled={updatingIds.has(order.id) || (!isSalida && !allChecked)}
         >
@@ -212,7 +281,7 @@ export default function Cocina() {
           ) : (
             <CheckCircle className="h-3 w-3 mr-2" />
           )}
-          {isSalida ? "ENTREGAR" : "TERMINAR"}
+          {isSalida ? (order.is_delivery ? "LISTO" : "ENTREGAR") : "TERMINAR"}
         </Button>
       </div>
     );

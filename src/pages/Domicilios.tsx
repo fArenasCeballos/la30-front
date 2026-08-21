@@ -24,6 +24,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -38,8 +45,6 @@ import {
   User,
   ShoppingBag,
   Clock,
-  ChefHat,
-  Package,
   Send,
   Loader2,
   History,
@@ -47,17 +52,36 @@ import {
   CheckCircle,
   FileText,
   Zap,
+  Edit,
+  XCircle,
+  DollarSign,
+  Bike,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { OrderReceipt } from "@/components/OrderReceipt";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
   buildCustomerReceiptHTML,
   buildKitchenReceiptHTML,
+  buildShiftClosingReceiptHTML,
   silentPrint,
 } from "@/lib/receiptUtils";
 import type { ReceiptData } from "@/lib/receiptUtils";
+import { getShiftStart } from "@/lib/shiftUtils";
 import { shouldGenerateInvoice } from "@/lib/siigoService";
 import { SiigoInvoiceModal } from "@/components/SiigoInvoiceModal";
+import { LiquidacionDomiciliariosView } from "@/components/LiquidacionDomiciliariosView";
+import { useQueryClient } from "@tanstack/react-query";
+
+function timeAgo(dateStr: string | undefined | null): string {
+  if (!dateStr) return "--";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "--";
+  const mins = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (mins < 1) return "Ahora";
+  if (mins < 60) return `${mins} min`;
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
 
 interface CartItem {
   product: Product;
@@ -91,15 +115,14 @@ export default function Domicilios() {
     processPayment,
     addDeliveryOrder,
   } = useOrders();
+  const queryClient = useQueryClient();
 
   // UI state
+  const [currentNavTab, setCurrentNavTab] = useState<string>("pendientes");
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [payingOrder, setPayingOrder] = useState<Order | null>(null);
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
   const [receipt, setReceipt] = useState<ReceiptState | null>(null);
-  const [activeSubTab, setActiveSubTab] = useState<
-    "todos" | "cocina" | "listos" | "camino"
-  >("todos");
   const [siigoOrder, setSiigoOrder] = useState<{
     order: Order;
     method: string;
@@ -214,6 +237,113 @@ export default function Domicilios() {
     [orders],
   );
 
+  // Fetch Active Drivers
+  const { data: drivers = [] } = useQuery({
+    queryKey: ["delivery-drivers-active"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("delivery_drivers")
+        .select("*")
+        .eq("is_active", true)
+        .order("first_name", { ascending: true });
+      return (
+        (data as Array<{
+          id: string;
+          first_name: string;
+          last_name: string;
+          phone: string;
+          motorcycle_plate: string;
+        }>) || []
+      );
+    },
+  });
+
+  const handleAssignDriver = async (
+    orderId: string,
+    driverId: string | null,
+  ) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ driver_id: driverId })
+        .eq("id", orderId);
+      if (error) throw error;
+      toast.success("Repartidor asignado");
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["active-orders"] });
+    } catch (err) {
+      toast.error(
+        `Error al asignar repartidor: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  };
+
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleGenerateClosing = async () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    try {
+      const now = new Date();
+      const shiftStart = getShiftStart();
+      const cajeroName = user?.name ?? "Cajero Domicilios";
+
+      // Consultar órdenes de domicilios del turno directamente desde la BD con payments incluidos
+      let closingQuery = supabase
+        .from("orders")
+        .select(
+          "*, order_items(*, products(id, name, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi)",
+        )
+        .eq("is_delivery", true)
+        .gte("created_at", shiftStart.toISOString())
+        .lte("created_at", now.toISOString())
+        .in("status", ["entregado", "cancelado"]);
+
+      if (activeStore?.id) {
+        closingQuery = closingQuery.eq("store_id", activeStore.id);
+      }
+
+      const { data: dbOrders, error: fetchError } = await closingQuery;
+
+      if (fetchError) throw fetchError;
+
+      const allCompletedDeliveries =
+        dbOrders && dbOrders.length > 0
+          ? (dbOrders as unknown as Order[])
+          : completedDeliveries;
+
+      // Imprimir tirilla de cierre de turno de domicilios
+      if (allCompletedDeliveries.length > 0) {
+        const closingHTML = buildShiftClosingReceiptHTML({
+          orders: allCompletedDeliveries,
+          cajeroName,
+          shiftStart,
+          shiftEnd: now,
+        });
+        await silentPrint(closingHTML, "Cierre de Turno - Domicilios");
+      }
+
+      const { error } = await supabase.rpc("generate_cash_closing", {
+        p_period_start: shiftStart.toISOString(),
+        p_period_end: now.toISOString(),
+        p_store_id: activeStore?.id,
+        p_notes: `Cierre de Domicilios generado por ${user?.name || "Usuario"}`,
+      });
+
+      if (error) throw error;
+
+      toast.success(
+        "Cierre de domicilios generado correctamente. Abriendo módulo de liquidación.",
+      );
+      setCurrentNavTab("liquidacion");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      toast.error(`Error al generar cierre: ${msg}`);
+    } finally {
+      setIsClosing(false);
+    }
+  };
+
   const handleDispatchClick = async (orderId: string) => {
     setUpdatingIds((prev) => new Set(prev).add(orderId));
     try {
@@ -227,40 +357,30 @@ export default function Domicilios() {
     }
   };
 
-  const stats = useMemo(() => {
-    const pending = deliveryOrders.filter(
-      (o) => o.status === "pendiente" || o.status === "confirmado",
-    ).length;
-    const inPrep = deliveryOrders.filter(
-      (o) => o.status === "en_preparacion",
-    ).length;
-    const ready = deliveryOrders.filter(
-      (o) => o.status === "listo" && !o.is_dispatched,
-    ).length;
-    const dispatched = deliveryOrders.filter(
-      (o) => o.status === "listo" && o.is_dispatched,
-    ).length;
-    return { pending, inPrep, ready, dispatched, total: deliveryOrders.length };
-  }, [deliveryOrders]);
+  const pendientes = useMemo(
+    () => deliveryOrders.filter((o) => o.status === "pendiente"),
+    [deliveryOrders],
+  );
 
-  const filteredActiveOrders = useMemo(() => {
-    switch (activeSubTab) {
-      case "cocina":
-        return deliveryOrders.filter((o) =>
-          ["pendiente", "confirmado", "en_preparacion"].includes(o.status),
-        );
-      case "listos":
-        return deliveryOrders.filter(
-          (o) => o.status === "listo" && !o.is_dispatched,
-        );
-      case "camino":
-        return deliveryOrders.filter(
-          (o) => o.status === "listo" && o.is_dispatched,
-        );
-      default:
-        return deliveryOrders;
-    }
-  }, [deliveryOrders, activeSubTab]);
+  const enCocina = useMemo(
+    () =>
+      deliveryOrders.filter((o) =>
+        ["confirmado", "en_preparacion"].includes(o.status),
+      ),
+    [deliveryOrders],
+  );
+
+  const listos = useMemo(
+    () =>
+      deliveryOrders.filter((o) => o.status === "listo" && !o.is_dispatched),
+    [deliveryOrders],
+  );
+
+  const enCamino = useMemo(
+    () =>
+      deliveryOrders.filter((o) => o.status === "listo" && o.is_dispatched),
+    [deliveryOrders],
+  );
 
   // Cart helpers
   const addToCart = (product: Product) => {
@@ -453,381 +573,538 @@ export default function Domicilios() {
     return false;
   };
 
-  const getStatusActions = (order: Order) => {
+  const renderDeliveryCard = (order: Order) => {
     const isUpdating = updatingIds.has(order.id);
-    switch (order.status) {
-      case "pendiente":
-        return (
-          <Button
-            size="sm"
-            className="bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest"
-            disabled={isUpdating}
-            onClick={() => handleStatusChange(order.id, "confirmado")}
-          >
-            {isUpdating ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
+    const validItems = (order.order_items ?? []).filter(
+      (item) => item != null && item.products != null,
+    );
+
+    return (
+      <motion.div
+        key={order.id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="pos-card group animate-in fade-in duration-300 border-2 border-transparent hover:border-purple-500/20 transition-all shadow-md hover:shadow-xl p-2.5 lg:p-3 bg-white/80 backdrop-blur-md"
+      >
+        {/* Card Header */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="flex flex-col items-center justify-center h-10 w-10 rounded-xl bg-purple-500/10 border border-purple-500/20 shadow-inner group-hover:rotate-3 transition-all duration-500 shrink-0">
+              <span className="text-[7px] font-black leading-none text-purple-600/50 uppercase tracking-widest mb-0.5">
+                #DOM
+              </span>
+              <span className="font-black text-lg tracking-tighter text-purple-700">
+                {order.locator}
+              </span>
+            </div>
+            <div className="space-y-0.5 min-w-0 flex-1">
+              <p className="font-black text-xs text-foreground truncate flex items-center gap-1">
+                <User className="h-3 w-3 text-purple-500 shrink-0" />
+                {order.delivery_name || "Cliente"}
+              </p>
+              <div className="flex items-center gap-1.5 text-muted-foreground/40 font-black uppercase tracking-widest text-[8px]">
+                <Clock className="h-2.5 w-2.5" />
+                <span>{timeAgo(order.created_at)}</span>
+              </div>
+              <p className="text-[8px] font-black text-purple-600/70 uppercase tracking-widest truncate">
+                {order.profiles?.name
+                  ? `Mesero: ${order.profiles.name}`
+                  : "Kiosko"}
+              </p>
+            </div>
+          </div>
+          <StatusBadge status={order.status} className="scale-90 origin-right shrink-0" />
+        </div>
+
+        {/* Customer Address & Phone */}
+        <div className="p-2 bg-purple-500/5 rounded-xl border border-purple-500/10 space-y-1 mb-2">
+          <div className="flex items-start gap-1.5 text-xs">
+            <MapPin className="h-3.5 w-3.5 text-purple-500 mt-0.5 shrink-0" />
+            <span className="text-foreground/80 font-semibold leading-tight text-xs break-words">
+              {order.delivery_address || "Sin dirección"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs">
+            <Phone className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+            <a
+              href={`tel:${order.delivery_phone}`}
+              className="text-purple-600 font-bold hover:underline tracking-tight"
+            >
+              {order.delivery_phone || "Sin teléfono"}
+            </a>
+          </div>
+        </div>
+
+        {/* Products List */}
+        {validItems.length > 0 && (
+          <div className="space-y-1 mb-2 bg-accent/5 -mx-2.5 lg:-mx-3 px-2.5 lg:px-3 py-1.5 border-y border-dashed border-accent/10">
+            {validItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex justify-between items-start text-xs gap-2"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold leading-tight tracking-tight text-foreground">
+                    <span className="text-purple-600 font-black mr-1">
+                      {item.quantity}x
+                    </span>
+                    {item.products?.name ?? "Producto"}
+                  </p>
+                  {item.notes && (
+                    <p className="text-[9px] font-medium text-muted-foreground/60 italic leading-none mt-0.5">
+                      "{item.notes}"
+                    </p>
+                  )}
+                  {item.choices && Object.keys(item.choices).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {Object.values(item.choices).map(
+                        (
+                          choice: { label: string; icon?: string },
+                          cIdx: number,
+                        ) => (
+                          <span
+                            key={cIdx}
+                            className="text-[7px] font-black uppercase tracking-widest px-1 py-0.5 rounded-sm bg-white border border-accent/10 text-muted-foreground/60 shadow-sm"
+                          >
+                            {choice.icon} {choice.label}
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
+                <span className="font-black text-[11px] text-muted-foreground/40 tracking-tighter shrink-0 pt-0.5">
+                  {formatPrice(
+                    (item.unit_price ?? 0) * (item.quantity ?? 1),
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Items Count & Total */}
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex flex-col -space-y-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[7px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
+                TOTAL
+              </span>
+              {(order.delivery_fee ?? 0) > 0 && (
+                <span className="text-[8px] font-bold text-purple-600 bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.2 rounded-md">
+                  Envío: {formatPrice(order.delivery_fee ?? 0)}
+                </span>
+              )}
+            </div>
+            <span className="font-black text-base lg:text-lg tracking-tighter text-purple-600 group-hover:scale-105 origin-left transition-all duration-500">
+              {formatPrice(order.total)}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest bg-accent/10 px-2 py-1 rounded-full">
+            <span>{validItems.length} items</span>
+          </div>
+        </div>
+
+        {/* Domiciliario Asignado / Selector */}
+        <div className="flex items-center justify-between gap-2 p-1.5 bg-accent/5 rounded-xl border border-accent/10 mt-2 mb-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Bike className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+            <span className="text-[8px] font-black uppercase tracking-wider text-muted-foreground/60 shrink-0">
+              REPARTIDOR:
+            </span>
+            {order.driver_id ? (
+              <span className="text-[10px] font-black text-purple-700 truncate">
+                {(() => {
+                  const d = drivers.find((drv) => drv.id === order.driver_id);
+                  return d
+                    ? `${d.first_name} (${d.motorcycle_plate})`
+                    : "Asignado";
+                })()}
+              </span>
             ) : (
-              "Confirmar"
+              <span className="text-[9px] font-bold text-amber-600 italic">
+                Sin asignar
+              </span>
             )}
-          </Button>
-        );
-      case "confirmado":
-        return (
-          <Button
-            size="sm"
-            className="bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest"
-            disabled={isUpdating}
-            onClick={() => handleStatusChange(order.id, "en_preparacion")}
+          </div>
+
+          <Select
+            value={order.driver_id || "none"}
+            onValueChange={(driverId) =>
+              handleAssignDriver(
+                order.id,
+                driverId === "none" ? null : driverId,
+              )
+            }
           >
-            {isUpdating ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              "Preparar"
-            )}
-          </Button>
-        );
-      case "en_preparacion":
-        return (
-          <Button
-            size="sm"
-            className="bg-green-500 hover:bg-green-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest"
-            disabled={isUpdating}
-            onClick={() => handleStatusChange(order.id, "listo")}
-          >
-            {isUpdating ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              "Listo"
-            )}
-          </Button>
-        );
-      case "listo":
-        if (!order.is_dispatched) {
-          return (
-            <Button
-              size="sm"
-              className="bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center gap-1.5"
+            <SelectTrigger className="h-7 w-28 px-2 rounded-lg border-purple-200 bg-white text-[9px] font-black uppercase tracking-wider text-purple-700 shadow-none">
+              <SelectValue placeholder="Asignar" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl p-1">
+              <SelectItem
+                value="none"
+                className="text-xs text-muted-foreground font-bold"
+              >
+                Sin asignar
+              </SelectItem>
+              {drivers.map((d) => (
+                <SelectItem
+                  key={d.id}
+                  value={d.id}
+                  className="text-xs font-bold"
+                >
+                  🛵 {d.first_name} {d.last_name} ({d.motorcycle_plate})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Actions Bar */}
+        <div className="flex gap-2 mt-1 pt-2 border-t border-accent/10 w-full">
+          {order.status === "pendiente" && (
+            <>
+              <button
+                className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-primary hover:bg-primary/90 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
+                onClick={() => handleStatusChange(order.id, "confirmado")}
+                disabled={isUpdating}
+              >
+                {isUpdating ? (
+                  <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-3 w-3 mr-1.5" strokeWidth={3} />
+                )}
+                CONFIRMAR
+              </button>
+              <button
+                className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-white border border-accent/20 hover:bg-accent/5 transition-all flex items-center justify-center disabled:opacity-50"
+                onClick={() => navigate(`/kiosko?edit=${order.id}`)}
+                disabled={isUpdating}
+              >
+                <Edit className="h-3 w-3 mr-1.5" strokeWidth={3} />
+                EDITAR
+              </button>
+            </>
+          )}
+
+          {order.status === "confirmado" && (
+            <button
+              className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
+              onClick={() => handleStatusChange(order.id, "en_preparacion")}
               disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+              ) : (
+                "PREPARAR"
+              )}
+            </button>
+          )}
+
+          {order.status === "en_preparacion" && (
+            <button
+              className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-green-500 hover:bg-green-600 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
+              onClick={() => handleStatusChange(order.id, "listo")}
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+              ) : (
+                <CheckCircle className="h-3 w-3 mr-1.5" strokeWidth={3} />
+              )}
+              LISTO
+            </button>
+          )}
+
+          {order.status === "listo" && !order.is_dispatched && (
+            <button
+              className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50"
               onClick={() => handleDispatchClick(order.id)}
-            >
-              <Truck className="h-3 w-3" />
-              Despachar
-            </Button>
-          );
-        } else {
-          return (
-            <Button
-              size="sm"
-              className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center gap-1.5"
               disabled={isUpdating}
-              onClick={() => setPayingOrder(order)}
             >
-              <CheckCircle className="h-3.5 w-3.5" />
-              Cobrar y Entregar
-            </Button>
-          );
-        }
-      default:
-        return null;
-    }
+              {isUpdating ? (
+                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+              ) : (
+                <Truck className="h-3.5 w-3.5" strokeWidth={2.5} />
+              )}
+              DESPACHAR
+            </button>
+          )}
+
+          {order.status === "listo" && order.is_dispatched && (
+            <button
+              className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50"
+              onClick={() => setPayingOrder(order)}
+              disabled={isUpdating}
+            >
+              <CheckCircle className="h-3.5 w-3.5" strokeWidth={3} />
+              COBRAR Y ENTREGAR
+            </button>
+          )}
+
+          <button
+            title="Cancelar pedido"
+            className="rounded-xl h-9 w-9 text-destructive hover:bg-destructive/5 border border-transparent hover:border-destructive/10 transition-all flex items-center justify-center disabled:opacity-50 shrink-0"
+            onClick={() => handleStatusChange(order.id, "cancelado")}
+            disabled={isUpdating}
+          >
+            {isUpdating ? (
+              <Loader2 className="h-3 w-3 animate-spin text-destructive" />
+            ) : (
+              <XCircle className="h-4 w-4" strokeWidth={3} />
+            )}
+          </button>
+        </div>
+      </motion.div>
+    );
   };
 
   if (user && !["admin", "caja"].includes(user.role)) return null;
 
+  const tabs = [
+    {
+      id: "pendientes",
+      label: "PENDIENTES",
+      count: pendientes.length,
+      icon: Clock,
+    },
+    {
+      id: "cocina",
+      label: "EN COCINA",
+      count: enCocina.length,
+      icon: Loader2,
+    },
+    {
+      id: "listos",
+      label: "LISTOS",
+      count: listos.length,
+      icon: CheckCircle,
+    },
+    {
+      id: "camino",
+      label: "EN CAMINO",
+      count: enCamino.length,
+      icon: Truck,
+    },
+    {
+      id: "historial",
+      label: "HISTORIAL",
+      count: completedDeliveries.length,
+      icon: History,
+    },
+    {
+      id: "liquidacion",
+      label: "LIQUIDACIÓN",
+      count: completedDeliveries.length,
+      icon: DollarSign,
+    },
+  ];
+
   return (
-    <div className="section-container space-y-6 lg:space-y-8 pb-32 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-purple-500/10 p-2 lg:p-2.5 rounded-xl lg:rounded-2xl">
-            <Truck
-              className="h-5 w-5 lg:h-6 lg:w-6 text-purple-600"
-              strokeWidth={2.5}
-            />
-          </div>
-          <div>
-            <h1 className="text-xl lg:text-3xl font-black tracking-tight">
-              Domicilios
-            </h1>
-            <p className="text-[8px] lg:text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest mt-0.5">
-              Gestión de pedidos a domicilio
-            </p>
-          </div>
-        </div>
-
-        <Button
-          onClick={() => navigate("/kiosko")}
-          className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl lg:rounded-2xl h-10 lg:h-12 px-4 lg:px-8 font-black text-xs lg:text-sm shadow-xl shadow-purple-500/20 active:scale-95 transition-all"
+    <ErrorBoundary>
+      <div className="section-container space-y-4 lg:space-y-6 pb-32 animate-in fade-in duration-300">
+        <Tabs
+          value={currentNavTab}
+          onValueChange={setCurrentNavTab}
+          className="w-full"
         >
-          <Plus className="h-4 w-4 mr-1 lg:mr-2" />
-          <span className="hidden sm:inline">Nuevo Domicilio</span>
-          <span className="sm:hidden">Nuevo</span>
-        </Button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 lg:gap-4">
-        {[
-          {
-            label: "Pendientes",
-            value: stats.pending,
-            icon: Clock,
-            color: "text-amber-600",
-            bg: "bg-amber-500/10",
-          },
-          {
-            label: "En Cocina",
-            value: stats.inPrep,
-            icon: ChefHat,
-            color: "text-blue-600",
-            bg: "bg-blue-500/10",
-          },
-          {
-            label: "Listos en Local",
-            value: stats.ready,
-            icon: Package,
-            color: "text-green-600",
-            bg: "bg-green-500/10",
-          },
-          {
-            label: "En Camino",
-            value: stats.dispatched,
-            icon: Truck,
-            color: "text-purple-600",
-            bg: "bg-purple-500/10",
-          },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className="pos-card p-3 lg:p-5 border-2 bg-white/60"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <div
-                className={cn(
-                  "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                  s.bg,
-                  s.color,
-                )}
-              >
-                <s.icon className="h-4 w-4" strokeWidth={2.5} />
-              </div>
-              <p className="text-[7px] lg:text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
-                {s.label}
-              </p>
-            </div>
-            <p className={cn("text-xl lg:text-3xl font-black", s.color)}>
-              {s.value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Delivery Tabs */}
-      <Tabs defaultValue="activos" className="w-full">
-        <TabsList className="bg-white/60 backdrop-blur-xl p-1 rounded-2xl border-2 border-accent/20 shadow-sm mb-6 flex w-full max-w-[320px]">
-          <TabsTrigger
-            value="activos"
-            className="flex-1 rounded-xl px-4 py-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border-2 data-[state=active]:border-purple-500/5"
-          >
-            <Truck className="h-4 w-4" strokeWidth={3} />
-            Activos
-            <Badge className="bg-purple-500 text-white border-none rounded-xl h-5 min-w-5 px-1.5 flex items-center justify-center font-black text-[9px] ml-1 shadow-md">
-              {deliveryOrders.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger
-            value="historial"
-            className="flex-1 rounded-xl px-4 py-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border-2 data-[state=active]:border-purple-500/5"
-          >
-            <History className="h-4 w-4" strokeWidth={3} />
-            Historial
-            <Badge className="bg-purple-500 text-white border-none rounded-xl h-5 min-w-5 px-1.5 flex items-center justify-center font-black text-[9px] ml-1 shadow-md">
-              {completedDeliveries.length}
-            </Badge>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent
-          value="activos"
-          className="outline-none animate-in fade-in duration-300 space-y-6"
-        >
-          {/* Sub-tabs for filtering active deliveries */}
-          {deliveryOrders.length > 0 && (
-            <div className="flex flex-wrap gap-2 p-1.5 bg-white/40 border border-accent/10 rounded-2xl w-fit">
-              {[
-                { id: "todos", label: "Todos", count: deliveryOrders.length },
-                {
-                  id: "cocina",
-                  label: "En Cocina",
-                  count: stats.pending + stats.inPrep,
-                },
-                { id: "listos", label: "Listos en Local", count: stats.ready },
-                {
-                  id: "camino",
-                  label: "En Camino 🛵",
-                  count: stats.dispatched,
-                },
-              ].map((tab) => (
-                <Button
-                  key={tab.id}
-                  variant={activeSubTab === tab.id ? "default" : "ghost"}
-                  size="sm"
-                  className={cn(
-                    "rounded-xl font-black text-[10px] uppercase tracking-wider px-3.5 py-2 h-8 transition-all shrink-0",
-                    activeSubTab === tab.id
-                      ? "bg-purple-600 text-white hover:bg-purple-700 shadow-md shadow-purple-500/10"
-                      : "text-muted-foreground hover:bg-purple-500/5 hover:text-purple-600",
-                  )}
-                  onClick={() =>
-                    setActiveSubTab(
-                      tab.id as "todos" | "cocina" | "listos" | "camino",
-                    )
-                  }
-                >
-                  {tab.label}
-                  <Badge
-                    className={cn(
-                      "ml-2 rounded-full px-1.5 py-0.5 text-[9px] font-black border-none shrink-0 h-4 min-w-4 flex items-center justify-center",
-                      activeSubTab === tab.id
-                        ? "bg-white text-purple-600"
-                        : "bg-purple-100 text-purple-600",
-                    )}
+          <div className="bg-white/60 backdrop-blur-xl p-1 lg:p-2 rounded-2xl border-2 border-accent/20 shadow-sm mb-4 lg:mb-6 sticky top-14 lg:top-16 z-40 flex flex-col sm:flex-row items-center gap-2 lg:gap-4">
+            <div className="flex-1 w-full overflow-x-auto no-scrollbar">
+              <TabsList className="bg-transparent h-auto p-0 flex-nowrap w-full justify-start gap-1 lg:gap-2">
+                {tabs.map((tab) => (
+                  <TabsTrigger
+                    key={tab.id}
+                    value={tab.id}
+                    className="group rounded-lg lg:rounded-xl px-4 lg:px-8 py-2 lg:py-3 data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-md transition-all font-black text-[9px] lg:text-[11px] uppercase tracking-widest flex items-center gap-2 lg:gap-3 border-2 data-[state=active]:border-purple-500/5 min-w-30 lg:min-w-35"
                   >
-                    {tab.count}
-                  </Badge>
-                </Button>
-              ))}
-            </div>
-          )}
-
-          {filteredActiveOrders.length === 0 ? (
-            <div className="text-center py-20 bg-white/40 rounded-2xl border-2 border-dashed border-accent/15">
-              <div className="inline-flex h-20 w-20 rounded-full bg-purple-500/5 items-center justify-center mb-4">
-                <Truck className="h-10 w-10 text-purple-300" />
-              </div>
-              <p className="text-sm font-black text-muted-foreground/30 uppercase tracking-widest">
-                {activeSubTab === "todos"
-                  ? "Sin domicilios activos"
-                  : activeSubTab === "cocina"
-                    ? "Sin domicilios en cocina"
-                    : activeSubTab === "listos"
-                      ? "Sin domicilios listos en local"
-                      : "Sin domicilios en camino"}
-              </p>
-              <p className="text-xs text-muted-foreground/20 mt-1">
-                {activeSubTab === "todos"
-                  ? "Crea un nuevo pedido para comenzar"
-                  : "No hay pedidos en este estado en este momento"}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <AnimatePresence>
-                {filteredActiveOrders.map((order) => (
-                  <motion.div
-                    key={order.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="pos-card p-0 overflow-hidden border-2 border-purple-500/10 hover:border-purple-500/20 transition-all hover:shadow-lg"
-                  >
-                    {/* Card Header */}
-                    <div className="p-4 bg-purple-500/5 border-b border-purple-500/10 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-black text-sm">
-                          {order.locator}
-                        </div>
-                        <div>
-                          <p className="font-black text-sm flex items-center gap-1.5">
-                            <User className="h-3 w-3 text-purple-400" />
-                            {order.delivery_name || "Cliente"}
-                          </p>
-                          <p className="text-[9px] text-muted-foreground/50">
-                            {new Date(order.created_at).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                          <p className="text-[8px] font-black text-purple-600/70 uppercase tracking-widest truncate max-w-30 mt-0.5">
-                            {order.profiles?.name
-                              ? `Mesero: ${order.profiles.name}`
-                              : "Kiosko"}
-                          </p>
-                        </div>
-                      </div>
-                      <StatusBadge status={order.status} />
-                    </div>
-
-                    {/* Customer Info */}
-                    <div className="p-4 space-y-2">
-                      <div className="flex items-start gap-2 text-xs">
-                        <MapPin className="h-3.5 w-3.5 text-purple-400 mt-0.5 shrink-0" />
-                        <span className="text-muted-foreground font-medium leading-tight">
-                          {order.delivery_address || "Sin dirección"}
-                        </span>
-                      </div>
-                      <a
-                        href={`tel:${order.delivery_phone}`}
-                        className="flex items-center gap-2 text-xs text-purple-600 font-bold hover:underline"
-                      >
-                        <Phone className="h-3.5 w-3.5" />
-                        {order.delivery_phone || "Sin teléfono"}
-                      </a>
-                    </div>
-
-                    {/* Items & Total */}
-                    <div className="px-4 pb-3 border-t border-accent/10 pt-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
-                          {order.order_items?.length || 0} items
-                        </span>
-                        {(order.delivery_fee ?? 0) > 0 && (
-                          <span className="text-[9px] font-bold text-purple-500">
-                            Envío: {formatPrice(order.delivery_fee ?? 0)}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-lg font-black text-purple-600">
-                        {formatPrice(order.total)}
-                      </p>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="px-4 pb-4 flex items-center gap-2">
-                      {getStatusActions(order)}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-xl text-[9px] font-black uppercase tracking-widest text-destructive border-destructive/20 hover:bg-destructive/5"
-                        onClick={() =>
-                          handleStatusChange(order.id, "cancelado")
-                        }
-                        disabled={updatingIds.has(order.id)}
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  </motion.div>
+                    <tab.icon
+                      className={cn(
+                        "h-5 w-5 lg:h-6 lg:w-6 shrink-0 transition-all duration-200 group-hover:scale-110 group-active:scale-95",
+                        tab.id === "cocina" && "animate-spin",
+                      )}
+                      strokeWidth={2.5}
+                    />
+                    {tab.label}
+                    <Badge className="bg-purple-600 text-white border-none rounded-xl h-6 min-w-6 px-1.5 flex items-center justify-center font-black text-[10px] ml-auto shadow-md">
+                      {tab.count}
+                    </Badge>
+                  </TabsTrigger>
                 ))}
-              </AnimatePresence>
+              </TabsList>
             </div>
-          )}
-        </TabsContent>
+            <Button
+              size="sm"
+              className="rounded-xl h-10 lg:h-12 px-4 lg:px-6 bg-purple-600 hover:bg-purple-700 text-white font-black text-[10px] lg:text-xs shadow-md shadow-purple-500/20 hover:scale-[1.05] active:scale-[0.95] transition-all group shrink-0"
+              onClick={() => navigate("/kiosko")}
+            >
+              <Plus
+                className="h-3.5 w-3.5 lg:h-4 lg:w-4 mr-2 group-hover:rotate-90 transition-transform duration-200"
+                strokeWidth={3}
+              />
+              NUEVO DOMICILIO
+            </Button>
+          </div>
 
-        <TabsContent
-          value="historial"
-          className="outline-none animate-in fade-in duration-300"
-        >
-          <div className="space-y-6">
-            {completedDeliveries.length === 0 ? (
+          {/* Tab: Pendientes */}
+          <TabsContent
+            value="pendientes"
+            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
+          >
+            {pendientes.length === 0 ? (
               <div className="py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
                 <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
-                  <History className="h-10 w-10 text-muted-foreground/60" />
+                  <Clock className="h-10 w-10 text-muted-foreground/60" />
                 </div>
                 <p className="font-black uppercase tracking-[0.3em] text-sm text-muted-foreground/60">
-                  Sin historial de domicilios
+                  Sin domicilios pendientes
                 </p>
               </div>
+            ) : (
+              <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
+                <AnimatePresence>
+                  {pendientes.map(renderDeliveryCard)}
+                </AnimatePresence>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Tab: En Cocina */}
+          <TabsContent
+            value="cocina"
+            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
+          >
+            {enCocina.length === 0 ? (
+              <div className="py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
+                <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
+                  <Loader2 className="h-10 w-10 text-muted-foreground/60 animate-spin" />
+                </div>
+                <p className="font-black uppercase tracking-[0.3em] text-sm text-muted-foreground/60">
+                  Sin domicilios en cocina
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
+                <AnimatePresence>
+                  {enCocina.map(renderDeliveryCard)}
+                </AnimatePresence>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Tab: Listos en Local */}
+          <TabsContent
+            value="listos"
+            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
+          >
+            {listos.length === 0 ? (
+              <div className="py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
+                <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
+                  <CheckCircle className="h-10 w-10 text-muted-foreground/60" />
+                </div>
+                <p className="font-black uppercase tracking-[0.3em] text-sm text-muted-foreground/60">
+                  Sin domicilios listos en local
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
+                <AnimatePresence>
+                  {listos.map(renderDeliveryCard)}
+                </AnimatePresence>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Tab: En Camino */}
+          <TabsContent
+            value="camino"
+            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
+          >
+            {enCamino.length === 0 ? (
+              <div className="py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
+                <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
+                  <Truck className="h-10 w-10 text-muted-foreground/60" />
+                </div>
+                <p className="font-black uppercase tracking-[0.3em] text-sm text-muted-foreground/60">
+                  Sin domicilios en camino
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
+                <AnimatePresence>
+                  {enCamino.map(renderDeliveryCard)}
+                </AnimatePresence>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Tab: Historial */}
+          <TabsContent
+            value="historial"
+            className="outline-none animate-in fade-in duration-300"
+          >
+            <div className="space-y-6 lg:space-y-8">
+              {/* Cash Closing Section */}
+              <div className="bg-linear-to-br from-purple-500/10 via-white/50 to-purple-500/5 backdrop-blur-md border-2 border-purple-500/20 p-6 lg:p-8 rounded-3xl flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8 group shadow-md relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-150 transition-transform duration-1000">
+                  <DollarSign
+                    className="h-48 w-48 text-purple-600"
+                    strokeWidth={3}
+                  />
+                </div>
+
+                <div className="space-y-3 text-center lg:text-left relative z-10">
+                  <div className="flex items-center justify-center lg:justify-start gap-2 text-purple-600 font-black uppercase tracking-[0.3em] text-[10px]">
+                    <span className="h-2 w-2 rounded-full bg-purple-600 animate-pulse" />
+                    ADMINISTRACIÓN DE TURNO
+                  </div>
+                  <h3 className="text-2xl lg:text-3xl font-black tracking-tighter text-foreground">
+                    Cierre de Domicilios Diario
+                  </h3>
+                  <p className="text-muted-foreground font-medium text-sm lg:text-base leading-relaxed max-w-xl">
+                    Consolida todas las transacciones de domicilios del turno actual y genera el reporte oficial de ventas para administración.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 relative z-10">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setCurrentNavTab("liquidacion")}
+                    className="rounded-2xl h-14 lg:h-16 px-6 border-2 border-purple-300 hover:bg-purple-50 text-purple-700 font-black text-xs uppercase tracking-widest shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
+                  >
+                    <Bike className="h-5 w-5 mr-2 text-purple-600" />
+                    LIQUIDAR DOMICILIARIOS
+                  </Button>
+
+                  <Button
+                    size="lg"
+                    onClick={handleGenerateClosing}
+                    disabled={isClosing || completedDeliveries.length === 0}
+                    className="rounded-2xl h-14 lg:h-16 px-8 lg:px-10 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-purple-500/25 hover:scale-[1.03] active:scale-[0.97] transition-all group shrink-0"
+                  >
+                    {isClosing ? (
+                      <Loader2 className="h-5 w-5 animate-spin mr-3" />
+                    ) : (
+                      <DollarSign
+                        className="h-5 w-5 mr-3 group-hover:scale-125 transition-transform duration-200"
+                        strokeWidth={3}
+                      />
+                    )}
+                    REALIZAR CIERRE DE TURNO
+                  </Button>
+                </div>
+              </div>
+
+              {completedDeliveries.length === 0 ? (
+                <div className="py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
+                  <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
+                    <History className="h-10 w-10 text-muted-foreground/60" />
+                  </div>
+                  <p className="font-black uppercase tracking-[0.3em] text-sm text-muted-foreground/60">
+                    Sin historial de domicilios
+                  </p>
+                </div>
             ) : (
               <div className="grid gap-6">
                 {completedDeliveries.map((order, idx) => {
@@ -1029,6 +1306,14 @@ export default function Domicilios() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        {/* Tab: Liquidación de Domiciliarios */}
+        <TabsContent
+          value="liquidacion"
+          className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
+        >
+          <LiquidacionDomiciliariosView />
         </TabsContent>
       </Tabs>
 
@@ -1263,5 +1548,6 @@ export default function Domicilios() {
         />
       )}
     </div>
+    </ErrorBoundary>
   );
 }

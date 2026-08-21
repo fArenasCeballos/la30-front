@@ -33,11 +33,15 @@ import {
 } from "@/components/ui/dialog";
 import type { Tables } from "@/types/database.types";
 import { formatPrice } from "@/lib/formatPrice";
+import { LiquidacionDomiciliariosView } from "@/components/LiquidacionDomiciliariosView";
 
 type DeliveryDriver = Tables<"delivery_drivers">;
 type Order = Tables<"orders">;
 
 export default function DomiciliariosAdmin() {
+  const [adminSubTab, setAdminSubTab] = useState<"gestion" | "liquidacion">(
+    "gestion",
+  );
   const [drivers, setDrivers] = useState<DeliveryDriver[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -222,50 +226,81 @@ export default function DomiciliariosAdmin() {
 
   return (
     <ErrorBoundary>
-      <div className="section-container space-y-16 pb-32 animate-in fade-in duration-700">
-        <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 px-4">
-            <div className="flex items-center gap-6">
-              <div className="h-14 w-14 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 shadow-inner">
-                <Bike className="h-7 w-7" strokeWidth={3} />
+      <div className="section-container space-y-8 pb-32 animate-in fade-in duration-700">
+        {/* Sub-tab Navigation */}
+        <div className="flex items-center gap-2 bg-white/60 backdrop-blur-md p-1.5 rounded-2xl border-2 border-accent/15 w-fit shadow-xs">
+          <button
+            onClick={() => setAdminSubTab("gestion")}
+            className={cn(
+              "flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all",
+              adminSubTab === "gestion"
+                ? "bg-orange-500 text-white shadow-md shadow-orange-500/20"
+                : "text-muted-foreground/60 hover:text-orange-500",
+            )}
+          >
+            <Bike className="h-4 w-4" />
+            Gestión de Repartidores
+          </button>
+          <button
+            onClick={() => setAdminSubTab("liquidacion")}
+            className={cn(
+              "flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all",
+              adminSubTab === "liquidacion"
+                ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
+                : "text-muted-foreground/60 hover:text-purple-600",
+            )}
+          >
+            <DollarSign className="h-4 w-4" />
+            Liquidación de Turnos (12 PM - 12 PM)
+          </button>
+        </div>
+
+        {adminSubTab === "liquidacion" ? (
+          <LiquidacionDomiciliariosView />
+        ) : (
+          <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 px-4">
+              <div className="flex items-center gap-6">
+                <div className="h-14 w-14 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 shadow-inner">
+                  <Bike className="h-7 w-7" strokeWidth={3} />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-black tracking-tight text-foreground">
+                    Domiciliarios
+                  </h1>
+                  <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
+                    {drivers.length} Conductores Registrados
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-3xl font-black tracking-tight text-foreground">
-                  Domiciliarios
-                </h1>
-                <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
-                  {drivers.length} Conductores Registrados
-                </p>
+
+              <div className="flex flex-col sm:flex-row items-center gap-4 flex-1 lg:max-w-3xl justify-end">
+                <div className="relative w-full sm:max-w-md group">
+                  <Search
+                    className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 group-focus-within:text-orange-500 transition-all duration-300"
+                    strokeWidth={3}
+                  />
+                  <Input
+                    placeholder="Buscar domiciliario..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-12 h-14 rounded-2xl border-2 focus-visible:ring-orange-500/20 bg-white/60 backdrop-blur-md shadow-soft transition-all font-bold focus:border-orange-500/30"
+                  />
+                </div>
+
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto h-14 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black shadow-strong hover:scale-[1.02] active:scale-[0.98] transition-all group px-8"
+                  onClick={openCreate}
+                >
+                  <PlusCircle
+                    className="h-5 w-5 mr-3 group-hover:rotate-90 transition-transform duration-500"
+                    strokeWidth={2.5}
+                  />
+                  REGISTRAR
+                </Button>
               </div>
             </div>
-
-            <div className="flex flex-col sm:flex-row items-center gap-4 flex-1 lg:max-w-3xl justify-end">
-              <div className="relative w-full sm:max-w-md group">
-                <Search
-                  className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 group-focus-within:text-orange-500 transition-all duration-300"
-                  strokeWidth={3}
-                />
-                <Input
-                  placeholder="Buscar domiciliario..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-12 h-14 rounded-2xl border-2 focus-visible:ring-orange-500/20 bg-white/60 backdrop-blur-md shadow-soft transition-all font-bold focus:border-orange-500/30"
-                />
-              </div>
-
-              <Button
-                size="lg"
-                className="w-full sm:w-auto h-14 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black shadow-strong hover:scale-[1.02] active:scale-[0.98] transition-all group px-8"
-                onClick={openCreate}
-              >
-                <PlusCircle
-                  className="h-5 w-5 mr-3 group-hover:rotate-90 transition-transform duration-500"
-                  strokeWidth={2.5}
-                />
-                REGISTRAR
-              </Button>
-            </div>
-          </div>
 
           <div className="bg-white/40 backdrop-blur-md overflow-hidden border-2 shadow-strong rounded-[3rem] border-accent/20">
             <div className="overflow-x-auto">
@@ -390,6 +425,7 @@ export default function DomiciliariosAdmin() {
             )}
           </div>
         </div>
+      )}
 
         {/* Modal CRUD */}
         <Dialog open={showForm} onOpenChange={setShowForm}>

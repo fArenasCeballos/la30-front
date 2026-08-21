@@ -834,3 +834,179 @@ export function buildPartialPaymentReceiptHTML(
     </html>
   `;
 }
+
+export interface DriverSettlementData {
+  driverName: string;
+  driverPlate?: string;
+  driverPhone?: string;
+  orders: Order[];
+  shiftStart: Date;
+  shiftEnd: Date;
+  cajeroName: string;
+  storeName?: string;
+}
+
+export function buildDriverSettlementReceiptHTML({
+  driverName,
+  driverPlate,
+  driverPhone,
+  orders,
+  shiftStart,
+  shiftEnd,
+  cajeroName,
+  storeName = "LA 30 BURGER",
+}: DriverSettlementData): string {
+  const totalDeliveries = orders.length;
+  const totalDeliveryFees = orders.reduce(
+    (sum, o) => sum + (o.delivery_fee ?? 0),
+    0,
+  );
+
+  let totalCashCollected = 0;
+  orders.forEach((o) => {
+    o.payments?.forEach((p) => {
+      if (p.method === "efectivo") {
+        totalCashCollected += p.amount_total || 0;
+      } else if (p.method === "mixto") {
+        totalCashCollected += p.amount_efectivo || 0;
+      }
+    });
+  });
+
+  const totalOrdersAmount = orders.reduce((sum, o) => sum + (o.total ?? 0), 0);
+  const netBalanceToCashier = totalCashCollected - totalDeliveryFees;
+
+  const ordersRows = orders
+    .map((o) => {
+      const hora = new Date(o.created_at).toLocaleTimeString("es-CO", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+      const paymentMethods =
+        o.payments?.map((p) => p.method.toUpperCase()).join(", ") ||
+        "PENDIENTE";
+      const fee = o.delivery_fee ?? 0;
+      return `
+        <tr>
+          <td>
+            <div class="bold">#DOM ${o.locator} (${hora})</div>
+            <div style="font-size:10px; color:#333;">${o.delivery_address || "Sin dirección"}</div>
+            <div style="font-size:9px; color:#555;">Pago: ${paymentMethods}</div>
+          </td>
+          <td style="text-align:right;">
+            <div style="font-size:10px;">${formatPrice(o.total)}</div>
+            <div class="bold" style="font-size:11px; color:#000;">+${formatPrice(fee)}</div>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  return `
+    <html>
+      <head>
+        <style>${PRINT_STYLES}</style>
+      </head>
+      <body>
+        <div class="receipt">
+          <div class="center">
+            <div class="header-title">${storeName.toUpperCase()}</div>
+            <div class="bold" style="font-size:14px; margin: 2px 0;">LIQUIDACIÓN DE DOMICILIARIO</div>
+            <div style="font-size:11px;">Módulo de Domicilios</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="row">
+            <span class="bold">DOMICILIARIO:</span>
+            <span class="bold">${driverName.toUpperCase()}</span>
+          </div>
+          ${driverPlate ? `<div class="row"><span>Placa Moto:</span><span class="bold">${driverPlate.toUpperCase()}</span></div>` : ""}
+          ${driverPhone ? `<div class="row"><span>Teléfono:</span><span>${driverPhone}</span></div>` : ""}
+          <div class="row">
+            <span>Cajero / Responsable:</span>
+            <span>${cajeroName}</span>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="row" style="font-size:10px;">
+            <span>Desde:</span>
+            <span>${shiftStart.toLocaleDateString("es-CO")} ${shiftStart.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
+          </div>
+          <div class="row" style="font-size:10px;">
+            <span>Hasta:</span>
+            <span>${shiftEnd.toLocaleDateString("es-CO")} ${shiftEnd.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
+          </div>
+
+          <div class="double-divider"></div>
+
+          <div class="bold" style="font-size:12px; margin-bottom:4px;">DETALLE DE ENTREGAS (${totalDeliveries})</div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align:left;">Pedido / Dirección</th>
+                <th style="text-align:right;">Total / Flete</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ordersRows}
+            </tbody>
+          </table>
+
+          <div class="double-divider"></div>
+
+          <div class="row" style="font-size:13px;">
+            <span>Total Pedidos Entregados:</span>
+            <span class="bold">${totalDeliveries}</span>
+          </div>
+          <div class="row" style="font-size:13px;">
+            <span>Venta Total Pedidos:</span>
+            <span class="bold">${formatPrice(totalOrdersAmount)}</span>
+          </div>
+          <div class="row" style="font-size:13px; color:#000;">
+            <span>Efectivo Cobrado en Mano:</span>
+            <span class="bold">${formatPrice(totalCashCollected)}</span>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="row total-row" style="font-size:15px; margin: 4px 0;">
+            <span>VALOR A PAGAR A DOMICILIARIO:</span>
+            <span class="bold big-total">${formatPrice(totalDeliveryFees)}</span>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="row" style="font-size:14px; padding: 4px 0;">
+            <span class="bold">BALANCE CON CAJA:</span>
+            <span class="bold" style="font-size:15px;">
+              ${netBalanceToCashier >= 0 ? `Entrega a Caja: ${formatPrice(netBalanceToCashier)}` : `Caja le paga: ${formatPrice(Math.abs(netBalanceToCashier))}`}
+            </span>
+          </div>
+
+          <div class="divider" style="margin-top:20px;"></div>
+
+          <div style="margin-top:25px;" class="center">
+            <div style="border-top:1px solid #000; width:80%; margin:0 auto; padding-top:4px;">
+              <span style="font-size:11px;">Firma Domiciliario: ${driverName}</span>
+            </div>
+          </div>
+
+          <div style="margin-top:25px;" class="center">
+            <div style="border-top:1px solid #000; width:80%; margin:0 auto; padding-top:4px;">
+              <span style="font-size:11px;">Firma Cajero: ${cajeroName}</span>
+            </div>
+          </div>
+
+          <div style="margin-top:15px; font-size:10px;" class="center">
+            <p>Comprobante oficial de liquidación de turno</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+

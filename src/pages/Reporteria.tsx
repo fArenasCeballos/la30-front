@@ -26,6 +26,9 @@ import {
   Award,
   ListChecks,
   FileText,
+  Store as StoreIcon,
+  Truck,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -111,6 +114,10 @@ const QUICK_RANGES = [
 
 interface ReportOrder {
   is_delivery: boolean;
+  delivery_name?: string | null;
+  delivery_address?: string | null;
+  delivery_phone?: string | null;
+  delivery_fee?: number | null;
   id: string;
   locator: string;
   status: OrderStatus;
@@ -172,13 +179,28 @@ export default function Reporteria() {
     from: startOfDay(new Date()),
     to: startOfDay(new Date()),
   });
-  const { activeStore } = useStore();
-  const storeId = activeStore?.id;
+  const { stores, activeStore } = useStore();
+  const [selectedStoreId, setSelectedStoreId] = useState<string>(
+    activeStore?.id ?? "all",
+  );
   const [activeQuick, setActiveQuick] = useState("Hoy");
   const [expandedDetailId, setExpandedDetailId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<"all" | "caja" | "delivery">(
     "all",
   );
+
+  const selectedStoreName = useMemo(() => {
+    if (selectedStoreId === "all") return "General (Todas las Sedes)";
+    const current = stores.find((s) => s.id === selectedStoreId);
+    return current?.name ?? activeStore?.name ?? "Sede Seleccionada";
+  }, [selectedStoreId, stores, activeStore]);
+
+  const isDomiciliosStore = useMemo(() => {
+    if (selectedStoreId === "all") return true;
+    const current = stores.find((s) => s.id === selectedStoreId);
+    if (current) return current.slug === "domicilios";
+    return activeStore?.slug === "domicilios";
+  }, [selectedStoreId, stores, activeStore]);
 
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 50;
@@ -197,7 +219,7 @@ export default function Reporteria() {
       user?.id,
       shiftRange?.from?.toISOString(),
       shiftRange?.to?.toISOString(),
-      storeId,
+      selectedStoreId,
       typeFilter,
     ],
     queryFn: async () => {
@@ -208,7 +230,7 @@ export default function Reporteria() {
       const { data, error } = await supabase.rpc("get_reporteria_stats", {
         p_start: from,
         p_end: to,
-        p_store_id: activeStore?.slug === "domicilios" ? null : storeId,
+        p_store_id: selectedStoreId === "all" ? null : selectedStoreId,
         p_type_filter: typeFilter,
       });
 
@@ -227,7 +249,7 @@ export default function Reporteria() {
       user?.id,
       shiftRange?.from?.toISOString(),
       shiftRange?.to?.toISOString(),
-      storeId,
+      selectedStoreId,
       typeFilter,
       statusFilter,
       page,
@@ -248,11 +270,11 @@ export default function Reporteria() {
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-      if (storeId && activeStore?.slug !== "domicilios") {
-        query = query.eq("store_id", storeId);
+      if (selectedStoreId !== "all") {
+        query = query.eq("store_id", selectedStoreId);
       }
 
-      if (activeStore?.slug === "domicilios" && typeFilter !== "all") {
+      if (typeFilter !== "all") {
         if (typeFilter === "delivery") query = query.eq("is_delivery", true);
         if (typeFilter === "caja")
           query = query.filter("is_delivery", "in", "(false,null)");
@@ -383,11 +405,11 @@ export default function Reporteria() {
         .lte("created_at", to)
         .order("created_at", { ascending: false });
 
-      if (storeId && activeStore?.slug !== "domicilios") {
-        query = query.eq("store_id", storeId);
+      if (selectedStoreId !== "all") {
+        query = query.eq("store_id", selectedStoreId);
       }
 
-      if (activeStore?.slug === "domicilios" && typeFilter !== "all") {
+      if (typeFilter !== "all") {
         if (typeFilter === "delivery") query = query.eq("is_delivery", true);
         if (typeFilter === "caja")
           query = query.filter("is_delivery", "in", "(false,null)");
@@ -418,8 +440,10 @@ export default function Reporteria() {
 
       wsOrders.columns = [
         { header: "LOCALIZADOR", key: "loc", width: 16 },
+        { header: "CANAL", key: "channel", width: 16 },
         { header: "ESTADO", key: "status", width: 18 },
         { header: "TOTAL", key: "total", width: 18 },
+        { header: "CLIENTE / DIRECCIÓN", key: "customer", width: 32 },
         { header: "CANTIDAD ITEMS", key: "items", width: 18 },
         { header: "FECHA", key: "date", width: 28 },
         { header: "CREADO POR", key: "creator", width: 25 },
@@ -439,9 +463,13 @@ export default function Reporteria() {
 
       ordersToExport.forEach((o) => {
         const row = wsOrders.addRow({
-          loc: o.locator,
+          loc: o.is_delivery ? `#DOM ${o.locator}` : `#LOC ${o.locator}`,
+          channel: o.is_delivery ? "DOMICILIO" : "CAJA",
           status: o.status.toUpperCase(),
           total: o.total,
+          customer: o.is_delivery
+            ? `${o.delivery_name || "Cliente"} (${o.delivery_address || "Sin dirección"})`
+            : "Venta en Local / Caja",
           items: o.order_items?.length ?? 0,
           date: format(new Date(o.created_at), "PPP pp", { locale: es }),
           creator: o.profiles?.name ?? "Sistema",
@@ -581,7 +609,7 @@ export default function Reporteria() {
                       Reportería
                     </h1>
                     <p className="text-[8px] lg:text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest mt-0.5 lg:mt-1 truncate">
-                      {activeStore?.name}
+                      {selectedStoreName}
                     </p>
                   </div>
                 </div>
@@ -609,6 +637,47 @@ export default function Reporteria() {
               {/* Bottom Row: Controls & Navigation */}
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2 border-t border-accent/5 overflow-hidden">
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-3 px-3 pb-1 lg:pb-0 lg:mx-0 lg:px-0">
+                  {/* Store Selector */}
+                  <Select
+                    value={selectedStoreId}
+                    onValueChange={(v) => {
+                      setSelectedStoreId(v);
+                      setPage(0);
+                    }}
+                  >
+                    <SelectTrigger className="w-36 lg:w-48 h-8 lg:h-10 rounded-xl lg:rounded-2xl border-none bg-accent/5 font-black text-[8px] lg:text-[10px] tracking-widest uppercase shadow-none hover:bg-accent/10 transition-colors shrink-0">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <StoreIcon
+                          className="h-3.5 w-3.5 text-primary/40 shrink-0"
+                          strokeWidth={2.5}
+                        />
+                        <SelectValue placeholder="Sede" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-none shadow-strong p-1">
+                      <SelectItem
+                        value="all"
+                        className="font-black text-[9px] lg:text-[10px] tracking-widest uppercase py-2.5 rounded-xl text-primary font-bold"
+                      >
+                        🌐 General (Todas)
+                      </SelectItem>
+                      {stores.map((st) => (
+                        <SelectItem
+                          key={st.id}
+                          value={st.id}
+                          className="font-black text-[9px] lg:text-[10px] tracking-widest uppercase py-2.5 rounded-xl"
+                        >
+                          {st.slug === "domicilios"
+                            ? "🛵 "
+                            : st.slug === "trailer"
+                              ? "🚚 "
+                              : "🍽️ "}
+                          {st.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
                   {/* Date Selection */}
                   <div className="flex items-center gap-1 bg-accent/5 p-1 rounded-xl lg:rounded-2xl border border-accent/10 shrink-0">
                     <div className="flex">
@@ -706,8 +775,8 @@ export default function Reporteria() {
                     </SelectContent>
                   </Select>
 
-                  {/* Type Filter (Caja vs Domicilio) - Only for domicilios store */}
-                  {activeStore?.slug === "domicilios" && (
+                  {/* Type Filter (Caja vs Domicilio) */}
+                  {isDomiciliosStore && (
                     <Select
                       value={typeFilter}
                       onValueChange={(v: "all" | "caja" | "delivery") =>
@@ -852,6 +921,84 @@ export default function Reporteria() {
                   </div>
                 ))}
               </div>
+
+              {/* Channel Breakdown: Caja vs Domicilios */}
+              {isDomiciliosStore && (
+                <div className="bg-linear-to-r from-purple-500/10 via-white/50 to-blue-500/10 rounded-3xl p-6 lg:p-8 border-2 border-purple-500/20 shadow-md">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center shadow-md">
+                        <Truck className="h-5 w-5" strokeWidth={2.5} />
+                      </div>
+                      <div>
+                        <h3 className="text-base lg:text-lg font-black tracking-tight text-foreground uppercase">
+                          Desglose por Canal: Caja vs Domicilios
+                        </h3>
+                        <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                          Separación de ventas en mostrador/caja vs pedidos a domicilio
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Caja Card */}
+                    <div className="bg-white/80 backdrop-blur-md p-5 rounded-2xl border-2 border-blue-500/20 shadow-sm space-y-1">
+                      <div className="flex items-center justify-between text-blue-600 mb-2">
+                        <span className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                          <StoreIcon className="h-3.5 w-3.5" /> Ventas en Caja
+                        </span>
+                        <span className="text-xs font-black bg-blue-500/10 px-2 py-0.5 rounded-full">
+                          {summary.total > 0
+                            ? Math.round(
+                                ((reportStats.caja_total ?? 0) / summary.total) *
+                                  100,
+                              )
+                            : 0}
+                          %
+                        </span>
+                      </div>
+                      <p className="text-2xl font-black text-blue-600 tracking-tighter">
+                        {formatPrice(reportStats.caja_total ?? 0)}
+                      </p>
+                    </div>
+
+                    {/* Domicilios Card */}
+                    <div className="bg-white/80 backdrop-blur-md p-5 rounded-2xl border-2 border-purple-500/20 shadow-sm space-y-1">
+                      <div className="flex items-center justify-between text-purple-600 mb-2">
+                        <span className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                          <Truck className="h-3.5 w-3.5" /> Ventas Domicilios
+                        </span>
+                        <span className="text-xs font-black bg-purple-500/10 px-2 py-0.5 rounded-full">
+                          {summary.total > 0
+                            ? Math.round(
+                                ((reportStats.delivery_total ?? 0) /
+                                  summary.total) *
+                                  100,
+                              )
+                            : 0}
+                          %
+                        </span>
+                      </div>
+                      <p className="text-2xl font-black text-purple-600 tracking-tighter">
+                        {formatPrice(reportStats.delivery_total ?? 0)}
+                      </p>
+                    </div>
+
+                    {/* Pendientes Domicilios Card */}
+                    <div className="bg-white/80 backdrop-blur-md p-5 rounded-2xl border-2 border-amber-500/20 shadow-sm space-y-1">
+                      <div className="flex items-center justify-between text-amber-600 mb-2">
+                        <span className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" /> Domicilios en Proceso
+                        </span>
+                      </div>
+                      <p className="text-2xl font-black text-amber-600 tracking-tighter">
+                        {formatPrice(reportStats.delivery_pending ?? 0)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                 {/* Payment Methods Visual Breakdown */}
@@ -1183,6 +1330,30 @@ export default function Reporteria() {
                       </h3>
                     </div>
                     <div className="bg-white/40 rounded-2xl border-2 border-white shadow-soft p-6 lg:p-8 space-y-4">
+                      {isDomiciliosStore && (
+                        <>
+                          <div className="flex items-center justify-between p-3 lg:p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                            <span className="font-bold text-sm lg:text-base text-blue-800 flex items-center gap-2">
+                              <StoreIcon className="h-4 w-4 text-blue-600" />
+                              Ventas en Caja
+                            </span>
+                            <div className="px-3 py-1 rounded-xl font-black text-sm lg:text-base bg-blue-500/10 text-blue-700">
+                              {formatPrice(reportStats.caja_total ?? 0)}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between p-3 lg:p-4 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                            <span className="font-bold text-sm lg:text-base text-purple-800 flex items-center gap-2">
+                              <Truck className="h-4 w-4 text-purple-600" />
+                              Ventas Domicilios
+                            </span>
+                            <div className="px-3 py-1 rounded-xl font-black text-sm lg:text-base bg-purple-500/10 text-purple-700">
+                              {formatPrice(reportStats.delivery_total ?? 0)}
+                            </div>
+                          </div>
+                          <div className="h-px bg-accent/20 my-2" />
+                        </>
+                      )}
+
                       {[
                         {
                           label: "Pedidos Entregados",
@@ -1532,13 +1703,15 @@ export default function Reporteria() {
                             <div
                               className={cn(
                                 "w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 shadow-md transition-all duration-300 shrink-0",
-                                isExpanded
-                                  ? "bg-primary text-white border-primary/10"
-                                  : "bg-white border-white text-primary",
+                                order.is_delivery
+                                  ? "bg-purple-600 text-white border-purple-500/20 shadow-purple-500/20"
+                                  : isExpanded
+                                    ? "bg-primary text-white border-primary/10"
+                                    : "bg-white border-white text-primary",
                               )}
                             >
-                              <span className="text-[8px] font-black opacity-40 uppercase leading-none mb-1">
-                                ORD
+                              <span className="text-[8px] font-black opacity-60 uppercase leading-none mb-1">
+                                {order.is_delivery ? "#DOM" : "ORD"}
                               </span>
                               <span className="text-xl font-black">
                                 {order.locator}
@@ -1547,7 +1720,16 @@ export default function Reporteria() {
 
                             <div className="min-w-0 flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
                               <div className="space-y-1 min-w-0">
-                                <div className="flex items-center gap-3 flex-wrap">
+                                <div className="flex items-center gap-2.5 flex-wrap">
+                                  {order.is_delivery ? (
+                                    <span className="inline-flex items-center gap-1 text-[8px] font-black bg-purple-500/10 text-purple-600 border border-purple-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                                      <Truck className="h-2.5 w-2.5" /> DOMICILIO
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[8px] font-black bg-blue-500/10 text-blue-600 border border-blue-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                                      <StoreIcon className="h-2.5 w-2.5" /> CAJA
+                                    </span>
+                                  )}
                                   <StatusBadge
                                     status={order.status}
                                     className="scale-75 origin-left"
@@ -1556,6 +1738,11 @@ export default function Reporteria() {
                                     {itemCount}{" "}
                                     {itemCount === 1 ? "ART" : "ARTS"} • {hora}
                                   </span>
+                                  {order.is_delivery && order.delivery_name && (
+                                    <span className="text-[9px] font-black text-purple-700 bg-purple-500/5 border border-purple-500/10 px-2.5 py-0.5 rounded-full">
+                                      Cliente: {order.delivery_name}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-4 flex-wrap">
                                   <p className="text-xl lg:text-2xl font-black tracking-tighter text-foreground">
@@ -1754,8 +1941,12 @@ export default function Reporteria() {
                                           },
                                           {
                                             label: "CANAL",
-                                            val: "TERMINAL POS",
-                                            icon: Smartphone,
+                                            val: order.is_delivery
+                                              ? "DOMICILIO"
+                                              : "TERMINAL CAJA",
+                                            icon: order.is_delivery
+                                              ? Truck
+                                              : StoreIcon,
                                           },
                                           {
                                             label: "OPERADOR",
@@ -1782,6 +1973,48 @@ export default function Reporteria() {
                                           </div>
                                         ))}
                                       </div>
+
+                                      {order.is_delivery &&
+                                        (order.delivery_address ||
+                                          order.delivery_phone) && (
+                                          <div className="p-5 bg-purple-500/5 rounded-3xl border-2 border-purple-500/10 space-y-3">
+                                            <p className="text-[9px] font-black text-purple-700 uppercase tracking-widest flex items-center gap-2">
+                                              <Truck className="h-4 w-4 text-purple-600" />
+                                              DATOS DE ENTREGA A DOMICILIO
+                                            </p>
+                                            <div className="space-y-2 text-xs">
+                                              {order.delivery_address && (
+                                                <div className="flex items-start gap-2 text-foreground/80 font-bold">
+                                                  <MapPin className="h-4 w-4 text-purple-500 shrink-0 mt-0.5" />
+                                                  <span className="leading-snug">
+                                                    {order.delivery_address}
+                                                  </span>
+                                                </div>
+                                              )}
+                                              {order.delivery_phone && (
+                                                <div className="flex items-center gap-2 text-purple-600 font-bold">
+                                                  <Phone className="h-3.5 w-3.5 shrink-0" />
+                                                  <a
+                                                    href={`tel:${order.delivery_phone}`}
+                                                    className="hover:underline"
+                                                  >
+                                                    {order.delivery_phone}
+                                                  </a>
+                                                </div>
+                                              )}
+                                              {(order.delivery_fee ?? 0) > 0 && (
+                                                <div className="pt-1">
+                                                  <span className="text-[10px] font-black text-purple-700 bg-purple-500/10 px-2.5 py-1 rounded-md">
+                                                    Costo de Envío:{" "}
+                                                    {formatPrice(
+                                                      order.delivery_fee ?? 0,
+                                                    )}
+                                                  </span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
                                     </div>
 
                                     <div className="bg-primary p-12 rounded-[3.5rem] shadow-strong shadow-primary/20 relative overflow-hidden group/total">
