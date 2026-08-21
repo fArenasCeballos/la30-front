@@ -110,27 +110,18 @@ export function AdminNewsBanner({
 }: AdminNewsBannerProps) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isBlinking, setIsBlinking] = useState(() => {
-    try {
-      const interacted = localStorage.getItem(
-        `la30_banner_interacted_${update?.id}`,
-      );
-      return isUnread && interacted !== "true";
-    } catch {
-      return isUnread;
-    }
-  });
+  const [hasInteracted, setHasInteracted] = useState(false);
 
-  const stopBlinking = () => {
-    if (isBlinking) {
-      setIsBlinking(false);
-      try {
-        localStorage.setItem(`la30_banner_interacted_${update.id}`, "true");
-      } catch {
-        // ignore
-      }
-      onInteract?.();
+  const shouldBlink = isUnread && !hasInteracted;
+
+  const handleInteraction = () => {
+    setHasInteracted(true);
+    try {
+      localStorage.setItem(`la30_banner_interacted_${update.id}`, "true");
+    } catch {
+      // ignore
     }
+    onInteract?.();
   };
 
   if (isDismissed || !update) return null;
@@ -140,70 +131,65 @@ export function AdminNewsBanner({
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
-      animate={
-        isBlinking
-          ? {
-              opacity: 1,
-              y: 0,
-              boxShadow: [
-                "0 2px 5px rgba(0,0,0,0.05)",
-                `0 0 24px 4px ${theme.glowShadow}`,
-                "0 2px 5px rgba(0,0,0,0.05)",
-              ],
-              borderColor: [
-                "rgba(147, 51, 234, 0.3)",
-                theme.glowBorder,
-                "rgba(147, 51, 234, 0.3)",
-              ],
-            }
-          : {
-              opacity: 1,
-              y: 0,
-              boxShadow:
-                "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
-            }
-      }
-      transition={
-        isBlinking
-          ? {
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }
-          : { duration: 0.3 }
-      }
+      animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, height: 0 }}
-      onClick={stopBlinking}
+      onClick={handleInteraction}
       className={cn(
-        "relative overflow-hidden rounded-3xl border bg-gradient-to-r backdrop-blur-sm p-4 sm:p-5 shadow-sm transition-colors",
+        "relative overflow-hidden rounded-3xl border bg-gradient-to-r backdrop-blur-sm p-4 sm:p-5 transition-all cursor-pointer select-none",
         theme.border,
         theme.containerBg,
+        shouldBlink
+          ? "ring-2 ring-purple-500/70 shadow-xl shadow-purple-500/25 border-purple-500/80"
+          : "shadow-sm",
       )}
     >
+      {/* Sweeping Light Shimmer Effect when unread */}
+      {shouldBlink && (
+        <motion.div
+          initial={{ x: "-100%" }}
+          animate={{ x: "250%" }}
+          transition={{
+            repeat: Infinity,
+            duration: 2.5,
+            ease: "easeInOut",
+          }}
+          className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-12 pointer-events-none z-10"
+        />
+      )}
+
       {/* Decorative ambient gradients */}
       <div
         className={cn(
           "absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl pointer-events-none",
           theme.glow1,
+          shouldBlink && "animate-pulse",
         )}
       />
       <div
         className={cn(
           "absolute -left-12 -bottom-12 w-40 h-40 rounded-full blur-2xl pointer-events-none",
           theme.glow2,
+          shouldBlink && "animate-pulse",
         )}
       />
 
-      <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="relative z-20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         {/* Left info */}
         <div className="flex items-start gap-3.5 min-w-0 flex-1">
           <div
             className={cn(
-              "w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br text-white flex items-center justify-center shrink-0 shadow-md",
+              "w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br text-white flex items-center justify-center shrink-0 shadow-md relative",
               theme.iconBg,
+              shouldBlink && "animate-bounce",
             )}
           >
-            <Sparkles className="w-5 h-5 animate-pulse" />
+            <Sparkles className="w-5 h-5" />
+            {shouldBlink && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500 border border-white" />
+              </span>
+            )}
           </div>
 
           <div className="space-y-1 min-w-0 flex-1">
@@ -216,14 +202,18 @@ export function AdminNewsBanner({
               >
                 {update.version}
               </Badge>
-              {isUnread && (
+              {shouldBlink && (
                 <span
                   className={cn(
-                    "flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-lg animate-pulse",
+                    "flex items-center gap-1.5 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-lg animate-pulse shadow-xs",
                     theme.unreadText,
                     theme.unreadBg,
                   )}
                 >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-600" />
+                  </span>
                   <BellRing className="w-3 h-3" />
                   Nueva Actualización
                 </span>
@@ -243,13 +233,13 @@ export function AdminNewsBanner({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/60">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/60 relative z-30">
           <Button
             variant="ghost"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              stopBlinking();
+              handleInteraction();
               setIsExpanded(!isExpanded);
             }}
             className="text-xs font-bold text-muted-foreground hover:text-foreground rounded-xl h-8 px-2 sm:px-3"
@@ -271,12 +261,13 @@ export function AdminNewsBanner({
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              stopBlinking();
+              handleInteraction();
               onOpenFullModal(update.id);
             }}
             className={cn(
-              "font-extrabold text-xs rounded-xl h-8 px-3.5 gap-1.5 shadow-sm",
+              "font-extrabold text-xs rounded-xl h-8 px-3.5 gap-1.5 shadow-md transition-all hover:scale-[1.03] active:scale-[0.97]",
               theme.buttonBg,
+              shouldBlink && "animate-pulse ring-2 ring-white/50",
             )}
           >
             Ver Poster Completo
@@ -288,7 +279,7 @@ export function AdminNewsBanner({
             size="icon"
             onClick={(e) => {
               e.stopPropagation();
-              stopBlinking();
+              handleInteraction();
               setIsDismissed(true);
             }}
             className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-black/5"
