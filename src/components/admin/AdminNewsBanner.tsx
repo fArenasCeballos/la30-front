@@ -11,6 +11,83 @@ interface AdminNewsBannerProps {
   isUnread?: boolean;
 }
 
+const BANNER_THEMES: Record<
+  AppUpdate["gradientTheme"],
+  {
+    containerBg: string;
+    border: string;
+    iconBg: string;
+    badgeBg: string;
+    buttonBg: string;
+    glow1: string;
+    glow2: string;
+    unreadText: string;
+    unreadBg: string;
+    highlightBorder: string;
+  }
+> = {
+  purple: {
+    containerBg: "from-purple-500/15 via-indigo-500/10 to-violet-500/15",
+    border: "border-purple-500/30",
+    iconBg: "from-purple-600 to-indigo-600 shadow-purple-500/30",
+    badgeBg: "bg-purple-600 hover:bg-purple-700 text-white shadow-purple-500/20",
+    buttonBg: "bg-purple-600 hover:bg-purple-700 text-white shadow-purple-500/25",
+    glow1: "bg-purple-500/15",
+    glow2: "bg-indigo-500/15",
+    unreadText: "text-purple-700",
+    unreadBg: "bg-purple-500/15 border border-purple-500/20",
+    highlightBorder: "border-purple-500/15",
+  },
+  sunset: {
+    containerBg: "from-orange-500/10 via-amber-500/10 to-rose-500/10",
+    border: "border-orange-500/25",
+    iconBg: "from-primary to-amber-500 shadow-primary/25",
+    badgeBg: "bg-primary hover:bg-primary/90 text-white shadow-primary/20",
+    buttonBg: "bg-primary hover:bg-primary/90 text-white shadow-primary/20",
+    glow1: "bg-primary/10",
+    glow2: "bg-amber-500/10",
+    unreadText: "text-amber-600",
+    unreadBg: "bg-amber-500/15",
+    highlightBorder: "border-primary/10",
+  },
+  ocean: {
+    containerBg: "from-blue-500/15 via-indigo-500/10 to-cyan-500/15",
+    border: "border-blue-500/30",
+    iconBg: "from-blue-600 to-indigo-600 shadow-blue-500/30",
+    badgeBg: "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20",
+    buttonBg: "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/25",
+    glow1: "bg-blue-500/15",
+    glow2: "bg-cyan-500/15",
+    unreadText: "text-blue-700",
+    unreadBg: "bg-blue-500/15 border border-blue-500/20",
+    highlightBorder: "border-blue-500/15",
+  },
+  emerald: {
+    containerBg: "from-emerald-500/15 via-teal-500/10 to-green-500/15",
+    border: "border-emerald-500/30",
+    iconBg: "from-emerald-600 to-teal-600 shadow-emerald-500/30",
+    badgeBg: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20",
+    buttonBg: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/25",
+    glow1: "bg-emerald-500/15",
+    glow2: "bg-teal-500/15",
+    unreadText: "text-emerald-700",
+    unreadBg: "bg-emerald-500/15 border border-emerald-500/20",
+    highlightBorder: "border-emerald-500/15",
+  },
+  midnight: {
+    containerBg: "from-slate-800/15 via-zinc-800/10 to-slate-900/15",
+    border: "border-slate-700/30",
+    iconBg: "from-slate-800 to-zinc-900 shadow-slate-900/30",
+    badgeBg: "bg-slate-800 hover:bg-slate-900 text-white shadow-slate-800/20",
+    buttonBg: "bg-slate-800 hover:bg-slate-900 text-white shadow-slate-800/25",
+    glow1: "bg-slate-500/15",
+    glow2: "bg-zinc-500/15",
+    unreadText: "text-slate-800",
+    unreadBg: "bg-slate-500/15 border border-slate-500/20",
+    highlightBorder: "border-slate-700/15",
+  },
+};
+
 export function AdminNewsBanner({
   onOpenFullModal,
   update = APP_UPDATES[0],
@@ -21,31 +98,63 @@ export function AdminNewsBanner({
 
   if (isDismissed || !update) return null;
 
+  const theme = BANNER_THEMES[update.gradientTheme] || BANNER_THEMES.purple;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, height: 0 }}
-      className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-rose-500/10 backdrop-blur-sm p-4 sm:p-5 shadow-sm"
+      className={cn(
+        "relative overflow-hidden rounded-3xl border bg-gradient-to-r backdrop-blur-sm p-4 sm:p-5 shadow-sm",
+        theme.border,
+        theme.containerBg,
+      )}
     >
       {/* Decorative ambient gradients */}
-      <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -left-12 -bottom-12 w-40 h-40 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+      <div
+        className={cn(
+          "absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl pointer-events-none",
+          theme.glow1,
+        )}
+      />
+      <div
+        className={cn(
+          "absolute -left-12 -bottom-12 w-40 h-40 rounded-full blur-2xl pointer-events-none",
+          theme.glow2,
+        )}
+      />
 
       <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         {/* Left info */}
         <div className="flex items-start gap-3.5 min-w-0 flex-1">
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-primary to-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-primary/25">
+          <div
+            className={cn(
+              "w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br text-white flex items-center justify-center shrink-0 shadow-md",
+              theme.iconBg,
+            )}
+          >
             <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
 
           <div className="space-y-1 min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-primary hover:bg-primary/90 text-white font-black text-[10px] tracking-wide uppercase px-2 py-0.5 rounded-lg border-0 shadow-xs">
+              <Badge
+                className={cn(
+                  "font-black text-[10px] tracking-wide uppercase px-2.5 py-0.5 rounded-lg border-0 shadow-xs",
+                  theme.badgeBg,
+                )}
+              >
                 {update.version}
               </Badge>
               {isUnread && (
-                <span className="flex items-center gap-1 text-[10px] font-black uppercase text-amber-600 bg-amber-500/15 px-2 py-0.5 rounded-lg animate-pulse">
+                <span
+                  className={cn(
+                    "flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-lg animate-pulse",
+                    theme.unreadText,
+                    theme.unreadBg,
+                  )}
+                >
                   <BellRing className="w-3 h-3" />
                   Nueva Actualización
                 </span>
@@ -88,7 +197,10 @@ export function AdminNewsBanner({
           <Button
             size="sm"
             onClick={() => onOpenFullModal(update.id)}
-            className="bg-primary hover:bg-primary/90 text-white font-extrabold text-xs rounded-xl h-8 px-3.5 shadow-sm shadow-primary/20 gap-1.5"
+            className={cn(
+              "font-extrabold text-xs rounded-xl h-8 px-3.5 gap-1.5 shadow-sm",
+              theme.buttonBg,
+            )}
           >
             Ver Poster Completo
             <ArrowRight className="w-3.5 h-3.5" />
@@ -114,12 +226,18 @@ export function AdminNewsBanner({
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="relative z-10 pt-4 mt-3 border-t border-primary/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"
+            className={cn(
+              "relative z-10 pt-4 mt-3 border-t grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2",
+              theme.highlightBorder,
+            )}
           >
             {update.items.slice(0, 3).map((item, idx) => (
               <div
                 key={idx}
-                className="bg-white/60 dark:bg-card/60 backdrop-blur-xs p-2.5 rounded-xl border border-primary/10 space-y-0.5"
+                className={cn(
+                  "bg-white/60 dark:bg-card/60 backdrop-blur-xs p-2.5 rounded-xl border space-y-0.5",
+                  theme.highlightBorder,
+                )}
               >
                 <p className="text-xs font-bold text-foreground truncate">
                   {item.title}
