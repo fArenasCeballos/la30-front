@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { APP_UPDATES, type AppUpdate } from "@/data/appUpdates";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface AdminNewsBannerProps {
   onOpenFullModal: (updateId?: string) => void;
