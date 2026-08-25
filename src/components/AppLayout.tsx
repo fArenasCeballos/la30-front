@@ -13,6 +13,7 @@ import {
   Store,
   Truck,
   Settings,
+  UtensilsCrossed,
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { NavLink } from "@/components/NavLink";
@@ -73,6 +74,12 @@ const NAV_ITEMS: {
     roles: ["mesero", "caja", "admin"],
   },
   {
+    to: "/consumo-interno",
+    label: "Consumo Interno",
+    icon: UtensilsCrossed,
+    roles: ["caja", "admin"],
+  },
+  {
     to: "/administracion",
     label: "Administración",
     icon: Settings,
@@ -83,7 +90,8 @@ const NAV_ITEMS: {
 export function AppLayout() {
   const { user, logout, logoutAll, forceReset, isAuthenticated, loading } =
     useAuth();
-  const { activeStore, isAdmin, loading: storeLoading } = useStore();
+  const { activeStore, canSwitchStore, loading: storeLoading } =
+    useStore();
   const navigate = useNavigate();
   const location = useLocation();
   const ecosystem = location.pathname.startsWith("/kiosko")
@@ -126,18 +134,25 @@ export function AppLayout() {
     };
   }, []);
 
-  // Guard: Admin without store should go to selector
+  // Guard: User without active store should go to selector if they have multiple stores
   useEffect(() => {
     if (
       !loading &&
       !storeLoading &&
       isAuthenticated &&
-      isAdmin &&
+      canSwitchStore &&
       !activeStore
     ) {
       navigate("/select-store", { replace: true });
     }
-  }, [loading, storeLoading, isAuthenticated, isAdmin, activeStore, navigate]);
+  }, [
+    loading,
+    storeLoading,
+    isAuthenticated,
+    canSwitchStore,
+    activeStore,
+    navigate,
+  ]);
 
   // Guard: Prevent accessing /domicilios if the active store is not Domicilios
   useEffect(() => {
@@ -275,17 +290,18 @@ export function AppLayout() {
 
           {activeStore && (
             <button
-              onClick={() => (isAdmin ? navigate("/select-store") : undefined)}
+              onClick={() => (canSwitchStore ? navigate("/select-store") : undefined)}
               className={cn(
                 "flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 2xl:px-5 py-1.5 lg:py-2 rounded-xl lg:rounded-2xl text-[10px] lg:text-[11px] 2xl:text-sm font-black transition-all border-2 shadow-soft min-w-0",
-                isAdmin
+                canSwitchStore
                   ? "bg-white hover:border-primary/30 hover:shadow-medium cursor-pointer"
                   : "cursor-default bg-accent/30 border-transparent",
               )}
               style={{
                 color: activeStore.color || undefined,
-                borderColor: isAdmin ? undefined : `${activeStore.color}20`,
+                borderColor: canSwitchStore ? undefined : `${activeStore.color}20`,
               }}
+              title={canSwitchStore ? "Cambiar punto de venta" : undefined}
             >
               <div className="h-5 w-5 lg:h-6 lg:w-6 rounded-lg bg-current/10 flex items-center justify-center shrink-0">
                 <Store className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
@@ -294,7 +310,7 @@ export function AppLayout() {
                 {activeStore.name}
               </span>
               <span className="sm:hidden">{activeStore.icon}</span>
-              {isAdmin && (
+              {canSwitchStore && (
                 <Wrench className="h-2.5 w-2.5 opacity-30 ml-0.5 lg:ml-1 shrink-0" />
               )}
             </button>

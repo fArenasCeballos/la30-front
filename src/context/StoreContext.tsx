@@ -12,6 +12,7 @@ export interface StoreContextType {
   setActiveStore: (store: Store) => void;
   loading: boolean;
   isAdmin: boolean;
+  canSwitchStore: boolean;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -54,6 +55,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           // Fallback to legacy single store_id if allowed_store_ids is empty
           loadedStores = loadedStores.filter(s => s.id === profile.store_id);
         }
+        // If profile.allowed_store_ids is null/empty and profile.store_id is null,
+        // it means GLOBAL ACCESS, so loadedStores contains all stores.
       }
 
       setStores(loadedStores);
@@ -90,6 +93,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const canSwitchStore = isAdmin || stores.length > 1;
+
   const value = useMemo(
     () => ({
       stores,
@@ -97,8 +102,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setActiveStore,
       loading,
       isAdmin,
+      canSwitchStore,
     }),
-    [stores, activeStore, setActiveStore, loading, isAdmin],
+    [stores, activeStore, setActiveStore, loading, isAdmin, canSwitchStore],
   );
 
   return (

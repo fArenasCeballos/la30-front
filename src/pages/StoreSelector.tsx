@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { useStore } from "@/context/StoreContext";
+import { useAuth } from "@/context/AuthContext";
 import type { Store } from "@/types";
 
 export default function StoreSelector() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { stores, setActiveStore } = useStore();
 
   const activeStores = stores.filter((s) => s.is_active);
@@ -11,8 +13,22 @@ export default function StoreSelector() {
 
   const handleSelect = (store: Store) => {
     setActiveStore(store);
-    const destination = store.slug === "domicilios" ? "/domicilios" : "/";
-    navigate(destination, { replace: true });
+    
+    if (store.slug === "domicilios" && (user?.role === "admin" || user?.role === "caja")) {
+      navigate("/domicilios", { replace: true });
+    } else if (user?.role === "mesero") {
+      navigate("/kiosko", { replace: true });
+    } else if (user?.role === "cocina") {
+      navigate("/cocina", { replace: true });
+    } else if (user?.role === "caja") {
+      navigate("/caja", { replace: true });
+    } else if (user?.role === "admin") {
+      navigate(store.slug === "domicilios" ? "/domicilios" : "/dashboard", { replace: true });
+    } else if (user?.role === "bodega") {
+      navigate("/administracion?tab=bodega", { replace: true });
+    } else {
+      navigate("/", { replace: true });
+    }
   };
 
   return (

@@ -20,6 +20,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MisPedidos = lazy(() => import("./pages/MisPedidos"));
 const Domicilios = lazy(() => import("./pages/Domicilios"));
 const Administracion = lazy(() => import("./pages/Administracion"));
+const ConsumoInterno = lazy(() => import("./pages/ConsumoInterno"));
 const StoreSelector = lazy(() => import("./pages/StoreSelector"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -119,6 +120,10 @@ const App = () => (
                         />
 
                         <Route path="/mis-pedidos" element={<MisPedidos />} />
+                        <Route
+                          path="/consumo-interno"
+                          element={<ConsumoInterno />}
+                        />
                         <Route
                           path="/consultas"
                           element={

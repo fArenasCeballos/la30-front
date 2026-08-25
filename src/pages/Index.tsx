@@ -12,7 +12,7 @@ const ROLE_ROUTES: Record<string, string> = {
 
 export default function Index() {
   const { user, isAuthenticated, loading } = useAuth();
-  const { activeStore, loading: storeLoading } = useStore();
+  const { activeStore, canSwitchStore, loading: storeLoading } = useStore();
 
   if (loading || storeLoading) {
     return (
@@ -29,22 +29,17 @@ export default function Index() {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  // Admin or Bodega without an active store → send to store selector
-  if ((user?.role === "admin" || user?.role === "bodega") && !activeStore) {
+  // User without an active store who can switch stores → send to store selector
+  if (canSwitchStore && !activeStore) {
     return <Navigate to="/select-store" replace />;
   }
 
-  // If active store is Domicilios, go directly to the delivery module
-  if (user?.role === "admin" && activeStore?.slug === "domicilios") {
+  // If active store is Domicilios, go directly to the delivery module for admin/caja
+  if ((user?.role === "admin" || user?.role === "caja") && activeStore?.slug === "domicilios") {
     return <Navigate to="/domicilios" replace />;
   }
 
   const target = user ? ROLE_ROUTES[user.role] || "/caja" : "/login";
-  
-  // Extra safety: If we are going to dashboard but have no store (as admin), don't
-  if (target === "/dashboard" && !activeStore && user?.role === "admin") {
-    return <Navigate to="/select-store" replace />;
-  }
 
   return <Navigate to={target} replace />;
 }

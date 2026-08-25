@@ -120,7 +120,7 @@ export default function Usuarios() {
     setFormPassword("");
     setFormRole("mesero");
     setFormStoreIds([]);
-    setIsGlobalAccess(false);
+    setIsGlobalAccess(true);
     setNewPassword("");
     setShowPassword(false);
     setShowForm(true);
@@ -131,7 +131,7 @@ export default function Usuarios() {
     setFormName(p.name || "");
     setFormRole((p.role as UserRole) || "mesero");
 
-    if (p.role === "admin" || (p.allowed_store_ids === null && !p.store_id)) {
+    if (p.role === "admin" || (!p.allowed_store_ids && !p.store_id)) {
       setIsGlobalAccess(true);
       setFormStoreIds([]);
     } else {
@@ -193,25 +193,40 @@ export default function Usuarios() {
     }
 
     setIsSubmitting(true);
+    const targetAllowedStoreIds =
+      isGlobalAccess || formRole === "admin"
+        ? null
+        : formStoreIds.length > 0
+          ? formStoreIds
+          : null;
+    const targetStoreId =
+      isGlobalAccess || formRole === "admin"
+        ? null
+        : formStoreIds[0] || null;
+
     if (editingProfile) {
       const { error } = await supabase
         .from("profiles")
         .update({
           name: formName,
           role: formRole,
-          store_id: isGlobalAccess ? null : formStoreIds[0] || null, // legacy compat
+          store_id: targetStoreId,
+          allowed_store_ids: targetAllowedStoreIds,
         })
         .eq("id", editingProfile.id);
 
       if (error) {
         toast.error(`Error: ${error.message}`);
       } else {
-        // Guardar las tiendas permitidas
-        await supabase.rpc("update_user_allowed_stores", {
-          p_user_id: editingProfile.id,
-          p_store_ids:
-            isGlobalAccess || formRole === "admin" ? null : formStoreIds,
-        });
+        // Guardar las tiendas permitidas via RPC también por compatibilidad
+        try {
+          await supabase.rpc("update_user_allowed_stores", {
+            p_user_id: editingProfile.id,
+            p_store_ids: targetAllowedStoreIds,
+          });
+        } catch {
+          // Ignore
+        }
 
         if (newPassword.trim()) {
           const { error: pwdError } = await supabase.rpc(
@@ -260,7 +275,7 @@ export default function Usuarios() {
             data: {
               full_name: formName,
               role: formRole,
-              store_id: isGlobalAccess ? null : formStoreIds[0] || null,
+              store_id: targetStoreId,
             },
           },
         });
@@ -269,11 +284,22 @@ export default function Usuarios() {
           toast.error(`Error al crear usuario: ${error.message}`);
         } else {
           if (signUpData.user) {
-            await supabase.rpc("update_user_allowed_stores", {
-              p_user_id: signUpData.user.id,
-              p_store_ids:
-                isGlobalAccess || formRole === "admin" ? null : formStoreIds,
-            });
+            await supabase
+              .from("profiles")
+              .update({
+                allowed_store_ids: targetAllowedStoreIds,
+                store_id: targetStoreId,
+              })
+              .eq("id", signUpData.user.id);
+
+            try {
+              await supabase.rpc("update_user_allowed_stores", {
+                p_user_id: signUpData.user.id,
+                p_store_ids: targetAllowedStoreIds,
+              });
+            } catch {
+              // Ignore
+            }
           }
           toast.success("Usuario creado exitosamente.");
           setTimeout(fetchProfiles, 1500);
@@ -668,7 +694,7 @@ export default function Usuarios() {
                       </div>
                     ) : (
                       <>
-                        <div className="flex items-center space-x-3 pb-4 border-b-2 border-accent/10">
+                        <div className="flex items-center space-x-3 pb-3 border-b-2 border-accent/10">
                           <Checkbox
                             id="global-access"
                             checked={isGlobalAccess}
@@ -683,21 +709,23 @@ export default function Usuarios() {
                             htmlFor="global-access"
                             className="text-sm font-black leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                           >
-                            Acceso Global (Todas las tiendas presentes y
-                            futuras)
+                            Acceso Global (Todas las tiendas)
                           </label>
                         </div>
 
                         <div
                           className={cn(
-                            "space-y-3 transition-opacity",
-                            isGlobalAccess && "opacity-50 pointer-events-none",
+                            "space-y-2.5 transition-opacity",
+                            isGlobalAccess && "opacity-40 pointer-events-none",
                           )}
                         >
+                          <p className="text-[11px] font-bold text-muted-foreground/70 mb-1">
+                            O selecciona una o varias tiendas asignadas:
+                          </p>
                           {stores.map((s) => (
                             <div
                               key={s.id}
-                              className="flex items-center space-x-3"
+                              className="flex items-center space-x-3 p-1.5 rounded-lg hover:bg-white/60 transition-colors"
                             >
                               <Checkbox
                                 id={`store-${s.id}`}
@@ -714,9 +742,10 @@ export default function Usuarios() {
                               />
                               <label
                                 htmlFor={`store-${s.id}`}
-                                className="text-sm font-bold leading-none cursor-pointer"
+                                className="text-sm font-bold leading-none cursor-pointer flex items-center gap-2 flex-1"
                               >
-                                {s.name}
+                                <span className="text-base">{s.icon}</span>
+                                <span>{s.name}</span>
                               </label>
                             </div>
                           ))}

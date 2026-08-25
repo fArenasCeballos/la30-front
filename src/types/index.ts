@@ -188,3 +188,15 @@ export interface StoreOperatingHour {
   is_open: boolean;
   created_at: string;
 }
+
+// Internal Consumption (Consumo Interno) types
+export type {
+  InternalConsumerType,
+  InternalPaymentStatus,
+  InternalPartner,
+  InternalConsumption,
+  InternalConsumptionWithItems,
+  InternalConsumptionItem,
+  InternalConsumptionPayment,
+  MonthlyAccountStatement,
+} from "./internalConsumption.types";
