@@ -52,13 +52,13 @@ export function buildInternalConsumptionReceiptHTML(
       (item) => `
     <tr>
       <td>
-        ${item.product_name}
-        ${item.is_beverage ? '<span style="font-size:10px;"> (Bebida)</span>' : ""}
-        ${item.discount_percent > 0 ? `<br><span style="font-size:10px;text-decoration:line-through;">${formatPrice(item.original_price)}</span> <b>-${item.discount_percent}%</b>` : ""}
+        <span class="bold">${item.product_name}</span>
+        ${item.is_beverage ? '<span class="bold" style="font-size:11px;"> (Bebida)</span>' : ""}
+        ${item.discount_percent > 0 ? `<br><span class="bold" style="font-size:11px;text-decoration:line-through;">${formatPrice(item.original_price)}</span> <b class="bold">-${item.discount_percent}%</b>` : ""}
         ${item.notes ? `<br><span class="item-notes">↳ ${item.notes}</span>` : ""}
       </td>
-      <td style="text-align:center;">${item.quantity}</td>
-      <td style="text-align:right;">${formatPrice(item.subtotal)}</td>
+      <td style="text-align:center;" class="bold">${item.quantity}</td>
+      <td style="text-align:right;" class="bold">${formatPrice(item.subtotal)}</td>
     </tr>
   `,
     )
@@ -69,25 +69,25 @@ export function buildInternalConsumptionReceiptHTML(
 <html><head><style>${PRINT_STYLES}</style></head>
 <body>
   <div class="center">
-    <div class="header-title">🍔 LA 30</div>
-    <div style="font-size:11px;font-weight:bold;">CONSUMO INTERNO</div>
-    <div style="font-size:10px;">${storeName}</div>
-    <div style="font-size:10px;">${dateStr}</div>
+    <div class="header-title">LA 30</div>
+    <div class="bold" style="font-size:12px;">CONSUMO INTERNO</div>
+    <div class="bold" style="font-size:11px;">${storeName}</div>
+    <div class="bold" style="font-size:11px;">${dateStr}</div>
   </div>
 
   <div class="double-divider"></div>
 
   <div class="row">
     <span class="bold">Beneficiario:</span>
-    <span>${c.consumer_name}</span>
+    <span class="bold">${c.consumer_name}</span>
   </div>
   <div class="row">
     <span class="bold">Tipo:</span>
-    <span>${c.consumer_type === "employee" ? "Empleado" : "Socio"}</span>
+    <span class="bold">${c.consumer_type === "employee" ? "Empleado" : "Socio"}</span>
   </div>
   <div class="row">
     <span class="bold">Cajero:</span>
-    <span>${cashierName}</span>
+    <span class="bold">${cashierName}</span>
   </div>
 
   <div class="divider"></div>
@@ -108,12 +108,12 @@ export function buildInternalConsumptionReceiptHTML(
   <div class="divider"></div>
 
   <div class="row">
-    <span>Precio Original:</span>
-    <span style="text-decoration:line-through;">${formatPrice(c.total_original)}</span>
+    <span class="bold">Precio Original:</span>
+    <span class="bold" style="text-decoration:line-through;">${formatPrice(c.total_original)}</span>
   </div>
   <div class="row">
-    <span>Descuento Empleado:</span>
-    <span>-${formatPrice(c.discount_total)}</span>
+    <span class="bold">Descuento Empleado:</span>
+    <span class="bold">-${formatPrice(c.discount_total)}</span>
   </div>
 
   <div class="double-divider"></div>
@@ -129,11 +129,11 @@ export function buildInternalConsumptionReceiptHTML(
     <span class="bold">Estado:</span>
     <span class="bold">${statusLabel}</span>
   </div>
-  ${c.payment_method ? `<div class="row"><span>Método:</span><span>${c.payment_method}</span></div>` : ""}
-  ${c.notes ? `<div style="font-size:11px;margin-top:4px;">Obs: ${c.notes}</div>` : ""}
+  ${c.payment_method ? `<div class="row"><span class="bold">Método:</span><span class="bold">${c.payment_method}</span></div>` : ""}
+  ${c.notes ? `<div class="bold" style="font-size:12px;margin-top:4px;">Obs: ${c.notes}</div>` : ""}
 
   <div class="divider"></div>
-  <div class="center" style="font-size:10px;margin-top:4px;">
+  <div class="center bold" style="font-size:11px;margin-top:4px;">
     <div>*** CONSUMO INTERNO ***</div>
     <div>No válido como factura</div>
     <div>No aplica para DIAN</div>
@@ -170,9 +170,9 @@ export function buildCuentaDeCobroHTML(
             : "🔴";
       return `
       <tr>
-        <td>${dateStr}</td>
+        <td class="bold">${dateStr}</td>
         <td>${statusIcon}</td>
-        <td style="text-align:right;">${formatPrice(c.total)}</td>
+        <td style="text-align:right;" class="bold">${formatPrice(c.total)}</td>
       </tr>`;
     })
     .join("");
@@ -185,9 +185,9 @@ export function buildCuentaDeCobroHTML(
       });
       return `
       <tr>
-        <td>${dateStr}</td>
-        <td>${p.payment_method}</td>
-        <td style="text-align:right;">${formatPrice(p.amount)}</td>
+        <td class="bold">${dateStr}</td>
+        <td class="bold">${p.payment_method}</td>
+        <td style="text-align:right;" class="bold">${formatPrice(p.amount)}</td>
       </tr>`;
     })
     .join("");
@@ -197,30 +197,30 @@ export function buildCuentaDeCobroHTML(
 <html><head><style>${PRINT_STYLES}</style></head>
 <body>
   <div class="center">
-    <div class="header-title">🍔 LA 30</div>
-    <div style="font-size:14px;font-weight:bold;">CUENTA DE COBRO</div>
-    <div style="font-size:11px;">CONSUMO INTERNO</div>
-    <div style="font-size:10px;">${storeName}</div>
+    <div class="header-title">LA 30</div>
+    <div class="bold" style="font-size:14px;">CUENTA DE COBRO</div>
+    <div class="bold" style="font-size:11.5px;">CONSUMO INTERNO</div>
+    <div class="bold" style="font-size:11px;">${storeName}</div>
   </div>
 
   <div class="double-divider"></div>
 
   <div class="row">
     <span class="bold">Nombre:</span>
-    <span>${statement.consumerName}</span>
+    <span class="bold">${statement.consumerName}</span>
   </div>
   <div class="row">
     <span class="bold">Tipo:</span>
-    <span>${statement.consumerType === "employee" ? "Empleado" : "Socio"}</span>
+    <span class="bold">${statement.consumerType === "employee" ? "Empleado" : "Socio"}</span>
   </div>
   <div class="row">
     <span class="bold">Período:</span>
-    <span>${monthLabel}</span>
+    <span class="bold">${monthLabel}</span>
   </div>
 
   <div class="divider"></div>
 
-  <div class="bold center" style="font-size:12px;margin:4px 0;">CONSUMOS DEL MES</div>
+  <div class="bold center" style="font-size:13px;margin:4px 0;">CONSUMOS DEL MES</div>
   <table>
     <thead>
       <tr>
@@ -230,7 +230,7 @@ export function buildCuentaDeCobroHTML(
       </tr>
     </thead>
     <tbody>
-      ${consumptionRows || '<tr><td colspan="3" class="center">Sin consumos</td></tr>'}
+      ${consumptionRows || '<tr><td colspan="3" class="center bold">Sin consumos</td></tr>'}
     </tbody>
   </table>
 
@@ -238,7 +238,7 @@ export function buildCuentaDeCobroHTML(
     paymentRows
       ? `
     <div class="divider"></div>
-    <div class="bold center" style="font-size:12px;margin:4px 0;">ABONOS / PAGOS</div>
+    <div class="bold center" style="font-size:13px;margin:4px 0;">ABONOS / PAGOS</div>
     <table>
       <thead>
         <tr>
@@ -256,12 +256,12 @@ export function buildCuentaDeCobroHTML(
   <div class="double-divider"></div>
 
   <div class="row">
-    <span>Total Consumido:</span>
-    <span>${formatPrice(statement.totalConsumed)}</span>
+    <span class="bold">Total Consumido:</span>
+    <span class="bold">${formatPrice(statement.totalConsumed)}</span>
   </div>
   <div class="row">
-    <span>Total Pagado:</span>
-    <span>${formatPrice(statement.totalPaid)}</span>
+    <span class="bold">Total Pagado:</span>
+    <span class="bold">${formatPrice(statement.totalPaid)}</span>
   </div>
 
   <div class="double-divider"></div>
@@ -274,19 +274,19 @@ export function buildCuentaDeCobroHTML(
   <div class="divider"></div>
 
   <div style="margin-top:20px;">
-    <div style="font-size:10px;">Firma de conformidad:</div>
-    <div style="border-bottom:1px solid #000;margin-top:25px;width:100%;"></div>
-    <div style="font-size:9px;text-align:center;margin-top:2px;">${statement.consumerName}</div>
+    <div class="bold" style="font-size:11px;">Firma de conformidad:</div>
+    <div style="border-bottom:1.5px solid #000000;margin-top:25px;width:100%;"></div>
+    <div class="bold" style="font-size:10px;text-align:center;margin-top:2px;">${statement.consumerName}</div>
   </div>
 
   <div style="margin-top:10px;">
-    <div style="font-size:10px;">Firma de la empresa:</div>
-    <div style="border-bottom:1px solid #000;margin-top:25px;width:100%;"></div>
-    <div style="font-size:9px;text-align:center;margin-top:2px;">La 30 — Administración</div>
+    <div class="bold" style="font-size:11px;">Firma de la empresa:</div>
+    <div style="border-bottom:1.5px solid #000000;margin-top:25px;width:100%;"></div>
+    <div class="bold" style="font-size:10px;text-align:center;margin-top:2px;">La 30 — Administración</div>
   </div>
 
   <div class="divider" style="margin-top:10px;"></div>
-  <div class="center" style="font-size:9px;margin-top:4px;">
+  <div class="center bold" style="font-size:10px;margin-top:4px;">
     <div>Documento interno — No válido como factura</div>
     <div>Generado el ${new Date().toLocaleString("es-CO")}</div>
   </div>

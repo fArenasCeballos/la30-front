@@ -11,7 +11,7 @@ export const PRINT_STYLES = `
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    color: #000 !important;
+    color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -21,26 +21,29 @@ export const PRINT_STYLES = `
     margin: 0 auto;
     padding: 0 1mm 4mm 1mm;
     font-size: 13px;
-    color: #000 !important;
-    line-height: 1.15;
-    background: #fff;
-    -webkit-font-smoothing: antialiased;
+    font-weight: bold;
+    color: #000000 !important;
+    line-height: 1.2;
+    background: #ffffff !important;
+    -webkit-font-smoothing: none;
   }
   .center   { text-align: center; }
   .right    { text-align: right; }
-  .bold     { font-weight: bold; }
-  .divider  { border-top: 1px dashed #000; margin: 4px 0; }
+  .bold     { font-weight: 900 !important; }
+  .divider  { border-top: 1.5px dashed #000000; margin: 4px 0; }
   .double-divider {
-    border-top: 2px solid #000;
-    border-bottom: 2px solid #000;
-    padding: 2px 0;
+    border-top: 2px solid #000000;
+    border-bottom: 2px solid #000000;
+    padding: 3px 0;
     margin: 4px 0;
   }
   .row {
     display: flex;
     justify-content: space-between;
-    padding: 1px 0;
+    padding: 1.5px 0;
     word-break: break-word;
+    font-weight: bold;
+    color: #000000 !important;
   }
   table {
     width: 100%;
@@ -49,74 +52,82 @@ export const PRINT_STYLES = `
     margin: 4px 0;
   }
   th {
-    border-bottom: 1px solid #000;
-    border-top: 1px solid #000;
-    padding: 2px 0;
-    font-size: 12px;
-    font-weight: bold;
+    border-bottom: 1.5px solid #000000;
+    border-top: 1.5px solid #000000;
+    padding: 3px 0;
+    font-size: 12.5px;
+    font-weight: 900;
     text-align: left;
+    color: #000000 !important;
   }
   th:last-child { text-align: right; }
   td {
-    padding: 2px 0;
+    padding: 3px 0;
     vertical-align: top;
-    font-size: 12px;
+    font-size: 12.5px;
+    font-weight: bold;
+    color: #000000 !important;
     word-break: break-word;
   }
-  td:first-child { width: 58%; }
-  td:nth-child(2) { width: 14%; text-align: center; }
-  td:last-child { width: 28%; text-align: right; }
+  td:first-child { width: 56%; }
+  td:nth-child(2) { width: 14%; text-align: center; font-weight: 900; }
+  td:last-child { width: 30%; text-align: right; font-weight: 900; }
   .item-notes {
-    font-size: 11px;
-    font-weight: bold;
+    font-size: 11.5px;
+    font-weight: 900;
     padding-left: 4px;
     word-break: break-word;
+    color: #000000 !important;
   }
   .header-title {
-    font-size: 16px;
-    font-weight: bold;
+    font-size: 17px;
+    font-weight: 900;
     margin-bottom: 2px;
+    letter-spacing: 0.5px;
   }
   .total-row {
-    font-size: 15px;
-    font-weight: bold;
+    font-size: 16px;
+    font-weight: 900;
     margin-top: 4px;
   }
   .big-total {
-    font-size: 18px;
-    font-weight: bold;
+    font-size: 19px;
+    font-weight: 900;
   }
   /* ── Comanda de cocina ───────────────────────────────────── */
   .kitchen-title {
     font-size: 28px;
-    font-weight: bold;
-    border: 3px solid #000;
+    font-weight: 900;
+    border: 3px solid #000000;
     display: inline-block;
-    padding: 2px 12px;
+    padding: 2px 14px;
     margin-bottom: 6px;
+    letter-spacing: 1px;
   }
   .kitchen-locator {
-    font-size: 70px;
-    font-weight: bold;
+    font-size: 72px;
+    font-weight: 900;
     line-height: 1;
   }
   .kitchen-ticket {
-    font-size: 20px;
+    font-size: 22px;
+    font-weight: 900;
   }
   .kitchen-cashier {
-    font-size: 15px;
-    font-weight: bold;
+    font-size: 16px;
+    font-weight: 900;
   }
   .kitchen-item-name {
     font-size: 28px;
-    font-weight: bold;
+    font-weight: 900;
     padding: 6px 0 2px;
-    border-bottom: 2px solid #000;
+    border-bottom: 2.5px solid #000000;
     word-break: break-word;
+    line-height: 1.15;
   }
   .kitchen-item-notes {
     font-size: 18px;
-    font-weight: bold;
+    font-weight: 900;
     padding-left: 6px;
     margin-bottom: 8px;
     line-height: 1.25;
@@ -124,20 +135,22 @@ export const PRINT_STYLES = `
   }
   .kitchen-footer-notes {
     font-size: 18px;
-    font-weight: bold;
-    background: #fff;
-    padding: 4px;
-    border: 2px dashed #000;
+    font-weight: 900;
+    background: #ffffff;
+    padding: 5px;
+    border: 2px dashed #000000;
     margin-top: 8px;
     word-break: break-word;
   }
   .kitchen-obs {
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: bold;
     padding: 0 0 4px 4px;
     word-break: break-word;
   }
   .kitchen-footer {
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 900;
     margin-top: 6px;
   }
   .print-page-break {
@@ -217,8 +230,8 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
         <span class="bold">${(item.products?.name ?? "Producto").toUpperCase()}</span>
         ${item.notes ? `<div class="item-notes">↳ ${item.notes}</div>` : ""}
       </td>
-      <td style="text-align:center">${item.quantity}</td>
-      <td>${formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}</td>
+      <td style="text-align:center" class="bold">${item.quantity}</td>
+      <td class="bold">${formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}</td>
     </tr>
   `,
     )
@@ -243,19 +256,19 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
         if (m === "tarjeta") return "Tarjeta";
         return "Nequi";
       };
-      breakdownDetails += `<div class="center bold" style="font-size:12px;padding:2px 0">PAGO COMPARTIDO</div>`;
+      breakdownDetails += `<div class="center bold" style="font-size:12px;padding:3px 0">PAGO COMPARTIDO</div>`;
       data.sharedPayments.forEach((p, idx) => {
-        breakdownDetails += `<div class="row" style="font-size:11px"><span>Pago ${idx + 1}: ${getLabel(p.method, p.subMethod)}</span><span class="bold">${formatPrice(p.amount)}</span></div>`;
+        breakdownDetails += `<div class="row" style="font-size:11.5px"><span class="bold">Pago ${idx + 1} (${getLabel(p.method, p.subMethod)}):</span><span class="bold">${formatPrice(p.amount)}</span></div>`;
       });
     } else if (paymentMethod === "mixto" && data.paymentBreakdown) {
       // Fallback: aggregated breakdown (for reprints from DB)
       const b = data.paymentBreakdown;
       if (b.efectivo)
-        breakdownDetails += `<div class="row"><span>Efectivo:</span><span class="bold">${formatPrice(b.efectivo)}</span></div>`;
+        breakdownDetails += `<div class="row"><span class="bold">Efectivo:</span><span class="bold">${formatPrice(b.efectivo)}</span></div>`;
       if (b.tarjeta)
-        breakdownDetails += `<div class="row"><span>Tarjeta:</span><span class="bold">${formatPrice(b.tarjeta)}</span></div>`;
+        breakdownDetails += `<div class="row"><span class="bold">Tarjeta:</span><span class="bold">${formatPrice(b.tarjeta)}</span></div>`;
       if (b.nequi)
-        breakdownDetails += `<div class="row"><span>Nequi:</span><span class="bold">${formatPrice(b.nequi)}</span></div>`;
+        breakdownDetails += `<div class="row"><span class="bold">Nequi:</span><span class="bold">${formatPrice(b.nequi)}</span></div>`;
     } else {
       const label =
         paymentMethod === "efectivo"
@@ -263,7 +276,7 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
           : paymentMethod === "tarjeta"
             ? "Tarjeta"
             : "Nequi";
-      breakdownDetails = `<div class="row"><span>${label}:</span><span class="bold">${formatPrice(paymentReceived ?? order.total ?? 0)}</span></div>`;
+      breakdownDetails = `<div class="row"><span class="bold">${label}:</span><span class="bold">${formatPrice(paymentReceived ?? order.total ?? 0)}</span></div>`;
     }
 
     paymentSection = `
@@ -275,7 +288,7 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
         <span class="bold">Cambio</span>
         <span class="bold">${formatPrice(paymentChange ?? 0)}</span>
       </div>
-      <div style="font-size:11px;padding:4px 0 0">
+      <div style="font-size:11.5px;padding:4px 0 0">
         ${breakdownDetails}
       </div>
       <div class="divider"></div>
@@ -290,9 +303,9 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
   let deliveryInfo = "";
   if (order.is_delivery) {
     deliveryInfo = `
-      <div class="row"><span>Cliente:</span><span class="bold">${(order.delivery_name ?? "Cliente").toUpperCase()}</span></div>
-      ${order.delivery_address ? `<div class="row"><span>Dirección:</span><span class="bold">${order.delivery_address.toUpperCase()}</span></div>` : ""}
-      ${order.delivery_phone ? `<div class="row"><span>Teléfono:</span><span class="bold">${order.delivery_phone}</span></div>` : ""}
+      <div class="row"><span class="bold">Cliente:</span><span class="bold">${(order.delivery_name ?? "Cliente").toUpperCase()}</span></div>
+      ${order.delivery_address ? `<div class="row"><span class="bold">Dirección:</span><span class="bold">${order.delivery_address.toUpperCase()}</span></div>` : ""}
+      ${order.delivery_phone ? `<div class="row"><span class="bold">Teléfono:</span><span class="bold">${order.delivery_phone}</span></div>` : ""}
     `;
   }
 
@@ -304,30 +317,30 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
         <span class="bold">${ticketNumber}</span>
       </div>
     </div>
-    <div class="row" style="font-size:10px"><span>Fecha Hora Impr.:</span><span>${printDate}</span></div>
+    <div class="row" style="font-size:11px"><span class="bold">Fecha Hora Impr.:</span><span class="bold">${printDate}</span></div>
     <div class="divider"></div>
-    <div class="row"><span>Fecha :</span><span>${dateOnly}</span></div>
-    <div class="row"><span>Hora  :</span><span>${timeOnly}</span></div>
-    <div class="row"><span>${locatorLabel}:</span><span class="bold">${order.locator}</span></div>
+    <div class="row"><span class="bold">Fecha :</span><span class="bold">${dateOnly}</span></div>
+    <div class="row"><span class="bold">Hora  :</span><span class="bold">${timeOnly}</span></div>
+    <div class="row"><span class="bold">${locatorLabel}:</span><span class="bold">${order.locator}</span></div>
     ${deliveryInfo}
-    <div class="row"><span>Cajero :</span><span class="bold">${cajeroName.toUpperCase()}</span></div>
+    <div class="row"><span class="bold">Cajero :</span><span class="bold">${cajeroName.toUpperCase()}</span></div>
     <div class="divider"></div>
     <table>
       <thead><tr><th>Producto Nombre</th><th>Cant.</th><th>Valor</th></tr></thead>
       <tbody>${itemsRows}</tbody>
     </table>
     <div class="divider"></div>
-    <div class="row"><span>Sub Total</span><span class="bold">${formatPrice(subtotal)}</span></div>
-    ${(order.delivery_fee ?? 0) > 0 ? `<div class="row"><span>Costo Envío</span><span class="bold">${formatPrice(order.delivery_fee)}</span></div>` : ""}
+    <div class="row"><span class="bold">Sub Total</span><span class="bold">${formatPrice(subtotal)}</span></div>
+    ${(order.delivery_fee ?? 0) > 0 ? `<div class="row"><span class="bold">Costo Envío</span><span class="bold">${formatPrice(order.delivery_fee)}</span></div>` : ""}
     <div class="divider"></div>
-    <div class="row total-row"><span>Total</span><span class="big-total">${formatPrice(order.total ?? 0)}</span></div>
+    <div class="row total-row"><span class="bold">Total</span><span class="big-total">${formatPrice(order.total ?? 0)}</span></div>
     <div class="divider"></div>
     ${paymentSection}
     <div class="center" style="padding:4px 0">
-      <p class="bold">¡Gracias por tu compra!</p>
-      <p>Espera tu número: <span class="bold">${order.locator}</span></p>
+      <p class="bold" style="font-size:14px">¡Gracias por tu compra!</p>
+      <p class="bold" style="font-size:13px;margin-top:2px">Espera tu número: <span class="bold">${order.locator}</span></p>
       <div class="divider"></div>
-      <p class="bold" style="font-size:11px;padding-top:4px">${storeName.toUpperCase()}</p>
+      <p class="bold" style="font-size:12px;padding-top:4px">${storeName.toUpperCase()}</p>
     </div>
   `;
 }
@@ -357,7 +370,7 @@ export function buildKitchenReceiptHTML(
                  .map((n) => {
                    const trimmed = n.trim();
                    if (trimmed.startsWith("Obs:")) {
-                     return `<div style="margin-top:4px; color:#000; border-top:2px solid #000; padding-top:2px; font-size:18px;">${trimmed.replace("Obs:", "<strong>OBS:</strong>")}</div>`;
+                     return `<div style="margin-top:4px; color:#000000; border-top:2.5px solid #000000; padding-top:3px; font-size:19px; font-weight:900;">${trimmed.replace("Obs:", "<strong>OBS:</strong>")}</div>`;
                    }
                    return `• ${trimmed}`;
                  })
@@ -374,7 +387,7 @@ export function buildKitchenReceiptHTML(
   if (order.notes) {
     notesSection = `
       <div class="divider"></div>
-      <div class="bold" style="font-size:14px">NOTAS DEL PEDIDO:</div>
+      <div class="bold" style="font-size:15px">NOTAS DEL PEDIDO:</div>
       <div class="kitchen-footer-notes">${order.notes.toUpperCase()}</div>
     `;
   }
@@ -385,7 +398,7 @@ export function buildKitchenReceiptHTML(
   let deliveryInfo = "";
   if (order.is_delivery) {
     deliveryInfo = `
-      <div style="font-size:13px; margin-top:4px; border:2px dashed #000; padding:4px; background:#fff;">
+      <div style="font-size:14px; font-weight:bold; margin-top:5px; border:2px dashed #000000; padding:5px; background:#ffffff; color:#000000;">
         <div><strong>CLIENTE:</strong> ${(order.delivery_name ?? "Cliente").toUpperCase()}</div>
         ${order.delivery_address ? `<div><strong>DIR:</strong> ${order.delivery_address.toUpperCase()}</div>` : ""}
         ${order.delivery_phone ? `<div><strong>TEL:</strong> ${order.delivery_phone}</div>` : ""}
@@ -396,19 +409,19 @@ export function buildKitchenReceiptHTML(
   return `
     <div class="center"><p class="kitchen-title">${kitchenTitle}</p></div>
     <div class="row" style="align-items:baseline">
-      <span class="bold">${locatorLabel}</span>
+      <span class="bold" style="font-size:16px;">${locatorLabel}</span>
       <span class="kitchen-locator">${order.locator}</span>
     </div>
     ${deliveryInfo}
-    <div class="row"><span>Ticket Control</span><span class="bold kitchen-ticket">${ticketNumber}</span></div>
-    <div class="center" style="padding:2px 0"><span class="kitchen-cashier">${cajeroName.toUpperCase()}</span></div>
+    <div class="row" style="margin-top:4px;"><span class="bold">Ticket Control</span><span class="bold kitchen-ticket">${ticketNumber}</span></div>
+    <div class="center" style="padding:3px 0"><span class="kitchen-cashier">${cajeroName.toUpperCase()}</span></div>
     <div class="divider"></div>
-    <div class="row" style="font-size:11px"><span class="bold">Cant.</span><span class="bold">Producto</span></div>
+    <div class="row" style="font-size:13px"><span class="bold">Cant.</span><span class="bold">Producto</span></div>
     <div class="divider"></div>
     ${itemsHTML}
     ${notesSection}
     <div class="divider"></div>
-    <div class="center" style="font-size:12px;margin-top:4px">
+    <div class="center kitchen-footer" style="font-size:13px; font-weight:bold; margin-top:4px;">
       Hora: ${timeOnly}<br>
       ${dateOnly}
     </div>
@@ -551,8 +564,8 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((item) => {
           return `
-            <div class="row" style="font-size:11px; margin-bottom:2px; padding: 0 2px;">
-              <span>${item.name.toUpperCase()}: <span class="bold">${item.qty}</span></span>
+            <div class="row" style="font-size:12px; margin-bottom:2px; padding: 0 2px;">
+              <span class="bold">${item.name.toUpperCase()}: <span class="bold">${item.qty}</span></span>
               <span class="bold">${formatPrice(item.total)}</span>
             </div>
           `;
@@ -561,7 +574,7 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
 
       return `
         <div style="margin-top: 6px; margin-bottom: 2px;">
-          <div class="bold center" style="font-size:12px; border-bottom:1px dashed #000; margin-bottom: 2px; padding-bottom: 2px;">
+          <div class="bold center" style="font-size:13px; border-bottom:1.5px dashed #000000; margin-bottom: 3px; padding-bottom: 2px;">
             ${catSummary.name.toUpperCase()}
           </div>
           ${itemsList}
@@ -577,7 +590,7 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
       .map((order) => {
         const ticketNumber = order.ticket_number ?? "—";
         const typeLabel = order.is_delivery ? "DOM" : "MESA";
-        return `<div class="row" style="font-size:11px"><span>#${ticketNumber} ${typeLabel} ${order.locator}</span><span class="bold">${formatPrice(order.total ?? 0)}</span></div>`;
+        return `<div class="row" style="font-size:11.5px"><span class="bold">#${ticketNumber} ${typeLabel} ${order.locator}</span><span class="bold">${formatPrice(order.total ?? 0)}</span></div>`;
       })
       .join("");
 
@@ -590,30 +603,30 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
       <div class="divider"></div>
       <div class="bold" style="font-size:13px;padding:4px 0 2px">PEDIDOS CANCELADOS (${cancelados.length})</div>
       ${cancelledRows}
-      <div class="row bold" style="font-size:12px;padding-top:2px"><span>Total Cancelado</span><span>${formatPrice(totalCancelado)}</span></div>
+      <div class="row bold" style="font-size:12px;padding-top:2px"><span class="bold">Total Cancelado</span><span class="bold">${formatPrice(totalCancelado)}</span></div>
     `;
   }
 
   return `
     <div class="center"><p class="header-title">CIERRE DE TURNO</p></div>
     <div class="double-divider">
-      <div class="center bold" style="font-size:13px">${storeName.toUpperCase()}</div>
+      <div class="center bold" style="font-size:14px">${storeName.toUpperCase()}</div>
     </div>
 
-    <div class="row" style="font-size:10px"><span>Fecha Hora Impr.:</span><span>${printDate}</span></div>
+    <div class="row" style="font-size:11px"><span class="bold">Fecha Hora Impr.:</span><span class="bold">${printDate}</span></div>
     <div class="divider"></div>
 
-    <div class="row"><span>Inicio Turno:</span><span class="bold">${dateFmt.format(shiftStart)} ${timeFmt.format(shiftStart)}</span></div>
-    <div class="row"><span>Cierre Turno:</span><span class="bold">${dateFmt.format(shiftEnd)} ${timeFmt.format(shiftEnd)}</span></div>
-    <div class="row"><span>Cajero:</span><span class="bold">${cajeroName.toUpperCase()}</span></div>
+    <div class="row"><span class="bold">Inicio Turno:</span><span class="bold">${dateFmt.format(shiftStart)} ${timeFmt.format(shiftStart)}</span></div>
+    <div class="row"><span class="bold">Cierre Turno:</span><span class="bold">${dateFmt.format(shiftEnd)} ${timeFmt.format(shiftEnd)}</span></div>
+    <div class="row"><span class="bold">Cajero:</span><span class="bold">${cajeroName.toUpperCase()}</span></div>
 
     <div class="double-divider">
-      <div class="center bold" style="font-size:13px">PRODUCTOS VENDIDOS</div>
+      <div class="center bold" style="font-size:14px">PRODUCTOS VENDIDOS</div>
     </div>
 
-    <div class="row bold" style="font-size:11px;border-bottom:1px solid #000;padding-bottom:2px;margin-bottom:4px">
-      <span>Pedidos Entregados: ${entregados.length}</span>
-      <span>Total: ${formatPrice(grandTotal)}</span>
+    <div class="row bold" style="font-size:12px;border-bottom:1.5px solid #000000;padding-bottom:2px;margin-bottom:4px">
+      <span class="bold">Pedidos Entregados: ${entregados.length}</span>
+      <span class="bold">Total: ${formatPrice(grandTotal)}</span>
     </div>
 
     ${orderRows}
@@ -624,32 +637,32 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
       <div class="center bold" style="font-size:14px">RESUMEN DE CAJA</div>
     </div>
 
-    <div class="row" style="font-size:13px;padding:3px 0">
+    <div class="row" style="font-size:13.5px;padding:3px 0">
       <span class="bold">💵 Efectivo:</span>
       <span class="bold">${formatPrice(totalEfectivo)}</span>
     </div>
-    <div class="row" style="font-size:13px;padding:3px 0">
+    <div class="row" style="font-size:13.5px;padding:3px 0">
       <span class="bold">💳 Tarjeta:</span>
       <span class="bold">${formatPrice(totalTarjeta)}</span>
     </div>
-    <div class="row" style="font-size:13px;padding:3px 0">
+    <div class="row" style="font-size:13.5px;padding:3px 0">
       <span class="bold">📱 Transferencias:</span>
       <span class="bold">${formatPrice(totalTransferencias)}</span>
     </div>
 
     <div class="double-divider"></div>
     <div class="row total-row" style="padding:4px 0">
-      <span>TOTAL EN CAJA</span>
+      <span class="bold">TOTAL EN CAJA</span>
       <span class="big-total">${formatPrice(grandTotal)}</span>
     </div>
     <div class="divider"></div>
 
-    <div class="center" style="padding:6px 0;font-size:11px">
-      <p>Total Pedidos: <span class="bold">${entregados.length + cancelados.length}</span></p>
-      <p>Entregados: <span class="bold">${entregados.length}</span> | Cancelados: <span class="bold">${cancelados.length}</span></p>
+    <div class="center" style="padding:6px 0;font-size:11.5px">
+      <p class="bold">Total Pedidos: <span class="bold">${entregados.length + cancelados.length}</span></p>
+      <p class="bold">Entregados: <span class="bold">${entregados.length}</span> | Cancelados: <span class="bold">${cancelados.length}</span></p>
       <div class="divider" style="margin-top:6px"></div>
       <p class="bold" style="padding-top:4px">${storeName.toUpperCase()}</p>
-      <p style="font-size:10px">Cierre generado automáticamente</p>
+      <p class="bold" style="font-size:10.5px">Cierre generado automáticamente</p>
     </div>
   `;
 }
@@ -691,7 +704,7 @@ export async function silentPrint(
             html, body {
               margin: 0 !important;
               padding: 0 !important;
-              background: #fff !important;
+              background: #ffffff !important;
             }
           </style>
         </head>
@@ -765,8 +778,8 @@ export function buildPartialPaymentReceiptHTML(
   return `
     <div class="center">
       <p class="header-title">${storeName.toUpperCase()}</p>
-      <p class="bold" style="font-size:12px; margin-top:2px;">COMPROBANTE DE PAGO</p>
-      <p style="font-size:11px;">(PAGO PARCIAL ${index} de ${totalPayments})</p>
+      <p class="bold" style="font-size:13px; margin-top:2px;">COMPROBANTE DE PAGO</p>
+      <p class="bold" style="font-size:11.5px;">(PAGO PARCIAL ${index} de ${totalPayments})</p>
     </div>
 
     <div class="double-divider">
@@ -776,26 +789,26 @@ export function buildPartialPaymentReceiptHTML(
       </div>
     </div>
 
-    <div class="row" style="font-size:10px">
-      <span>Fecha Hora Impr.:</span>
-      <span>${printDate}</span>
+    <div class="row" style="font-size:11px">
+      <span class="bold">Fecha Hora Impr.:</span>
+      <span class="bold">${printDate}</span>
     </div>
     <div class="divider"></div>
 
     <div class="row">
-      <span>${order.is_delivery ? "Domicilio No." : "Mesa No."}:</span>
+      <span class="bold">${order.is_delivery ? "Domicilio No." : "Mesa No."}:</span>
       <span class="bold">${order.locator}</span>
     </div>
 
     <div class="row">
-      <span>Cajero :</span>
+      <span class="bold">Cajero :</span>
       <span class="bold">${cajeroName.toUpperCase()}</span>
     </div>
 
     <div class="divider"></div>
 
     <div class="center" style="padding:6px 0;">
-      <p style="font-size:14px; font-weight:bold;">${paymentLabel.toUpperCase()}</p>
+      <p style="font-size:15px; font-weight:900;">${paymentLabel.toUpperCase()}</p>
       <p class="big-total" style="font-size:22px; margin-top:3px;">${formatPrice(payment.amount)}</p>
     </div>
     ${
@@ -819,8 +832,8 @@ export function buildPartialPaymentReceiptHTML(
             <span class="bold">${(item.products?.name ?? "Producto").toUpperCase()}</span>
             ${item.notes ? `<div class="item-notes">↳ ${item.notes}</div>` : ""}
           </td>
-          <td style="text-align:center">${item.quantity}</td>
-          <td>${formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}</td>
+          <td style="text-align:center" class="bold">${item.quantity}</td>
+          <td class="bold">${formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}</td>
         </tr>
         `,
           )
@@ -833,7 +846,7 @@ export function buildPartialPaymentReceiptHTML(
 
     <div class="divider"></div>
     <div class="center" style="padding:4px 0;">
-      <p style="font-size:11px;" class="bold">Conserve este comprobante</p>
+      <p style="font-size:12px;" class="bold">Conserve este comprobante</p>
     </div>
   `;
 }
@@ -892,14 +905,14 @@ export function buildDriverSettlementReceiptHTML({
       const fee = o.delivery_fee ?? 0;
       return `
         <tr>
-          <td style="width:62%;">
-            <div class="bold">#DOM ${o.locator} (${hora})</div>
-            <div style="font-size:10px;">${o.delivery_address || "Sin dirección"}</div>
-            <div style="font-size:9px;">Pago: <span class="bold">${paymentMethods}</span></div>
+          <td style="width:60%;">
+            <div class="bold" style="font-size:12.5px;">#DOM ${o.locator} (${hora})</div>
+            <div class="bold" style="font-size:11px;">${o.delivery_address || "Sin dirección"}</div>
+            <div class="bold" style="font-size:10.5px;">Pago: ${paymentMethods}</div>
           </td>
-          <td style="width:38%; text-align:right;">
-            <div style="font-size:10px;">${formatPrice(o.total)}</div>
-            <div class="bold" style="font-size:11px;">+${formatPrice(fee)}</div>
+          <td style="width:40%; text-align:right;">
+            <div class="bold" style="font-size:11px;">${formatPrice(o.total)}</div>
+            <div class="bold" style="font-size:12px;">+${formatPrice(fee)}</div>
           </td>
         </tr>
       `;
@@ -909,8 +922,8 @@ export function buildDriverSettlementReceiptHTML({
   return `
     <div class="center">
       <div class="header-title">${storeName.toUpperCase()}</div>
-      <div class="bold" style="font-size:14px; margin: 2px 0;">LIQUIDACIÓN DE DOMICILIARIO</div>
-      <div style="font-size:11px;">Módulo de Domicilios</div>
+      <div class="bold" style="font-size:14.5px; margin: 2px 0;">LIQUIDACIÓN DE DOMICILIARIO</div>
+      <div class="bold" style="font-size:11.5px;">Módulo de Domicilios</div>
     </div>
 
     <div class="divider"></div>
@@ -919,33 +932,33 @@ export function buildDriverSettlementReceiptHTML({
       <span class="bold">DOMICILIARIO:</span>
       <span class="bold">${driverName.toUpperCase()}</span>
     </div>
-    ${driverPlate ? `<div class="row"><span>Placa Moto:</span><span class="bold">${driverPlate.toUpperCase()}</span></div>` : ""}
-    ${driverPhone ? `<div class="row"><span>Teléfono:</span><span class="bold">${driverPhone}</span></div>` : ""}
+    ${driverPlate ? `<div class="row"><span class="bold">Placa Moto:</span><span class="bold">${driverPlate.toUpperCase()}</span></div>` : ""}
+    ${driverPhone ? `<div class="row"><span class="bold">Teléfono:</span><span class="bold">${driverPhone}</span></div>` : ""}
     <div class="row">
-      <span>Cajero / Responsable:</span>
+      <span class="bold">Cajero / Responsable:</span>
       <span class="bold">${cajeroName.toUpperCase()}</span>
     </div>
 
     <div class="divider"></div>
 
-    <div class="row" style="font-size:10px;">
-      <span>Desde:</span>
+    <div class="row" style="font-size:11px;">
+      <span class="bold">Desde:</span>
       <span class="bold">${shiftStart.toLocaleDateString("es-CO")} ${shiftStart.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
     </div>
-    <div class="row" style="font-size:10px;">
-      <span>Hasta:</span>
+    <div class="row" style="font-size:11px;">
+      <span class="bold">Hasta:</span>
       <span class="bold">${shiftEnd.toLocaleDateString("es-CO")} ${shiftEnd.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
     </div>
 
     <div class="double-divider"></div>
 
-    <div class="bold" style="font-size:12px; margin-bottom:4px;">DETALLE DE ENTREGAS (${totalDeliveries})</div>
+    <div class="bold" style="font-size:13px; margin-bottom:4px;">DETALLE DE ENTREGAS (${totalDeliveries})</div>
 
     <table>
       <thead>
         <tr>
-          <th style="text-align:left; width:62%;">Pedido / Dirección</th>
-          <th style="text-align:right; width:38%;">Total / Flete</th>
+          <th style="text-align:left; width:60%;">Pedido / Dirección</th>
+          <th style="text-align:right; width:40%;">Total / Flete</th>
         </tr>
       </thead>
       <tbody>
@@ -956,22 +969,22 @@ export function buildDriverSettlementReceiptHTML({
     <div class="double-divider"></div>
 
     <div class="row" style="font-size:13px;">
-      <span>Total Pedidos Entregados:</span>
+      <span class="bold">Total Pedidos Entregados:</span>
       <span class="bold">${totalDeliveries}</span>
     </div>
     <div class="row" style="font-size:13px;">
-      <span>Venta Total Pedidos:</span>
+      <span class="bold">Venta Total Pedidos:</span>
       <span class="bold">${formatPrice(totalOrdersAmount)}</span>
     </div>
     <div class="row" style="font-size:13px;">
-      <span>Efectivo Cobrado en Mano:</span>
+      <span class="bold">Efectivo Cobrado en Mano:</span>
       <span class="bold">${formatPrice(totalCashCollected)}</span>
     </div>
 
     <div class="divider"></div>
 
     <div class="row total-row" style="font-size:15px; margin: 4px 0;">
-      <span>A PAGAR A DOMICILIARIO:</span>
+      <span class="bold">A PAGAR A DOMICILIARIO:</span>
       <span class="bold big-total">${formatPrice(totalDeliveryFees)}</span>
     </div>
 
@@ -987,18 +1000,18 @@ export function buildDriverSettlementReceiptHTML({
     <div class="divider" style="margin-top:20px;"></div>
 
     <div style="margin-top:25px;" class="center">
-      <div style="border-top:1px solid #000; width:80%; margin:0 auto; padding-top:4px;">
-        <span style="font-size:11px;" class="bold">Firma Domiciliario: ${driverName}</span>
+      <div style="border-top:1.5px solid #000000; width:80%; margin:0 auto; padding-top:4px;">
+        <span style="font-size:11.5px;" class="bold">Firma Domiciliario: ${driverName}</span>
       </div>
     </div>
 
     <div style="margin-top:25px;" class="center">
-      <div style="border-top:1px solid #000; width:80%; margin:0 auto; padding-top:4px;">
-        <span style="font-size:11px;" class="bold">Firma Cajero: ${cajeroName}</span>
+      <div style="border-top:1.5px solid #000000; width:80%; margin:0 auto; padding-top:4px;">
+        <span style="font-size:11.5px;" class="bold">Firma Cajero: ${cajeroName}</span>
       </div>
     </div>
 
-    <div style="margin-top:15px; font-size:10px;" class="center">
+    <div style="margin-top:15px; font-size:11px;" class="center">
       <p class="bold">Comprobante oficial de liquidación de turno</p>
     </div>
   `;

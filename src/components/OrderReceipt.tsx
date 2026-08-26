@@ -146,41 +146,41 @@ export function OrderReceipt({
         </div>
       </div>
 
-      <div className="row" style={{ fontSize: "10px" }}>
-        <span>Fecha Hora Impr.:</span>
-        <span>{printDate}</span>
+      <div className="row" style={{ fontSize: "11px" }}>
+        <span className="bold">Fecha Hora Impr.:</span>
+        <span className="bold">{printDate}</span>
       </div>
       <div className="divider" />
 
       <div className="row">
-        <span>Fecha :</span>
-        <span>{dateOnly}</span>
+        <span className="bold">Fecha :</span>
+        <span className="bold">{dateOnly}</span>
       </div>
       <div className="row">
-        <span>Hora :</span>
-        <span>{timeOnly}</span>
+        <span className="bold">Hora :</span>
+        <span className="bold">{timeOnly}</span>
       </div>
 
       <div className="row">
-        <span>{order.is_delivery ? "Domicilio No." : "Mesa No."}:</span>
+        <span className="bold">{order.is_delivery ? "Domicilio No." : "Mesa No."}:</span>
         <span className="bold">{order.locator}</span>
       </div>
 
       {order.is_delivery && (
         <>
           <div className="row">
-            <span>Cliente:</span>
+            <span className="bold">Cliente:</span>
             <span className="bold">{(order.delivery_name ?? "Cliente").toUpperCase()}</span>
           </div>
           {order.delivery_address && (
             <div className="row">
-              <span>Dirección:</span>
+              <span className="bold">Dirección:</span>
               <span className="bold">{order.delivery_address.toUpperCase()}</span>
             </div>
           )}
           {order.delivery_phone && (
             <div className="row">
-              <span>Teléfono:</span>
+              <span className="bold">Teléfono:</span>
               <span className="bold">{order.delivery_phone}</span>
             </div>
           )}
@@ -188,7 +188,7 @@ export function OrderReceipt({
       )}
 
       <div className="row">
-        <span>Cajero :</span>
+        <span className="bold">Cajero :</span>
         <span className="bold">{cajeroName.toUpperCase()}</span>
       </div>
 
@@ -207,11 +207,11 @@ export function OrderReceipt({
           {validItems.map((item) => (
             <tr key={item.id}>
               <td>
-                {(item.products?.name ?? "Producto").toUpperCase()}
-                {item.notes && <div className="item-notes">{item.notes}</div>}
+                <span className="bold">{(item.products?.name ?? "Producto").toUpperCase()}</span>
+                {item.notes && <div className="item-notes">↳ {item.notes}</div>}
               </td>
-              <td style={{ textAlign: "center" }}>{item.quantity}</td>
-              <td>
+              <td style={{ textAlign: "center" }} className="bold">{item.quantity}</td>
+              <td className="bold">
                 {formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}
               </td>
             </tr>
@@ -223,20 +223,20 @@ export function OrderReceipt({
 
       {/* Subtotal y Total */}
       <div className="row">
-        <span>Sub Total</span>
-        <span>{formatPrice(subtotal)}</span>
+        <span className="bold">Sub Total</span>
+        <span className="bold">{formatPrice(subtotal)}</span>
       </div>
       {(order.delivery_fee ?? 0) > 0 && (
         <div className="row">
-          <span>Costo Envío</span>
-          <span>{formatPrice(order.delivery_fee)}</span>
+          <span className="bold">Costo Envío</span>
+          <span className="bold">{formatPrice(order.delivery_fee)}</span>
         </div>
       )}
 
       <div className="divider" />
 
       <div className="row total-row">
-        <span>Total</span>
+        <span className="bold">Total</span>
         <span className="big-total">{formatPrice(order.total ?? 0)}</span>
       </div>
 
@@ -256,7 +256,7 @@ export function OrderReceipt({
             <span className="bold">{formatPrice(paymentChange ?? 0)}</span>
           </div>
 
-          <div style={{ fontSize: "11px", padding: "4px 0 0" }}>
+          <div style={{ fontSize: "11.5px", padding: "4px 0 0" }}>
             {paymentMethod === "mixto" && sharedPayments && sharedPayments.length > 0 ? (
               <div className="space-y-0.5">
                 <div className="center bold" style={{ fontSize: "12px", padding: "2px 0" }}>PAGO COMPARTIDO</div>
@@ -272,8 +272,8 @@ export function OrderReceipt({
                   };
                   return (
                     <div key={idx} className="row">
-                      <span>Pago {idx + 1}: {getLabel(p.method, p.subMethod)}</span>
-                      <span>{formatPrice(p.amount)}</span>
+                      <span className="bold">Pago {idx + 1} ({getLabel(p.method, p.subMethod)}):</span>
+                      <span className="bold">{formatPrice(p.amount)}</span>
                     </div>
                   );
                 })}
@@ -282,26 +282,26 @@ export function OrderReceipt({
               <div className="space-y-0.5">
                 {paymentBreakdown.efectivo ? (
                   <div className="row">
-                    <span>Efectivo:</span>
-                    <span>{formatPrice(paymentBreakdown.efectivo)}</span>
+                    <span className="bold">Efectivo:</span>
+                    <span className="bold">{formatPrice(paymentBreakdown.efectivo)}</span>
                   </div>
                 ) : null}
                 {paymentBreakdown.tarjeta ? (
                   <div className="row">
-                    <span>Tarjeta:</span>
-                    <span>{formatPrice(paymentBreakdown.tarjeta)}</span>
+                    <span className="bold">Tarjeta:</span>
+                    <span className="bold">{formatPrice(paymentBreakdown.tarjeta)}</span>
                   </div>
                 ) : null}
                 {paymentBreakdown.nequi ? (
                   <div className="row">
-                    <span>Nequi:</span>
-                    <span>{formatPrice(paymentBreakdown.nequi)}</span>
+                    <span className="bold">Nequi:</span>
+                    <span className="bold">{formatPrice(paymentBreakdown.nequi)}</span>
                   </div>
                 ) : null}
               </div>
             ) : (
               <div className="row">
-                <span>
+                <span className="bold">
                   {paymentMethod === "efectivo"
                     ? "Efectivo"
                     : paymentMethod === "tarjeta"
@@ -309,7 +309,7 @@ export function OrderReceipt({
                       : "Nequi"}
                   :
                 </span>
-                <span>{formatPrice(paymentReceived ?? order.total ?? 0)}</span>
+                <span className="bold">{formatPrice(paymentReceived ?? order.total ?? 0)}</span>
               </div>
             )}
           </div>
@@ -319,12 +319,12 @@ export function OrderReceipt({
 
       {/* Footer */}
       <div className="center" style={{ padding: "4px 0" }}>
-        <p>¡Gracias por tu compra!</p>
-        <p>
+        <p className="bold" style={{ fontSize: "14px" }}>¡Gracias por tu compra!</p>
+        <p className="bold" style={{ fontSize: "13px", marginTop: "2px" }}>
           Espera tu número: <span className="bold">{order.locator}</span>
         </p>
         <div className="divider" />
-        <p className="bold" style={{ fontSize: "11px", paddingTop: "4px" }}>
+        <p className="bold" style={{ fontSize: "12px", paddingTop: "4px" }}>
           La 30 Perros y Hamburguesas
         </p>
       </div>
@@ -343,49 +343,59 @@ export function OrderReceipt({
       </div>
 
       <div className="row" style={{ alignItems: "baseline" }}>
-        <span className="bold">
+        <span className="bold" style={{ fontSize: "16px" }}>
           {order.is_delivery ? "Domicilio #" : "Mesa #"}
         </span>
         <span className="kitchen-locator">{order.locator}</span>
       </div>
 
       {order.is_delivery && (
-        <div style={{ fontSize: "14px", marginTop: "6px", border: "2px dashed #000", padding: "6px", background: "#f9f9f9" }}>
+        <div style={{ fontSize: "14px", fontWeight: "bold", marginTop: "6px", border: "2px dashed #000000", padding: "6px", background: "#ffffff", color: "#000000" }}>
           <div><strong>CLIENTE:</strong> {(order.delivery_name ?? "Cliente").toUpperCase()}</div>
           {order.delivery_address && <div><strong>DIR:</strong> {order.delivery_address.toUpperCase()}</div>}
           {order.delivery_phone && <div><strong>TEL:</strong> {order.delivery_phone}</div>}
         </div>
       )}
 
-      <div className="row">
-        <span>Ticket Control</span>
+      <div className="row" style={{ marginTop: "4px" }}>
+        <span className="bold">Ticket Control</span>
         <span className="bold kitchen-ticket">{ticketNumber}</span>
       </div>
 
-      <div className="center" style={{ padding: "2px 0" }}>
+      <div className="center" style={{ padding: "3px 0" }}>
         <span className="kitchen-cashier">{cajeroName.toUpperCase()}</span>
       </div>
 
       <div className="divider" />
 
-      <div className="row" style={{ fontSize: "10px" }}>
-        <span className="bold">Cantidad</span>
-        <span className="bold">Productos</span>
+      <div className="row" style={{ fontSize: "13px" }}>
+        <span className="bold">Cant.</span>
+        <span className="bold">Producto</span>
       </div>
       <div className="divider" />
 
       {validItems.map((item) => (
-        <div key={item.id}>
+        <div key={item.id} style={{ marginBottom: "10px" }}>
           <p className="kitchen-item-name">
             {item.quantity} {(item.products?.name ?? "Producto").toUpperCase()}
           </p>
           {item.notes && (
-            <div className="kitchen-obs">
-              {item.notes.split(",").map((note, idx) => (
-                <p key={idx} style={{ margin: "1px 0", paddingLeft: "4px" }}>
-                  • {note.trim()}
-                </p>
-              ))}
+            <div className="kitchen-item-notes">
+              {item.notes.split(",").map((note, idx) => {
+                const trimmed = note.trim();
+                if (trimmed.startsWith("Obs:")) {
+                  return (
+                    <div key={idx} style={{ marginTop: "4px", color: "#000000", borderTop: "2.5px solid #000000", paddingTop: "3px", fontSize: "19px", fontWeight: 900 }}>
+                      <strong>OBS:</strong> {trimmed.replace("Obs:", "").trim()}
+                    </div>
+                  );
+                }
+                return (
+                  <p key={idx} style={{ margin: "1px 0" }}>
+                    • {trimmed}
+                  </p>
+                );
+              })}
             </div>
           )}
         </div>
@@ -394,14 +404,14 @@ export function OrderReceipt({
       {order.notes && (
         <>
           <div className="divider" />
-          <p className="bold">NOTAS DEL PEDIDO:</p>
-          <p className="kitchen-obs">{order.notes}</p>
+          <div className="bold" style={{ fontSize: "15px" }}>NOTAS DEL PEDIDO:</div>
+          <div className="kitchen-footer-notes">{order.notes.toUpperCase()}</div>
         </>
       )}
 
-      <div className="divider" style={{ borderTopStyle: "dotted" }} />
+      <div className="divider" />
 
-      <div className="center kitchen-footer">
+      <div className="center kitchen-footer" style={{ fontSize: "13px", fontWeight: "bold", marginTop: "4px" }}>
         <p>Hora: {timeOnly}</p>
         <p>{dateOnly}</p>
       </div>
