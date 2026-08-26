@@ -22,49 +22,20 @@ export interface NotificationBellProps {
 }
 
 export function NotificationBell({
-  ecosystem = "restaurant",
+  ecosystem: _ecosystem = "restaurant",
 }: NotificationBellProps) {
   const { notifications, markAllRead, clearNotifications } = useNotifications();
 
-  const filteredNotifications = notifications.filter((n) => {
-    const text = (n.title + " " + n.message).toLowerCase();
-
-    // Heurística de filtrado por ecosistema
-    const isKioskRelated =
-      text.includes("tu pedido") ||
-      text.includes("está listo") ||
-      text.includes("en preparación") ||
-      text.includes("entregado") ||
-      text.includes("cancelado");
-
-    if (ecosystem === "kiosk") {
-      return isKioskRelated;
-    } else {
-      // Para el restaurante, mostramos todo lo que NO sea exclusivo de cliente
-      // o que sea explícitamente de gestión (nueva orden, stock, etc)
-      const isRestaurantRelated =
-        text.includes("nueva orden") ||
-        text.includes("pago") ||
-        text.includes("stock") ||
-        text.includes("usuario") ||
-        text.includes("cierre");
-
-      return isRestaurantRelated || !isKioskRelated;
-    }
-  });
-
-  const filteredUnreadCount = filteredNotifications.filter(
-    (n) => !n.read,
-  ).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-4 w-4" />
-          {filteredUnreadCount > 0 && (
+          {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center animate-pulse-glow">
-              {filteredUnreadCount}
+              {unreadCount}
             </span>
           )}
         </Button>
@@ -73,7 +44,7 @@ export function NotificationBell({
         <div className="flex items-center justify-between p-3 border-b">
           <h4 className="font-display font-bold text-sm">Notificaciones</h4>
           <div className="flex gap-1">
-            {filteredUnreadCount > 0 && (
+            {unreadCount > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -83,7 +54,7 @@ export function NotificationBell({
                 <Check className="h-3 w-3 mr-1" /> Leer todo
               </Button>
             )}
-            {filteredNotifications.length > 0 && (
+            {notifications.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -96,13 +67,13 @@ export function NotificationBell({
           </div>
         </div>
         <div className="max-h-80 overflow-y-auto">
-          {filteredNotifications.length === 0 && (
+          {notifications.length === 0 && (
             <div className="py-8 text-center text-muted-foreground text-sm">
               <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
               Sin notificaciones
             </div>
           )}
-          {filteredNotifications.map((n) => (
+          {notifications.map((n) => (
             <div
               key={n.id}
               className={`flex gap-3 px-3 py-3 border-b last:border-0 text-sm transition-colors ${

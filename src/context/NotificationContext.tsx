@@ -34,29 +34,70 @@ function playNotificationSound() {
   }
 }
 
-export function isNotificationForStore(n: { title: string; message: string }, storeSlug: string | undefined): boolean {
+export function isNotificationForStore(
+  n: { title?: string | null; message?: string | null },
+  storeSlug: string | undefined,
+): boolean {
   if (!storeSlug) return true;
-  
-  const text = ((n.title || "") + " " + (n.message || "")).toLowerCase();
-  
-  if (storeSlug === "domicilios") {
-    return text.includes("domicilio") || text.includes("domicilios");
-  }
-  
-  if (storeSlug === "carrito" || storeSlug === "trailer" || storeSlug === "carrito-movil") {
-    return text.includes("trailer") || text.includes("tráiler") || text.includes("carrito");
-  }
-  
-  if (storeSlug === "restaurante") {
+
+  const title = (n.title || "").toLowerCase();
+  const msg = (n.message || "").toLowerCase();
+  const text = `${title} ${msg}`;
+
+  const slug = storeSlug.toLowerCase().trim();
+
+  // Tienda Domicilios
+  if (slug === "domicilios" || slug === "domicilio") {
     return (
-      !text.includes("trailer") &&
-      !text.includes("tráiler") &&
-      !text.includes("carrito") &&
-      !text.includes("domicilio") &&
-      !text.includes("domicilios")
+      text.includes("domicilio") ||
+      text.includes("domicilios") ||
+      text.includes("repartidor") ||
+      text.includes("flete") ||
+      text.includes("🛵") ||
+      text.includes("🏍️")
     );
   }
-  
+
+  // Tienda Tráiler / Carrito Móvil
+  if (
+    slug === "trailer" ||
+    slug === "tráiler" ||
+    slug === "carrito" ||
+    slug === "carrito-movil" ||
+    slug === "carrito_movil"
+  ) {
+    return (
+      text.includes("trailer") ||
+      text.includes("tráiler") ||
+      text.includes("carrito") ||
+      text.includes("🛒")
+    );
+  }
+
+  // Tienda Restaurante
+  if (slug === "restaurante" || slug === "restaurant") {
+    // Excluir estrictamente cualquier notificación que pertenezca a Domicilios o Tráiler
+    const isDomicilio =
+      text.includes("domicilio") ||
+      text.includes("domicilios") ||
+      text.includes("repartidor") ||
+      text.includes("flete") ||
+      text.includes("🛵") ||
+      text.includes("🏍️");
+
+    const isTrailer =
+      text.includes("trailer") ||
+      text.includes("tráiler") ||
+      text.includes("carrito") ||
+      text.includes("🛒");
+
+    if (isDomicilio || isTrailer) {
+      return false;
+    }
+
+    return true;
+  }
+
   return true;
 }
 

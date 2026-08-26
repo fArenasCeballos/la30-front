@@ -1034,11 +1034,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
                 // Insert notifications for each low stock item
                 result.low_stock_alerts.forEach(async (materialName) => {
+                  const storeTag = activeStore?.name ? ` [${activeStore.name}]` : "";
                   const { error } = await supabase
                     .from("notifications")
                     .insert({
-                      title: "Stock Mínimo Alcanzado",
-                      message: `El insumo ${materialName} se está quedando sin stock tras un pedido reciente.`,
+                      title: `Stock Mínimo Alcanzado${storeTag}`,
+                      message: `El insumo ${materialName} se está quedando sin stock en ${activeStore?.name || "la tienda"} tras un pedido reciente.`,
                       type: "warning",
                       user_id: user?.id,
                     });
@@ -1062,7 +1063,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       });
       return true;
     },
-    [queryClient, user?.id, storeId],
+    [queryClient, user?.id, storeId, activeStore.name],
   );
 
   const getOrdersByStatus = useCallback(
