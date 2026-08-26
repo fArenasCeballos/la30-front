@@ -1063,7 +1063,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       });
       return true;
     },
-    [queryClient, user?.id, storeId, activeStore.name],
+    [queryClient, user?.id, storeId, activeStore?.name],
   );
 
   const getOrdersByStatus = useCallback(
