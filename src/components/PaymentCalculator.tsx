@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
@@ -15,15 +14,21 @@ import {
   Smartphone,
   ArrowLeft,
   CheckCircle,
-  Receipt,
   Delete,
   Users,
   Trash2,
   PiSquare,
+  Plus,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type PaymentMethod = "efectivo" | "tarjeta" | "nequi" | "mixto" | "compartido";
+type LocalPaymentMethod =
+  | "efectivo"
+  | "tarjeta"
+  | "nequi"
+  | "mixto"
+  | "compartido";
 type SubMethod = "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata";
 type BaseMethod = "efectivo" | "tarjeta" | "nequi";
 
@@ -35,7 +40,7 @@ export interface SharedPaymentEntry {
 }
 
 const PAYMENT_METHODS: {
-  key: PaymentMethod;
+  key: LocalPaymentMethod;
   label: string;
   icon: React.ReactNode;
   color: string;
@@ -79,7 +84,7 @@ interface PaymentCalculatorProps {
   open: boolean;
   onClose: () => void;
   onPaymentComplete: (
-    method: PaymentMethod,
+    method: LocalPaymentMethod,
     received: number,
     breakdown?: {
       efectivo?: number;
@@ -100,7 +105,7 @@ export function PaymentCalculator({
   onPaymentComplete,
 }: PaymentCalculatorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [method, setMethod] = useState<PaymentMethod | null>(null);
+  const [method, setMethod] = useState<LocalPaymentMethod | null>(null);
   const [subMethod, setSubMethod] = useState<SubMethod | null>(null);
   const [received, setReceived] = useState("");
 
@@ -181,7 +186,7 @@ export function PaymentCalculator({
             const parsed = JSON.parse(stored);
             setAlreadyPaidItemIds(new Set(parsed));
             if (parsed.length > 0) {
-              setMethod("mixto");
+              setMethod("compartido");
               setStep("shared_items");
             }
           }, 0);
@@ -193,17 +198,23 @@ export function PaymentCalculator({
   }, [open, order.id]);
 
   const change = useMemo(() => {
-    if (
-      (method === "mixto" || method === "compartido") &&
-      step === "shared_amount"
-    ) {
-      if (currentPartialMethod === "efectivo") {
-        const toPay = itemsAmount > 0 ? itemsAmount : remainingTotal;
-        return Math.max(0, receivedNum - toPay);
+    if (method === "mixto") {
+      if (step === "shared_amount" && currentPartialMethod === "efectivo") {
+        return Math.max(0, receivedNum - remainingTotal);
       }
-      return Math.max(0, receivedNum - remainingTotal);
+      return 0;
     }
-    if (method !== "mixto" && method !== "compartido" && step === "amount") {
+    if (method === "compartido") {
+      if (step === "shared_amount") {
+        if (currentPartialMethod === "efectivo") {
+          const toPay = itemsAmount > 0 ? itemsAmount : remainingTotal;
+          return Math.max(0, receivedNum - toPay);
+        }
+        return Math.max(0, receivedNum - remainingTotal);
+      }
+      return 0;
+    }
+    if (step === "amount") {
       return Math.max(0, receivedNum - baseRemaining);
     }
     return 0;
@@ -219,10 +230,10 @@ export function PaymentCalculator({
 
   // Can finalize the entire payment or partial
   const canConfirm = useMemo(() => {
-    if (
-      (method === "mixto" || method === "compartido") &&
-      step === "shared_amount"
-    ) {
+    if (method === "mixto" && step === "shared_amount") {
+      return receivedNum >= remainingTotal && receivedNum > 0;
+    }
+    if (method === "compartido" && step === "shared_amount") {
       if (currentPartialMethod === "efectivo" && itemsAmount > 0) {
         // For cash: receivedNum is what client hands over, must be >= itemsAmount
         return (
@@ -235,7 +246,7 @@ export function PaymentCalculator({
         // Non-cash: itemsAmount pre-set, no user input needed
         return itemsAmount >= remainingTotal;
       }
-      return receivedNum >= remainingTotal;
+      return receivedNum >= remainingTotal && receivedNum > 0;
     }
     if (step === "amount" && method === "efectivo") {
       return receivedNum >= baseRemaining;
@@ -254,19 +265,25 @@ export function PaymentCalculator({
   // Can add current amount as a partial (not the last one)
   const canAddPartial = useMemo(() => {
     if (step !== "shared_amount") return false;
-    if (currentPartialMethod === "efectivo" && itemsAmount > 0) {
-      return (
-        receivedNum > 0 &&
-        receivedNum >= itemsAmount &&
-        itemsAmount < remainingTotal
-      );
+    if (method === "mixto") {
+      return receivedNum > 0 && receivedNum < remainingTotal;
     }
-    if (currentPartialMethod !== "efectivo" && itemsAmount > 0) {
-      // Non-cash: the actual amount is itemsAmount
-      return itemsAmount < remainingTotal;
+    if (method === "compartido") {
+      if (currentPartialMethod === "efectivo" && itemsAmount > 0) {
+        return (
+          receivedNum > 0 &&
+          receivedNum >= itemsAmount &&
+          itemsAmount < remainingTotal
+        );
+      }
+      if (currentPartialMethod !== "efectivo" && itemsAmount > 0) {
+        // Non-cash: the actual amount is itemsAmount
+        return itemsAmount < remainingTotal;
+      }
+      return receivedNum > 0 && receivedNum < remainingTotal;
     }
-    return receivedNum > 0 && receivedNum < remainingTotal;
-  }, [step, receivedNum, remainingTotal, currentPartialMethod, itemsAmount]);
+    return false;
+  }, [method, step, receivedNum, remainingTotal, currentPartialMethod, itemsAmount]);
 
   const handleNumpad = useCallback(
     (val: string) => {
@@ -312,54 +329,70 @@ export function PaymentCalculator({
 
   // Add the current entry as a partial payment and continue
   const addPartialPayment = useCallback(() => {
-    // Use itemsAmount if pre-calculated (from item selector), else fall back to receivedNum
-    const paymentAmount = itemsAmount > 0 ? itemsAmount : receivedNum;
+    const isMixto = method === "mixto";
+    const paymentAmount = isMixto
+      ? receivedNum
+      : itemsAmount > 0
+        ? itemsAmount
+        : receivedNum;
+
     if (
       !currentPartialMethod ||
       paymentAmount <= 0 ||
       paymentAmount >= remainingTotal
     )
       return;
+
     const paymentItems: Partial<OrderItem>[] = [];
-    order.order_items?.forEach((item) => {
-      let qty = 0;
-      for (let i = 0; i < item.quantity; i++) {
-        // En pago parcial en curso, los ítems están en currentPersonItemIds (porque dimos CONTINUAR)
-        if (currentPersonItemIds.has(`${item.id}-${i}`)) {
-          qty++;
+    if (!isMixto) {
+      order.order_items?.forEach((item) => {
+        let qty = 0;
+        for (let i = 0; i < item.quantity; i++) {
+          if (currentPersonItemIds.has(`${item.id}-${i}`)) {
+            qty++;
+          }
         }
-      }
-      if (qty > 0) {
-        paymentItems.push({
-          ...item,
-          quantity: qty,
-          unit_price: item.unit_price,
-          products: item.products,
-          notes: item.notes,
-        });
-      }
-    });
+        if (qty > 0) {
+          paymentItems.push({
+            ...item,
+            quantity: qty,
+            unit_price: item.unit_price,
+            products: item.products,
+            notes: item.notes,
+          });
+        }
+      });
+    }
 
     const newPartial: SharedPaymentEntry = {
       method: currentPartialMethod,
       subMethod: currentPartialSubMethod ?? undefined,
       amount: paymentAmount,
-      items: paymentItems,
+      items: isMixto ? undefined : paymentItems,
     };
     setPartialPayments((prev) => [...prev, newPartial]);
-    setAlreadyPaidItemIds((prev) => {
-      const next = new Set([...prev, ...currentPersonItemIds]);
-      localStorage.setItem(`paid_items_${order.id}`, JSON.stringify([...next]));
-      return next;
-    });
+    if (!isMixto) {
+      setAlreadyPaidItemIds((prev) => {
+        const next = new Set([...prev, ...currentPersonItemIds]);
+        localStorage.setItem(`paid_items_${order.id}`, JSON.stringify([...next]));
+        return next;
+      });
+    }
     setReceived("");
     setItemsAmount(0);
     setCurrentPartialMethod(null);
     setCurrentPartialSubMethod(null);
     setCurrentPersonItemIds(new Set());
     setSelectedItemIds(new Set());
-    setStep("shared_items");
+
+    // En pago mixto, vuelve a elegir el siguiente medio de pago para el saldo restante
+    if (isMixto) {
+      setStep("shared_method");
+    } else {
+      setStep("shared_items");
+    }
   }, [
+    method,
     itemsAmount,
     receivedNum,
     currentPartialMethod,
@@ -377,7 +410,7 @@ export function PaymentCalculator({
   const handleConfirmPayment = useCallback(
     async (
       overrideReceived?: number,
-      overrideMethod?: PaymentMethod,
+      overrideMethod?: LocalPaymentMethod,
       overrideSubMethod?: SubMethod | null,
     ) => {
       const activeMethod = overrideMethod || method;
@@ -400,39 +433,47 @@ export function PaymentCalculator({
       let finalSharedPayments: SharedPaymentEntry[] | undefined;
 
       if (activeMethod === "mixto" || activeMethod === "compartido") {
+        const isMixto = activeMethod === "mixto";
         // Build all payments: existing partials + the current (final) entry
         const allPayments: SharedPaymentEntry[] = [...partialPayments];
-        // For cash in shared mode, the actual payment amount is itemsAmount (if set)
-        const finalAmount = itemsAmount > 0 ? itemsAmount : currentReceived;
+        const finalAmount = isMixto
+          ? currentPartialMethod === "efectivo"
+            ? Math.min(currentReceived, remainingTotal)
+            : currentReceived
+          : itemsAmount > 0
+            ? itemsAmount
+            : currentReceived;
+
         if (currentPartialMethod && finalAmount > 0) {
           const paymentItems: Partial<OrderItem>[] = [];
-          order.order_items?.forEach((item) => {
-            let qty = 0;
-            for (let i = 0; i < item.quantity; i++) {
-              // Puede estar en selectedItemIds (si es pago único rápido) o en currentPersonItemIds
-              if (
-                selectedItemIds.has(`${item.id}-${i}`) ||
-                currentPersonItemIds.has(`${item.id}-${i}`)
-              ) {
-                qty++;
+          if (!isMixto) {
+            order.order_items?.forEach((item) => {
+              let qty = 0;
+              for (let i = 0; i < item.quantity; i++) {
+                if (
+                  selectedItemIds.has(`${item.id}-${i}`) ||
+                  currentPersonItemIds.has(`${item.id}-${i}`)
+                ) {
+                  qty++;
+                }
               }
-            }
-            if (qty > 0) {
-              paymentItems.push({
-                ...item,
-                quantity: qty,
-                unit_price: item.unit_price,
-                products: item.products,
-                notes: item.notes,
-              });
-            }
-          });
+              if (qty > 0) {
+                paymentItems.push({
+                  ...item,
+                  quantity: qty,
+                  unit_price: item.unit_price,
+                  products: item.products,
+                  notes: item.notes,
+                });
+              }
+            });
+          }
 
           allPayments.push({
             method: currentPartialMethod,
             subMethod: currentPartialSubMethod ?? undefined,
             amount: finalAmount,
-            items: paymentItems,
+            items: isMixto ? undefined : paymentItems,
           });
         }
 
@@ -552,7 +593,7 @@ export function PaymentCalculator({
     onClose();
   };
 
-  const selectMethod = (m: PaymentMethod) => {
+  const selectMethod = (m: LocalPaymentMethod) => {
     if (isSubmitting) return;
     setMethod(m);
     if (m === "compartido") {
@@ -560,6 +601,9 @@ export function PaymentCalculator({
       setCurrentPersonItemIds(new Set());
       setStep("shared_items");
     } else if (m === "mixto") {
+      setItemsAmount(0);
+      setSelectedItemIds(new Set());
+      setCurrentPersonItemIds(new Set());
       setStep("shared_method");
     } else if (m === "tarjeta") {
       setStep("sub_method_tarjeta");
@@ -633,6 +677,13 @@ export function PaymentCalculator({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-xl p-0 gap-0 overflow-y-auto max-h-[92vh] rounded-3xl lg:rounded-[2.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl custom-scrollbar">
+        <DialogTitle className="sr-only">
+          Calculadora de Cobro - Pedido #{order.locator}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          Selecciona el método de pago para procesar la transacción.
+        </DialogDescription>
+
         {/* Glassmorphic Loading Overlay */}
         {isSubmitting && step !== "done" && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-8 lg:p-12 space-y-6 bg-white/90 backdrop-blur-md rounded-3xl lg:rounded-[2.5rem] animate-in fade-in duration-300">
@@ -698,107 +749,182 @@ export function PaymentCalculator({
 
         {/* ═══════ Method selection ═══════ */}
         {step === "method" && (
-          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <DialogHeader className="p-4 lg:p-6 pb-2 lg:pb-3">
-              <div className="flex items-center gap-4 mb-2">
-                <div className="bg-primary/10 p-2 lg:p-3 rounded-2xl">
-                  <Receipt className="h-8 w-8 text-primary" strokeWidth={3} />
-                </div>
-                <div className="space-y-0.5">
-                  <div className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
-                    PUNTO DE PAGO
-                  </div>
-                  <DialogTitle className="text-2xl lg:text-4xl font-black tracking-tighter">
-                    Cobrar Pedido #{order.locator}
-                  </DialogTitle>
-                </div>
+          <div className="animate-in fade-in duration-500 p-4 lg:p-6 space-y-4 lg:space-y-6">
+            <div className="text-center space-y-1">
+              <div className="flex items-center justify-center gap-1.5 text-primary font-black uppercase tracking-[0.3em] text-[10px]">
+                <Sparkles className="h-3 w-3" />
+                TERMINAL DE COBRO
               </div>
-              <DialogDescription className="sr-only">
-                Selección de método de pago
-              </DialogDescription>
-            </DialogHeader>
+              <h2 className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground">
+                Selecciona Método
+              </h2>
+            </div>
 
-            <div className="p-4 lg:p-6 pt-2 lg:pt-3 space-y-3 lg:space-y-6">
-              {/* Ticket Order summary */}
-              <div className="relative">
-                <div className="absolute inset-0 bg-accent/5 rounded-2xl lg:rounded-[2.5rem] -rotate-1 translate-y-1" />
-                <div className="relative rounded-2xl lg:rounded-3xl bg-white border-2 border-accent/20 p-4 lg:p-5 space-y-2 lg:space-y-3 shadow-soft">
-                  <div className="flex items-center justify-between border-b-2 border-dashed border-accent/20 pb-4 mb-4">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
-                      DETALLE DE ORDEN
-                    </span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
-                      {order.order_items?.length} ITEMS
-                    </span>
-                  </div>
-                  <div className="space-y-2 max-h-25 overflow-y-auto pr-2 custom-scrollbar">
-                    {order.order_items?.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex justify-between items-center text-lg"
-                      >
-                        <span className="font-bold flex items-center gap-3">
-                          <span className="text-primary font-black bg-primary/5 px-2 py-0.5 rounded-lg text-sm">
-                            {item.quantity}x
-                          </span>
-                          {item.products.name}
-                        </span>
-                        <span className="font-black tracking-tighter text-muted-foreground/60">
-                          {formatPrice(item.unit_price * item.quantity)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="border-t-2 border-accent/10 pt-4 flex justify-between items-end">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">
-                        {previouslyPaid > 0
-                          ? "RESTANTE A RECAUDAR"
-                          : "TOTAL A RECAUDAR"}
-                      </span>
-                      <div className="text-2xl lg:text-4xl font-black tracking-tighter text-primary">
-                        {formatPrice(baseRemaining)}
-                      </div>
-                      {previouslyPaid > 0 && (
-                        <div className="text-xs font-bold text-muted-foreground mt-1">
-                          TOTAL ORIGINAL: {formatPrice(order.total)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment methods */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="h-px flex-1 bg-accent/20" />
-                  <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.3em]">
-                    MÉTODO DE PAGO
-                  </span>
-                  <div className="h-px flex-1 bg-accent/20" />
-                </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-                  {PAYMENT_METHODS.map((pm) => (
-                    <button
-                      key={pm.key}
-                      onClick={() => selectMethod(pm.key)}
-                      className={cn(
-                        "group relative flex flex-row lg:flex-col items-center justify-center gap-2 lg:gap-3 p-3 lg:p-4 rounded-xl lg:rounded-2xl border-2 transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] shadow-soft hover:shadow-xl",
-                        pm.color,
-                      )}
-                    >
-                      <div className="transition-transform duration-500 group-hover:scale-110 shrink-0">
-                        {pm.icon}
-                      </div>
-                      <span className="text-[9px] lg:text-xs font-black tracking-widest truncate">
-                        {pm.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+            {/* Total display */}
+            <div className="bg-linear-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/20 rounded-3xl p-6 text-center space-y-1 relative overflow-hidden shadow-inner">
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">
+                TOTAL A COBRAR
+              </span>
+              <div className="text-4xl lg:text-6xl font-black tracking-tighter text-primary">
+                {formatPrice(baseRemaining)}
               </div>
             </div>
+
+            {/* Methods Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+              {PAYMENT_METHODS.map((m) => (
+                <button
+                  key={m.key}
+                  onClick={() => selectMethod(m.key)}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-4 lg:p-6 rounded-2xl lg:rounded-3xl border-2 transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] shadow-sm gap-2",
+                    m.color,
+                  )}
+                >
+                  {m.icon}
+                  <span className="font-black text-xs lg:text-sm tracking-wider uppercase">
+                    {m.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════ Standard: Amount entry (Efectivo) ═══════ */}
+        {step === "amount" && (
+          <div className="animate-in fade-in slide-in-from-right-8 duration-500 p-4 lg:p-6 space-y-4">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setReceived("");
+                  setMethod(null);
+                  setStep("method");
+                }}
+                className="h-12 w-12 rounded-2xl bg-accent/10"
+              >
+                <ArrowLeft className="h-5 w-5" strokeWidth={3} />
+              </Button>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-green-600">
+                  PAGO EN EFECTIVO
+                </span>
+                <h3 className="text-xl lg:text-2xl font-black tracking-tighter">
+                  Calculadora de Cambio
+                </h3>
+              </div>
+            </div>
+
+            {/* Display Calculator */}
+            <div className="grid grid-cols-3 gap-2 bg-accent/5 p-3 rounded-2xl border border-accent/10 text-center">
+              <div>
+                <span className="text-[9px] font-black uppercase text-muted-foreground/60 block">
+                  A PAGAR
+                </span>
+                <span className="font-black text-sm lg:text-base text-foreground">
+                  {formatPrice(baseRemaining)}
+                </span>
+              </div>
+              <div className="border-x border-accent/10 px-2">
+                <span className="text-[9px] font-black uppercase text-primary block">
+                  RECIBIDO
+                </span>
+                <span className="font-black text-base lg:text-xl text-primary truncate block">
+                  {received ? formatPrice(receivedNum) : "$0"}
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] font-black uppercase text-muted-foreground/60 block">
+                  DEVUELTA
+                </span>
+                <span
+                  className={cn(
+                    "font-black text-sm lg:text-base block",
+                    change > 0
+                      ? "text-green-600"
+                      : receivedNum > 0 && receivedNum < baseRemaining
+                        ? "text-destructive"
+                        : "text-muted-foreground/40",
+                  )}
+                >
+                  {change > 0
+                    ? formatPrice(change)
+                    : receivedNum > 0 && receivedNum < baseRemaining
+                      ? `-${formatPrice(baseRemaining - receivedNum)}`
+                      : "$0"}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick buttons */}
+            <div className="grid grid-cols-4 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExact}
+                className="rounded-xl font-black text-[10px] uppercase border-2 col-span-2 bg-primary/5 text-primary border-primary/20"
+              >
+                EXACTO ({formatPrice(baseRemaining)})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setReceived("50000")}
+                className="rounded-xl font-black text-xs border-2"
+              >
+                $50.000
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setReceived("100000")}
+                className="rounded-xl font-black text-xs border-2"
+              >
+                $100.000
+              </Button>
+            </div>
+
+            {/* Numpad */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "C",
+                "0",
+                "DEL",
+              ].map((key) => (
+                <Button
+                  key={key}
+                  variant="secondary"
+                  className={cn(
+                    "h-11 rounded-xl font-black text-lg shadow-sm border",
+                    key === "C" && "text-destructive",
+                  )}
+                  onClick={() => handleNumpad(key)}
+                >
+                  {key === "DEL" ? <Delete className="h-5 w-5" /> : key}
+                </Button>
+              ))}
+            </div>
+
+            <Button
+              size="lg"
+              disabled={!canConfirm || isSubmitting}
+              className="w-full h-14 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-green-600/20"
+              onClick={() => handleConfirmPayment()}
+            >
+              <CheckCircle className="h-5 w-5 mr-2" />
+              CONFIRMAR COBRO • {formatPrice(baseRemaining)}
+            </Button>
           </div>
         )}
 
@@ -946,7 +1072,7 @@ export function PaymentCalculator({
           </div>
         )}
 
-        {/* ═══════ Shared: Select method for next partial ═══════ */}
+        {/* ═══════ Shared/Mixed: Select method for next partial ═══════ */}
         {step === "shared_method" && (
           <div className="animate-in fade-in slide-in-from-right-8 duration-700 p-4 lg:p-6">
             <div className="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
@@ -954,43 +1080,68 @@ export function PaymentCalculator({
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  setStep("shared_items");
+                  if (method === "mixto") {
+                    setStep("method");
+                    setMethod(null);
+                    setPartialPayments([]);
+                    setReceived("");
+                  } else {
+                    setStep("shared_items");
+                  }
                 }}
                 className="h-14 w-14 rounded-2xl bg-accent/10"
               >
                 <ArrowLeft className="h-6 w-6" strokeWidth={3} />
               </Button>
               <div className="space-y-0.5">
-                <div className="text-amber-600 font-black uppercase tracking-[0.3em] text-[10px]">
-                  PAGO COMPARTIDO • PAGO #{partialPayments.length + 1}
+                <div className={cn("font-black uppercase tracking-[0.3em] text-[10px]", method === "mixto" ? "text-orange-600" : "text-amber-600")}>
+                  {method === "mixto"
+                    ? `PAGO MIXTO • MÉTODO #${partialPayments.length + 1}`
+                    : `PAGO COMPARTIDO • PAGO #${partialPayments.length + 1}`}
                 </div>
                 <h3 className="text-2xl lg:text-4xl font-black tracking-tighter">
-                  ¿Cómo paga?
+                  {method === "mixto" ? "Elige el medio de pago" : "¿Cómo paga esta persona?"}
                 </h3>
               </div>
             </div>
 
             {/* Show remaining */}
-            <div className="bg-amber-500/5 rounded-2xl lg:rounded-3xl p-4 lg:p-6 mb-4 lg:mb-6 border-2 border-amber-500/10 border-dashed text-center">
-              <p className="text-xs font-black text-amber-600/60 uppercase tracking-widest mb-1">
-                {itemsAmount > 0
-                  ? "TOTAL SELECCIONADO"
-                  : receivedNum > 0
-                    ? "MONTO INGRESADO"
-                    : partialPayments.length === 0
-                      ? "TOTAL A PAGAR"
-                      : "MONTO RESTANTE"}
-              </p>
-              <div className="text-3xl lg:text-4xl font-black tracking-tighter text-amber-600">
-                {formatPrice(
-                  itemsAmount > 0
-                    ? itemsAmount
+            <div className={cn(
+              "rounded-2xl lg:rounded-3xl p-4 lg:p-6 mb-4 lg:mb-6 border-2 border-dashed text-center",
+              method === "mixto"
+                ? "bg-orange-500/5 border-orange-500/20 text-orange-700"
+                : "bg-amber-500/5 border-amber-500/10 text-amber-700"
+            )}>
+              <p className="text-xs font-black uppercase tracking-widest mb-1 opacity-70">
+                {method === "mixto"
+                  ? partialPayments.length === 0
+                    ? "TOTAL A PAGAR"
+                    : "SALDO RESTANTE POR PAGAR"
+                  : itemsAmount > 0
+                    ? "TOTAL SELECCIONADO"
                     : receivedNum > 0
-                      ? receivedNum
-                      : remainingTotal,
+                      ? "MONTO INGRESADO"
+                      : partialPayments.length === 0
+                        ? "TOTAL A PAGAR"
+                        : "MONTO RESTANTE"}
+              </p>
+              <div className={cn("text-3xl lg:text-5xl font-black tracking-tighter", method === "mixto" ? "text-orange-600" : "text-amber-600")}>
+                {formatPrice(
+                  method === "mixto"
+                    ? remainingTotal
+                    : itemsAmount > 0
+                      ? itemsAmount
+                      : receivedNum > 0
+                        ? receivedNum
+                        : remainingTotal
                 )}
               </div>
-              {(itemsAmount > 0 || receivedNum > 0) &&
+              {method === "mixto" && partialPayments.length > 0 && (
+                <p className="text-[11px] font-bold mt-2 uppercase tracking-wider text-muted-foreground">
+                  PAGADO HASTA AHORA: <span className="font-black text-foreground">{formatPrice(partialTotal)}</span> · TOTAL ORDEN: <span className="font-black text-foreground">{formatPrice(baseRemaining)}</span>
+                </p>
+              )}
+              {method !== "mixto" && (itemsAmount > 0 || receivedNum > 0) &&
                 (itemsAmount > 0 ? itemsAmount : receivedNum) !==
                   remainingTotal && (
                   <p className="text-[10px] font-bold text-amber-600/40 mt-2 uppercase tracking-wider">
@@ -1092,17 +1243,20 @@ export function PaymentCalculator({
                 <ArrowLeft className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
               </Button>
               <div className="space-y-0.5">
-                <div className="text-amber-600 font-black uppercase tracking-[0.3em] text-[8px] lg:text-[10px]">
-                  PAGO #{partialPayments.length + 1} •{" "}
-                  {getMethodLabel(
-                    currentPartialMethod,
-                    currentPartialSubMethod ?? undefined,
-                  ).toUpperCase()}
+                <div className={cn("font-black uppercase tracking-[0.3em] text-[8px] lg:text-[10px]", method === "mixto" ? "text-orange-600" : "text-amber-600")}>
+                  {method === "mixto"
+                    ? `PAGO MIXTO • ${getMethodLabel(currentPartialMethod, currentPartialSubMethod ?? undefined).toUpperCase()}`
+                    : `PAGO #${partialPayments.length + 1} • ${getMethodLabel(
+                        currentPartialMethod,
+                        currentPartialSubMethod ?? undefined,
+                      ).toUpperCase()}`}
                 </div>
                 <h3 className="text-xl lg:text-2xl font-black tracking-tighter">
-                  {currentPartialMethod === "efectivo"
-                    ? "¿Cuánto paga esta persona?"
-                    : "Confirmar cobro"}
+                  {method === "mixto"
+                    ? `¿Cuánto vas a pagar con ${getMethodLabel(currentPartialMethod, currentPartialSubMethod ?? undefined)}?`
+                    : currentPartialMethod === "efectivo"
+                      ? "¿Cuánto paga esta persona?"
+                      : "Confirmar cobro"}
                 </h3>
               </div>
             </div>
@@ -1377,14 +1531,20 @@ export function PaymentCalculator({
                   {canAddPartial && (
                     <Button
                       size="lg"
-                      className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.15em] shadow-strong shadow-amber-500/20 transition-all active:scale-95"
+                      className={cn(
+                        "w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.15em] shadow-strong transition-all active:scale-95",
+                        method === "mixto"
+                          ? "bg-orange-500 hover:bg-orange-600 shadow-orange-500/20"
+                          : "bg-amber-500 hover:bg-amber-600 shadow-amber-500/20",
+                      )}
                       onClick={addPartialPayment}
                     >
-                      <Users
-                        className="h-5 w-5 lg:h-6 lg:w-6 mr-2"
-                        strokeWidth={3}
-                      />
-                      AGREGAR PAGO Y CONTINUAR (FALTAN{" "}
+                      {method === "mixto" ? (
+                        <Plus className="h-5 w-5 lg:h-6 lg:w-6 mr-2" strokeWidth={3} />
+                      ) : (
+                        <Users className="h-5 w-5 lg:h-6 lg:w-6 mr-2" strokeWidth={3} />
+                      )}
+                      {method === "mixto" ? "AGREGAR ESTE PAGO (FALTAN " : "AGREGAR PAGO Y CONTINUAR (FALTAN "}
                       {formatPrice(
                         remainingTotal -
                           (currentPartialMethod === "efectivo" &&

@@ -7,15 +7,24 @@ export const PRINT_STYLES = `
     margin: 0;
     size: 80mm auto;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
   body {
-    font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
-    width: 80mm;
-    padding: 0 2mm 2mm 2mm;
+    font-family: 'Courier New', Courier, 'Monaco', 'Consolas', monospace;
+    width: 72mm;
+    margin: 0 auto;
+    padding: 0 1mm 4mm 1mm;
     font-size: 13px;
-    color: #000;
-    line-height: 1.1;
+    color: #000 !important;
+    line-height: 1.15;
     background: #fff;
+    -webkit-font-smoothing: antialiased;
   }
   .center   { text-align: center; }
   .right    { text-align: right; }
@@ -24,16 +33,18 @@ export const PRINT_STYLES = `
   .double-divider {
     border-top: 2px solid #000;
     border-bottom: 2px solid #000;
-    padding: 1px 0;
+    padding: 2px 0;
     margin: 4px 0;
   }
   .row {
     display: flex;
     justify-content: space-between;
     padding: 1px 0;
+    word-break: break-word;
   }
   table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     margin: 4px 0;
   }
@@ -42,6 +53,7 @@ export const PRINT_STYLES = `
     border-top: 1px solid #000;
     padding: 2px 0;
     font-size: 12px;
+    font-weight: bold;
     text-align: left;
   }
   th:last-child { text-align: right; }
@@ -49,13 +61,16 @@ export const PRINT_STYLES = `
     padding: 2px 0;
     vertical-align: top;
     font-size: 12px;
+    word-break: break-word;
   }
-  td:first-child { width: 60%; }
-  td:nth-child(2) { width: 10%; text-align: center; }
-  td:last-child { text-align: right; }
+  td:first-child { width: 58%; }
+  td:nth-child(2) { width: 14%; text-align: center; }
+  td:last-child { width: 28%; text-align: right; }
   .item-notes {
     font-size: 11px;
+    font-weight: bold;
     padding-left: 4px;
+    word-break: break-word;
   }
   .header-title {
     font-size: 16px;
@@ -81,7 +96,7 @@ export const PRINT_STYLES = `
     margin-bottom: 6px;
   }
   .kitchen-locator {
-    font-size: 75px;
+    font-size: 70px;
     font-weight: bold;
     line-height: 1;
   }
@@ -89,33 +104,36 @@ export const PRINT_STYLES = `
     font-size: 20px;
   }
   .kitchen-cashier {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: bold;
   }
   .kitchen-item-name {
-    font-size: 32px;
+    font-size: 28px;
     font-weight: bold;
     padding: 6px 0 2px;
-    border-bottom: 3px solid #000;
+    border-bottom: 2px solid #000;
+    word-break: break-word;
   }
   .kitchen-item-notes {
-    font-size: 19px;
+    font-size: 18px;
     font-weight: bold;
-    padding-left: 10px;
-    margin-bottom: 10px;
-    line-height: 1.3;
+    padding-left: 6px;
+    margin-bottom: 8px;
+    line-height: 1.25;
+    word-break: break-word;
   }
   .kitchen-footer-notes {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
-    background: #eee;
-    padding: 6px;
+    background: #fff;
+    padding: 4px;
     border: 2px dashed #000;
-    margin-top: 10px;
+    margin-top: 8px;
+    word-break: break-word;
   }
   .kitchen-obs {
     font-size: 12px;
-    padding: 0 0 6px 4px;
+    padding: 0 0 4px 4px;
     word-break: break-word;
   }
   .kitchen-footer {
@@ -167,6 +185,7 @@ function getValidItems(order: Order): OrderItem[] {
 export interface ReceiptData {
   order: Order;
   cajeroName: string;
+  storeName?: string;
   paymentMethod?: string;
   paymentReceived?: number;
   paymentChange?: number;
@@ -180,7 +199,7 @@ export interface ReceiptData {
 
 /** Genera el HTML completo de la factura del cliente */
 export function buildCustomerReceiptHTML(data: ReceiptData): string {
-  const { order, cajeroName, paymentMethod, paymentReceived, paymentChange } =
+  const { order, cajeroName, storeName = "La 30 Perros y Hamburguesas", paymentMethod, paymentReceived, paymentChange } =
     data;
   const { dateOnly, timeOnly, printDate } = getReceiptDates(order);
   const validItems = getValidItems(order);
@@ -195,8 +214,8 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
       (item) => `
     <tr>
       <td>
-        ${(item.products?.name ?? "Producto").toUpperCase()}
-        ${item.notes ? `<div class="item-notes">${item.notes}</div>` : ""}
+        <span class="bold">${(item.products?.name ?? "Producto").toUpperCase()}</span>
+        ${item.notes ? `<div class="item-notes">↳ ${item.notes}</div>` : ""}
       </td>
       <td style="text-align:center">${item.quantity}</td>
       <td>${formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}</td>
@@ -226,17 +245,17 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
       };
       breakdownDetails += `<div class="center bold" style="font-size:12px;padding:2px 0">PAGO COMPARTIDO</div>`;
       data.sharedPayments.forEach((p, idx) => {
-        breakdownDetails += `<div class="row" style="font-size:11px"><span>Pago ${idx + 1}: ${getLabel(p.method, p.subMethod)}</span><span>${formatPrice(p.amount)}</span></div>`;
+        breakdownDetails += `<div class="row" style="font-size:11px"><span>Pago ${idx + 1}: ${getLabel(p.method, p.subMethod)}</span><span class="bold">${formatPrice(p.amount)}</span></div>`;
       });
     } else if (paymentMethod === "mixto" && data.paymentBreakdown) {
       // Fallback: aggregated breakdown (for reprints from DB)
       const b = data.paymentBreakdown;
       if (b.efectivo)
-        breakdownDetails += `<div class="row"><span>Efectivo:</span><span>${formatPrice(b.efectivo)}</span></div>`;
+        breakdownDetails += `<div class="row"><span>Efectivo:</span><span class="bold">${formatPrice(b.efectivo)}</span></div>`;
       if (b.tarjeta)
-        breakdownDetails += `<div class="row"><span>Tarjeta:</span><span>${formatPrice(b.tarjeta)}</span></div>`;
+        breakdownDetails += `<div class="row"><span>Tarjeta:</span><span class="bold">${formatPrice(b.tarjeta)}</span></div>`;
       if (b.nequi)
-        breakdownDetails += `<div class="row"><span>Nequi:</span><span>${formatPrice(b.nequi)}</span></div>`;
+        breakdownDetails += `<div class="row"><span>Nequi:</span><span class="bold">${formatPrice(b.nequi)}</span></div>`;
     } else {
       const label =
         paymentMethod === "efectivo"
@@ -244,7 +263,7 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
           : paymentMethod === "tarjeta"
             ? "Tarjeta"
             : "Nequi";
-      breakdownDetails = `<div class="row"><span>${label}:</span><span>${formatPrice(paymentReceived ?? order.total ?? 0)}</span></div>`;
+      breakdownDetails = `<div class="row"><span>${label}:</span><span class="bold">${formatPrice(paymentReceived ?? order.total ?? 0)}</span></div>`;
     }
 
     paymentSection = `
@@ -298,18 +317,17 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
       <tbody>${itemsRows}</tbody>
     </table>
     <div class="divider"></div>
-    <div class="row"><span>Sub Total</span><span>${formatPrice(subtotal)}</span></div>
-    ${(order.delivery_fee ?? 0) > 0 ? `<div class="row"><span>Costo Envío</span><span>${formatPrice(order.delivery_fee)}</span></div>` : ""}
-    <div class="row"><span>Descuento</span><span>$0</span></div>
+    <div class="row"><span>Sub Total</span><span class="bold">${formatPrice(subtotal)}</span></div>
+    ${(order.delivery_fee ?? 0) > 0 ? `<div class="row"><span>Costo Envío</span><span class="bold">${formatPrice(order.delivery_fee)}</span></div>` : ""}
     <div class="divider"></div>
     <div class="row total-row"><span>Total</span><span class="big-total">${formatPrice(order.total ?? 0)}</span></div>
     <div class="divider"></div>
     ${paymentSection}
     <div class="center" style="padding:4px 0">
-      <p>¡Gracias por tu compra!</p>
+      <p class="bold">¡Gracias por tu compra!</p>
       <p>Espera tu número: <span class="bold">${order.locator}</span></p>
       <div class="divider"></div>
-      <p class="bold" style="font-size:11px;padding-top:4px">La 30 Perros y Hamburguesas</p>
+      <p class="bold" style="font-size:11px;padding-top:4px">${storeName.toUpperCase()}</p>
     </div>
   `;
 }
@@ -327,7 +345,7 @@ export function buildKitchenReceiptHTML(
   const itemsHTML = itemsToPrint
     .map(
       (item) => `
-    <div style="margin-bottom: 12px;">
+    <div style="margin-bottom: 10px;">
       <div class="kitchen-item-name">
         ${item.quantity} ${item.products?.name?.toUpperCase() ?? "PRODUCTO"}
       </div>
@@ -339,7 +357,7 @@ export function buildKitchenReceiptHTML(
                  .map((n) => {
                    const trimmed = n.trim();
                    if (trimmed.startsWith("Obs:")) {
-                     return `<div style="margin-top:6px; color:#000; border-top:2px solid #000; padding-top:4px; font-size:20px;">${trimmed.replace("Obs:", "<strong>OBS:</strong>")}</div>`;
+                     return `<div style="margin-top:4px; color:#000; border-top:2px solid #000; padding-top:2px; font-size:18px;">${trimmed.replace("Obs:", "<strong>OBS:</strong>")}</div>`;
                    }
                    return `• ${trimmed}`;
                  })
@@ -362,12 +380,12 @@ export function buildKitchenReceiptHTML(
   }
 
   const kitchenTitle = order.is_delivery ? "DOMICILIO" : "PEDIDO";
-  const locatorLabel = order.is_delivery ? "Domicilio #" : "Mesa #";
+  const locatorLabel = order.is_delivery ? "Domicilio #" : "Mesa #" ;
 
   let deliveryInfo = "";
   if (order.is_delivery) {
     deliveryInfo = `
-      <div style="font-size:14px; margin-top:6px; border:2px dashed #000; padding:6px; background:#f9f9f9;">
+      <div style="font-size:13px; margin-top:4px; border:2px dashed #000; padding:4px; background:#fff;">
         <div><strong>CLIENTE:</strong> ${(order.delivery_name ?? "Cliente").toUpperCase()}</div>
         ${order.delivery_address ? `<div><strong>DIR:</strong> ${order.delivery_address.toUpperCase()}</div>` : ""}
         ${order.delivery_phone ? `<div><strong>TEL:</strong> ${order.delivery_phone}</div>` : ""}
@@ -385,7 +403,7 @@ export function buildKitchenReceiptHTML(
     <div class="row"><span>Ticket Control</span><span class="bold kitchen-ticket">${ticketNumber}</span></div>
     <div class="center" style="padding:2px 0"><span class="kitchen-cashier">${cajeroName.toUpperCase()}</span></div>
     <div class="divider"></div>
-    <div class="row" style="font-size:10px"><span class="bold">Cant.</span><span class="bold">Producto</span></div>
+    <div class="row" style="font-size:11px"><span class="bold">Cant.</span><span class="bold">Producto</span></div>
     <div class="divider"></div>
     ${itemsHTML}
     ${notesSection}
@@ -406,11 +424,12 @@ export interface ShiftClosingData {
   cajeroName: string;
   shiftStart: Date;
   shiftEnd: Date;
+  storeName?: string;
 }
 
 /** Genera el HTML completo de la tirilla de cierre de turno */
 export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
-  const { orders, cajeroName, shiftStart, shiftEnd } = data;
+  const { orders, cajeroName, shiftStart, shiftEnd, storeName = "La 30 Perros y Hamburguesas" } = data;
 
   const dateFmt = new Intl.DateTimeFormat("es-CO", {
     day: "2-digit",
@@ -484,7 +503,6 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
       if (!item.products) return;
 
       const category = item.products.categories;
-      // Usar category_id directo del producto como clave (más confiable que el join)
       const categoryId =
         (item.products as unknown as { category_id?: string | null })
           .category_id ??
@@ -530,12 +548,12 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
   const orderRows = sortedCategories
     .map((catSummary) => {
       const itemsList = Array.from(catSummary.items.values())
-        .sort((a, b) => a.sortOrder - b.sortOrder) // Ordenar productos por su posición
+        .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((item) => {
           return `
-            <div class="row" style="font-size:11px; margin-bottom:2px; padding: 0 4px;">
+            <div class="row" style="font-size:11px; margin-bottom:2px; padding: 0 2px;">
               <span>${item.name.toUpperCase()}: <span class="bold">${item.qty}</span></span>
-              <span>${formatPrice(item.total)}</span>
+              <span class="bold">${formatPrice(item.total)}</span>
             </div>
           `;
         })
@@ -543,7 +561,7 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
 
       return `
         <div style="margin-top: 6px; margin-bottom: 2px;">
-          <div class="bold center" style="font-size:12px; border-bottom:1px solid #ddd; margin-bottom: 2px; padding-bottom: 2px;">
+          <div class="bold center" style="font-size:12px; border-bottom:1px dashed #000; margin-bottom: 2px; padding-bottom: 2px;">
             ${catSummary.name.toUpperCase()}
           </div>
           ${itemsList}
@@ -559,7 +577,7 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
       .map((order) => {
         const ticketNumber = order.ticket_number ?? "—";
         const typeLabel = order.is_delivery ? "DOM" : "MESA";
-        return `<div class="row" style="font-size:11px"><span>#${ticketNumber} ${typeLabel} ${order.locator}</span><span>${formatPrice(order.total ?? 0)}</span></div>`;
+        return `<div class="row" style="font-size:11px"><span>#${ticketNumber} ${typeLabel} ${order.locator}</span><span class="bold">${formatPrice(order.total ?? 0)}</span></div>`;
       })
       .join("");
 
@@ -579,7 +597,7 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
   return `
     <div class="center"><p class="header-title">CIERRE DE TURNO</p></div>
     <div class="double-divider">
-      <div class="center bold" style="font-size:13px">La 30 Perros y Hamburguesas</div>
+      <div class="center bold" style="font-size:13px">${storeName.toUpperCase()}</div>
     </div>
 
     <div class="row" style="font-size:10px"><span>Fecha Hora Impr.:</span><span>${printDate}</span></div>
@@ -630,7 +648,7 @@ export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
       <p>Total Pedidos: <span class="bold">${entregados.length + cancelados.length}</span></p>
       <p>Entregados: <span class="bold">${entregados.length}</span> | Cancelados: <span class="bold">${cancelados.length}</span></p>
       <div class="divider" style="margin-top:6px"></div>
-      <p class="bold" style="padding-top:4px">La 30 Perros y Hamburguesas</p>
+      <p class="bold" style="padding-top:4px">${storeName.toUpperCase()}</p>
       <p style="font-size:10px">Cierre generado automáticamente</p>
     </div>
   `;
@@ -646,7 +664,6 @@ export async function silentPrint(
 ): Promise<void> {
   return new Promise((resolve) => {
     const iframe = document.createElement("iframe");
-    // Ocultar el iframe fuera de la vista
     iframe.style.position = "absolute";
     iframe.style.top = "-9999px";
     iframe.style.left = "-9999px";
@@ -663,11 +680,12 @@ export async function silentPrint(
       return;
     }
 
-    // Inyectar el contenido y estilos en el iframe
     doc.open();
     doc.write(`
+      <!DOCTYPE html>
       <html>
         <head>
+          <meta charset="utf-8" />
           <style>
             ${PRINT_STYLES}
             html, body {
@@ -696,13 +714,10 @@ export async function silentPrint(
       resolve();
     };
 
-    // Dar tiempo a que el navegador renderice el contenido del iframe
     setTimeout(() => {
       const win = iframe.contentWindow;
       if (win) {
         win.addEventListener("afterprint", cleanup);
-
-        // Timeout de seguridad de 10s en caso de que afterprint no dispare
         setTimeout(cleanup, 10000);
 
         try {
@@ -731,7 +746,7 @@ export function buildPartialPaymentReceiptHTML(
   index: number,
   totalPayments: number,
 ): string {
-  const { order, cajeroName } = data;
+  const { order, cajeroName, storeName = "La 30 Perros y Hamburguesas" } = data;
   const { printDate } = getReceiptDates(order);
   const ticketNumber = order.ticket_number ?? "—";
 
@@ -747,10 +762,11 @@ export function buildPartialPaymentReceiptHTML(
 
   const paymentLabel = getLabel(payment.method, payment.subMethod);
 
-  const partialReceipt = `
+  return `
     <div class="center">
-      <p class="header-title">COMPROBANTE DE PAGO</p>
-      <p style="font-size:12px; margin-top:4px;">(PAGO PARCIAL ${index} de ${totalPayments})</p>
+      <p class="header-title">${storeName.toUpperCase()}</p>
+      <p class="bold" style="font-size:12px; margin-top:2px;">COMPROBANTE DE PAGO</p>
+      <p style="font-size:11px;">(PAGO PARCIAL ${index} de ${totalPayments})</p>
     </div>
 
     <div class="double-divider">
@@ -778,18 +794,18 @@ export function buildPartialPaymentReceiptHTML(
 
     <div class="divider"></div>
 
-    <div class="center" style="padding:10px 0;">
-      <p style="font-size:16px; font-weight:bold;">${paymentLabel.toUpperCase()}</p>
-      <p style="font-size:24px; font-weight:black; margin-top:5px;">${formatPrice(payment.amount)}</p>
+    <div class="center" style="padding:6px 0;">
+      <p style="font-size:14px; font-weight:bold;">${paymentLabel.toUpperCase()}</p>
+      <p class="big-total" style="font-size:22px; margin-top:3px;">${formatPrice(payment.amount)}</p>
     </div>
     ${
       payment.items && payment.items.length > 0
         ? `
     <div class="divider"></div>
-    <table class="items-table">
+    <table>
       <thead>
         <tr>
-          <th style="text-align:left">Desc</th>
+          <th>Desc</th>
           <th style="text-align:center">Cant</th>
           <th style="text-align:right">Total</th>
         </tr>
@@ -800,8 +816,8 @@ export function buildPartialPaymentReceiptHTML(
             (item) => `
         <tr>
           <td>
-            ${(item.products?.name ?? "Producto").toUpperCase()}
-            ${item.notes ? `<div class="item-notes">${item.notes}</div>` : ""}
+            <span class="bold">${(item.products?.name ?? "Producto").toUpperCase()}</span>
+            ${item.notes ? `<div class="item-notes">↳ ${item.notes}</div>` : ""}
           </td>
           <td style="text-align:center">${item.quantity}</td>
           <td>${formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}</td>
@@ -817,21 +833,8 @@ export function buildPartialPaymentReceiptHTML(
 
     <div class="divider"></div>
     <div class="center" style="padding:4px 0;">
-      <p style="font-size:11px;">Conserve este comprobante</p>
+      <p style="font-size:11px;" class="bold">Conserve este comprobante</p>
     </div>
-  `;
-
-  return `
-    <html>
-      <head>
-        <style>${PRINT_STYLES}</style>
-      </head>
-      <body>
-        <div class="receipt">
-          ${partialReceipt}
-        </div>
-      </body>
-    </html>
   `;
 }
 
@@ -889,14 +892,14 @@ export function buildDriverSettlementReceiptHTML({
       const fee = o.delivery_fee ?? 0;
       return `
         <tr>
-          <td>
+          <td style="width:62%;">
             <div class="bold">#DOM ${o.locator} (${hora})</div>
-            <div style="font-size:10px; color:#333;">${o.delivery_address || "Sin dirección"}</div>
-            <div style="font-size:9px; color:#555;">Pago: ${paymentMethods}</div>
+            <div style="font-size:10px;">${o.delivery_address || "Sin dirección"}</div>
+            <div style="font-size:9px;">Pago: <span class="bold">${paymentMethods}</span></div>
           </td>
-          <td style="text-align:right;">
+          <td style="width:38%; text-align:right;">
             <div style="font-size:10px;">${formatPrice(o.total)}</div>
-            <div class="bold" style="font-size:11px; color:#000;">+${formatPrice(fee)}</div>
+            <div class="bold" style="font-size:11px;">+${formatPrice(fee)}</div>
           </td>
         </tr>
       `;
@@ -904,109 +907,100 @@ export function buildDriverSettlementReceiptHTML({
     .join("");
 
   return `
-    <html>
-      <head>
-        <style>${PRINT_STYLES}</style>
-      </head>
-      <body>
-        <div class="receipt">
-          <div class="center">
-            <div class="header-title">${storeName.toUpperCase()}</div>
-            <div class="bold" style="font-size:14px; margin: 2px 0;">LIQUIDACIÓN DE DOMICILIARIO</div>
-            <div style="font-size:11px;">Módulo de Domicilios</div>
-          </div>
+    <div class="center">
+      <div class="header-title">${storeName.toUpperCase()}</div>
+      <div class="bold" style="font-size:14px; margin: 2px 0;">LIQUIDACIÓN DE DOMICILIARIO</div>
+      <div style="font-size:11px;">Módulo de Domicilios</div>
+    </div>
 
-          <div class="divider"></div>
+    <div class="divider"></div>
 
-          <div class="row">
-            <span class="bold">DOMICILIARIO:</span>
-            <span class="bold">${driverName.toUpperCase()}</span>
-          </div>
-          ${driverPlate ? `<div class="row"><span>Placa Moto:</span><span class="bold">${driverPlate.toUpperCase()}</span></div>` : ""}
-          ${driverPhone ? `<div class="row"><span>Teléfono:</span><span>${driverPhone}</span></div>` : ""}
-          <div class="row">
-            <span>Cajero / Responsable:</span>
-            <span>${cajeroName}</span>
-          </div>
+    <div class="row">
+      <span class="bold">DOMICILIARIO:</span>
+      <span class="bold">${driverName.toUpperCase()}</span>
+    </div>
+    ${driverPlate ? `<div class="row"><span>Placa Moto:</span><span class="bold">${driverPlate.toUpperCase()}</span></div>` : ""}
+    ${driverPhone ? `<div class="row"><span>Teléfono:</span><span class="bold">${driverPhone}</span></div>` : ""}
+    <div class="row">
+      <span>Cajero / Responsable:</span>
+      <span class="bold">${cajeroName.toUpperCase()}</span>
+    </div>
 
-          <div class="divider"></div>
+    <div class="divider"></div>
 
-          <div class="row" style="font-size:10px;">
-            <span>Desde:</span>
-            <span>${shiftStart.toLocaleDateString("es-CO")} ${shiftStart.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
-          </div>
-          <div class="row" style="font-size:10px;">
-            <span>Hasta:</span>
-            <span>${shiftEnd.toLocaleDateString("es-CO")} ${shiftEnd.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
-          </div>
+    <div class="row" style="font-size:10px;">
+      <span>Desde:</span>
+      <span class="bold">${shiftStart.toLocaleDateString("es-CO")} ${shiftStart.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
+    </div>
+    <div class="row" style="font-size:10px;">
+      <span>Hasta:</span>
+      <span class="bold">${shiftEnd.toLocaleDateString("es-CO")} ${shiftEnd.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
+    </div>
 
-          <div class="double-divider"></div>
+    <div class="double-divider"></div>
 
-          <div class="bold" style="font-size:12px; margin-bottom:4px;">DETALLE DE ENTREGAS (${totalDeliveries})</div>
+    <div class="bold" style="font-size:12px; margin-bottom:4px;">DETALLE DE ENTREGAS (${totalDeliveries})</div>
 
-          <table>
-            <thead>
-              <tr>
-                <th style="text-align:left;">Pedido / Dirección</th>
-                <th style="text-align:right;">Total / Flete</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${ordersRows}
-            </tbody>
-          </table>
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:left; width:62%;">Pedido / Dirección</th>
+          <th style="text-align:right; width:38%;">Total / Flete</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${ordersRows}
+      </tbody>
+    </table>
 
-          <div class="double-divider"></div>
+    <div class="double-divider"></div>
 
-          <div class="row" style="font-size:13px;">
-            <span>Total Pedidos Entregados:</span>
-            <span class="bold">${totalDeliveries}</span>
-          </div>
-          <div class="row" style="font-size:13px;">
-            <span>Venta Total Pedidos:</span>
-            <span class="bold">${formatPrice(totalOrdersAmount)}</span>
-          </div>
-          <div class="row" style="font-size:13px; color:#000;">
-            <span>Efectivo Cobrado en Mano:</span>
-            <span class="bold">${formatPrice(totalCashCollected)}</span>
-          </div>
+    <div class="row" style="font-size:13px;">
+      <span>Total Pedidos Entregados:</span>
+      <span class="bold">${totalDeliveries}</span>
+    </div>
+    <div class="row" style="font-size:13px;">
+      <span>Venta Total Pedidos:</span>
+      <span class="bold">${formatPrice(totalOrdersAmount)}</span>
+    </div>
+    <div class="row" style="font-size:13px;">
+      <span>Efectivo Cobrado en Mano:</span>
+      <span class="bold">${formatPrice(totalCashCollected)}</span>
+    </div>
 
-          <div class="divider"></div>
+    <div class="divider"></div>
 
-          <div class="row total-row" style="font-size:15px; margin: 4px 0;">
-            <span>VALOR A PAGAR A DOMICILIARIO:</span>
-            <span class="bold big-total">${formatPrice(totalDeliveryFees)}</span>
-          </div>
+    <div class="row total-row" style="font-size:15px; margin: 4px 0;">
+      <span>A PAGAR A DOMICILIARIO:</span>
+      <span class="bold big-total">${formatPrice(totalDeliveryFees)}</span>
+    </div>
 
-          <div class="divider"></div>
+    <div class="divider"></div>
 
-          <div class="row" style="font-size:14px; padding: 4px 0;">
-            <span class="bold">BALANCE CON CAJA:</span>
-            <span class="bold" style="font-size:15px;">
-              ${netBalanceToCashier >= 0 ? `Entrega a Caja: ${formatPrice(netBalanceToCashier)}` : `Caja le paga: ${formatPrice(Math.abs(netBalanceToCashier))}`}
-            </span>
-          </div>
+    <div class="row" style="font-size:14px; padding: 4px 0;">
+      <span class="bold">BALANCE CON CAJA:</span>
+      <span class="bold" style="font-size:15px;">
+        ${netBalanceToCashier >= 0 ? `Entrega a Caja: ${formatPrice(netBalanceToCashier)}` : `Caja le paga: ${formatPrice(Math.abs(netBalanceToCashier))}`}
+      </span>
+    </div>
 
-          <div class="divider" style="margin-top:20px;"></div>
+    <div class="divider" style="margin-top:20px;"></div>
 
-          <div style="margin-top:25px;" class="center">
-            <div style="border-top:1px solid #000; width:80%; margin:0 auto; padding-top:4px;">
-              <span style="font-size:11px;">Firma Domiciliario: ${driverName}</span>
-            </div>
-          </div>
+    <div style="margin-top:25px;" class="center">
+      <div style="border-top:1px solid #000; width:80%; margin:0 auto; padding-top:4px;">
+        <span style="font-size:11px;" class="bold">Firma Domiciliario: ${driverName}</span>
+      </div>
+    </div>
 
-          <div style="margin-top:25px;" class="center">
-            <div style="border-top:1px solid #000; width:80%; margin:0 auto; padding-top:4px;">
-              <span style="font-size:11px;">Firma Cajero: ${cajeroName}</span>
-            </div>
-          </div>
+    <div style="margin-top:25px;" class="center">
+      <div style="border-top:1px solid #000; width:80%; margin:0 auto; padding-top:4px;">
+        <span style="font-size:11px;" class="bold">Firma Cajero: ${cajeroName}</span>
+      </div>
+    </div>
 
-          <div style="margin-top:15px; font-size:10px;" class="center">
-            <p>Comprobante oficial de liquidación de turno</p>
-          </div>
-        </div>
-      </body>
-    </html>
+    <div style="margin-top:15px; font-size:10px;" class="center">
+      <p class="bold">Comprobante oficial de liquidación de turno</p>
+    </div>
   `;
 }
 

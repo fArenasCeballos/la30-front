@@ -232,10 +232,6 @@ export function OrderReceipt({
           <span>{formatPrice(order.delivery_fee)}</span>
         </div>
       )}
-      <div className="row">
-        <span>Descuento</span>
-        <span>$0</span>
-      </div>
 
       <div className="divider" />
 

@@ -64,6 +64,7 @@ import {
   buildCustomerReceiptHTML,
   buildKitchenReceiptHTML,
   buildShiftClosingReceiptHTML,
+  buildPartialPaymentReceiptHTML,
   silentPrint,
 } from "@/lib/receiptUtils";
 import type { ReceiptData } from "@/lib/receiptUtils";
@@ -319,6 +320,7 @@ export default function Domicilios() {
           cajeroName,
           shiftStart,
           shiftEnd: now,
+          storeName: "La 30 Perros y Hamburguesas",
         });
         await silentPrint(closingHTML, "Cierre de Turno - Domicilios");
       }
@@ -487,16 +489,17 @@ export default function Domicilios() {
           const receiptData: ReceiptData = {
             order,
             cajeroName,
+            storeName: activeStore?.name || "La 30 Perros y Hamburguesas",
             // Sin paymentMethod → la factura no muestra info de pago
           };
 
-          // Imprimir factura del cliente (sin método de pago)
+          // Imprimir factura del cliente (para enviar con el domiciliario)
           await silentPrint(
             buildCustomerReceiptHTML(receiptData),
             `Recibo - ${order.locator}`,
           );
 
-          // Imprimir comandas agrupadas por categoría
+          // Imprimir comandas agrupadas por categoría en una sola sesión de impresión
           const items = (order.order_items ?? []).filter(
             (i) => i.products != null,
           );
@@ -506,10 +509,15 @@ export default function Domicilios() {
             if (!categoryGroups[catName]) categoryGroups[catName] = [];
             categoryGroups[catName].push(item);
           });
-          for (const catName of Object.keys(categoryGroups)) {
-            await silentPrint(
+          const categoryKeys = Object.keys(categoryGroups);
+          if (categoryKeys.length > 0) {
+            const kitchenHTMLs = categoryKeys.map((catName) =>
               buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
             );
+            const combinedKitchenHTML = kitchenHTMLs.join(
+              '<div class="print-page-break"></div>',
+            );
+            await silentPrint(combinedKitchenHTML);
           }
         }
       }
@@ -533,6 +541,11 @@ export default function Domicilios() {
       tarjeta_debito?: number;
       daviplata?: number;
     },
+    sharedPayments?: Array<{
+      method: string;
+      subMethod?: string;
+      amount: number;
+    }>,
   ): Promise<boolean> => {
     if (!payingOrder) return false;
 
@@ -548,6 +561,7 @@ export default function Domicilios() {
         0,
       ) || 0;
     const baseRemaining = Math.max(0, payingOrder.total - previouslyPaid);
+    const change = Math.max(0, received - baseRemaining);
     const isFullyPaid = received >= baseRemaining;
     const targetStatus = isFullyPaid ? "entregado" : null;
 
@@ -560,14 +574,57 @@ export default function Domicilios() {
     );
 
     if (success) {
-      if (isFullyPaid) {
-        // Abrir modal de facturación electrónica Siigo si aplica
-        const isFacturacionAllowed =
-          user?.role === "admin" || user?.role === "caja";
-        if (isFacturacionAllowed && shouldGenerateInvoice(method, breakdown)) {
-          setSiigoOrder({ order: payingOrder, method, breakdown });
+      const activeOrder = payingOrder;
+      const cajeroName = user?.name ?? "Cajero";
+
+      (async () => {
+        try {
+          // Abrir modal de facturación electrónica Siigo si aplica
+          const isFacturacionAllowed =
+            user?.role === "admin" || user?.role === "caja";
+          if (isFullyPaid && isFacturacionAllowed && shouldGenerateInvoice(method, breakdown)) {
+            setSiigoOrder({ order: activeOrder, method, breakdown });
+          }
+
+          const receiptData: ReceiptData = {
+            order: activeOrder,
+            cajeroName,
+            storeName: activeStore?.name || "La 30 Perros y Hamburguesas",
+            paymentMethod: method,
+            paymentReceived: received,
+            paymentChange: change,
+            paymentBreakdown: breakdown,
+            sharedPayments,
+          };
+
+          // Si es pago mixto/compartido, imprimir cada comprobante individual
+          if (method === "mixto" && sharedPayments && sharedPayments.length > 0) {
+            for (let i = 0; i < sharedPayments.length; i++) {
+              const p = sharedPayments[i];
+              await silentPrint(
+                buildPartialPaymentReceiptHTML(
+                  receiptData,
+                  p,
+                  i + 1,
+                  sharedPayments.length,
+                ),
+                `Voucher Parcial ${i + 1} - ${activeOrder.locator}`,
+              );
+            }
+          }
+
+          // Auto-imprimir factura final del cliente con información de pago
+          if (isFullyPaid) {
+            await silentPrint(
+              buildCustomerReceiptHTML(receiptData),
+              `Recibo - ${activeOrder.locator}`,
+            );
+          }
+        } catch (err) {
+          console.error("Error in delivery post-payment printing pipeline:", err);
         }
-      }
+      })();
+
       return true;
     }
     return false;
