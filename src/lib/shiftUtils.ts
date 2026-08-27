@@ -57,3 +57,17 @@ export function getCalendarShiftRange(from: Date, to?: Date): { from: Date; to: 
 
   return { from: shiftFrom, to: lastDay };
 }
+
+/**
+ * Obtiene la fecha calendario base que identifica al turno activo (fecha en que inició el turno a las 12:00 PM).
+ * Por ejemplo:
+ * - A la 1:00 AM del 27 de agosto, el turno activo inició el 26 de agosto a las 12:00 PM -> retorna 26 de agosto a las 00:00:00.
+ * - A las 2:00 PM del 27 de agosto, el turno activo inició el 27 de agosto a las 12:00 PM -> retorna 27 de agosto a las 00:00:00.
+ */
+export function getCurrentShiftDate(date = new Date()): Date {
+  const start = getShiftStart(date);
+  const result = new Date(start);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+

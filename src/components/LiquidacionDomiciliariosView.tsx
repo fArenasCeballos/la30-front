@@ -39,13 +39,14 @@ import {
   getShiftStart,
   getShiftEnd,
   getCalendarShiftRange,
+  getCurrentShiftDate,
 } from "@/lib/shiftUtils";
 import {
   buildDriverSettlementReceiptHTML,
   buildShiftClosingReceiptHTML,
   silentPrint,
 } from "@/lib/receiptUtils";
-import { format, startOfDay, subDays } from "date-fns";
+import { format, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -65,11 +66,14 @@ export function LiquidacionDomiciliariosView() {
   const { activeStore } = useStore();
   const queryClient = useQueryClient();
 
-  // Shift / Date selection
+  // Shift / Date selection (Turno activo de 12:00 PM a 12:00 PM)
   const [activeQuick, setActiveQuick] = useState<string>("Hoy");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: startOfDay(new Date()),
-    to: startOfDay(new Date()),
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    const shiftDate = getCurrentShiftDate();
+    return {
+      from: shiftDate,
+      to: shiftDate,
+    };
   });
 
   // Calculate shift start and end (12:00 PM a 12:00 PM)
@@ -135,14 +139,14 @@ export function LiquidacionDomiciliariosView() {
 
   const handleQuickShift = (label: string) => {
     setActiveQuick(label);
-    const now = new Date();
+    const currentShift = getCurrentShiftDate();
     if (label === "Hoy") {
-      setDateRange({ from: startOfDay(now), to: startOfDay(now) });
+      setDateRange({ from: currentShift, to: currentShift });
     } else if (label === "Ayer") {
-      const yesterday = subDays(now, 1);
+      const yesterdayShift = subDays(currentShift, 1);
       setDateRange({
-        from: startOfDay(yesterday),
-        to: startOfDay(yesterday),
+        from: yesterdayShift,
+        to: yesterdayShift,
       });
     }
   };

@@ -66,7 +66,7 @@ import {
   isSameDay,
 } from "date-fns";
 import { es } from "date-fns/locale";
-import { getCalendarShiftRange } from "@/lib/shiftUtils";
+import { getCalendarShiftRange, getCurrentShiftDate } from "@/lib/shiftUtils";
 import type { DateRange } from "react-day-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
@@ -77,36 +77,49 @@ import { ReportLoadingModal } from "@/components/ReportLoadingModal";
 const QUICK_RANGES = [
   {
     label: "Hoy",
-    getValue: () => ({
-      from: startOfDay(new Date()),
-      to: startOfDay(new Date()),
-    }),
+    getValue: () => {
+      const shift = getCurrentShiftDate();
+      return {
+        from: shift,
+        to: shift,
+      };
+    },
   },
   {
     label: "Ayer",
-    getValue: () => ({
-      from: startOfDay(subDays(new Date(), 1)),
-      to: startOfDay(subDays(new Date(), 1)),
-    }),
+    getValue: () => {
+      const shift = subDays(getCurrentShiftDate(), 1);
+      return {
+        from: shift,
+        to: shift,
+      };
+    },
   },
   {
     label: "Últimos 7 días",
-    getValue: () => ({
-      from: startOfDay(subDays(new Date(), 6)),
-      to: startOfDay(new Date()),
-    }),
+    getValue: () => {
+      const shift = getCurrentShiftDate();
+      return {
+        from: subDays(shift, 6),
+        to: shift,
+      };
+    },
   },
   {
     label: "Este mes",
-    getValue: () => ({
-      from: startOfMonth(new Date()),
-      to: startOfDay(endOfMonth(new Date())),
-    }),
+    getValue: () => {
+      const shift = getCurrentShiftDate();
+      return {
+        from: startOfMonth(shift),
+        to: startOfDay(endOfMonth(shift)),
+      };
+    },
   },
   {
     label: "Mes pasado",
     getValue: () => {
-      const d = subDays(startOfMonth(new Date()), 1);
+      const shift = getCurrentShiftDate();
+      const d = subDays(startOfMonth(shift), 1);
       return { from: startOfMonth(d), to: startOfDay(endOfMonth(d)) };
     },
   },
@@ -175,9 +188,12 @@ interface ReportStatsData {
 export default function Reporteria() {
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: startOfDay(new Date()),
-    to: startOfDay(new Date()),
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    const shift = getCurrentShiftDate();
+    return {
+      from: shift,
+      to: shift,
+    };
   });
   const { stores, activeStore } = useStore();
   const [selectedStoreId, setSelectedStoreId] = useState<string>(
