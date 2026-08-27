@@ -498,3 +498,59 @@ export async function settleConsumption(
     } as never)
     .eq("id" as never, consumptionId as never);
 }
+
+// ─── Admin Operations (Consultas Module) ─────────────────────────────────────
+
+/**
+ * Deletes an internal consumption record along with its items and payments.
+ * This is an irreversible admin-only operation.
+ */
+export async function deleteConsumption(consumptionId: string): Promise<void> {
+  // 1. Delete line items
+  const { error: itemsError } = await supabase
+    .from("internal_consumption_items" as never)
+    .delete()
+    .eq("consumption_id" as never, consumptionId as never);
+
+  if (itemsError)
+    throw new Error(`Error al eliminar ítems: ${itemsError.message}`);
+
+  // 2. Delete associated payments
+  const { error: paymentsError } = await supabase
+    .from("internal_consumption_payments" as never)
+    .delete()
+    .eq("consumption_id" as never, consumptionId as never);
+
+  if (paymentsError)
+    throw new Error(`Error al eliminar pagos: ${paymentsError.message}`);
+
+  // 3. Delete the header
+  const { error: headerError } = await supabase
+    .from("internal_consumptions" as never)
+    .delete()
+    .eq("id" as never, consumptionId as never);
+
+  if (headerError)
+    throw new Error(`Error al eliminar consumo: ${headerError.message}`);
+}
+
+/**
+ * Updates the payment status of an internal consumption.
+ * Used by admins from the Consultas module to manually change status.
+ */
+export async function updateConsumptionPaymentStatus(
+  consumptionId: string,
+  newStatus: InternalPaymentStatus,
+): Promise<void> {
+  const { error } = await supabase
+    .from("internal_consumptions" as never)
+    .update({
+      payment_status: newStatus,
+      paid_at: newStatus === "paid" ? new Date().toISOString() : null,
+    } as never)
+    .eq("id" as never, consumptionId as never);
+
+  if (error)
+    throw new Error(`Error al actualizar estado de pago: ${error.message}`);
+}
+

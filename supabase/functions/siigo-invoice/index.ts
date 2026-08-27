@@ -9,6 +9,22 @@ const SIIGO_AUTH_URL = "https://api.siigo.com/auth";
 const SIIGO_API_URL = "https://api.siigo.com/v1";
 const PARTNER_ID = "PosPyHCM";
 
+// ─── Timeouts ──────────────────────────────────────────────
+const AUTH_TIMEOUT_MS = 15_000; // 15s for auth
+const INVOICE_TIMEOUT_MS = 30_000; // 30s for invoice creation
+
+// ─── Valid Payment Methods ─────────────────────────────────
+// Note: "mixto" is NOT a valid method here — the client decomposes mixed
+// payments into individual method calls before invoking this Edge Function.
+const VALID_METHODS = new Set([
+  "efectivo",
+  "tarjeta",
+  "tarjeta_credito",
+  "tarjeta_debito",
+  "nequi",
+  "daviplata",
+]);
+
 // Sandbox defaults — these IDs come from the sandbox account
 // In production, these should be fetched dynamically or configured per-store
 const DEFAULTS = {
@@ -40,6 +56,38 @@ const DEFAULTS = {
   },
 };
 
+// ─── Cached Supabase Client ────────────────────────────────
+// Created once at module level instead of per-request
+let _supabase: ReturnType<typeof createClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    _supabase = createClient(supabaseUrl, supabaseKey);
+  }
+  return _supabase;
+}
+
+// ─── Fetch with Timeout ────────────────────────────────────
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(`Request to ${url} timed out after ${timeoutMs}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 // ─── Token Cache ───────────────────────────────────────────
 let cachedToken: string | null = null;
 let tokenExpiresAt = 0;
@@ -57,26 +105,54 @@ async function getSiigoToken(): Promise<string> {
     throw new Error("Missing SIIGO_USERNAME or SIIGO_ACCESS_KEY env vars");
   }
 
-  const res = await fetch(SIIGO_AUTH_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Partner-Id": PARTNER_ID,
-    },
-    body: JSON.stringify({ username, access_key: accessKey }),
-  });
+  const authBody = JSON.stringify({ username, access_key: accessKey });
+  const authHeaders = {
+    "Content-Type": "application/json",
+    "Partner-Id": PARTNER_ID,
+  };
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Siigo auth failed (${res.status}): ${err}`);
+  // Attempt auth with 1 retry on transient failures (5xx / network)
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetchWithTimeout(
+        SIIGO_AUTH_URL,
+        { method: "POST", headers: authHeaders, body: authBody },
+        AUTH_TIMEOUT_MS,
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        cachedToken = data.access_token;
+        // Refresh 5 min before expiry (token lasts 24h)
+        tokenExpiresAt = now + (data.expires_in - 300) * 1000;
+        return cachedToken!;
+      }
+
+      const errText = await res.text();
+
+      // Only retry on 5xx (server errors)
+      if (res.status >= 500 && attempt === 0) {
+        lastError = new Error(`Siigo auth failed (${res.status}): ${errText}`);
+        console.warn(`Siigo auth attempt ${attempt + 1} failed (${res.status}), retrying in 1s...`);
+        await new Promise((r) => setTimeout(r, 1000));
+        continue;
+      }
+
+      throw new Error(`Siigo auth failed (${res.status}): ${errText}`);
+    } catch (err) {
+      if (attempt === 0 && !(err instanceof Error && err.message.includes("auth failed"))) {
+        // Network/timeout error on first attempt — retry
+        lastError = err instanceof Error ? err : new Error(String(err));
+        console.warn(`Siigo auth attempt ${attempt + 1} network error, retrying in 1s...`);
+        await new Promise((r) => setTimeout(r, 1000));
+        continue;
+      }
+      throw err;
+    }
   }
 
-  const data = await res.json();
-  cachedToken = data.access_token;
-  // Refresh 5 min before expiry (token lasts 24h)
-  tokenExpiresAt = now + (data.expires_in - 300) * 1000;
-
-  return cachedToken!;
+  throw lastError ?? new Error("Siigo auth failed after retries");
 }
 
 // ─── Siigo Payment Type Mapping ────────────────────────────
@@ -97,6 +173,56 @@ function mapPaymentType(method: string): number {
     default:
       return DEFAULTS.paymentTypeTarjetaCredito;
   }
+}
+
+// ─── Input Validation ──────────────────────────────────────
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function validateInput(body: InvoiceRequest): string | null {
+  // orderId must be a valid UUID
+  if (!body.orderId || !UUID_RE.test(body.orderId)) {
+    return "orderId must be a valid UUID";
+  }
+
+  // method must be one of the valid payment methods
+  if (!body.method || !VALID_METHODS.has(body.method)) {
+    return `Invalid method "${body.method}". Must be one of: ${[...VALID_METHODS].join(", ")}`;
+  }
+
+  // total must be > 0
+  if (typeof body.total !== "number" || body.total <= 0) {
+    return "total must be a number greater than 0";
+  }
+
+  // items must have at least one valid item
+  if (!Array.isArray(body.items) || body.items.length === 0) {
+    return "items must be a non-empty array";
+  }
+
+  for (let i = 0; i < body.items.length; i++) {
+    const item = body.items[i];
+    if (typeof item.quantity !== "number" || item.quantity <= 0) {
+      return `items[${i}].quantity must be > 0`;
+    }
+    if (typeof item.unit_price !== "number" || item.unit_price < 0) {
+      return `items[${i}].unit_price must be >= 0`;
+    }
+  }
+
+
+
+  // Validate customer structure if provided
+  if (body.customer) {
+    const c = body.customer;
+    if (!c.identification || typeof c.identification !== "string") {
+      return "customer.identification is required and must be a string";
+    }
+    if (!Array.isArray(c.name) || c.name.length === 0) {
+      return "customer.name must be a non-empty array";
+    }
+  }
+
+  return null; // Valid
 }
 
 // ─── Build Siigo Invoice Payload ───────────────────────────
@@ -145,33 +271,13 @@ function buildInvoicePayload(req: InvoiceRequest) {
   // Build payments array
   const payments: Array<{ id: number; value: number; due_date: string }> = [];
 
-  if (req.method === "mixto" && req.breakdown) {
-    const keys: Array<keyof Required<InvoiceRequest>["breakdown"]> = [
-      "efectivo",
-      "tarjeta",
-      "nequi",
-      "tarjeta_credito",
-      "tarjeta_debito",
-      "daviplata",
-    ];
-    for (const key of keys) {
-      const val = req.breakdown[key];
-      if (val && val > 0) {
-        payments.push({
-          id: mapPaymentType(key),
-          value: val,
-          due_date: today,
-        });
-      }
-    }
-  } else {
-    // Single payment method
-    payments.push({
-      id: mapPaymentType(req.method),
-      value: req.total,
-      due_date: today,
-    });
-  }
+  // Single payment method per invoice
+  // (mixed payments are decomposed by the client into separate calls)
+  payments.push({
+    id: mapPaymentType(req.method),
+    value: req.total,
+    due_date: today,
+  });
 
   return {
     document: {
@@ -213,41 +319,72 @@ Deno.serve(async (rawReq: Request) => {
   try {
     const body: InvoiceRequest = await rawReq.json();
 
-    // Validate required fields
-    if (!body.orderId || !body.method || !body.items?.length || !body.total) {
+    // ── 1. Exhaustive input validation (before any external call) ──
+    const validationError = validateInput(body);
+    if (validationError) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing required fields: orderId, method, items, total",
+          error: validationError,
         }),
         { status: 400, headers: corsHeaders },
       );
     }
 
-    // 1. Get Siigo token
+    // ── 2. Duplicate invoice protection ────────────────────────────
+    // Check if a successful invoice already exists for this order + method
+    const supabase = getSupabase();
+    const { data: existing } = await supabase
+      .from("siigo_invoices")
+      .select("id, siigo_invoice_id, siigo_invoice_number")
+      .eq("order_id", body.orderId)
+      .eq("payment_method", body.method)
+      .eq("status", "success")
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      console.warn(
+        `Duplicate invoice request for order ${body.orderId} method ${body.method} — already exists (${existing.siigo_invoice_number})`,
+      );
+      return new Response(
+        JSON.stringify({
+          success: true,
+          duplicate: true,
+          message: `Invoice already exists for this order and method`,
+          siigoDetail: {
+            id: existing.siigo_invoice_id,
+            name: existing.siigo_invoice_number,
+          },
+        }),
+        { status: 200, headers: corsHeaders },
+      );
+    }
+
+    // ── 3. Get Siigo token (with retry + timeout) ──────────────────
     const token = await getSiigoToken();
 
-    // 2. Build invoice payload
+    // ── 4. Build invoice payload ───────────────────────────────────
     const invoicePayload = buildInvoicePayload(body);
 
-    // 3. Send to Siigo
-    const siigoRes = await fetch(`${SIIGO_API_URL}/invoices`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        "Partner-Id": PARTNER_ID,
+    // ── 5. Send to Siigo (with timeout) ────────────────────────────
+    const siigoRes = await fetchWithTimeout(
+      `${SIIGO_API_URL}/invoices`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "Partner-Id": PARTNER_ID,
+        },
+        body: JSON.stringify(invoicePayload),
       },
-      body: JSON.stringify(invoicePayload),
-    });
+      INVOICE_TIMEOUT_MS,
+    );
 
     const siigoData = await siigoRes.json();
 
-    // 4. Save to DB
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
+    // ── 6. Save to DB ──────────────────────────────────────────────
     const isSuccess = siigoRes.ok;
 
     await supabase.from("siigo_invoices").insert({
@@ -280,7 +417,10 @@ Deno.serve(async (rawReq: Request) => {
     }
 
     if (!isSuccess) {
-      console.error("Siigo API error:", JSON.stringify(siigoData));
+      console.error(
+        `Siigo API error for order ${body.orderId} (${body.method}):`,
+        JSON.stringify(siigoData),
+      );
       return new Response(
         JSON.stringify({
           success: false,
@@ -291,7 +431,7 @@ Deno.serve(async (rawReq: Request) => {
       );
     }
 
-    // 5. Return success
+    // ── 7. Return success ──────────────────────────────────────────
     return new Response(
       JSON.stringify({
         success: true,
