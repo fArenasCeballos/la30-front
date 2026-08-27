@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { formatPrice } from "@/lib/formatPrice";
 import type {
@@ -108,6 +108,7 @@ function clearDraft() {
 }
 
 export default function Kiosko() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editOrderId = searchParams.get("edit");
   const { addOrder, addDeliveryOrder, updateOrder, orders } = useOrders();
@@ -358,12 +359,33 @@ export default function Kiosko() {
       if (orderToEdit) {
         if (orderToEdit.status !== "pendiente") {
           toast.error("Solo se pueden editar pedidos pendientes");
-          window.history.replaceState({}, "", "/kiosko");
+          navigate(orderToEdit.is_delivery ? "/domicilios" : "/kiosko");
           return;
         }
         setTimeout(() => {
-          setLocator(orderToEdit.locator || "");
-          setOrderNotes(orderToEdit.notes || "");
+          const cleanNotes =
+            orderToEdit.notes?.startsWith("📍") &&
+            (!orderToEdit.delivery_address ||
+              orderToEdit.notes.includes(orderToEdit.delivery_address) ||
+              orderToEdit.notes.trim() ===
+                `📍 ${orderToEdit.delivery_address?.trim()}`)
+              ? ""
+              : orderToEdit.notes || "";
+          setOrderNotes(cleanNotes);
+          setIsDeliveryOrder(!!orderToEdit.is_delivery);
+          if (orderToEdit.is_delivery) {
+            setDeliveryName(orderToEdit.delivery_name || "");
+            setDeliveryAddress(orderToEdit.delivery_address || "");
+            setDeliveryPhone(orderToEdit.delivery_phone || "");
+            setDeliveryFee(orderToEdit.delivery_fee || 0);
+            setDriverId(orderToEdit.driver_id || undefined);
+            const matchingZone = zones.find(
+              (z) => z.price === orderToEdit.delivery_fee,
+            );
+            if (matchingZone) {
+              setSelectedZoneId(matchingZone.id);
+            }
+          }
 
           // Transformar order_items a CartItem
           const initialCart = (orderToEdit.order_items || [])
@@ -385,7 +407,7 @@ export default function Kiosko() {
         }, 0);
       }
     }
-  }, [editOrderId, orders]);
+  }, [editOrderId, orders, zones, navigate]);
 
   // Derivación de la categoría activa para evitar efectos innecesarios
   const currentCategory =
@@ -512,7 +534,7 @@ export default function Kiosko() {
     }
 
     // Delivery validation
-    if (isDeliveryOrder && !editOrderId) {
+    if (isDeliveryOrder) {
       if (
         !deliveryName.trim() ||
         !deliveryAddress.trim() ||
@@ -533,8 +555,27 @@ export default function Kiosko() {
       }));
 
       if (editOrderId) {
-        await updateOrder(editOrderId, locator, itemsForDb, orderNotes);
-        window.history.replaceState({}, "", "/kiosko");
+        await updateOrder(
+          editOrderId,
+          locator,
+          itemsForDb,
+          orderNotes,
+          isDeliveryOrder
+            ? {
+                name: deliveryName,
+                address: deliveryAddress,
+                phone: deliveryPhone,
+                fee: deliveryFee,
+                driver_id: driverId,
+              }
+            : undefined,
+        );
+        if (isDeliveryOrder) {
+          navigate("/domicilios");
+        } else {
+          window.history.replaceState({}, "", "/kiosko");
+          setStep("locator");
+        }
       } else if (isDeliveryOrder) {
         const deliveryLocator = nextDeliveryLocator;
         await addDeliveryOrder(
@@ -547,13 +588,14 @@ export default function Kiosko() {
             fee: deliveryFee,
             driver_id: driverId,
           },
-          orderNotes || `📍 ${deliveryAddress}`,
+          orderNotes.trim() || undefined,
         );
         setDeliveryName("");
         setDeliveryAddress("");
         setDeliveryPhone("");
         setDeliveryFee(0);
         setDriverId(undefined);
+        navigate("/domicilios");
       } else {
         await addOrder(locator, itemsForDb, orderNotes);
       }
@@ -561,7 +603,9 @@ export default function Kiosko() {
       setLocator("");
       setOrderNotes("");
       setIsDeliveryOrder(false);
-      setStep("locator");
+      if (!isDeliveryOrder) {
+        setStep("locator");
+      }
       clearDraft();
     } finally {
       setIsSending(false);
@@ -745,9 +789,16 @@ export default function Kiosko() {
               <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
             </Button>
             <div>
-              <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-primary leading-none mb-1">
+              <p
+                className={cn(
+                  "text-[9px] sm:text-[10px] font-black uppercase tracking-widest leading-none mb-1",
+                  isDeliveryOrder ? "text-purple-600" : "text-primary",
+                )}
+              >
                 {editOrderId
-                  ? "Edición de Orden"
+                  ? isDeliveryOrder
+                    ? "🛵 Edición de Domicilio"
+                    : "Edición de Orden"
                   : isDeliveryOrder
                     ? "🛵 Nuevo Domicilio"
                     : "Finalizar Pedido"}
@@ -768,8 +819,17 @@ export default function Kiosko() {
                         <span className="text-[9px] font-black opacity-40 leading-none mb-0.5">
                           {isDeliveryOrder ? "DOM" : "ORD"}
                         </span>
-                        <span className="text-2xl font-black text-primary">
-                          {isDeliveryOrder ? nextDeliveryLocator : locator}
+                        <span
+                          className={cn(
+                            "text-2xl font-black",
+                            isDeliveryOrder ? "text-purple-600" : "text-primary",
+                          )}
+                        >
+                          {isDeliveryOrder
+                            ? editOrderId
+                              ? locator
+                              : nextDeliveryLocator
+                            : locator}
                         </span>
                       </div>
                       <div>
@@ -823,7 +883,7 @@ export default function Kiosko() {
               </div>
 
               {/* Delivery Info (only in delivery mode) */}
-              {isDeliveryOrder && !editOrderId && (
+              {isDeliveryOrder && (
                 <div className="space-y-4 bg-purple-500/5 p-6 rounded-4xl border-2 border-dashed border-purple-500/20">
                   <h3 className="text-sm font-black uppercase tracking-[0.2em] text-purple-600 px-2 flex items-center gap-2">
                     🛵 Datos del Domicilio
@@ -996,7 +1056,9 @@ export default function Kiosko() {
                       </h4>
                       <p className="text-white/70 text-sm font-medium">
                         {isDeliveryOrder
-                          ? "Verifica los datos del cliente y los productos antes de crear el domicilio."
+                          ? editOrderId
+                            ? "Verifica los datos del cliente y los productos antes de actualizar el domicilio."
+                            : "Verifica los datos del cliente y los productos antes de crear el domicilio."
                           : "Verifica que todos los productos y cantidades sean correctos antes de confirmar."}
                       </p>
                     </div>
@@ -1016,7 +1078,9 @@ export default function Kiosko() {
                         <ArrowRight className="h-6 w-6 mr-2" />
                       )}
                       {editOrderId
-                        ? "GUARDAR CAMBIOS"
+                        ? isDeliveryOrder
+                          ? "🛵 ACTUALIZAR DOMICILIO"
+                          : "GUARDAR CAMBIOS"
                         : isDeliveryOrder
                           ? "🛵 CREAR DOMICILIO"
                           : "CONFIRMAR PEDIDO"}
@@ -1046,6 +1110,14 @@ export default function Kiosko() {
                   size="icon"
                   className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl border-2 shadow-soft group shrink-0"
                   onClick={() => {
+                    if (editOrderId) {
+                      if (isDeliveryOrder) {
+                        navigate("/domicilios");
+                      } else {
+                        navigate("/caja");
+                      }
+                      return;
+                    }
                     if (cart.length > 0) {
                       toast.info(
                         "Limpia el carrito para cambiar de localizador",
@@ -1058,15 +1130,35 @@ export default function Kiosko() {
                   <ArrowLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
                 </Button>
                 <div className="min-w-0">
-                  <p className="text-[8px] lg:text-[10px] font-black uppercase tracking-[0.2em] text-primary leading-none mb-1">
-                    Menú Digital
+                  <p
+                    className={cn(
+                      "text-[8px] lg:text-[10px] font-black uppercase tracking-[0.2em] leading-none mb-1",
+                      isDeliveryOrder ? "text-purple-600" : "text-primary",
+                    )}
+                  >
+                    {isDeliveryOrder
+                      ? editOrderId
+                        ? "🛵 Editando Domicilio"
+                        : "🛵 Menú Domicilio"
+                      : "Menú Digital"}
                   </p>
                   <h2 className="text-lg lg:text-3xl font-black tracking-tight flex items-center gap-2 lg:gap-3 truncate">
                     <span className="truncate hidden sm:inline">
-                      Mesa / Localizador:
+                      {isDeliveryOrder
+                        ? "Pedido Domicilio:"
+                        : "Mesa / Localizador:"}
                     </span>
-                    <span className="sm:hidden">MES:</span>
-                    <span className="text-primary truncate">{locator}</span>
+                    <span className="sm:hidden">
+                      {isDeliveryOrder ? "DOM:" : "MES:"}
+                    </span>
+                    <span
+                      className={cn(
+                        "truncate",
+                        isDeliveryOrder ? "text-purple-600" : "text-primary",
+                      )}
+                    >
+                      {locator}
+                    </span>
                   </h2>
                 </div>
               </div>

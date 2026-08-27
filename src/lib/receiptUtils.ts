@@ -424,11 +424,17 @@ export function buildKitchenReceiptHTML(
   }
 
   let notesSection = "";
-  if (order.notes) {
+  const rawNotes = order.notes?.trim() || "";
+  const isAddressNote =
+    rawNotes.startsWith("📍") ||
+    (order.delivery_address &&
+      rawNotes.toLowerCase() === order.delivery_address.toLowerCase());
+
+  if (rawNotes && !isAddressNote) {
     notesSection = `
       <div class="divider"></div>
       <div class="bold" style="font-size:15px">NOTAS DEL PEDIDO:</div>
-      <div class="kitchen-footer-notes">${order.notes.toUpperCase()}</div>
+      <div class="kitchen-footer-notes">${rawNotes.toUpperCase()}</div>
     `;
   }
 
@@ -443,13 +449,13 @@ export function buildKitchenReceiptHTML(
       order.driver?.first_name;
     const driverFirstName = extractFirstName(rawDriverName);
 
-    deliveryInfo = `
-      <div style="font-size:14px; font-weight:bold; margin-top:5px; border:2px dashed #000000; padding:5px; background:#ffffff; color:#000000;">
-        <div><strong>CLIENTE:</strong> ${(order.delivery_name ?? "Cliente").toUpperCase()}</div>
-        ${order.delivery_phone ? `<div><strong>TEL:</strong> ${order.delivery_phone}</div>` : ""}
-        ${driverFirstName ? `<div><strong>DOMICILIARIO:</strong> ${driverFirstName.toUpperCase()}</div>` : ""}
-      </div>
-    `;
+    if (driverFirstName) {
+      deliveryInfo = `
+        <div style="font-size:14px; font-weight:bold; margin-top:5px; border:2px dashed #000000; padding:5px; background:#ffffff; color:#000000;">
+          <div><strong>DOMICILIARIO:</strong> ${driverFirstName.toUpperCase()}</div>
+        </div>
+      `;
+    }
   }
 
   return `

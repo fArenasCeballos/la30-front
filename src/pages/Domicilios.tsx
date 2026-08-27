@@ -464,7 +464,7 @@ export default function Domicilios() {
           phone: customerPhone,
           fee: deliveryFee,
         },
-        `📍 ${customerAddress}`,
+        undefined,
       );
 
       resetForm();

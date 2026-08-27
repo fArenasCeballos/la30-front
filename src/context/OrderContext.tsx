@@ -50,6 +50,13 @@ export interface OrderContextType {
     locator: string,
     items: OrderItemInput[],
     notes?: string,
+    deliveryInfo?: {
+      name?: string;
+      address?: string;
+      phone?: string;
+      fee?: number;
+      driver_id?: string;
+    },
   ) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
   dispatchOrder: (orderId: string) => Promise<void>;
@@ -825,6 +832,13 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       locator: string,
       items: OrderItemInput[],
       notes?: string,
+      deliveryInfo?: {
+        name?: string;
+        address?: string;
+        phone?: string;
+        fee?: number;
+        driver_id?: string;
+      },
     ) => {
       const { error } = await supabase.rpc("update_order", {
         p_order_id: orderId,
@@ -835,6 +849,30 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         toast.error(`Error: ${error.message}`);
         return;
+      }
+      if (deliveryInfo) {
+        const itemsTotal = items.reduce(
+          (s, i) => s + (Number(i.unit_price) || 0) * (Number(i.quantity) || 0),
+          0,
+        );
+        const grandTotal = itemsTotal + (Number(deliveryInfo.fee) || 0);
+        const { error: updateDeliveryError } = await supabase
+          .from("orders")
+          .update({
+            delivery_name: deliveryInfo.name || null,
+            delivery_address: deliveryInfo.address || null,
+            delivery_phone: deliveryInfo.phone || null,
+            delivery_fee: Number(deliveryInfo.fee) || 0,
+            driver_id: deliveryInfo.driver_id || null,
+            is_delivery: true,
+            total: grandTotal,
+          })
+          .eq("id", orderId);
+        if (updateDeliveryError) {
+          toast.error(
+            `Error al actualizar datos de entrega: ${updateDeliveryError.message}`,
+          );
+        }
       }
       toast.success("Pedido actualizado");
       queryClient.invalidateQueries({

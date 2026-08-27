@@ -10,14 +10,16 @@ import {
   BarChart3,
   Wrench,
   ClipboardList,
-  Store,
   Truck,
   Settings,
   UtensilsCrossed,
+  ChevronDown,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { NavLink } from "@/components/NavLink";
-import type { UserRole } from "@/types";
+import type { UserRole, Store as StoreType } from "@/types";
 import { NotificationBell } from "./NotificationBell";
 import {
   AlertDialog,
@@ -34,12 +36,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useEffect, useState } from "react";
 import { Logo } from "./ui/logo";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 const NAV_ITEMS: {
   to: string;
@@ -87,11 +91,84 @@ const NAV_ITEMS: {
   },
 ];
 
+function getStoreTheme(store: StoreType | null) {
+  if (!store) {
+    return {
+      bg: "bg-gray-100/80 hover:bg-gray-200/80",
+      border: "border-gray-300 hover:border-gray-400",
+      text: "text-gray-800",
+      badge: "bg-gray-700 text-white shadow-gray-500/20",
+      accent: "#4b5563",
+      glow: "shadow-gray-500/10",
+      defaultIcon: "🏪",
+      label: "SIN TIENDA",
+      tag: "Punto de venta",
+      accentBg: "bg-gray-500",
+    };
+  }
+
+  const slug = store.slug?.toLowerCase() || "";
+  const name = store.name?.toLowerCase() || "";
+
+  if (slug.includes("domicilio") || name.includes("domicilio")) {
+    return {
+      bg: "bg-gradient-to-r from-purple-500/20 via-purple-500/10 to-purple-500/5 hover:from-purple-500/25 hover:to-purple-500/15",
+      border: "border-purple-500/50 hover:border-purple-600",
+      text: "text-purple-900",
+      badge: "bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/30",
+      accent: "#9333ea",
+      glow: "shadow-lg shadow-purple-500/15",
+      defaultIcon: "🛵",
+      label: "DOMICILIOS",
+      tag: "Centro de Despacho & Entregas",
+      accentBg: "bg-purple-600",
+    };
+  }
+
+  if (
+    slug.includes("trailer") ||
+    slug.includes("carrito") ||
+    name.includes("trailer") ||
+    name.includes("tráiler")
+  ) {
+    return {
+      bg: "bg-gradient-to-r from-emerald-500/20 via-emerald-500/10 to-emerald-500/5 hover:from-emerald-500/25 hover:to-emerald-500/15",
+      border: "border-emerald-500/50 hover:border-emerald-600",
+      text: "text-emerald-900",
+      badge: "bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/30",
+      accent: "#059669",
+      glow: "shadow-lg shadow-emerald-500/15",
+      defaultIcon: "🚚",
+      label: "TRÁILER",
+      tag: "Punto Móvil / Carrito",
+      accentBg: "bg-emerald-600",
+    };
+  }
+
+  return {
+    bg: "bg-gradient-to-r from-orange-500/20 via-orange-500/10 to-orange-500/5 hover:from-orange-500/25 hover:to-orange-500/15",
+    border: "border-orange-500/50 hover:border-orange-600",
+    text: "text-orange-950",
+    badge: "bg-gradient-to-br from-orange-600 to-amber-600 text-white shadow-md shadow-orange-500/30",
+    accent: store.color || "#ea580c",
+    glow: "shadow-lg shadow-orange-500/15",
+    defaultIcon: store.icon || "🍽️",
+    label: store.name?.toUpperCase() || "RESTAURANTE",
+    tag: "Comedor & Salón Principal",
+    accentBg: "bg-orange-600",
+  };
+}
+
 export function AppLayout() {
   const { user, logout, logoutAll, forceReset, isAuthenticated, loading } =
     useAuth();
-  const { activeStore, canSwitchStore, loading: storeLoading } =
-    useStore();
+  const {
+    activeStore,
+    canSwitchStore,
+    stores,
+    setActiveStore,
+    loading: storeLoading,
+  } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
   const ecosystem = location.pathname.startsWith("/kiosko")
@@ -101,6 +178,8 @@ export function AppLayout() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [showRestored, setShowRestored] = useState(false);
   const [hasOtherSessions, setHasOtherSessions] = useState(false);
+
+  const currentTheme = getStoreTheme(activeStore);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -114,12 +193,8 @@ export function AppLayout() {
     const handleOnline = () => {
       setIsOffline(false);
       setShowRestored(true);
-      const timer = setTimeout(() => {
-        setShowRestored(false);
-      }, 3000);
-      return () => clearTimeout(timer);
+      setTimeout(() => setShowRestored(false), 4000);
     };
-
     const handleOffline = () => {
       setIsOffline(true);
       setShowRestored(false);
@@ -133,26 +208,6 @@ export function AppLayout() {
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
-
-  // Guard: User without active store should go to selector if they have multiple stores
-  useEffect(() => {
-    if (
-      !loading &&
-      !storeLoading &&
-      isAuthenticated &&
-      canSwitchStore &&
-      !activeStore
-    ) {
-      navigate("/select-store", { replace: true });
-    }
-  }, [
-    loading,
-    storeLoading,
-    isAuthenticated,
-    canSwitchStore,
-    activeStore,
-    navigate,
-  ]);
 
   // Guard: Prevent accessing /domicilios if the active store is not Domicilios
   useEffect(() => {
@@ -174,16 +229,17 @@ export function AppLayout() {
     user?.role,
   ]);
 
-  if (loading) {
+  if (loading || storeLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse" />
-          <Logo className="h-16 w-16 relative animate-bounce" />
+      <div className="h-screen w-screen flex items-center justify-center bg-accent/20">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-white border-2 shadow-strong flex items-center justify-center animate-bounce">
+            <Logo className="h-6 w-6" />
+          </div>
+          <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">
+            Iniciando plataforma...
+          </p>
         </div>
-        <p className="mt-8 text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse">
-          Cargando Sistema
-        </p>
       </div>
     );
   }
@@ -192,60 +248,75 @@ export function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
+  const role = user?.role;
+  const isCaja = role === "caja";
+
+  // Filter navigation items based on user role, active store, and caja ecosystem
   const visibleNav = NAV_ITEMS.filter((item) => {
-    if (!user) return false;
-    if (!item.roles.includes(user.role)) return false;
+    if (!role) return false;
 
     // Hide Domicilios module from the navbar if the active store is NOT "domicilios"
     if (item.to === "/domicilios" && activeStore?.slug !== "domicilios") {
       return false;
     }
 
-    return true;
+    // Caja role ecosystem isolation
+    if (isCaja) {
+      if (ecosystem === "restaurant") {
+        if (item.to === "/kiosko") return false;
+      }
+    }
+
+    return item.roles.includes(role);
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      {/* Premium Connection Warning Banner */}
+    <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans selection:bg-primary selection:text-white pb-24 lg:pb-0">
+      {/* Offline Status Banners */}
       <AnimatePresence>
         {isOffline && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="w-full bg-red-500/10 border-b border-red-500/20 backdrop-blur-md sticky top-0 z-100 overflow-hidden"
+            className="bg-amber-500 text-white px-4 py-2 text-center text-xs font-bold flex items-center justify-center gap-2 shadow-md relative z-50"
           >
-            <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-center gap-3 text-red-700 font-bold text-xs lg:text-sm text-center">
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-              </span>
-              <span>
-                <strong>Sin conexión a internet</strong> — Visualizando datos en
-                caché. Los cambios nuevos no se guardarán hasta restablecer la
-                conexión.
-              </span>
-            </div>
+            <div className="w-2 h-2 rounded-full bg-white animate-ping" />
+            <span>
+              Modo sin conexión: Los pedidos se guardarán localmente y se
+              sincronizarán al recuperar la red.
+            </span>
           </motion.div>
         )}
-
         {showRestored && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="w-full bg-green-500/10 border-b border-green-500/20 backdrop-blur-md sticky top-0 z-100 overflow-hidden"
+            className="bg-emerald-600 text-white px-4 py-2 text-center text-xs font-bold flex items-center justify-center gap-2 shadow-md relative z-50"
           >
-            <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-center gap-3 text-green-700 font-bold text-xs lg:text-sm text-center">
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-              </span>
+            <div className="w-2 h-2 rounded-full bg-white" />
+            <span>
+              Conexión restablecida. Sincronizando datos con el servidor...
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Cross-session reset warning banner */}
+      <AnimatePresence>
+        {hasOtherSessions && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-purple-900 text-white px-4 py-2.5 text-xs font-bold flex items-center justify-between gap-4 shadow-lg relative z-50 border-b border-purple-700"
+          >
+            <div className="flex items-center gap-2 mx-auto">
+              <span className="text-base">🔐</span>
               <span>
-                <strong>¡Conexión de red restablecida!</strong> Datos
-                sincronizados correctamente.
+                Hay múltiples sesiones abiertas. Puedes cerrar todas las demás
+                sesiones desde el botón de cerrar sesión.
               </span>
             </div>
           </motion.div>
@@ -253,7 +324,16 @@ export function AppLayout() {
       </AnimatePresence>
 
       {/* Premium Glass Header */}
-      <header className="h-14 lg:h-16 2xl:h-20 border-b bg-white/90 backdrop-blur-md flex items-center px-4 lg:px-6 2xl:px-10 gap-2 lg:gap-4 2xl:gap-8 sticky top-0 z-50 transition-all duration-300">
+      <header className="relative h-14 lg:h-16 2xl:h-20 border-b bg-white/95 backdrop-blur-md flex items-center px-4 lg:px-6 2xl:px-10 gap-2 lg:gap-4 2xl:gap-8 sticky top-0 z-50 transition-all duration-300">
+        {/* Dynamic Top Ambient Indicator Line with Glow */}
+        <div
+          className="absolute top-0 left-0 right-0 h-1.5 transition-all duration-500"
+          style={{
+            backgroundColor: currentTheme.accent,
+            boxShadow: `0 2px 12px ${currentTheme.accent}80`,
+          }}
+        />
+
         {/* Brand & Store Selector */}
         <div className="flex items-center gap-2 lg:gap-4 2xl:gap-6 flex-1 lg:flex-none">
           <div
@@ -288,33 +368,188 @@ export function AppLayout() {
             <div className="h-8 w-px bg-accent/60 mx-1 hidden lg:block" />
           )}
 
-          {activeStore && (
-            <button
-              onClick={() => (canSwitchStore ? navigate("/select-store") : undefined)}
-              className={cn(
-                "flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 2xl:px-5 py-1.5 lg:py-2 rounded-xl lg:rounded-2xl text-[10px] lg:text-[11px] 2xl:text-sm font-black transition-all border-2 shadow-soft min-w-0",
-                canSwitchStore
-                  ? "bg-white hover:border-primary/30 hover:shadow-medium cursor-pointer"
-                  : "cursor-default bg-accent/30 border-transparent",
-              )}
-              style={{
-                color: activeStore.color || undefined,
-                borderColor: canSwitchStore ? undefined : `${activeStore.color}20`,
-              }}
-              title={canSwitchStore ? "Cambiar punto de venta" : undefined}
-            >
-              <div className="h-5 w-5 lg:h-6 lg:w-6 rounded-lg bg-current/10 flex items-center justify-center shrink-0">
-                <Store className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+          {activeStore &&
+            (canSwitchStore ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      "group relative flex items-center gap-2 lg:gap-3 px-3 lg:px-4 2xl:px-5 py-1.5 lg:py-2 rounded-2xl transition-all duration-300 border-2 hover:scale-[1.03] active:scale-[0.98] cursor-pointer min-w-0 shadow-sm",
+                      currentTheme.bg,
+                      currentTheme.border,
+                      currentTheme.glow,
+                    )}
+                    title="Clic para cambiar de punto de venta"
+                  >
+                    {/* Store Icon Badge with 3D gradient & glow */}
+                    <div
+                      className={cn(
+                        "w-8 h-8 lg:w-9 lg:h-9 2xl:w-10 2xl:h-10 rounded-xl flex items-center justify-center text-base lg:text-lg shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3",
+                        currentTheme.badge,
+                      )}
+                    >
+                      <span>
+                        {activeStore.icon || currentTheme.defaultIcon}
+                      </span>
+                    </div>
+
+                    <div className="text-left flex flex-col justify-center min-w-0 pr-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[7.5px] lg:text-[8.5px] 2xl:text-[9.5px] font-black uppercase tracking-[0.22em] text-muted-foreground/80 leading-none">
+                          SEDE ACTIVA
+                        </span>
+                        <span className="relative flex h-2 w-2">
+                          <span
+                            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                            style={{ backgroundColor: currentTheme.accent }}
+                          />
+                          <span
+                            className="relative inline-flex rounded-full h-2 w-2 shadow-xs"
+                            style={{ backgroundColor: currentTheme.accent }}
+                          />
+                        </span>
+                      </div>
+                      <span
+                        className={cn(
+                          "font-black text-xs lg:text-sm 2xl:text-base tracking-tight leading-tight uppercase truncate max-w-32 sm:max-w-44 lg:max-w-none",
+                          currentTheme.text,
+                        )}
+                      >
+                        {activeStore.name}
+                      </span>
+                    </div>
+
+                    <div className="h-5 w-px bg-current/20 mx-1 hidden sm:block" />
+
+                    <div className="flex items-center gap-1">
+                      <span className="hidden sm:inline-block text-[8px] lg:text-[9px] font-black uppercase tracking-wider bg-white/80 dark:bg-black/20 border border-current/20 px-1.5 py-0.5 rounded-md opacity-80 group-hover:opacity-100 transition-opacity shadow-xs">
+                        Cambiar
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          "h-3.5 w-3.5 lg:h-4 lg:w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180 opacity-70 group-hover:opacity-100",
+                          currentTheme.text,
+                        )}
+                      />
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent
+                  align="start"
+                  className="w-72 sm:w-80 p-2 rounded-2xl border-2 shadow-2xl bg-white/95 backdrop-blur-xl animate-in fade-in-80 zoom-in-95 duration-200 z-50"
+                >
+                  <div className="px-3 py-2 border-b border-accent/20 mb-1.5">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                      Puntos de Venta
+                    </p>
+                    <p className="text-xs font-bold text-foreground">
+                      Selecciona la tienda para operar
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    {stores.map((s) => {
+                      const isSelected = s.id === activeStore.id;
+                      const sTheme = getStoreTheme(s);
+                      return (
+                        <DropdownMenuItem
+                          key={s.id}
+                          onClick={() => {
+                            if (!isSelected) {
+                              setActiveStore(s);
+                              toast.success(`Cambiado a: ${s.name}`);
+                            }
+                          }}
+                          className={cn(
+                            "flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition-all border-2",
+                            isSelected
+                              ? `${sTheme.bg} ${sTheme.border} ${sTheme.text} font-black shadow-xs`
+                              : "hover:bg-accent/40 border-transparent text-foreground font-bold",
+                          )}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={cn(
+                                "w-8 h-8 rounded-lg flex items-center justify-center text-sm shadow-xs shrink-0",
+                                isSelected ? sTheme.badge : "bg-accent/40",
+                              )}
+                            >
+                              <span>{s.icon || sTheme.defaultIcon}</span>
+                            </div>
+                            <div className="min-w-0 text-left">
+                              <p className="text-xs font-black tracking-tight uppercase leading-tight truncate">
+                                {s.name}
+                              </p>
+                              <p className="text-[10px] font-bold text-muted-foreground leading-none mt-0.5">
+                                {sTheme.tag || "Punto de venta"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {isSelected ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[9px] font-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded-md shadow-xs">
+                                Activo
+                              </span>
+                              <Check
+                                className="h-4 w-4 text-current shrink-0"
+                                strokeWidth={3}
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-black text-muted-foreground/60 hover:text-primary">
+                              Cambiar
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </div>
+
+                  <DropdownMenuSeparator className="my-2 bg-accent/20" />
+
+                  <DropdownMenuItem
+                    onClick={() => navigate("/select-store")}
+                    className="flex items-center justify-center gap-2 p-2 rounded-xl text-xs font-black text-muted-foreground hover:text-primary hover:bg-primary/5 cursor-pointer"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    <span>Abrir selector en pantalla completa</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              /* Static Badge for single-store users */
+              <div
+                className={cn(
+                  "flex items-center gap-2.5 lg:gap-3 px-3 lg:px-4 2xl:px-5 py-1.5 lg:py-2 rounded-2xl border-2 shadow-sm min-w-0",
+                  currentTheme.bg,
+                  currentTheme.border,
+                )}
+              >
+                <div
+                  className={cn(
+                    "w-8 h-8 lg:w-9 lg:h-9 2xl:w-10 2xl:h-10 rounded-xl flex items-center justify-center text-base lg:text-lg shrink-0",
+                    currentTheme.badge,
+                  )}
+                >
+                  <span>{activeStore.icon || currentTheme.defaultIcon}</span>
+                </div>
+                <div className="text-left flex flex-col justify-center min-w-0 pr-0.5">
+                  <span className="text-[7.5px] lg:text-[8.5px] 2xl:text-[9.5px] font-black uppercase tracking-[0.22em] text-muted-foreground/80 leading-none">
+                    SEDE ACTIVA
+                  </span>
+                  <span
+                    className={cn(
+                      "font-black text-xs lg:text-sm 2xl:text-base tracking-tight leading-tight uppercase truncate",
+                      currentTheme.text,
+                    )}
+                  >
+                    {activeStore.name}
+                  </span>
+                </div>
               </div>
-              <span className="hidden sm:inline uppercase tracking-widest text-[8px] lg:text-[9px] 2xl:text-[11px] truncate">
-                {activeStore.name}
-              </span>
-              <span className="sm:hidden">{activeStore.icon}</span>
-              {canSwitchStore && (
-                <Wrench className="h-2.5 w-2.5 opacity-30 ml-0.5 lg:ml-1 shrink-0" />
-              )}
-            </button>
-          )}
+            ))}
         </div>
 
         {/* Desktop Navigation */}
@@ -420,8 +655,36 @@ export function AppLayout() {
         </div>
       </header>
 
+      {/* Mobile Top Sub-Navbar (Always visible on mobile right below header) */}
+      <div className="lg:hidden border-b bg-white/95 backdrop-blur-md sticky top-14 z-40 px-3 py-2 overflow-x-auto no-scrollbar shadow-xs">
+        <div className="flex items-center gap-1.5 min-w-max">
+          {visibleNav.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black text-muted-foreground hover:bg-accent/50 hover:text-primary transition-all whitespace-nowrap border-2 border-transparent"
+              activeClassName="bg-primary text-white border-primary shadow-xs"
+            >
+              {({ isActive }) => (
+                <>
+                  <item.icon
+                    className={cn(
+                      "h-3.5 w-3.5 transition-transform duration-200",
+                      isActive ? "text-white scale-110" : "text-muted-foreground",
+                    )}
+                  />
+                  <span className="uppercase tracking-wider">
+                    {item.label}
+                  </span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
+      </div>
+
       {/* Main Content */}
-      <main className="flex-1 relative pb-24 lg:pb-0">
+      <main className="flex-1 relative pb-6 lg:pb-0">
         {/* Subtle Background Pattern */}
         <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,var(--tw-gradient-stops))] from-primary/3 via-transparent to-transparent pointer-events-none" />
         <div className="relative z-10">
@@ -430,55 +693,6 @@ export function AppLayout() {
           </ErrorBoundary>
         </div>
       </main>
-
-      {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-6 left-4 right-4 z-50 bg-white border border-white/50 shadow-2xl rounded-[2.5rem] p-1.5 flex items-center justify-around overflow-hidden">
-        {visibleNav.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className="flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-200 relative group min-w-10"
-            activeClassName="text-white"
-          >
-            {({ isActive }) => (
-              <>
-                <div
-                  className={cn(
-                    "relative z-10 flex flex-col items-center transition-all duration-200",
-                    isActive ? "scale-110" : "",
-                  )}
-                >
-                  <item.icon
-                    className={cn(
-                      "h-5 w-5 transition-all duration-200",
-                      isActive
-                        ? "text-white"
-                        : "text-muted-foreground/40 group-hover:text-primary",
-                    )}
-                    strokeWidth={isActive ? 3 : 2.5}
-                  />
-                  {isActive && (
-                    <motion.span
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="text-[7px] font-black uppercase tracking-[0.15em] mt-1 text-white whitespace-nowrap"
-                    >
-                      {item.label.split(" ")[0]}
-                    </motion.span>
-                  )}
-                </div>
-                {isActive && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute inset-0 bg-primary rounded-2xl shadow-lg shadow-primary/30"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                  />
-                )}
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
 
       {/* Repair Dialog */}
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>

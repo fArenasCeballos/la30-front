@@ -383,12 +383,9 @@ export function OrderReceipt({
         <span className="kitchen-locator">{order.locator}</span>
       </div>
 
-      {order.is_delivery && (
+      {order.is_delivery && driverFirstName && (
         <div style={{ fontSize: "14px", fontWeight: "bold", marginTop: "6px", border: "2px dashed #000000", padding: "6px", background: "#ffffff", color: "#000000" }}>
-          <div><strong>CLIENTE:</strong> {(order.delivery_name ?? "Cliente").toUpperCase()}</div>
-          {order.delivery_address && <div><strong>DIR:</strong> {order.delivery_address.toUpperCase()}</div>}
-          {order.delivery_phone && <div><strong>TEL:</strong> {order.delivery_phone}</div>}
-          {driverFirstName && <div><strong>DOMICILIARIO:</strong> {driverFirstName.toUpperCase()}</div>}
+          <div><strong>DOMICILIARIO:</strong> {driverFirstName.toUpperCase()}</div>
         </div>
       )}
 
@@ -436,13 +433,23 @@ export function OrderReceipt({
         </div>
       ))}
 
-      {order.notes && (
-        <>
-          <div className="divider" />
-          <div className="bold" style={{ fontSize: "15px" }}>NOTAS DEL PEDIDO:</div>
-          <div className="kitchen-footer-notes">{order.notes.toUpperCase()}</div>
-        </>
-      )}
+      {(() => {
+        const rawNotes = order.notes?.trim() || "";
+        const isAddressNote =
+          rawNotes.startsWith("📍") ||
+          (order.delivery_address &&
+            rawNotes.toLowerCase() === order.delivery_address.toLowerCase());
+        if (!rawNotes || isAddressNote) return null;
+        return (
+          <>
+            <div className="divider" />
+            <div className="bold" style={{ fontSize: "15px" }}>
+              NOTAS DEL PEDIDO:
+            </div>
+            <div className="kitchen-footer-notes">{rawNotes.toUpperCase()}</div>
+          </>
+        );
+      })()}
 
       <div className="divider" />
 
