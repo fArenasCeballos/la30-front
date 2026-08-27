@@ -5,8 +5,11 @@ import {
   silentPrint,
   buildCustomerReceiptHTML,
   buildKitchenReceiptHTML,
+  extractFirstName,
 } from "@/lib/receiptUtils";
 import { useAuth } from "@/context/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,6 +30,7 @@ interface OrderReceiptProps {
   paymentChange?: number;
   paymentBreakdown?: { efectivo?: number; tarjeta?: number; nequi?: number };
   sharedPayments?: Array<{ method: string; subMethod?: string; amount: number }>;
+  driverName?: string;
 }
 
 export function OrderReceipt({
@@ -39,11 +43,34 @@ export function OrderReceipt({
   paymentChange,
   paymentBreakdown,
   sharedPayments,
+  driverName,
 }: OrderReceiptProps) {
   const printRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
+  const { data: activeDrivers = [] } = useQuery({
+    queryKey: ["delivery-drivers-active"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("delivery_drivers")
+        .select("*")
+        .order("first_name", { ascending: true });
+      return data || [];
+    },
+    enabled: !!order?.is_delivery && !!order?.driver_id && !order?.delivery_drivers && !driverName,
+  });
+
   if (!order) return null;
+
+  const matchedDriver = order.driver_id
+    ? activeDrivers.find((d: { id: string | null; }) => d.id === order.driver_id)
+    : null;
+  const rawDriverName =
+    driverName ||
+    order.delivery_drivers?.first_name ||
+    order.driver?.first_name ||
+    matchedDriver?.first_name;
+  const driverFirstName = extractFirstName(rawDriverName);
 
   /* ── Datos comunes ─────────────────────────────────────── */
   const cajeroName = user?.name ?? "Cajero";
@@ -90,6 +117,7 @@ export function OrderReceipt({
       paymentChange,
       paymentBreakdown,
       sharedPayments,
+      driverName: driverFirstName,
     };
 
     if (type === "customer") {
@@ -182,6 +210,12 @@ export function OrderReceipt({
             <div className="row">
               <span className="bold">Teléfono:</span>
               <span className="bold">{order.delivery_phone}</span>
+            </div>
+          )}
+          {driverFirstName && (
+            <div className="row">
+              <span className="bold">Domiciliario:</span>
+              <span className="bold">{driverFirstName.toUpperCase()}</span>
             </div>
           )}
         </>
@@ -354,6 +388,7 @@ export function OrderReceipt({
           <div><strong>CLIENTE:</strong> {(order.delivery_name ?? "Cliente").toUpperCase()}</div>
           {order.delivery_address && <div><strong>DIR:</strong> {order.delivery_address.toUpperCase()}</div>}
           {order.delivery_phone && <div><strong>TEL:</strong> {order.delivery_phone}</div>}
+          {driverFirstName && <div><strong>DOMICILIARIO:</strong> {driverFirstName.toUpperCase()}</div>}
         </div>
       )}
 

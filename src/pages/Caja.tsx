@@ -56,6 +56,7 @@ interface ReceiptState {
     subMethod?: string;
     amount: number;
   }>;
+  driverName?: string;
 }
 
 export default function Caja() {
@@ -1018,6 +1019,8 @@ export default function Caja() {
           paymentReceived={receipt.paymentReceived}
           paymentChange={receipt.paymentChange}
           paymentBreakdown={receipt.paymentBreakdown}
+          sharedPayments={receipt.sharedPayments}
+          driverName={receipt.driverName}
         />
       )}
 

@@ -71,6 +71,16 @@ export interface Order extends OrderRow {
   isOptimistic?: boolean;
   isOfflinePending?: boolean;
   payment_method?: PaymentMethod;
+  delivery_drivers?: {
+    id: string;
+    first_name: string;
+    last_name?: string;
+  } | null;
+  driver?: {
+    id: string;
+    first_name: string;
+    last_name?: string;
+  } | null;
 }
 
 // Custom option with its choices (for ProductCustomizer)

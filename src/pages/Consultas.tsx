@@ -156,7 +156,7 @@ export default function Consultas() {
       let query = supabase
         .from("orders")
         .select(
-          "*, order_items(*, products(*, categories(*))), profiles(*), payments(*)",
+          "*, order_items(*, products(*, categories(*))), profiles(*), payments(*), delivery_drivers(id, first_name, last_name)",
         );
 
       // 1. Text Search (Locator, ID, Notes)

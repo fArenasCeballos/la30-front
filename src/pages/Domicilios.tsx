@@ -9,7 +9,6 @@ import { formatPrice } from "@/lib/formatPrice";
 import { toast } from "sonner";
 import type {
   Order,
-  OrderItem,
   OrderStatus,
   Category,
   Product,
@@ -102,6 +101,7 @@ interface ReceiptState {
     subMethod?: string;
     amount: number;
   }>;
+  driverName?: string;
 }
 
 export default function Domicilios() {
@@ -139,6 +139,7 @@ export default function Domicilios() {
 
   const handleReprintCustomer = (order: Order) => {
     const lastPayment = order.payments?.[0];
+    const assignedDriver = drivers.find((d) => d.id === order.driver_id);
     setReceipt({
       order,
       type: "customer",
@@ -152,6 +153,7 @@ export default function Domicilios() {
             nequi: lastPayment.amount_nequi,
           }
         : undefined,
+      driverName: assignedDriver?.first_name || order.delivery_drivers?.first_name,
     });
   };
 
@@ -486,10 +488,12 @@ export default function Domicilios() {
         );
         if (order) {
           const cajeroName = user?.name ?? "Cajero";
+          const assignedDriver = drivers.find((d) => d.id === order.driver_id);
           const receiptData: ReceiptData = {
             order,
             cajeroName,
             storeName: activeStore?.name || "La 30 Perros y Hamburguesas",
+            driverName: assignedDriver?.first_name || order.delivery_drivers?.first_name,
             // Sin paymentMethod → la factura no muestra info de pago
           };
 
@@ -499,26 +503,11 @@ export default function Domicilios() {
             `Recibo - ${order.locator}`,
           );
 
-          // Imprimir comandas agrupadas por categoría en una sola sesión de impresión
-          const items = (order.order_items ?? []).filter(
-            (i) => i.products != null,
+          // Imprimir una sola comanda de cocina organizada por categorías
+          await silentPrint(
+            buildKitchenReceiptHTML(receiptData),
+            `Comanda - ${order.locator}`,
           );
-          const categoryGroups: Record<string, OrderItem[]> = {};
-          items.forEach((item) => {
-            const catName = item.products?.categories?.name || "General";
-            if (!categoryGroups[catName]) categoryGroups[catName] = [];
-            categoryGroups[catName].push(item);
-          });
-          const categoryKeys = Object.keys(categoryGroups);
-          if (categoryKeys.length > 0) {
-            const kitchenHTMLs = categoryKeys.map((catName) =>
-              buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
-            );
-            const combinedKitchenHTML = kitchenHTMLs.join(
-              '<div class="print-page-break"></div>',
-            );
-            await silentPrint(combinedKitchenHTML);
-          }
         }
       }
     } finally {
@@ -586,6 +575,7 @@ export default function Domicilios() {
             setSiigoOrder({ order: activeOrder, method, breakdown });
           }
 
+          const assignedDriver = drivers.find((d) => d.id === activeOrder.driver_id);
           const receiptData: ReceiptData = {
             order: activeOrder,
             cajeroName,
@@ -595,6 +585,7 @@ export default function Domicilios() {
             paymentChange: change,
             paymentBreakdown: breakdown,
             sharedPayments,
+            driverName: assignedDriver?.first_name || activeOrder.delivery_drivers?.first_name,
           };
 
           // Si es pago mixto/compartido, imprimir cada comprobante individual
@@ -1592,6 +1583,7 @@ export default function Domicilios() {
           paymentChange={receipt.paymentChange}
           paymentBreakdown={receipt.paymentBreakdown}
           sharedPayments={receipt.sharedPayments}
+          driverName={receipt.driverName}
         />
       )}
 

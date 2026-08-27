@@ -199,6 +199,7 @@ export interface ReceiptData {
   order: Order;
   cajeroName: string;
   storeName?: string;
+  driverName?: string;
   paymentMethod?: string;
   paymentReceived?: number;
   paymentChange?: number;
@@ -208,6 +209,17 @@ export interface ReceiptData {
     subMethod?: string;
     amount: number;
   }>;
+}
+
+/**
+ * Extrae únicamente el primer nombre de un string de nombre o nombres compuestos.
+ * Ej: "Carlos Alberto" -> "Carlos", "JUAN MANUEL" -> "JUAN", "Andrés" -> "Andrés"
+ */
+export function extractFirstName(fullNameOrFirstName?: string | null): string {
+  if (!fullNameOrFirstName) return "";
+  const cleaned = fullNameOrFirstName.trim();
+  if (!cleaned) return "";
+  return cleaned.split(/\s+/)[0];
 }
 
 /** Genera el HTML completo de la factura del cliente */
@@ -302,10 +314,17 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
 
   let deliveryInfo = "";
   if (order.is_delivery) {
+    const rawDriverName =
+      data.driverName ||
+      order.delivery_drivers?.first_name ||
+      order.driver?.first_name;
+    const driverFirstName = extractFirstName(rawDriverName);
+
     deliveryInfo = `
       <div class="row"><span class="bold">Cliente:</span><span class="bold">${(order.delivery_name ?? "Cliente").toUpperCase()}</span></div>
       ${order.delivery_address ? `<div class="row"><span class="bold">Dirección:</span><span class="bold">${order.delivery_address.toUpperCase()}</span></div>` : ""}
       ${order.delivery_phone ? `<div class="row"><span class="bold">Teléfono:</span><span class="bold">${order.delivery_phone}</span></div>` : ""}
+      ${driverFirstName ? `<div class="row"><span class="bold">Domiciliario:</span><span class="bold">${driverFirstName.toUpperCase()}</span></div>` : ""}
     `;
   }
 
@@ -355,9 +374,7 @@ export function buildKitchenReceiptHTML(
   const itemsToPrint = filteredItems ?? getValidItems(order);
   const ticketNumber = order.ticket_number ?? "—";
 
-  const itemsHTML = itemsToPrint
-    .map(
-      (item) => `
+  const renderItemHTML = (item: OrderItem) => `
     <div style="margin-bottom: 10px;">
       <div class="kitchen-item-name">
         ${item.quantity} ${item.products?.name?.toUpperCase() ?? "PRODUCTO"}
@@ -379,9 +396,32 @@ export function buildKitchenReceiptHTML(
           : ""
       }
     </div>
-  `,
-    )
-    .join("");
+  `;
+
+  let itemsHTML = "";
+  if (filteredItems) {
+    itemsHTML = filteredItems.map(renderItemHTML).join("");
+  } else {
+    // Organizado por categorías en una única comanda
+    const categoryGroups: Record<string, OrderItem[]> = {};
+    itemsToPrint.forEach((item) => {
+      const catName = item.products?.categories?.name || "General";
+      if (!categoryGroups[catName]) categoryGroups[catName] = [];
+      categoryGroups[catName].push(item);
+    });
+
+    const entries = Object.entries(categoryGroups);
+    const showHeader = entries.length > 1;
+
+    itemsHTML = entries
+      .map(([catName, catItems]) => {
+        const header = showHeader
+          ? `<div style="font-size:16px; font-weight:900; border-top:2px solid #000000; border-bottom:2px solid #000000; padding:2px 0; margin:10px 0 6px; text-transform:uppercase; text-align:center;">── ${catName} ──</div>`
+          : "";
+        return `${header}${catItems.map(renderItemHTML).join("")}`;
+      })
+      .join("");
+  }
 
   let notesSection = "";
   if (order.notes) {
@@ -397,11 +437,17 @@ export function buildKitchenReceiptHTML(
 
   let deliveryInfo = "";
   if (order.is_delivery) {
+    const rawDriverName =
+      data.driverName ||
+      order.delivery_drivers?.first_name ||
+      order.driver?.first_name;
+    const driverFirstName = extractFirstName(rawDriverName);
+
     deliveryInfo = `
       <div style="font-size:14px; font-weight:bold; margin-top:5px; border:2px dashed #000000; padding:5px; background:#ffffff; color:#000000;">
         <div><strong>CLIENTE:</strong> ${(order.delivery_name ?? "Cliente").toUpperCase()}</div>
-        ${order.delivery_address ? `<div><strong>DIR:</strong> ${order.delivery_address.toUpperCase()}</div>` : ""}
         ${order.delivery_phone ? `<div><strong>TEL:</strong> ${order.delivery_phone}</div>` : ""}
+        ${driverFirstName ? `<div><strong>DOMICILIARIO:</strong> ${driverFirstName.toUpperCase()}</div>` : ""}
       </div>
     `;
   }
