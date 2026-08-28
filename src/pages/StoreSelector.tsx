@@ -1,12 +1,29 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
 import type { Store } from "@/types";
 
 export default function StoreSelector() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { stores, setActiveStore } = useStore();
+  const { user, isAuthenticated, loading } = useAuth();
+  const { stores, setActiveStore, loading: storeLoading } = useStore();
+
+  if (loading || storeLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+          <span className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
+            Cargando sedes
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   const activeStores = stores.filter((s) => s.is_active);
   const inactiveStores = stores.filter((s) => !s.is_active);

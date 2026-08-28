@@ -27,62 +27,89 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // Consolidate fetching and resolving into a single effect to avoid cascading renders
   useEffect(() => {
+    let isCancelled = false;
+
     async function initializeStores() {
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("stores")
-        .select("*")
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching stores:", error);
+      if (!user) {
+        setStores([]);
+        setActiveStoreState(null);
         setLoading(false);
         return;
       }
 
-      let loadedStores = (data || []).map((s: Store) => ({
-        ...s,
-        name: s.name === "Carrito Móvil" ? "Tráiler" : s.name,
-      }));
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("stores")
+          .select("*")
+          .order("created_at", { ascending: true });
 
-      // Filter accessible stores for non-admin users
-      if (user.role !== "admin") {
-        const profile = user as Profile;
-        if (profile.allowed_store_ids && profile.allowed_store_ids.length > 0) {
-          loadedStores = loadedStores.filter(s => profile.allowed_store_ids!.includes(s.id));
-        } else if (profile.store_id) {
-          // Fallback to legacy single store_id if allowed_store_ids is empty
-          loadedStores = loadedStores.filter(s => s.id === profile.store_id);
+        if (isCancelled) return;
+
+        if (error) {
+          console.error("Error fetching stores:", error);
+          setLoading(false);
+          return;
         }
-        // If profile.allowed_store_ids is null/empty and profile.store_id is null,
-        // it means GLOBAL ACCESS, so loadedStores contains all stores.
-      }
 
-      setStores(loadedStores);
+        let loadedStores = (data || []).map((s: Store) => ({
+          ...s,
+          name: s.name === "Carrito Móvil" ? "Tráiler" : s.name,
+        }));
 
-      // Resolve active store
-      let storeToSet: Store | null = null;
-      
-      const savedSlug = localStorage.getItem(STORAGE_KEY);
-      if (savedSlug) {
-        storeToSet = loadedStores.find((s) => s.slug === savedSlug) || null;
-      }
-      
-      // If no valid saved store is found among accessible stores, default to the first one
-      if (!storeToSet && loadedStores.length > 0) {
-        storeToSet = loadedStores[0];
-      }
+        // Filter accessible stores for non-admin users
+        if (user.role !== "admin") {
+          const profile = user as Profile;
+          if (profile.allowed_store_ids && profile.allowed_store_ids.length > 0) {
+            loadedStores = loadedStores.filter((s) =>
+              profile.allowed_store_ids!.includes(s.id),
+            );
+          } else if (profile.store_id) {
+            // Fallback to legacy single store_id if allowed_store_ids is empty
+            loadedStores = loadedStores.filter((s) => s.id === profile.store_id);
+          }
+          // If profile.allowed_store_ids is null/empty and profile.store_id is null,
+          // it means GLOBAL ACCESS, so loadedStores contains all stores.
+        }
 
-      // Only update state if different to prevent unnecessary renders and infinite loops
-      if (storeToSet) {
-        setActiveStoreState((prev) => (prev?.id !== storeToSet?.id ? storeToSet : prev));
+        if (isCancelled) return;
+        setStores(loadedStores);
+
+        // Resolve active store
+        let storeToSet: Store | null = null;
+
+        const savedSlug = localStorage.getItem(STORAGE_KEY);
+        if (savedSlug) {
+          storeToSet = loadedStores.find((s) => s.slug === savedSlug) || null;
+        }
+
+        // If no valid saved store is found among accessible stores, default to the first one
+        if (!storeToSet && loadedStores.length > 0) {
+          storeToSet = loadedStores[0];
+        }
+
+        // Only update state if different to prevent unnecessary renders and infinite loops
+        if (storeToSet) {
+          setActiveStoreState((prev) =>
+            prev?.id !== storeToSet?.id ? storeToSet : prev,
+          );
+        } else {
+          setActiveStoreState(null);
+        }
+      } catch (err) {
+        console.error("Error initializing stores:", err);
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
-      
-      setLoading(false);
     }
 
     initializeStores();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [user]); // Depend only on user to initialize stores once per session
 
   const setActiveStore = useCallback(

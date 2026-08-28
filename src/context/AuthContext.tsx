@@ -81,20 +81,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const loadProfile = async (userId: string) => {
       if (!mounted) return;
       lastFetchedId.current = userId;
-      await fetchProfile(userId);
-      if (mounted) setLoading(false);
+      try {
+        await fetchProfile(userId);
+      } finally {
+        if (mounted) setLoading(false);
+      }
     };
 
     // 1. Restaurar sesión del storage
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      if (session?.user?.id) {
-        initialSessionHandled.current = true;
-        loadProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (!mounted) return;
+        if (session?.user?.id) {
+          initialSessionHandled.current = true;
+          loadProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error("Session restore error:", err);
+        if (mounted) setLoading(false);
+      });
 
     // 2. Escuchar cambios (login, logout, token refresh)
     const {

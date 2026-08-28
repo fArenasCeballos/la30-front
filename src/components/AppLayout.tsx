@@ -229,7 +229,7 @@ export function AppLayout() {
     user?.role,
   ]);
 
-  if (loading || storeLoading) {
+  if (loading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-accent/20">
         <div className="flex flex-col items-center gap-4">
@@ -246,6 +246,21 @@ export function AppLayout() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (storeLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-accent/20">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-white border-2 shadow-strong flex items-center justify-center animate-bounce">
+            <Logo className="h-6 w-6" />
+          </div>
+          <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">
+            Cargando sede...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const role = user?.role;
