@@ -848,7 +848,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       });
       if (error) {
         toast.error(`Error: ${error.message}`);
-        return;
+        throw error;
       }
       if (deliveryInfo) {
         const itemsTotal = items.reduce(
@@ -872,6 +872,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           toast.error(
             `Error al actualizar datos de entrega: ${updateDeliveryError.message}`,
           );
+          throw updateDeliveryError;
         }
       }
       toast.success("Pedido actualizado");

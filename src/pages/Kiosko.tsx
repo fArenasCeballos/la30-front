@@ -9,6 +9,7 @@ import type {
   ProductWithCategory,
   DeliveryZone,
   LatLngPoint,
+  Order,
 } from "@/types";
 import type { Tables } from "@/types/database.types";
 import { useOrders } from "@/context/OrderContext";
@@ -352,62 +353,89 @@ export default function Kiosko() {
     driverId,
   ]);
 
+  const { data: directOrderToEdit } = useQuery({
+    queryKey: ["order-to-edit", editOrderId],
+    queryFn: async () => {
+      if (!editOrderId) return null;
+      const { data, error } = await supabase
+        .from("orders")
+        .select(
+          "*, order_items(*, products(id, name, siigo_code, sort_order, category_id, categories(id, name, sort_order)))",
+        )
+        .eq("id", editOrderId)
+        .single();
+      if (error) {
+        console.error("Error fetching order to edit:", error);
+        return null;
+      }
+      return data as unknown as Order;
+    },
+    enabled: !!editOrderId,
+    staleTime: 0,
+  });
+
+  const orderToEdit = useMemo(() => {
+    if (!editOrderId) return null;
+    return (
+      orders.find((o) => o.id === editOrderId) || directOrderToEdit || null
+    );
+  }, [editOrderId, orders, directOrderToEdit]);
+
   // Cargar pedido para editar si existe editOrderId
   useEffect(() => {
-    if (editOrderId && orders.length > 0) {
-      const orderToEdit = orders.find((o) => o.id === editOrderId);
-      if (orderToEdit) {
-        if (orderToEdit.status !== "pendiente") {
-          toast.error("Solo se pueden editar pedidos pendientes");
-          navigate(orderToEdit.is_delivery ? "/domicilios" : "/kiosko");
-          return;
-        }
-        setTimeout(() => {
-          const cleanNotes =
-            orderToEdit.notes?.startsWith("📍") &&
-            (!orderToEdit.delivery_address ||
-              orderToEdit.notes.includes(orderToEdit.delivery_address) ||
-              orderToEdit.notes.trim() ===
-                `📍 ${orderToEdit.delivery_address?.trim()}`)
-              ? ""
-              : orderToEdit.notes || "";
-          setOrderNotes(cleanNotes);
-          setIsDeliveryOrder(!!orderToEdit.is_delivery);
-          if (orderToEdit.is_delivery) {
-            setDeliveryName(orderToEdit.delivery_name || "");
-            setDeliveryAddress(orderToEdit.delivery_address || "");
-            setDeliveryPhone(orderToEdit.delivery_phone || "");
-            setDeliveryFee(orderToEdit.delivery_fee || 0);
-            setDriverId(orderToEdit.driver_id || undefined);
-            const matchingZone = zones.find(
-              (z) => z.price === orderToEdit.delivery_fee,
-            );
-            if (matchingZone) {
-              setSelectedZoneId(matchingZone.id);
-            }
-          }
+    if (!editOrderId || !orderToEdit) return;
 
-          // Transformar order_items a CartItem
-          const initialCart = (orderToEdit.order_items || [])
-            .map((item) => {
-              const product = item.products;
-              if (!product) return null;
-              const cartKey = `${product.id}-${item.notes || ""}`;
-              return {
-                id: cartKey,
-                product: product as ProductWithCategory,
-                quantity: item.quantity,
-                notes: item.notes || undefined,
-                unit_price: item.unit_price,
-              };
-            })
-            .filter(Boolean) as CartItem[];
-          setCart(initialCart);
-          setStep("menu"); // Ir directo al menú al editar
-        }, 0);
+    if (orderToEdit.status !== "pendiente") {
+      toast.error("Solo se pueden editar pedidos pendientes");
+      navigate(orderToEdit.is_delivery ? "/domicilios" : "/caja");
+      return;
+    }
+
+    const cleanNotes =
+      orderToEdit.notes?.startsWith("📍") &&
+      (!orderToEdit.delivery_address ||
+        orderToEdit.notes.includes(orderToEdit.delivery_address) ||
+        orderToEdit.notes.trim() ===
+          `📍 ${orderToEdit.delivery_address?.trim()}`)
+        ? ""
+        : orderToEdit.notes || "";
+
+    setLocator(orderToEdit.locator || "");
+    setOrderNotes(cleanNotes);
+    setIsDeliveryOrder(!!orderToEdit.is_delivery);
+    if (orderToEdit.is_delivery) {
+      setDeliveryName(orderToEdit.delivery_name || "");
+      setDeliveryAddress(orderToEdit.delivery_address || "");
+      setDeliveryPhone(orderToEdit.delivery_phone || "");
+      setDeliveryFee(orderToEdit.delivery_fee || 0);
+      setDriverId(orderToEdit.driver_id || undefined);
+      const matchingZone = zones.find(
+        (z) => z.price === orderToEdit.delivery_fee,
+      );
+      if (matchingZone) {
+        setSelectedZoneId(matchingZone.id);
       }
     }
-  }, [editOrderId, orders, zones, navigate]);
+
+    // Transformar order_items a CartItem
+    const initialCart = (orderToEdit.order_items || [])
+      .map((item) => {
+        const product = item.products;
+        if (!product) return null;
+        const cartKey = `${product.id}-${item.notes || ""}`;
+        return {
+          id: cartKey,
+          product: product as ProductWithCategory,
+          quantity: item.quantity,
+          notes: item.notes || undefined,
+          unit_price: item.unit_price,
+        };
+      })
+      .filter(Boolean) as CartItem[];
+
+    setCart(initialCart);
+    setStep("menu"); // Ir directo al menú al editar
+  }, [editOrderId, orderToEdit, zones, navigate]);
 
   // Derivación de la categoría activa para evitar efectos innecesarios
   const currentCategory =
@@ -570,12 +598,17 @@ export default function Kiosko() {
               }
             : undefined,
         );
+        setCart([]);
+        setLocator("");
+        setOrderNotes("");
+        setIsDeliveryOrder(false);
+        clearDraft();
         if (isDeliveryOrder) {
           navigate("/domicilios");
         } else {
-          window.history.replaceState({}, "", "/kiosko");
-          setStep("locator");
+          navigate("/caja");
         }
+        return;
       } else if (isDeliveryOrder) {
         const deliveryLocator = nextDeliveryLocator;
         await addDeliveryOrder(
@@ -611,6 +644,18 @@ export default function Kiosko() {
       setIsSending(false);
     }
   };
+
+  // Loading state when editing an order and waiting for data
+  if (editOrderId && !orderToEdit) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm font-bold text-muted-foreground">
+          Cargando pedido para editar...
+        </p>
+      </div>
+    );
+  }
 
   // Step 1: Locator (Entry) or Delivery/Local choice
   if (step === "locator") {
