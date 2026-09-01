@@ -11,7 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
 import type { Order, OrderStatus, ProductWithCategory } from "@/types";
 import { supabase } from "@/lib/supabase";
-import type { Json } from "@/types/database.types";
+import type { Json, UpdateDto } from "@/types/database.types";
 import { toast } from "sonner";
 
 import { getShiftStart } from "@/lib/shiftUtils";
@@ -867,7 +867,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      const updatePayload: Record<string, unknown> = {
+      const updatePayload: UpdateDto<"orders"> = {
         total: grandTotal,
         total_amount: grandTotal,
       };
