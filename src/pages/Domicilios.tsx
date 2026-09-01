@@ -295,7 +295,7 @@ export default function Domicilios() {
       let closingQuery = supabase
         .from("orders")
         .select(
-          "*, order_items(*, products(id, name, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi)",
+          "*, order_items(*, products(id, name, price, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi)",
         )
         .eq("is_delivery", true)
         .gte("created_at", shiftStart.toISOString())

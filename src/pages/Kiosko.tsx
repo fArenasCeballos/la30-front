@@ -360,7 +360,7 @@ export default function Kiosko() {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "*, order_items(*, products(id, name, siigo_code, sort_order, category_id, categories(id, name, sort_order)))",
+          "*, order_items(*, products(id, name, price, siigo_code, sort_order, category_id, categories(id, name, sort_order)))",
         )
         .eq("id", editOrderId)
         .single();
@@ -422,20 +422,27 @@ export default function Kiosko() {
       .map((item) => {
         const product = item.products;
         if (!product) return null;
-        const cartKey = `${product.id}-${item.notes || ""}`;
+        const catalogProduct =
+          products.find((p) => p.id === product.id) || product;
+        const cartKey = `${catalogProduct.id}-${item.notes || ""}`;
+        const unitPrice =
+          Number(item.unit_price) ||
+          Number(catalogProduct.price) ||
+          Number(product.price) ||
+          0;
         return {
           id: cartKey,
-          product: product as ProductWithCategory,
+          product: catalogProduct as ProductWithCategory,
           quantity: item.quantity,
           notes: item.notes || undefined,
-          unit_price: item.unit_price,
+          unit_price: unitPrice,
         };
       })
       .filter(Boolean) as CartItem[];
 
     setCart(initialCart);
     setStep("menu"); // Ir directo al menú al editar
-  }, [editOrderId, orderToEdit, zones, navigate]);
+  }, [editOrderId, orderToEdit, zones, navigate, products]);
 
   // Derivación de la categoría activa para evitar efectos innecesarios
   const currentCategory =

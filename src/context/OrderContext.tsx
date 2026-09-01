@@ -101,8 +101,8 @@ function sanitizeOrders(raw: unknown[]): Order[] {
     .map((o) => {
       const total_amount =
         Number(
-          (o.total_amount as number | null | undefined) ??
-            (o.total as number | null | undefined) ??
+          (o.total_amount as number | null | undefined) ||
+            (o.total as number | null | undefined) ||
             0,
         ) || 0;
       return {
@@ -117,18 +117,28 @@ function sanitizeOrders(raw: unknown[]): Order[] {
               typeof item === "object" &&
               (item as Record<string, unknown>).products != null,
           )
-          .map((item) => ({
-            ...item,
-            quantity:
-              Number((item.quantity as number | null | undefined) ?? 1) || 1,
-            unit_price:
-              Number((item.unit_price as number | null | undefined) ?? 0) || 0,
-            subtotal:
+          .map((item) => {
+            const rawProd = (item as Record<string, unknown>)
+              .products as Record<string, unknown> | null;
+            const unit_price =
               Number(
-                (item.subtotal as number | null | undefined) ??
-                  (Number(item.quantity) || 1) * (Number(item.unit_price) || 0),
-              ) || 0,
-          })),
+                (item.unit_price as number | null | undefined) ||
+                  rawProd?.price ||
+                  0,
+              ) || 0;
+            const quantity =
+              Number((item.quantity as number | null | undefined) ?? 1) || 1;
+            return {
+              ...item,
+              quantity,
+              unit_price,
+              subtotal:
+                Number(
+                  (item.subtotal as number | null | undefined) ||
+                    quantity * unit_price,
+                ) || 0,
+            };
+          }),
       };
     }) as unknown as Order[];
 }
@@ -192,7 +202,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         let query = supabase
           .from("orders")
           .select(
-            "*, order_items(*, products(id, name, siigo_code, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi), siigo_invoices(id, status, error_message), profiles(id, name), delivery_drivers(id, first_name, last_name)",
+            "*, order_items(*, products(id, name, price, siigo_code, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi), siigo_invoices(id, status, error_message), profiles(id, name), delivery_drivers(id, first_name, last_name)",
           )
           .gte("created_at", shiftStart)
           .order("created_at", { ascending: false });
@@ -227,7 +237,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         let query = supabase
           .from("orders")
           .select(
-            "*, order_items(*, products(id, name, siigo_code, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi), siigo_invoices(id, status, error_message), profiles(id, name), delivery_drivers(id, first_name, last_name)",
+            "*, order_items(*, products(id, name, price, siigo_code, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi), siigo_invoices(id, status, error_message), profiles(id, name), delivery_drivers(id, first_name, last_name)",
           )
           .in("status", ["pendiente", "confirmado", "en_preparacion", "listo"])
           .gte("created_at", shiftStart)
@@ -840,6 +850,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         driver_id?: string;
       },
     ) => {
+      const itemsTotal = items.reduce(
+        (s, i) => s + (Number(i.unit_price) || 0) * (Number(i.quantity) || 0),
+        0,
+      );
+      const grandTotal = itemsTotal + (Number(deliveryInfo?.fee) || 0);
+
       const { error } = await supabase.rpc("update_order", {
         p_order_id: orderId,
         p_locator: locator,
@@ -850,31 +866,33 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         toast.error(`Error: ${error.message}`);
         throw error;
       }
+
+      const updatePayload: Record<string, unknown> = {
+        total: grandTotal,
+        total_amount: grandTotal,
+      };
+
       if (deliveryInfo) {
-        const itemsTotal = items.reduce(
-          (s, i) => s + (Number(i.unit_price) || 0) * (Number(i.quantity) || 0),
-          0,
-        );
-        const grandTotal = itemsTotal + (Number(deliveryInfo.fee) || 0);
-        const { error: updateDeliveryError } = await supabase
-          .from("orders")
-          .update({
-            delivery_name: deliveryInfo.name || null,
-            delivery_address: deliveryInfo.address || null,
-            delivery_phone: deliveryInfo.phone || null,
-            delivery_fee: Number(deliveryInfo.fee) || 0,
-            driver_id: deliveryInfo.driver_id || null,
-            is_delivery: true,
-            total: grandTotal,
-          })
-          .eq("id", orderId);
-        if (updateDeliveryError) {
-          toast.error(
-            `Error al actualizar datos de entrega: ${updateDeliveryError.message}`,
-          );
-          throw updateDeliveryError;
-        }
+        updatePayload.delivery_name = deliveryInfo.name || null;
+        updatePayload.delivery_address = deliveryInfo.address || null;
+        updatePayload.delivery_phone = deliveryInfo.phone || null;
+        updatePayload.delivery_fee = Number(deliveryInfo.fee) || 0;
+        updatePayload.driver_id = deliveryInfo.driver_id || null;
+        updatePayload.is_delivery = true;
       }
+
+      const { error: updateOrderError } = await supabase
+        .from("orders")
+        .update(updatePayload)
+        .eq("id", orderId);
+
+      if (updateOrderError) {
+        toast.error(
+          `Error al actualizar total del pedido: ${updateOrderError.message}`,
+        );
+        throw updateOrderError;
+      }
+
       toast.success("Pedido actualizado");
       queryClient.invalidateQueries({
         queryKey: ["orders", user?.id, storeId],

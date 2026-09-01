@@ -119,7 +119,7 @@ export function LiquidacionDomiciliariosView() {
       let query = supabase
         .from("orders")
         .select(
-          "*, order_items(*, products(id, name, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi), profiles(id, name)",
+          "*, order_items(*, products(id, name, price, sort_order, category_id, categories(id, name, sort_order))), payments(id, method, amount_total, amount_efectivo, amount_tarjeta, amount_nequi), profiles(id, name)",
         )
         .eq("is_delivery", true)
         .gte("created_at", shiftRange.from.toISOString())
