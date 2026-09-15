@@ -36,10 +36,12 @@ export default function Login() {
   };
 
   return (
-    <div className="relative h-screen min-h-screen w-full bg-slate-50/70 text-slate-900 flex flex-col justify-between p-4 sm:p-6 overflow-y-auto select-none">
-      {/* Destellos sutiles de fondo para armonía visual con StoreSelector y Dashboard */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[550px] h-[240px] bg-orange-500/5 blur-[100px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[400px] h-[200px] bg-teal-500/5 blur-[90px] rounded-full pointer-events-none" />
+    <div className="relative min-h-screen min-h-[100dvh] w-full max-w-full bg-slate-50/70 text-slate-900 flex flex-col justify-between px-4 py-3 sm:p-6 overflow-x-hidden overflow-y-auto select-none pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+      {/* Destellos sutiles de fondo contenidos para evitar desbordamiento horizontal */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[450px] max-w-full h-[240px] bg-orange-500/5 blur-[100px] rounded-full" />
+        <div className="absolute bottom-0 right-0 w-[300px] max-w-full h-[200px] bg-teal-500/5 blur-[90px] rounded-full" />
+      </div>
 
       {/* Cabecera Superior Compacta */}
       <header className="relative z-10 flex items-center justify-between max-w-md w-full mx-auto shrink-0 py-1">
@@ -58,7 +60,7 @@ export default function Login() {
       </header>
 
       {/* Área Central: Tarjeta de Acceso */}
-      <main className="relative z-10 max-w-md w-full mx-auto my-auto py-2 shrink-0">
+      <main className="relative z-10 max-w-md w-full mx-auto my-auto py-3">
         <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-xl shadow-slate-200/60 relative overflow-hidden">
           {/* Logo y Encabezado del Formulario */}
           <div className="text-center space-y-1.5 mb-5">
