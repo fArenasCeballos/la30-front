@@ -1,3 +1,4 @@
+import pkg from "../../package.json";
 import { SiigoProductsModal } from "@/components/SiigoProductsModal";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -499,7 +500,7 @@ export default function Administracion() {
           {!isCollapsed && (
             <div className="flex items-center justify-between px-2 text-[10px] text-slate-400 font-medium">
               <span>La 30 Back-Office</span>
-              <span className="font-bold text-slate-500">v2.1.33</span>
+              <span className="font-bold text-slate-500">v{pkg.version}</span>
             </div>
           )}
         </div>

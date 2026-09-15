@@ -1,3 +1,4 @@
+import pkg from "../../../package.json";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -226,7 +227,7 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
               className="bg-white/10 hover:bg-white/20 border-white/20 text-white rounded-xl text-xs font-bold gap-1.5 shadow-xs cursor-pointer backdrop-blur-xs transition-all active:scale-95"
             >
               <Sparkles className="size-3.5 text-amber-300" />
-              <span>Novedades v2.1.33</span>
+              <span>Novedades v{pkg.version}</span>
             </Button>
 
             <Button
