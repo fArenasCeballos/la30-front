@@ -158,7 +158,13 @@ export default function StoreSelector() {
   const totalCards = activeStores.length + (isAdmin ? 1 : 0);
 
   return (
-    <div className="relative min-h-screen min-h-[100dvh] w-full max-w-full bg-slate-50/70 text-slate-900 flex flex-col justify-between px-4 py-3 sm:p-6 lg:p-8 overflow-x-hidden overflow-y-auto select-none pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <div
+      className="relative min-h-screen min-h-[100dvh] w-full max-w-full bg-slate-50/70 text-slate-900 flex flex-col justify-between px-4 sm:p-6 lg:p-8 overflow-x-hidden overflow-y-auto select-none"
+      style={{
+        paddingTop: "max(1.5rem, calc(env(safe-area-inset-top, 0px) + 0.85rem))",
+        paddingBottom: "max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem))",
+      }}
+    >
       {/* Luces sutiles de fondo contenidas para evitar desbordamiento horizontal */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[450px] max-w-full h-[250px] bg-teal-500/5 blur-[100px] rounded-full" />

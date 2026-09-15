@@ -36,7 +36,13 @@ export default function Login() {
   };
 
   return (
-    <div className="relative h-[100dvh] min-h-[100dvh] w-full max-w-full bg-slate-50/70 text-slate-900 flex flex-col justify-between px-4 py-2 sm:px-6 sm:py-4 overflow-hidden select-none pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <div
+      className="relative h-[100dvh] min-h-[100dvh] w-full max-w-full bg-slate-50/70 text-slate-900 flex flex-col justify-between px-4 sm:px-6 overflow-hidden select-none"
+      style={{
+        paddingTop: "max(1.5rem, calc(env(safe-area-inset-top, 0px) + 0.85rem))",
+        paddingBottom: "max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem))",
+      }}
+    >
       {/* Destellos sutiles de fondo contenidos para evitar desbordamiento horizontal */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[450px] max-w-full h-[240px] bg-orange-500/5 blur-[100px] rounded-full" />
