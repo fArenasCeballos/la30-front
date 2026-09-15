@@ -83,9 +83,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           storeToSet = loadedStores.find((s) => s.slug === savedSlug) || null;
         }
 
-        // If no valid saved store is found among accessible stores, default to the first one
+        // If no valid saved store is found among accessible stores:
+        // - If the user only has 1 store assigned, auto-select it.
+        // - If the user has multiple stores (or is admin), leave null so they choose in StoreSelector.
         if (!storeToSet && loadedStores.length > 0) {
-          storeToSet = loadedStores[0];
+          const hasMultiple = user.role === "admin" || loadedStores.length > 1;
+          if (!hasMultiple) {
+            storeToSet = loadedStores[0];
+          }
         }
 
         // Only update state if different to prevent unnecessary renders and infinite loops

@@ -9,71 +9,102 @@ import { OptionsTab } from "@/components/inventory/OptionsTab";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
+const INVENTORY_TABS = [
+  {
+    value: "products",
+    label: "Productos & Platos",
+    shortLabel: "Productos",
+    icon: Package,
+    description: "Catálogo y precios",
+  },
+  {
+    value: "categories",
+    label: "Categorías",
+    shortLabel: "Categorías",
+    icon: LayoutGrid,
+    description: "Estructura del menú",
+  },
+  {
+    value: "extras",
+    label: "Ingredientes & Extras",
+    shortLabel: "Extras",
+    icon: Sparkles,
+    description: "Adicionales y cobros",
+  },
+  {
+    value: "options",
+    label: "Variaciones & Opciones",
+    shortLabel: "Variaciones",
+    icon: ListChecks,
+    description: "Términos, salsas y tipos",
+  },
+] as const;
+
 export default function Inventario() {
-  const [activeTab, setActiveTab] = React.useState("products");
+  const [activeTab, setActiveTab] = React.useState<string>("products");
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-slate-50/50">
-        <div className="sticky top-14 lg:top-16 2xl:top-20 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-4 py-2 shadow-sm">
-          <div className="max-w-[1800px] mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner shrink-0">
-                <Package className="h-5 w-5" strokeWidth={3} />
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-xl font-black tracking-tight text-foreground leading-none">
-                  Catálogo
-                </h1>
-                <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                  Gestión Operativa
-                </p>
-              </div>
-            </div>
-
+      <div className="min-h-full">
+        {/* Sleek Segmented Sub-Navbar */}
+        <div className="sticky top-14 sm:top-[61px] z-20 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 py-2.5 transition-all">
+          <div className="max-w-[1800px] mx-auto flex items-center justify-between gap-4">
             <Tabs
-              defaultValue="products"
               value={activeTab}
               onValueChange={setActiveTab}
-              className="w-full lg:w-auto"
+              className="w-full"
             >
-              <TabsList className="bg-slate-100/50 p-1 rounded-xl h-11 flex overflow-x-auto no-scrollbar justify-start">
-                {[
-                  { value: "products", label: "Productos", icon: Package },
-                  { value: "categories", label: "Categorías", icon: LayoutGrid },
-                  { value: "extras", label: "Ingredientes", icon: Sparkles },
-                  { value: "options", label: "Variaciones", icon: ListChecks },
-                ].map((tab) => (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    className="rounded-lg px-4 py-1.5 font-bold text-[10px] uppercase tracking-widest transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-2 group/tab shrink-0"
-                  >
-                    <tab.icon className="h-3.5 w-3.5" />
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
+              <TabsList className="bg-slate-100/90 p-1 rounded-xl h-auto flex overflow-x-auto no-scrollbar gap-1.5 justify-start w-full sm:w-auto">
+                {INVENTORY_TABS.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.value;
+                  return (
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className="rounded-lg px-3.5 py-2 font-semibold text-xs transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs text-slate-600 hover:text-slate-900 flex items-center gap-2 shrink-0 select-none"
+                    >
+                      <Icon
+                        className={`h-4 w-4 ${
+                          isActive ? "text-teal-600" : "text-slate-400"
+                        }`}
+                      />
+                      <span className="hidden md:inline">{tab.label}</span>
+                      <span className="md:hidden">{tab.shortLabel}</span>
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
             </Tabs>
           </div>
         </div>
 
-        <div className="p-4 lg:p-6 max-w-[1800px] mx-auto">
+        {/* Tab Content Area */}
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-8 py-6">
           <Tabs value={activeTab} className="w-full">
-            <div className="animate-in fade-in duration-500">
-              <TabsContent value="products" className="m-0 outline-none">
-                <ErrorBoundary>{activeTab === "products" && <ProductsTab />}</ErrorBoundary>
-              </TabsContent>
-              <TabsContent value="categories" className="m-0 outline-none">
-                <ErrorBoundary>{activeTab === "categories" && <CategoriesTab />}</ErrorBoundary>
-              </TabsContent>
-              <TabsContent value="extras" className="m-0 outline-none">
-                <ErrorBoundary>{activeTab === "extras" && <ExtrasTab />}</ErrorBoundary>
-              </TabsContent>
-              <TabsContent value="options" className="m-0 outline-none">
-                <ErrorBoundary>{activeTab === "options" && <OptionsTab />}</ErrorBoundary>
-              </TabsContent>
-            </div>
+            <TabsContent value="products" className="m-0 outline-none">
+              <ErrorBoundary>
+                {activeTab === "products" && <ProductsTab />}
+              </ErrorBoundary>
+            </TabsContent>
+
+            <TabsContent value="categories" className="m-0 outline-none">
+              <ErrorBoundary>
+                {activeTab === "categories" && <CategoriesTab />}
+              </ErrorBoundary>
+            </TabsContent>
+
+            <TabsContent value="extras" className="m-0 outline-none">
+              <ErrorBoundary>
+                {activeTab === "extras" && <ExtrasTab />}
+              </ErrorBoundary>
+            </TabsContent>
+
+            <TabsContent value="options" className="m-0 outline-none">
+              <ErrorBoundary>
+                {activeTab === "options" && <OptionsTab />}
+              </ErrorBoundary>
+            </TabsContent>
           </Tabs>
         </div>
       </div>

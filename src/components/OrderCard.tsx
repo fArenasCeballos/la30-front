@@ -2,7 +2,7 @@ import type { Order } from "@/types";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/formatPrice";
-import { Clock, ShoppingCart } from "lucide-react";
+import { Clock, ShoppingCart, MessageSquare } from "lucide-react";
 
 function timeAgo(dateStr: string | undefined | null): string {
   if (!dateStr) return "--";
@@ -35,140 +35,194 @@ export function OrderCard({
   );
 
   const previouslyPaid =
-    order.payments?.reduce((sum, p) => sum + (Number(p.amount_total) || ((Number(p.amount_efectivo) || 0) + (Number(p.amount_tarjeta) || 0) + (Number(p.amount_nequi) || 0)) || 0), 0) || 0;
-  const baseRemaining = Math.max(0, (order.total || 0) - previouslyPaid);
+    order.payments?.reduce(
+      (sum, p) =>
+        sum +
+        (Number(p.amount_total) ||
+          (Number(p.amount_efectivo) || 0) +
+            (Number(p.amount_tarjeta) || 0) +
+            (Number(p.amount_nequi) || 0) ||
+          0),
+      0,
+    ) || 0;
+  const orderTotal = Number(order.total) || Number(order.total_amount) || 0;
+  const baseRemaining = Math.max(0, orderTotal - previouslyPaid);
+  const isPartiallyPaid = previouslyPaid > 0 && baseRemaining > 0;
+  const isKitchenOrReady = order.status === "en_preparacion" || order.status === "listo";
+  const isFullyPaid =
+    (previouslyPaid >= orderTotal && orderTotal > 0) ||
+    order.is_paid ||
+    isKitchenOrReady ||
+    order.status === "entregado";
 
   return (
     <div
       className={cn(
-        "pos-card group animate-in fade-in slide-in-from-bottom-4 duration-500 border-2 border-transparent hover:border-primary/10 transition-all shadow-md hover:shadow-xl p-2.5 lg:p-3",
+        "group relative flex flex-col justify-between rounded-3xl bg-white border border-slate-200/90 shadow-xs hover:shadow-xl hover:border-slate-300 transition-all duration-300 p-3 sm:p-3.5 select-none overflow-hidden",
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col items-center justify-center h-10 w-10 rounded-xl bg-accent/20 border border-accent/10 shadow-inner group-hover:rotate-3 transition-all duration-500">
-            <span className="text-[7px] font-black leading-none opacity-40 uppercase tracking-widest mb-0.5">
-              #LOC
-            </span>
-            <span className="font-black text-lg tracking-tighter text-foreground">
-              {order.locator}
-            </span>
-          </div>
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-1.5 text-muted-foreground/40 font-black uppercase tracking-widest text-[8px]">
-              <Clock className="h-2.5 w-2.5" />
-              <span>{timeAgo(order.created_at)}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-[8px] font-black text-primary/60 uppercase tracking-widest truncate max-w-30">
-                {order.profiles?.name
-                  ? `Mesero: ${order.profiles.name}`
-                  : "Kiosko"}
-              </p>
-              {order.isOfflinePending && (
-                <span className="inline-flex items-center gap-0.5 text-[6px] font-black text-amber-600 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full uppercase tracking-widest animate-pulse shrink-0">
-                  📶 Offline
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        <StatusBadge status={order.status} className="scale-90 origin-right" />
-      </div>
-
-      {!compact && validItems.length > 0 && (
-        <div className="space-y-1 mb-2 bg-accent/5 -mx-3 px-3 py-1.5 border-y border-dashed border-accent/10">
-          {validItems.map((item) => (
-            <div
-              key={item.id}
-              className="flex justify-between items-start gap-2"
-            >
-              <div className="flex items-start gap-2 flex-1 min-w-0">
-                {checkable && onToggleItem && (
-                  <div className="pt-0.5">
-                    <input
-                      type="checkbox"
-                      checked={!!item.is_completed}
-                      onChange={(e) => onToggleItem(item.id, e.target.checked)}
-                      className="h-4 w-4 rounded border-2 border-accent/30 text-primary focus:ring-primary/20 cursor-pointer transition-all checked:scale-110"
-                    />
-                  </div>
-                )}
-                <div className="space-y-0.5 min-w-0">
-                  <p
-                    className={cn(
-                      "text-xs font-bold leading-tight tracking-tight",
-                      item.is_completed && checkable
-                        ? "line-through text-muted-foreground/40"
-                        : "text-foreground",
-                    )}
-                  >
-                    <span className="text-primary font-black mr-1">
-                      {item.quantity}x
-                    </span>{" "}
-                    {item.products?.name ?? "Producto"}
-                  </p>
-                  {item.notes && (
-                    <p className="text-[9px] font-medium text-muted-foreground/60 italic leading-none">
-                      "{item.notes}"
-                    </p>
-                  )}
-                  {/* Variaciones si existen */}
-                  {item.choices && Object.keys(item.choices).length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {Object.values(item.choices).map(
-                        (
-                          choice: { label: string; icon?: string },
-                          idx: number,
-                        ) => (
-                          <span
-                            key={idx}
-                            className="text-[7px] font-black uppercase tracking-widest px-1 py-0.5 rounded-sm bg-white border border-accent/10 text-muted-foreground/60 shadow-sm"
-                          >
-                            {choice.icon} {choice.label}
-                          </span>
-                        ),
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <span className="font-black text-[11px] text-muted-foreground/40 tracking-tighter shrink-0 pt-0.5">
-                {formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}
+      {/* Cabecera de la Tarjeta: Localizador, Metadatos y Estado */}
+      <div>
+        <div className="flex items-start justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {/* Badge de Localizador Destacado */}
+            <div className="flex flex-col items-center justify-center size-11 sm:size-12 rounded-2xl bg-slate-900 text-white shadow-sm shrink-0 group-hover:scale-105 transition-transform">
+              <span className="text-[7px] font-black leading-none text-slate-400 uppercase tracking-widest mb-0.5">
+                #LOC
+              </span>
+              <span className="font-display font-black text-lg sm:text-xl tracking-tighter text-white">
+                {order.locator}
               </span>
             </div>
-          ))}
-        </div>
-      )}
 
-      <div className="flex items-center justify-between pt-2">
-        <div className="flex flex-col -space-y-1">
-          <span className="text-[7px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
-            TOTAL
-          </span>
-          <span className="font-black text-base lg:text-lg tracking-tighter text-primary group-hover:scale-105 origin-left transition-all duration-500">
-            {formatPrice(baseRemaining)}
-          </span>
-          {previouslyPaid > 0 && (
-            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1 mt-1">
-              RESTANTE (Pagado: {formatPrice(previouslyPaid)})
-            </span>
-          )}
+            {/* Metadatos: Tiempo y Origen */}
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex items-center gap-1.5 text-slate-400 font-bold uppercase tracking-widest text-[9px]">
+                <Clock className="size-3 text-slate-400" />
+                <span>{timeAgo(order.created_at)}</span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[9px] font-black text-slate-700 bg-slate-100 border border-slate-200/70 px-2 py-0.5 rounded-full uppercase tracking-wider truncate max-w-28 sm:max-w-32">
+                  {order.profiles?.name
+                    ? `Mesero: ${order.profiles.name}`
+                    : "Kiosko"}
+                </span>
+                {order.isOfflinePending && (
+                  <span className="inline-flex items-center gap-0.5 text-[8px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full uppercase tracking-widest animate-pulse shrink-0">
+                    📶 Offline
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <StatusBadge status={order.status} className="scale-90 origin-right shrink-0" />
         </div>
-        {compact && (
-          <div className="flex items-center gap-1.5 text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest bg-accent/10 px-2 py-1 rounded-full">
-            <ShoppingCart className="h-2.5 w-2.5" />
-            {validItems.length}
+
+        {/* Lista de Productos del Pedido */}
+        {!compact && validItems.length > 0 && (
+          <div className="space-y-1.5 my-2 bg-slate-50/80 p-2.5 rounded-2xl border border-slate-100">
+            {validItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex justify-between items-start gap-2 border-b border-slate-100/80 pb-1.5 last:border-b-0 last:pb-0"
+              >
+                <div className="flex items-start gap-2 flex-1 min-w-0">
+                  {checkable && onToggleItem && (
+                    <div className="pt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={!!item.is_completed}
+                        onChange={(e) => onToggleItem(item.id, e.target.checked)}
+                        className="size-4 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer transition-all checked:scale-110"
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <p
+                      className={cn(
+                        "text-xs font-bold leading-tight tracking-tight",
+                        item.is_completed && checkable
+                          ? "line-through text-slate-400"
+                          : "text-slate-800",
+                      )}
+                    >
+                      <span className="text-primary font-black mr-1">
+                        {item.quantity}x
+                      </span>{" "}
+                      {item.products?.name ?? "Producto"}
+                    </p>
+
+                    {/* Notas especiales destacadas */}
+                    {item.notes && (
+                      <div className="flex items-center gap-1 text-[9px] font-medium text-amber-900 bg-amber-50/90 border border-amber-200/60 rounded-md px-1.5 py-0.5 mt-0.5">
+                        <MessageSquare className="size-2.5 shrink-0 text-amber-600" />
+                        <span className="truncate italic">"{item.notes}"</span>
+                      </div>
+                    )}
+
+                    {/* Opciones y Modificadores */}
+                    {item.choices && Object.keys(item.choices).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {Object.values(item.choices).map(
+                          (
+                            choice: { label: string; icon?: string },
+                            idx: number,
+                          ) => (
+                            <span
+                              key={idx}
+                              className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 shadow-2xs"
+                            >
+                              {choice.icon} {choice.label}
+                            </span>
+                          ),
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {!checkable && !isKitchenOrReady && (
+                  <span className="font-bold text-xs text-slate-500 tracking-tight shrink-0 pt-0.5">
+                    {formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {actions && (
-        <div className="flex gap-2 mt-2 pt-2 border-t border-accent/5">
-          {actions}
+      {/* Pie de Tarjeta: Totales y Botones de Acción */}
+      <div>
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex flex-col">
+            {isPartiallyPaid ? (
+              <>
+                <span className="text-[9px] font-black uppercase tracking-wider text-amber-600">
+                  TOTAL RESTANTE
+                </span>
+                <span className="font-display font-black text-base sm:text-lg tracking-tight text-slate-900 group-hover:text-primary transition-colors">
+                  {formatPrice(baseRemaining)}
+                </span>
+                <span className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md inline-flex items-center gap-1 mt-0.5 w-fit">
+                  Abonado: {formatPrice(previouslyPaid)}
+                </span>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                    TOTAL
+                  </span>
+                  {isFullyPaid && (
+                    <span className="text-[8px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded-md inline-flex items-center gap-0.5">
+                      PAGADO
+                    </span>
+                  )}
+                </div>
+                <span className="font-display font-black text-base sm:text-lg tracking-tight text-slate-900 group-hover:text-primary transition-colors">
+                  {formatPrice(orderTotal > 0 ? orderTotal : previouslyPaid)}
+                </span>
+              </>
+            )}
+          </div>
+          {compact && (
+            <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+              <ShoppingCart className="size-3" />
+              <span>{validItems.length} items</span>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Acciones */}
+        {actions && (
+          <div className="mt-2.5 pt-2.5 border-t border-slate-100 w-full">
+            {actions}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+

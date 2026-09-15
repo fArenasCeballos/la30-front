@@ -803,50 +803,50 @@ export function PaymentCalculator({
                   setMethod(null);
                   setStep("method");
                 }}
-                className="h-12 w-12 rounded-2xl bg-accent/10"
+                className="h-11 w-11 rounded-2xl bg-accent/10 hover:bg-accent/20 transition-all active:scale-95"
               >
                 <ArrowLeft className="h-5 w-5" strokeWidth={3} />
               </Button>
               <div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-green-600">
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">
                   PAGO EN EFECTIVO
                 </span>
-                <h3 className="text-xl lg:text-2xl font-black tracking-tighter">
+                <h3 className="text-xl lg:text-2xl font-black tracking-tighter text-foreground">
                   Calculadora de Cambio
                 </h3>
               </div>
             </div>
 
             {/* Display Calculator */}
-            <div className="grid grid-cols-3 gap-2 bg-accent/5 p-3 rounded-2xl border border-accent/10 text-center">
+            <div className="grid grid-cols-3 gap-2 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 text-center shadow-xs">
               <div>
-                <span className="text-[9px] font-black uppercase text-muted-foreground/60 block">
+                <span className="text-[9px] font-black uppercase text-slate-500 block">
                   A PAGAR
                 </span>
-                <span className="font-black text-sm lg:text-base text-foreground">
+                <span className="font-black text-sm sm:text-base text-slate-900">
                   {formatPrice(baseRemaining)}
                 </span>
               </div>
-              <div className="border-x border-accent/10 px-2">
+              <div className="border-x border-slate-200/80 px-2">
                 <span className="text-[9px] font-black uppercase text-primary block">
                   RECIBIDO
                 </span>
-                <span className="font-black text-base lg:text-xl text-primary truncate block">
+                <span className="font-black text-base sm:text-xl text-primary truncate block">
                   {received ? formatPrice(receivedNum) : "$0"}
                 </span>
               </div>
               <div>
-                <span className="text-[9px] font-black uppercase text-muted-foreground/60 block">
+                <span className="text-[9px] font-black uppercase text-slate-500 block">
                   DEVUELTA
                 </span>
                 <span
                   className={cn(
-                    "font-black text-sm lg:text-base block",
+                    "font-black text-sm sm:text-base block",
                     change > 0
-                      ? "text-green-600"
+                      ? "text-emerald-600 font-extrabold"
                       : receivedNum > 0 && receivedNum < baseRemaining
-                        ? "text-destructive"
-                        : "text-muted-foreground/40",
+                        ? "text-rose-600"
+                        : "text-slate-400",
                   )}
                 >
                   {change > 0
@@ -864,15 +864,23 @@ export function PaymentCalculator({
                 variant="outline"
                 size="sm"
                 onClick={handleExact}
-                className="rounded-xl font-black text-[10px] uppercase border-2 col-span-2 bg-primary/5 text-primary border-primary/20"
+                className="h-11 rounded-xl font-black text-[10px] uppercase border-2 bg-primary/5 text-primary border-primary/20 hover:bg-primary/10 transition-all active:scale-95 truncate px-1"
               >
                 EXACTO ({formatPrice(baseRemaining)})
               </Button>
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => setReceived("20000")}
+                className="h-11 rounded-xl font-black text-xs border-2 hover:bg-slate-50 transition-all active:scale-95"
+              >
+                $20.000
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setReceived("50000")}
-                className="rounded-xl font-black text-xs border-2"
+                className="h-11 rounded-xl font-black text-xs border-2 hover:bg-slate-50 transition-all active:scale-95"
               >
                 $50.000
               </Button>
@@ -880,7 +888,7 @@ export function PaymentCalculator({
                 variant="outline"
                 size="sm"
                 onClick={() => setReceived("100000")}
-                className="rounded-xl font-black text-xs border-2"
+                className="h-11 rounded-xl font-black text-xs border-2 hover:bg-slate-50 transition-all active:scale-95"
               >
                 $100.000
               </Button>
@@ -906,8 +914,8 @@ export function PaymentCalculator({
                   key={key}
                   variant="secondary"
                   className={cn(
-                    "h-11 rounded-xl font-black text-lg shadow-sm border",
-                    key === "C" && "text-destructive",
+                    "h-12 rounded-xl font-black text-lg shadow-xs border transition-all active:scale-95",
+                    key === "C" && "text-rose-600 hover:bg-rose-50 border-rose-200/50",
                   )}
                   onClick={() => handleNumpad(key)}
                 >
@@ -916,14 +924,54 @@ export function PaymentCalculator({
               ))}
             </div>
 
+            {/* Action Button */}
             <Button
               size="lg"
               disabled={!canConfirm || isSubmitting}
-              className="w-full h-14 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-green-600/20"
+              className={cn(
+                "w-full h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-98",
+                canConfirm
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/25 cursor-pointer"
+                  : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed",
+              )}
               onClick={() => handleConfirmPayment()}
             >
-              <CheckCircle className="h-5 w-5 mr-2" />
-              CONFIRMAR COBRO • {formatPrice(baseRemaining)}
+              {isSubmitting ? (
+                <div className="flex items-center gap-2 justify-center">
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  PROCESANDO PAGO...
+                </div>
+              ) : canConfirm ? (
+                <div className="flex items-center gap-2 justify-center">
+                  <CheckCircle className="h-5 w-5" />
+                  {order.status === "pendiente" || order.status === "en_preparacion"
+                    ? `CONFIRMAR PAGO & ENVIAR A COCINA • ${formatPrice(baseRemaining)}`
+                    : `CONFIRMAR PAGO & ENTREGAR • ${formatPrice(baseRemaining)}`}
+                </div>
+              ) : receivedNum > 0 ? (
+                `MONTO INSUFICIENTE (FALTA ${formatPrice(baseRemaining - receivedNum)})`
+              ) : (
+                "INGRESA EL MONTO RECIBIDO"
+              )}
             </Button>
           </div>
         )}
@@ -1708,189 +1756,7 @@ export function PaymentCalculator({
           </div>
         )}
 
-        {/* ═══════ Amount / calculator (single efectivo only) ═══════ */}
-        {step === "amount" && method === "efectivo" && (
-          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 p-4 lg:p-6">
-            <div className="flex items-center gap-2 lg:gap-6 mb-2 lg:mb-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setStep("method");
-                  setReceived("");
-                }}
-                className="h-10 w-10 lg:h-14 lg:w-14 rounded-xl lg:rounded-2xl bg-accent/10 animate-none"
-              >
-                <ArrowLeft className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
-              </Button>
-              <div className="space-y-0.5">
-                <div className="text-primary font-black uppercase tracking-[0.3em] text-[8px] lg:text-[10px]">
-                  REGISTRAR EFECTIVO
-                </div>
-                <h3 className="text-xl lg:text-2xl font-black tracking-tighter">
-                  Monto Recibido
-                </h3>
-              </div>
-            </div>
 
-            <div className="space-y-3 lg:space-y-4">
-              {/* Display */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-8">
-                <div className="rounded-2xl lg:rounded-3xl bg-accent/5 p-4 lg:p-6 text-center space-y-1 lg:space-y-3 border-2 border-accent/5 shadow-inner">
-                  <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
-                    EFECTIVO RECIBIDO
-                  </p>
-                  <p className="text-2xl lg:text-4xl font-black tracking-tighter text-foreground">
-                    {received ? formatPrice(receivedNum) : "$0"}
-                  </p>
-                  {receivedNum > 0 && (
-                    <div className="pt-3 border-t border-accent/10 mt-3 flex flex-col items-center gap-1">
-                      <p className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest leading-none">
-                        CAMBIO PARA EL CLIENTE
-                      </p>
-                      <p
-                        className={cn(
-                          "text-lg lg:text-2xl font-black tracking-tighter",
-                          canConfirm ? "text-green-500" : "text-destructive",
-                        )}
-                      >
-                        {canConfirm
-                          ? formatPrice(change)
-                          : `Falta ${formatPrice((Number(order.total) || 0) - receivedNum)}`}
-                      </p>
-                    </div>
-                  )}
-                  <div className="pt-2 mt-2 border-t border-accent/5">
-                    <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
-                      DEBE PAGAR:{" "}
-                      <span className="text-foreground font-black ml-1">
-                        {formatPrice(order.total)}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExact}
-                      className="h-10 lg:h-12 rounded-xl lg:rounded-2xl border-2 font-black uppercase tracking-widest text-[8px] lg:text-[10px] shadow-soft"
-                    >
-                      MONTO EXACTO
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setReceived("50000")}
-                      className="h-10 lg:h-12 rounded-xl lg:rounded-2xl border-2 font-black text-sm shadow-soft"
-                    >
-                      $50.000
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {QUICK_AMOUNTS.slice(2, 6).map((a) => (
-                      <Button
-                        key={a}
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleQuickAmount(a)}
-                        className="h-10 lg:h-12 rounded-xl lg:rounded-2xl font-black text-sm shadow-soft bg-white border-2 border-accent/5"
-                      >
-                        +{formatPrice(a)}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Numpad */}
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  "1",
-                  "2",
-                  "3",
-                  "4",
-                  "5",
-                  "6",
-                  "7",
-                  "8",
-                  "9",
-                  "C",
-                  "0",
-                  "DEL",
-                ].map((key) => (
-                  <Button
-                    key={key}
-                    variant="secondary"
-                    className={cn(
-                      "h-10 lg:h-11 rounded-xl lg:rounded-2xl font-black text-lg transition-all active:scale-95 shadow-soft border-2 border-transparent",
-                      key === "C"
-                        ? "text-destructive hover:bg-destructive/5 hover:border-destructive/10"
-                        : key === "DEL"
-                          ? "hover:bg-accent/10"
-                          : "hover:border-primary/20",
-                    )}
-                    onClick={() => handleNumpad(key)}
-                  >
-                    {key === "DEL" ? (
-                      <Delete className="h-5 w-5" strokeWidth={2.5} />
-                    ) : (
-                      key
-                    )}
-                  </Button>
-                ))}
-              </div>
-
-              <Button
-                size="lg"
-                className="w-full h-12 lg:h-14 rounded-xl lg:rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-[10px] lg:text-xs uppercase tracking-[0.2em] shadow-strong shadow-primary/20 transition-all active:scale-95"
-                disabled={!canConfirm || isSubmitting}
-                onClick={() => handleConfirmPayment()}
-              >
-                {isSubmitting ? (
-                  <div className="flex items-center gap-3 justify-center">
-                    <svg
-                      className="animate-spin h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    PROCESANDO PAGO...
-                  </div>
-                ) : canConfirm ? (
-                  <div className="flex items-center gap-3">
-                    <CheckCircle
-                      className="h-5 w-5 lg:h-6 lg:w-6"
-                      strokeWidth={3}
-                    />
-                    {order.status === "pendiente" ||
-                    order.status === "en_preparacion"
-                      ? "CONFIRMAR PAGO & ENVIAR A COCINA"
-                      : "CONFIRMAR PAGO & ENTREGAR"}
-                  </div>
-                ) : (
-                  "MONTO INSUFICIENTE"
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

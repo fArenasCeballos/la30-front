@@ -30,14 +30,7 @@ import {
   Loader2,
   ChevronDown,
   CheckCircle2,
-  MoreVertical,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,6 +64,7 @@ export function ExtrasTab() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCat, setFilterCat] = useState<string>("all");
+  const [search, setSearch] = useState("");
   const [editExtra, setEditExtra] = useState<ProductExtra | null>(null);
   const [extraToDelete, setExtraToDelete] = useState<ProductExtra | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -105,14 +99,16 @@ export function ExtrasTab() {
     return cat ? `${cat.icon || ""} ${cat.label}` : catId;
   };
 
-  const filtered =
-    filterCat === "all"
-      ? extras
-      : extras.filter(
-          (e) =>
-            (e.category_ids && e.category_ids.includes(filterCat)) ||
-            e.category_id === filterCat,
-        );
+  const filtered = extras.filter((e) => {
+    const matchesCategory =
+      filterCat === "all" ||
+      (e.category_ids && e.category_ids.includes(filterCat)) ||
+      e.category_id === filterCat;
+    const matchesSearch =
+      e.label.toLowerCase().includes(search.toLowerCase()) ||
+      e.extra_key.toLowerCase().includes(search.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const nextSortOrder = () => {
     if (extras.length === 0) return 0;
@@ -148,8 +144,8 @@ export function ExtrasTab() {
       label: extra.label,
       icon: extra.icon || "",
       price_per_unit: String(extra.price_per_unit),
-      max_qty: String(extra.max_qty),
-      sort_order: String(extra.sort_order),
+      max_qty: String(extra.max_qty ?? 1),
+      sort_order: String(extra.sort_order ?? 0),
       store_ids: extra.store_ids || [],
     });
     setIsDialogOpen(true);
@@ -158,39 +154,28 @@ export function ExtrasTab() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (
-        !form.label.trim() ||
-        !form.extra_key.trim() ||
-        form.category_ids.length === 0 ||
-        !form.price_per_unit
-      ) {
-        toast.error("Completa todos los campos obligatorios");
+      if (!form.label.trim() || !form.extra_key.trim()) {
+        toast.error("El nombre y la clave son obligatorios");
         setSaving(false);
         return;
       }
+      if (form.category_ids.length === 0) {
+        toast.error("Debes vincular al menos una categoría");
+        setSaving(false);
+        return;
+      }
+
       const extraData = {
         category_ids: form.category_ids,
         category_id: form.category_ids[0],
-        extra_key: form.extra_key.toLowerCase().replace(/\s+/g, "_"),
-        label: form.label,
+        extra_key: form.extra_key.trim().toLowerCase().replace(/\s+/g, "_"),
+        label: form.label.trim(),
         icon: form.icon || null,
-        price_per_unit: Number(form.price_per_unit),
+        price_per_unit: Number(form.price_per_unit) || 0,
         max_qty: Number(form.max_qty) || 1,
         sort_order: Number(form.sort_order) || 0,
         store_ids: form.store_ids,
       };
-
-      const isDuplicate = extras.some(
-        (e) =>
-          e.extra_key === extraData.extra_key &&
-          (!editExtra || e.id !== editExtra.id),
-      );
-
-      if (isDuplicate) {
-        toast.error("Este extra ya existe (nombre o clave duplicada).");
-        setSaving(false);
-        return;
-      }
 
       if (editExtra) {
         const { error } = await supabase
@@ -202,7 +187,7 @@ export function ExtrasTab() {
           setSaving(false);
           return;
         }
-        toast.success("Extra actualizado");
+        toast.success("Ingrediente adicional actualizado");
       } else {
         const { error } = await supabase
           .from("product_extras")
@@ -212,12 +197,12 @@ export function ExtrasTab() {
           setSaving(false);
           return;
         }
-        toast.success("Extra creado");
+        toast.success("Ingrediente adicional creado");
       }
       await fetchData();
       setIsDialogOpen(false);
-    } catch (err: unknown) {
-      toast.error("Error interno al guardar el extra");
+    } catch {
+      toast.error("Error interno al guardar el ingrediente adicional");
     } finally {
       setSaving(false);
     }
@@ -234,224 +219,169 @@ export function ExtrasTab() {
       return;
     }
     setExtras((prev) => prev.filter((e) => e.id !== extraToDelete.id));
-    toast.success("Extra eliminado");
+    toast.success("Ingrediente eliminado con éxito");
     setExtraToDelete(null);
   };
 
   if (loading) {
     return (
-      <div className="py-20 flex flex-col items-center justify-center space-y-4 opacity-40">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="font-black uppercase tracking-[0.2em] text-[10px]">
-          Cargando ingredientes...
+      <div className="py-24 flex flex-col items-center justify-center space-y-3 text-slate-400">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+        <p className="font-semibold text-xs text-slate-500">
+          Cargando ingredientes adicionales...
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-1000 fill-mode-both relative">
-      <div className="sticky top-[112px] lg:top-[128px] 2xl:top-[160px] z-40 bg-slate-50/95 backdrop-blur-md py-4 -mx-2 px-2 flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all duration-300">
-        <div className="flex items-center gap-4 flex-1">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner shrink-0">
-            <Sparkles className="h-5 w-5" strokeWidth={3} />
+    <div className="space-y-6">
+      {/* Modern Toolbar */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 shrink-0">
+            <Sparkles className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-lg font-black tracking-tight text-foreground leading-none">
-              Personalización
+            <h2 className="text-base font-bold text-slate-900 leading-tight">
+              Ingredientes & Extras
             </h2>
-            <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest mt-1">
-              {extras.length} Adicionales
+            <p className="text-xs text-slate-500">
+              {extras.length} adicionales configurados
             </p>
           </div>
+        </div>
 
-          <div className="h-8 w-px bg-accent/20 hidden sm:block mx-2" />
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="w-48 sm:w-56">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar ingrediente..."
+              className="h-10 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs"
+            />
+          </div>
 
-          <div className="relative group/select min-w-[200px]">
+          <div className="w-44 sm:w-48">
             <Select value={filterCat} onValueChange={setFilterCat}>
-              <SelectTrigger className="h-10 px-4 rounded-xl border-2 focus-visible:ring-primary/20 bg-white shadow-soft transition-all font-bold border-transparent focus:border-primary/30 text-[10px] uppercase tracking-widest">
-                <SelectValue placeholder="Filtrar grupo" />
+              <SelectTrigger className="h-10 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs font-medium">
+                <SelectValue placeholder="Todas las categorías" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-none shadow-strong p-1">
-                <SelectItem
-                  value="all"
-                  className="font-black uppercase tracking-widest text-[9px] rounded-lg py-2"
-                >
-                  🚀 TODOS LOS GRUPOS
+              <SelectContent className="rounded-xl">
+                <SelectItem value="all" className="text-xs font-semibold">
+                  Todas las categorías
                 </SelectItem>
                 {categories.map((cat) => (
                   <SelectItem
                     key={cat.id}
                     value={cat.id}
-                    className="font-black uppercase tracking-widest text-[9px] rounded-lg py-2"
+                    className="text-xs font-medium"
                   >
-                    <span className="mr-2 text-sm">{cat.icon}</span> {cat.label}
+                    <span className="mr-1.5">{cat.icon}</span> {cat.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        </div>
 
-        <Button
-          onClick={openNew}
-          className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/90 text-white font-black shadow-strong hover:scale-[1.02] active:scale-[0.98] transition-all group text-[10px] uppercase tracking-widest shrink-0"
-        >
-          <Plus
-            className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-500"
-            strokeWidth={3}
-          />
-          Nuevo Ingrediente
-        </Button>
+          <Button
+            onClick={openNew}
+            className="h-10 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5 shrink-0"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+            <span>Nuevo Extra</span>
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 lg:gap-6">
-        {filtered.map((extra, idx) => (
+      {/* Grid of Extras */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {filtered.map((extra) => (
           <div
             key={extra.id}
-            className="pos-card group flex flex-col h-full border-4 transition-all duration-300 relative overflow-hidden bg-white/60 border-white hover:bg-white hover:border-primary/20 hover:shadow-2xl hover:scale-[1.03]"
-            style={{ animationDelay: `${idx * 50}ms` }}
+            className="group flex flex-col justify-between bg-white rounded-2xl border border-slate-200/80 hover:border-slate-300 hover:shadow-md p-4 sm:p-5 transition-all duration-200 shadow-xs"
           >
-            <div className="flex items-start justify-between p-6 pb-2">
-              <div className="h-16 w-16 rounded-2xl bg-white border-2 border-accent/5 flex items-center justify-center text-4xl shadow-md group-hover:scale-110 transition-all duration-300 group-hover:rotate-6 relative shrink-0">
-                <div className="absolute inset-0 bg-primary/5 rounded-full blur-xl scale-0 group-hover:scale-100 transition-transform duration-300" />
-                <span className="relative">{extra.icon || "➕"}</span>
+            {/* Header: Emoji Avatar + Price */}
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="h-13 w-13 rounded-2xl bg-emerald-50 text-3xl flex items-center justify-center border border-emerald-100 group-hover:scale-105 transition-transform">
+                <span>{extra.icon || "🧀"}</span>
               </div>
-              <div className="text-right space-y-1 lg:space-y-2">
-                <p className="font-black text-xl lg:text-2xl text-primary tracking-tighter group-hover:scale-110 transition-transform origin-right duration-200">
+
+              <div className="text-right">
+                <p className="font-bold text-base text-slate-900 leading-none">
                   {formatPrice(extra.price_per_unit)}
                 </p>
-                <span className="text-[7px] lg:text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 block">
-                  VALOR ADICIONAL
+                <span className="text-[10px] text-slate-400 font-medium mt-0.5 block">
+                  x unidad
                 </span>
-
-                {/* Mobile Action Menu */}
-                <div className="lg:hidden mt-4">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-11 w-11 rounded-2xl bg-white shadow-sm border border-accent/5 active:scale-95 transition-all"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="h-6 w-6" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="w-56 p-2 rounded-3xl border-4 border-white shadow-md backdrop-blur-xl bg-white/95"
-                    >
-                      <DropdownMenuItem
-                        className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 focus:bg-primary focus:text-white transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEdit(extra);
-                        }}
-                      >
-                        <Edit className="h-5 w-5" />
-                        EDITAR EXTRA
-                      </DropdownMenuItem>
-                      <div className="h-px bg-accent/10 my-1 mx-2" />
-                      <DropdownMenuItem
-                        className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 text-destructive focus:bg-destructive focus:text-white transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExtraToDelete(extra);
-                        }}
-                      >
-                        <Trash2 className="h-5 w-5" />
-                        ELIMINAR EXTRA
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
               </div>
             </div>
 
-            <div className="flex-1 p-4 lg:p-6 pt-2 space-y-4">
-              <div className="space-y-1">
-                <p className="text-[9px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] leading-none">
-                  IDENTIFICADOR: {extra.extra_key}
-                </p>
-                <h3 className="font-black text-lg tracking-tighter leading-[1.1] group-hover:text-primary transition-colors duration-200 min-h-[2.2em]">
+            {/* Info Body */}
+            <div className="space-y-2 mb-4">
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm group-hover:text-teal-700 transition-colors line-clamp-1">
                   {extra.label}
                 </h3>
+                <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                  key: {extra.extra_key}
+                </p>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {extra.category_ids && extra.category_ids.length > 0 ? (
-                    extra.category_ids.map((cid) => (
-                      <div
-                        key={cid}
-                        className="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 bg-primary/5 text-primary border-primary/10 shadow-sm"
-                      >
-                        {getCatLabel(cid)}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 bg-primary/5 text-primary border-primary/10 shadow-sm">
-                      {getCatLabel(extra.category_id)}
-                    </div>
-                  )}
-                </div>
+              {/* Linked categories pills */}
+              <div className="flex flex-wrap gap-1">
+                {(extra.category_ids || [extra.category_id])
+                  .filter(Boolean)
+                  .map((cid) => (
+                    <span
+                      key={cid}
+                      className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600"
+                    >
+                      {getCatLabel(cid)}
+                    </span>
+                  ))}
+              </div>
 
-                <div className="bg-accent/5 backdrop-blur-md rounded-[1.75rem] p-5 border-2 border-white shadow-inner flex items-center justify-between group-hover:bg-white transition-colors duration-300">
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/5 group-hover:rotate-12 transition-transform">
-                      <CheckCircle2
-                        className="h-5 w-5 text-primary"
-                        strokeWidth={3}
-                      />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
-                      Máximo permitido
-                    </span>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-black text-2xl text-primary tracking-tighter">
-                      {extra.max_qty}
-                    </span>
-                    <span className="text-[10px] font-black text-primary/40 uppercase">
-                      UDS.
-                    </span>
-                  </div>
-                </div>
+              <div className="text-xs text-slate-500 font-medium">
+                Máximo permitido:{" "}
+                <span className="font-bold text-slate-800">
+                  {extra.max_qty} uds.
+                </span>
               </div>
             </div>
 
-            <div className="p-4 lg:p-6 pt-0 hidden lg:flex items-center gap-4 transition-all duration-300">
+            {/* Actions Footer */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
               <Button
-                size="lg"
-                className="flex-1 h-12 rounded-xl font-black text-[10px] tracking-widest shadow-md bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
+                size="sm"
+                variant="outline"
                 onClick={() => openEdit(extra)}
+                className="flex-1 h-8 rounded-lg text-xs font-semibold text-slate-700 hover:text-teal-600 border-slate-200"
               >
-                <Edit className="h-4 w-4 mr-2" />
-                EDITAR
+                <Edit className="h-3.5 w-3.5 mr-1" />
+                <span>Editar</span>
               </Button>
+
               <Button
                 size="icon"
-                variant="destructive"
-                className="h-12 w-12 rounded-xl shadow-md bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none"
+                variant="ghost"
                 onClick={() => setExtraToDelete(extra)}
+                className="h-8 w-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
               >
-                <Trash2 className="h-5 w-5" />
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
-
-            {/* Decorative background element */}
-            <div className="absolute -right-12 -bottom-12 w-32 h-32 bg-primary/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
           </div>
         ))}
 
         {filtered.length === 0 && (
-          <div className="col-span-full py-40 flex flex-col items-center justify-center space-y-8 bg-accent/5 rounded-[3.5rem] border-4 border-dashed border-accent/20">
-            <div className="h-28 w-28 rounded-[2.5rem] bg-white border-2 shadow-sm flex items-center justify-center text-muted-foreground/20">
-              <Sparkles className="h-12 w-12 animate-pulse" strokeWidth={3} />
-            </div>
-            <p className="font-black uppercase tracking-[0.4em] text-sm text-center text-muted-foreground/40">
-              No hay ingredientes adicionales configurados
+          <div className="col-span-full py-16 flex flex-col items-center justify-center bg-white rounded-3xl border border-dashed border-slate-200 text-center p-8">
+            <Sparkles className="h-10 w-10 text-slate-300 mb-2" />
+            <h3 className="font-bold text-slate-700 text-sm">
+              No hay ingredientes adicionales
+            </h3>
+            <p className="text-xs text-slate-400 max-w-xs mt-1">
+              Agrega tocineta, queso extra, salsas especiales o aderezos.
             </p>
           </div>
         )}
@@ -459,70 +389,68 @@ export function ExtrasTab() {
 
       {/* Editor Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[95vh] overflow-y-auto rounded-[3.5rem] p-12 border-none shadow-md bg-white/95 backdrop-blur-2xl">
-          <DialogHeader className="space-y-6 mb-12">
-            <div className="h-20 w-20 rounded-4xl bg-primary/10 flex items-center justify-center text-primary mb-2 shadow-inner group-hover:rotate-12 transition-transform">
+        <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-2xl">
+          <DialogHeader className="space-y-2 mb-4">
+            <div className="h-12 w-12 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 mb-1">
               {editExtra ? (
-                <Edit className="h-10 w-10" />
+                <Edit className="h-6 w-6" />
               ) : (
-                <Sparkles className="h-10 w-10" />
+                <Sparkles className="h-6 w-6" />
               )}
             </div>
-            <div>
-              <DialogTitle className="text-5xl font-black tracking-tighter mb-3">
-                {editExtra ? "Editar Extra" : "Nuevo Extra"}
-              </DialogTitle>
-              <DialogDescription className="text-xl font-medium text-muted-foreground leading-relaxed">
-                Personaliza la experiencia de tus platos con ingredientes
-                adicionales.
-              </DialogDescription>
-            </div>
+            <DialogTitle className="text-xl font-bold text-slate-900 tracking-tight">
+              {editExtra ? "Editar Ingrediente Extra" : "Nuevo Ingrediente Extra"}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Configura ingredientes de personalización con cobro opcional por
+              unidad.
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-10">
-            <div className="space-y-4">
-              <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
-                Secciones Vinculadas
+          <div className="space-y-5">
+            {/* Category multi-selector */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">
+                Categorías Vinculadas *
               </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full justify-between h-auto min-h-20 py-4 px-6 rounded-4xl border-4 border-white shadow-sm bg-white/50 focus:border-primary/40 transition-all font-black"
+                    className="w-full justify-between h-auto min-h-11 py-2 px-3.5 rounded-xl border border-slate-200 text-xs text-left"
                   >
                     {form.category_ids.length > 0 ? (
-                      <div className="flex flex-wrap gap-2.5">
+                      <div className="flex flex-wrap gap-1.5">
                         {form.category_ids.map((catId) => {
                           const cat = categories.find((c) => c.id === catId);
                           return (
-                            <div
+                            <span
                               key={catId}
-                              className="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-white border border-accent/10 shadow-sm text-primary"
+                              className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200/60"
                             >
                               {cat?.icon} {cat?.label}
-                            </div>
+                            </span>
                           );
                         })}
                       </div>
                     ) : (
-                      <span className="text-muted-foreground opacity-30 text-sm tracking-widest uppercase">
+                      <span className="text-slate-400">
                         Seleccionar categorías vinculadas...
                       </span>
                     )}
-                    <ChevronDown className="h-6 w-6 opacity-30 ml-4 shrink-0" />
+                    <ChevronDown className="h-4 w-4 text-slate-400 shrink-0 ml-2" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent
-                  className="w-[340px] p-4 rounded-[2.5rem] border-none shadow-md bg-white/95 backdrop-blur-xl"
-                  align="start"
-                >
-                  <div className="max-h-[360px] overflow-y-auto space-y-2 p-2 no-scrollbar">
+                <PopoverContent className="w-[300px] p-2 rounded-2xl" align="start">
+                  <div className="max-h-[280px] overflow-y-auto space-y-1">
                     {categories.map((cat) => (
                       <div
                         key={cat.id}
                         className={cn(
-                          "flex items-center space-x-4 p-4 hover:bg-primary/5 rounded-2xl cursor-pointer transition-all group",
-                          form.category_ids.includes(cat.id) && "bg-primary/10",
+                          "flex items-center space-x-2.5 p-2 rounded-lg cursor-pointer transition-colors text-xs font-medium",
+                          form.category_ids.includes(cat.id)
+                            ? "bg-teal-50 text-teal-900"
+                            : "hover:bg-slate-100 text-slate-700",
                         )}
                         onClick={() => {
                           const current = form.category_ids;
@@ -534,20 +462,12 @@ export function ExtrasTab() {
                       >
                         <Checkbox
                           checked={form.category_ids.includes(cat.id)}
-                          onCheckedChange={() => {}}
-                          className="h-6 w-6 rounded-lg border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                          className="h-4 w-4 rounded data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
                         />
-                        <div className="flex-1 flex items-center gap-3">
-                          <span className="text-2xl">{cat.icon}</span>
-                          <span className="text-xs font-black uppercase tracking-widest group-hover:text-primary transition-colors">
-                            {cat.label}
-                          </span>
-                        </div>
+                        <span className="text-base">{cat.icon}</span>
+                        <span className="flex-1">{cat.label}</span>
                         {form.category_ids.includes(cat.id) && (
-                          <CheckCircle2
-                            className="h-5 w-5 text-primary"
-                            strokeWidth={3}
-                          />
+                          <CheckCircle2 className="h-4 w-4 text-teal-600" />
                         )}
                       </div>
                     ))}
@@ -556,11 +476,12 @@ export function ExtrasTab() {
               </Popover>
             </div>
 
-            <div className="space-y-4">
-              <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
-                Identificador Visual (Emoji)
+            {/* Emoji Selector */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">
+                Icono o Emoji
               </Label>
-              <div className="bg-white/50 backdrop-blur-md p-10 rounded-[3rem] border-4 border-white shadow-sm flex justify-center group-focus-within:border-primary/20 transition-all">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 flex justify-center">
                 <EmojiPicker
                   value={form.icon}
                   onChange={(emoji) => setForm((f) => ({ ...f, icon: emoji }))}
@@ -568,167 +489,148 @@ export function ExtrasTab() {
               </div>
             </div>
 
-            <div className="space-y-10">
-              <div className="space-y-4">
-                <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
-                  Nombre del Ingrediente
-                </Label>
-                <div className="relative group">
-                  <Input
-                    value={form.label}
-                    onChange={(e) => {
-                      const label = e.target.value;
-                      setForm((f) => ({
-                        ...f,
-                        label,
-                        extra_key: editExtra
-                          ? f.extra_key
-                          : generateSlug(label),
-                      }));
-                    }}
-                    placeholder="Ej: Tocino Ahumado Premium"
-                    className="h-16 px-8 rounded-2xl border-4 border-white shadow-sm bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
-                  />
-                  {form.extra_key && (
-                    <div className="absolute right-6 top-1/2 -translate-y-1/2">
-                      <span className="text-[10px] font-black text-primary/40 uppercase tracking-widest bg-primary/5 px-4 py-1.5 rounded-full border border-primary/10 shadow-inner">
-                        KEY: {form.extra_key}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
-                    Precio x Unidad
-                  </Label>
-                  <div className="relative group">
-                    <div className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-primary/30 group-focus-within:text-primary transition-colors">
-                      $
-                    </div>
-                    <Input
-                      type="number"
-                      value={form.price_per_unit}
-                      onChange={(e) =>
-                        setForm((f) => ({
-                          ...f,
-                          price_per_unit: e.target.value,
-                        }))
-                      }
-                      placeholder="0.00"
-                      className="h-16 pl-12 rounded-2xl border-4 border-white shadow-sm bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-2xl font-black transition-all"
-                    />
-                  </div>
-                  {form.price_per_unit && (
-                    <p className="text-[10px] font-black text-primary/60 px-4 tracking-widest uppercase">
-                      {formatPrice(Number(form.price_per_unit))} COP POR UNIDAD
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
-                    Límite por Pedido
-                  </Label>
-                  <Input
-                    type="number"
-                    value={form.max_qty}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, max_qty: e.target.value }))
-                    }
-                    placeholder="1"
-                    className="h-16 px-8 rounded-2xl border-4 border-white shadow-sm bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
-                  />
-                </div>
-              </div>
+            {/* Extra Label */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">
+                Nombre del Ingrediente *
+              </Label>
+              <Input
+                value={form.label}
+                onChange={(e) => {
+                  const label = e.target.value;
+                  setForm((f) => ({
+                    ...f,
+                    label,
+                    extra_key: editExtra ? f.extra_key : generateSlug(label),
+                  }));
+                }}
+                placeholder="Ej: Tocineta Ahumada Crispy"
+                className="h-11 rounded-xl border border-slate-200 text-sm font-medium"
+              />
+              {form.extra_key && (
+                <p className="text-[11px] font-mono text-slate-400 px-1">
+                  Clave: {form.extra_key}
+                </p>
+              )}
             </div>
 
-            <div className="space-y-4">
-              <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
-                Alcance de Tiendas
-              </Label>
-              <div className="bg-white/50 backdrop-blur-md p-8 rounded-[2.5rem] border-4 border-white shadow-sm">
-                <StoreMultiSelect
-                  selectedStoreIds={form.store_ids}
-                  onChange={(ids) => setForm((f) => ({ ...f, store_ids: ids }))}
+            {/* Price & Max Qty */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">
+                  Precio x Unidad (COP)
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
+                    $
+                  </span>
+                  <Input
+                    type="number"
+                    value={form.price_per_unit}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        price_per_unit: e.target.value,
+                      }))
+                    }
+                    placeholder="0"
+                    className="h-11 pl-8 rounded-xl border border-slate-200 font-bold text-base"
+                  />
+                </div>
+                {form.price_per_unit && (
+                  <p className="text-[11px] font-semibold text-teal-600 px-1">
+                    {formatPrice(Number(form.price_per_unit))} COP
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">
+                  Límite Máximo por Pedido
+                </Label>
+                <Input
+                  type="number"
+                  value={form.max_qty}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, max_qty: e.target.value }))
+                  }
+                  placeholder="1"
+                  className="h-11 rounded-xl border border-slate-200 text-sm"
                 />
               </div>
             </div>
+
+            {/* Store availability */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <Label className="text-xs font-semibold text-slate-700">
+                Disponibilidad en Sedes
+              </Label>
+              <StoreMultiSelect
+                selectedStoreIds={form.store_ids}
+                onChange={(ids) => setForm((f) => ({ ...f, store_ids: ids }))}
+              />
+            </div>
           </div>
 
-          <DialogFooter className="mt-16 gap-6">
+          <DialogFooter className="mt-8 gap-2.5 sm:gap-0">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => setIsDialogOpen(false)}
               disabled={saving}
-              className="h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] px-12"
+              className="h-11 rounded-xl font-semibold text-xs px-5 border-slate-200"
             >
-              Cerrar
+              Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="h-16 px-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-[0.2em] text-[11px] shadow-md shadow-primary/20 relative overflow-hidden group/save"
+              className="h-11 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs px-6 shadow-xs"
             >
               {saving ? (
                 <>
-                  <Loader2 className="h-5 w-5 mr-3 animate-spin" />
-                  SINCRONIZANDO...
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
                 </>
+              ) : editExtra ? (
+                "Guardar Cambios"
               ) : (
-                <>
-                  <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/save:translate-y-0 transition-transform duration-200" />
-                  <span className="relative">
-                    {editExtra ? "ACTUALIZAR EXTRA" : "CREAR EXTRA"}
-                  </span>
-                </>
+                "Crear Extra"
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Alert */}
       <AlertDialog
         open={!!extraToDelete}
         onOpenChange={(open) => !open && setExtraToDelete(null)}
       >
-        <AlertDialogContent className="rounded-[3.5rem] border-4 border-white p-12 max-w-lg bg-white/95 backdrop-blur-2xl shadow-md">
-          <AlertDialogHeader className="space-y-6">
-            <div className="h-24 w-24 rounded-[2.5rem] bg-destructive/10 flex items-center justify-center text-destructive mb-2 shadow-inner group-hover:rotate-12 transition-transform">
-              <Trash2 className="h-12 w-12" />
+        <AlertDialogContent className="rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-md">
+          <AlertDialogHeader className="space-y-3">
+            <div className="h-12 w-12 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 mb-1">
+              <Trash2 className="h-6 w-6" />
             </div>
-            <div>
-              <AlertDialogTitle className="text-4xl font-black tracking-tighter mb-4">
-                ¿Remover ingrediente?
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-lg font-medium text-muted-foreground leading-relaxed">
-                El ingrediente{" "}
-                <strong className="text-foreground">
-                  "{extraToDelete?.label}"
-                </strong>{" "}
-                dejará de aparecer en las opciones de personalización de forma
-                permanente.
-                <div className="mt-8 flex items-start gap-4 p-6 bg-destructive/5 rounded-3xl border-2 border-destructive/10">
-                  <div className="h-3 w-3 rounded-full bg-destructive mt-1.5 shrink-0 animate-pulse" />
-                  <p className="text-[11px] font-black uppercase tracking-widest text-destructive leading-tight">
-                    Esta acción no se puede deshacer y afectará a todos los
-                    pedidos futuros.
-                  </p>
-                </div>
-              </AlertDialogDescription>
-            </div>
+            <AlertDialogTitle className="text-xl font-bold text-slate-900 tracking-tight">
+              ¿Eliminar ingrediente adicional?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-500 leading-relaxed">
+              El ingrediente{" "}
+              <strong className="text-slate-800">
+                "{extraToDelete?.label}"
+              </strong>{" "}
+              dejará de estar disponible en las opciones de personalización.
+            </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="mt-12 gap-4">
-            <AlertDialogCancel className="h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] border-4 border-white bg-white/50 px-8 shadow-sm">
-              CANCELAR
+          <AlertDialogFooter className="mt-6 gap-2">
+            <AlertDialogCancel className="h-10 rounded-xl font-semibold text-xs">
+              Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="h-16 px-10 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] bg-destructive text-white hover:bg-destructive/90 shadow-md shadow-destructive/20 border-4 border-white/20"
+              className="h-10 rounded-xl font-semibold text-xs bg-rose-600 text-white hover:bg-rose-700"
             >
-              CONFIRMAR ELIMINACIÓN
+              Confirmar Eliminación
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

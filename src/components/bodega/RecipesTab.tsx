@@ -11,7 +11,18 @@ import {
 } from "@/lib/inventoryService";
 import { getCompatibleUnits, convertToBase } from "@/lib/unitConversions";
 import { toast } from "sonner";
-import { Plus, Trash2, Search, UtensilsCrossed, Filter } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Search,
+  UtensilsCrossed,
+  X,
+  Loader2,
+  Package,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export function RecipesTab() {
   const { activeStore } = useStore();
@@ -70,9 +81,14 @@ export function RecipesTab() {
 
   const filteredProducts = products.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchCat = activeProductCategoryId ? p.category_id === activeProductCategoryId : true;
+    const matchCat = activeProductCategoryId
+      ? p.category_id === activeProductCategoryId
+      : true;
     return matchSearch && matchCat;
   });
+
+  const effectiveSelectedProductId =
+    selectedProductId || (filteredProducts[0]?.id ?? "");
 
   // 2. Obtener insumos
   const { data: materials = [] } = useQuery({
@@ -83,9 +99,9 @@ export function RecipesTab() {
 
   // 3. Obtener recetas para el producto seleccionado
   const { data: recipes = [], isLoading: isLoadingRecipes } = useQuery({
-    queryKey: ["recipes", selectedProductId],
-    queryFn: () => getRecipesForProduct(selectedProductId),
-    enabled: !!selectedProductId,
+    queryKey: ["recipes", effectiveSelectedProductId],
+    queryFn: () => getRecipesForProduct(effectiveSelectedProductId),
+    enabled: !!effectiveSelectedProductId,
   });
 
   const saveMutation = useMutation({
@@ -95,15 +111,15 @@ export function RecipesTab() {
         formData.unit_id,
       );
       return upsertRecipe({
-        product_id: selectedProductId,
+        product_id: effectiveSelectedProductId,
         raw_material_id: formData.raw_material_id,
         quantity_required: baseQty,
       });
     },
     onSuccess: () => {
-      toast.success("Ingrediente guardado en la receta");
+      toast.success("Ingrediente agregado a la ficha técnica");
       queryClient.invalidateQueries({
-        queryKey: ["recipes", selectedProductId],
+        queryKey: ["recipes", effectiveSelectedProductId],
       });
       closeModal();
     },
@@ -111,12 +127,12 @@ export function RecipesTab() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (rawMaterialId: string) =>
-      deleteRecipe(selectedProductId, rawMaterialId),
+    mutationFn: (raw_material_id: string) =>
+      deleteRecipe(effectiveSelectedProductId, raw_material_id),
     onSuccess: () => {
-      toast.success("Ingrediente eliminado de la receta");
+      toast.success("Ingrediente removido de la receta");
       queryClient.invalidateQueries({
-        queryKey: ["recipes", selectedProductId],
+        queryKey: ["recipes", effectiveSelectedProductId],
       });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -124,88 +140,105 @@ export function RecipesTab() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProductId || !formData.raw_material_id) return;
+    if (!formData.raw_material_id || !formData.quantity_required) {
+      toast.error("Selecciona un insumo y digita la cantidad requerida");
+      return;
+    }
     saveMutation.mutate();
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setIsDropdownOpen(false);
+    setFormData({ raw_material_id: "", unit_id: "", quantity_required: "" });
     setIngredientSearch("");
-    setFormData({
-      raw_material_id: "",
-      unit_id: "",
-      quantity_required: "",
-    });
+    setIsDropdownOpen(false);
   };
 
-  const selectedProduct = products.find((p) => p.id === selectedProductId);
+  const selectedProduct = products.find(
+    (p) => p.id === effectiveSelectedProductId,
+  );
 
   const filteredMaterials = materials.filter((m) => {
-    const matchCat = activeMaterialCategoryId ? m.category_id === activeMaterialCategoryId : true;
-    const matchSearch = ingredientSearch ? m.name.toLowerCase().includes(ingredientSearch.toLowerCase()) : true;
+    const matchCat = activeMaterialCategoryId
+      ? m.category_id === activeMaterialCategoryId
+      : true;
+    const matchSearch = m.name
+      .toLowerCase()
+      .includes(ingredientSearch.toLowerCase());
     return matchCat && matchSearch;
   });
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Selector de Producto (Lado Izquierdo) */}
-      <div className="lg:col-span-1 space-y-4">
-        <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-col h-full max-h-[800px]">
-          <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 mb-4 shrink-0">
-            Seleccionar Producto
-          </h3>
-          
-          <div className="space-y-3 mb-4 shrink-0">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Buscar producto..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-              />
-            </div>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <select
-                value={activeProductCategoryId}
-                onChange={(e) => setActiveProductCategoryId(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none text-slate-600"
-              >
-                <option value="">Todas las categorías</option>
-                {productCategories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
+      <div className="lg:col-span-1 space-y-3">
+        <div className="bg-white p-4 sm:p-5 border border-slate-200/80 rounded-2xl shadow-xs flex flex-col h-auto max-h-[280px] sm:max-h-[340px] lg:max-h-[800px]">
+          <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+              <Package className="h-4 w-4 text-teal-600" />
+              <span>Platos & Bebidas ({filteredProducts.length})</span>
+            </h3>
           </div>
 
-          <div className="flex-1 overflow-y-auto premium-scrollbar pr-2 space-y-2">
+          <div className="space-y-2.5 mb-3 shrink-0">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Buscar plato en la carta..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 h-9.5 rounded-xl border border-slate-200/80 bg-slate-50/60 text-xs"
+              />
+            </div>
+
+            <select
+              value={activeProductCategoryId}
+              onChange={(e) => setActiveProductCategoryId(e.target.value)}
+              className="w-full h-9.5 px-3 bg-slate-50/60 border border-slate-200/80 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-teal-500/30 text-slate-700"
+            >
+              <option value="">Todas las categorías</option>
+              {productCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex-1 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
             {isLoadingProducts ? (
-              <p className="text-sm text-slate-400">Cargando catálogo...</p>
+              <div className="py-12 flex justify-center text-slate-400">
+                <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
+              </div>
             ) : filteredProducts.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">No se encontraron productos.</p>
+              <p className="text-xs text-slate-400 text-center py-6">
+                No se encontraron productos.
+              </p>
             ) : (
-              filteredProducts.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setSelectedProductId(p.id)}
-                  className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
-                    selectedProductId === p.id
-                      ? "border-primary bg-primary/5 shadow-sm text-primary"
-                      : "border-slate-100 hover:border-slate-300 bg-white text-slate-700"
-                  }`}
-                >
-                  <div className="font-bold">{p.name}</div>
-                  {p.categories?.name && (
-                    <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5 tracking-wider">
-                      {p.categories.name}
-                    </div>
-                  )}
-                </button>
-              ))
+              filteredProducts.map((p) => {
+                const isSelected = effectiveSelectedProductId === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setSelectedProductId(p.id)}
+                    className={cn(
+                      "w-full text-left p-3 rounded-xl border transition-all cursor-pointer",
+                      isSelected
+                        ? "border-teal-600 bg-teal-50/60 shadow-2xs text-teal-950"
+                        : "border-slate-100 hover:border-slate-200 bg-white hover:bg-slate-50/60 text-slate-800",
+                    )}
+                  >
+                    <div className="font-bold text-xs truncate">{p.name}</div>
+                    {p.categories?.name && (
+                      <div className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5 tracking-wider">
+                        {p.categories.name}
+                      </div>
+                    )}
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
@@ -214,83 +247,86 @@ export function RecipesTab() {
       {/* Receta y Acciones (Lado Derecho) */}
       <div className="lg:col-span-2 space-y-4">
         {selectedProduct ? (
-          <div className="bg-white border rounded-2xl shadow-sm overflow-hidden flex flex-col h-full min-h-[500px]">
-            <div className="p-6 border-b bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                  <UtensilsCrossed className="h-5 w-5 text-primary" />
-                  Receta del Producto
-                </h2>
-                <p className="text-xs font-bold text-slate-500 uppercase mt-1">
-                  {selectedProduct.name}
-                </p>
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden flex flex-col h-full min-h-[500px]">
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600">
+                  <UtensilsCrossed className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 leading-tight">
+                    {selectedProduct.name}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Ficha técnica de ingredientes para descuento de stock
+                  </p>
+                </div>
               </div>
-              <button
+
+              <Button
                 onClick={() => setIsModalOpen(true)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all shadow-sm font-bold text-sm"
+                className="h-10 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
               >
-                <Plus className="h-4 w-4" />
-                Agregar Ingrediente
-              </button>
+                <Plus className="h-4 w-4" strokeWidth={2.5} />
+                <span>Agregar Ingrediente</span>
+              </Button>
             </div>
 
-            <div className="flex-1 p-6">
+            {/* List of Ingredients */}
+            <div className="flex-1 p-4 sm:p-5">
               {isLoadingRecipes ? (
-                <p className="text-center text-slate-400 my-8">
-                  Cargando receta...
-                </p>
+                <div className="py-16 text-center text-slate-400">
+                  <Loader2 className="h-6 w-6 animate-spin text-teal-600 mx-auto mb-2" />
+                  <span className="text-xs font-medium">Cargando receta...</span>
+                </div>
               ) : recipes.length === 0 ? (
-                <div className="text-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8">
-                  <p className="text-slate-500 font-medium">
-                    Este producto no tiene ingredientes configurados.
+                <div className="text-center bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl p-8 max-w-md mx-auto my-8">
+                  <UtensilsCrossed className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+                  <p className="font-bold text-slate-700 text-sm">
+                    Sin ingredientes configurados
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Agrega insumos para que se descuenten automáticamente al
-                    vender.
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    Agrega los insumos que componen este plato para que se
+                    descuenten del stock automáticamente en cada venta.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {recipes.map((recipe) => (
                     <div
                       key={recipe.id}
-                      className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-primary/30 transition-all shadow-sm"
+                      className="flex items-center justify-between p-3.5 bg-white border border-slate-200/80 rounded-xl hover:border-slate-300 hover:shadow-2xs transition-all"
                     >
-                      <div>
-                        <h4 className="font-bold text-slate-800 text-base">
+                      <div className="min-w-0 flex-1 pr-2">
+                        <h4 className="font-bold text-slate-900 text-xs truncate">
                           {recipe.raw_materials?.name}
                         </h4>
-                        <p className="text-xs font-semibold text-slate-500 uppercase mt-0.5">
-                          Insumo
+                        <p className="text-[11px] font-semibold text-slate-500 mt-0.5">
+                          Consumo:{" "}
+                          <span className="font-bold text-teal-700">
+                            {recipe.quantity_required}{" "}
+                            {recipe.raw_materials?.unit}
+                          </span>
                         </p>
                       </div>
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <p className="text-lg font-black text-primary">
-                            {recipe.quantity_required}
-                            <span className="text-sm font-bold text-slate-400 ml-1 uppercase">
-                              {recipe.raw_materials?.unit}
-                            </span>
-                          </p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">
-                            Consumo por unidad
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                "¿Quitar este ingrediente de la receta?",
-                              )
-                            ) {
-                              deleteMutation.mutate(recipe.raw_material_id);
-                            }
-                          }}
-                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "¿Quitar este ingrediente de la receta?",
+                            )
+                          ) {
+                            deleteMutation.mutate(recipe.raw_material_id);
+                          }
+                        }}
+                        className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
+                        title="Quitar ingrediente"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -298,87 +334,97 @@ export function RecipesTab() {
             </div>
           </div>
         ) : (
-          <div className="h-full min-h-[500px] bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center text-slate-400">
-            <Search className="h-12 w-12 mb-4 opacity-20" />
-            <p className="font-bold uppercase tracking-widest text-sm">
+          <div className="h-full min-h-[500px] bg-white border border-slate-200/80 rounded-2xl flex flex-col items-center justify-center text-slate-400 p-8 text-center">
+            <Search className="h-10 w-10 mb-3 opacity-30" />
+            <p className="font-bold text-slate-700 text-sm">
               Selecciona un producto
             </p>
-            <p className="text-xs mt-2">
-              Para ver y editar su receta (componentes para descuento de stock)
+            <p className="text-xs text-slate-400 mt-1">
+              Selecciona un plato o bebida para configurar su ficha técnica de
+              insumos.
             </p>
           </div>
         )}
       </div>
 
+      {/* Modal Agregar a Receta */}
       {isModalOpen && selectedProduct && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b bg-slate-50 flex justify-between items-center">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200/80 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4.5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
               <div>
-                <h3 className="font-black text-lg text-slate-800">
+                <h3 className="font-bold text-base text-slate-900">
                   Agregar a Receta
                 </h3>
-                <p className="text-xs font-bold text-slate-500 uppercase mt-0.5">
+                <p className="text-xs text-slate-500 font-medium">
                   {selectedProduct.name}
                 </p>
               </div>
               <button
+                type="button"
                 onClick={closeModal}
-                className="text-slate-400 hover:text-slate-600"
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                ×
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  Categoría del Insumo
+                <label className="text-xs font-semibold text-slate-700">
+                  Filtrar Categoría de Insumo
                 </label>
                 <select
                   value={activeMaterialCategoryId}
                   onChange={(e) => setActiveMaterialCategoryId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 text-slate-600"
+                  className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-teal-500/30 text-slate-700"
                 >
                   <option value="">Todas las categorías</option>
                   {materialCategories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-1.5 relative">
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  Insumo (Materia Prima)
+                <label className="text-xs font-semibold text-slate-700">
+                  Insumo / Materia Prima *
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     type="text"
                     required={!formData.raw_material_id}
                     value={
                       formData.raw_material_id
-                        ? materials.find((m) => m.id === formData.raw_material_id)?.name || ""
+                        ? materials.find(
+                            (m) => m.id === formData.raw_material_id,
+                          )?.name || ""
                         : ingredientSearch
                     }
                     onChange={(e) => {
                       setIngredientSearch(e.target.value);
                       if (formData.raw_material_id) {
-                        setFormData((p) => ({ ...p, raw_material_id: "", unit_id: "" }));
+                        setFormData((p) => ({
+                          ...p,
+                          raw_material_id: "",
+                          unit_id: "",
+                        }));
                       }
                       setIsDropdownOpen(true);
                     }}
                     onFocus={() => setIsDropdownOpen(true)}
                     onBlur={() => {
-                      // Small delay to allow click on dropdown items
                       setTimeout(() => setIsDropdownOpen(false), 200);
                     }}
-                    placeholder="Escribe para buscar..."
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Escribe el nombre del insumo..."
+                    className="h-11 rounded-xl border border-slate-200 text-sm font-medium"
                   />
                   {isDropdownOpen && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto premium-scrollbar py-1">
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto no-scrollbar py-1">
                       {filteredMaterials.length === 0 ? (
-                        <div className="px-4 py-3 text-sm text-slate-400 text-center">
+                        <div className="px-4 py-3 text-xs text-slate-400 text-center">
                           No se encontraron coincidencias
                         </div>
                       ) : (
@@ -395,10 +441,14 @@ export function RecipesTab() {
                               setIngredientSearch("");
                               setIsDropdownOpen(false);
                             }}
-                            className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 focus:bg-slate-50 focus:outline-none transition-colors border-b border-slate-50 last:border-0"
+                            className="w-full text-left px-3.5 py-2 text-xs hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer flex items-center justify-between"
                           >
-                            <span className="font-bold text-slate-700">{m.name}</span>
-                            <span className="ml-1.5 text-xs text-slate-400 uppercase">({m.unit})</span>
+                            <span className="font-bold text-slate-800">
+                              {m.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400 uppercase font-semibold">
+                              ({m.unit})
+                            </span>
                           </button>
                         ))
                       )}
@@ -408,21 +458,22 @@ export function RecipesTab() {
               </div>
 
               {formData.raw_material_id && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3.5 pt-1">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">
-                      Unidad de Medida
+                    <label className="text-xs font-semibold text-slate-700">
+                      Unidad de Medida *
                     </label>
                     <select
                       value={formData.unit_id}
                       onChange={(e) =>
                         setFormData((p) => ({ ...p, unit_id: e.target.value }))
                       }
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full h-11 px-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                     >
                       {getCompatibleUnits(
-                        materials.find((m) => m.id === formData.raw_material_id)
-                          ?.unit || "",
+                        materials.find(
+                          (m) => m.id === formData.raw_material_id,
+                        )?.unit || "",
                       ).map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.label} ({u.short})
@@ -432,10 +483,10 @@ export function RecipesTab() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">
-                      Cantidad Requerida
+                    <label className="text-xs font-semibold text-slate-700">
+                      Cantidad Requerida *
                     </label>
-                    <input
+                    <Input
                       required
                       type="number"
                       step="0.0001"
@@ -447,19 +498,19 @@ export function RecipesTab() {
                           quantity_required: e.target.value,
                         }))
                       }
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="h-11 rounded-xl border border-slate-200 text-sm font-semibold"
                       placeholder="Ej: 150"
                     />
                   </div>
 
-                  <div className="col-span-2">
-                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                  <div className="col-span-2 bg-teal-50/60 p-3 rounded-xl border border-teal-200/50">
+                    <p className="text-[11px] text-teal-900 font-medium leading-relaxed">
                       Se descontarán{" "}
-                      <strong className="text-primary">
+                      <strong className="font-bold text-teal-700">
                         {formData.quantity_required || 0} {formData.unit_id}
                       </strong>{" "}
-                      del stock general por cada unidad de{" "}
-                      <strong className="text-slate-600">
+                      del inventario central por cada unidad de{" "}
+                      <strong className="font-bold text-slate-800">
                         {selectedProduct.name}
                       </strong>{" "}
                       vendida.
@@ -468,21 +519,22 @@ export function RecipesTab() {
                 </div>
               )}
 
-              <div className="pt-4 flex gap-3">
-                <button
+              <div className="pt-3 flex gap-2.5">
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={closeModal}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-sm"
+                  className="flex-1 h-11 rounded-xl text-xs font-semibold border-slate-200 cursor-pointer"
                 >
                   Cancelar
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={saveMutation.isPending || !formData.raw_material_id}
-                  className="flex-1 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-colors text-sm disabled:opacity-50"
+                  className="flex-1 h-11 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs cursor-pointer"
                 >
-                  Guardar Ingrediente
-                </button>
+                  {saveMutation.isPending ? "Guardando..." : "Guardar Ingrediente"}
+                </Button>
               </div>
             </form>
           </div>

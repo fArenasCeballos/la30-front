@@ -12,6 +12,7 @@ import {
 } from "@/lib/internalConsumptionService";
 import { buildInternalConsumptionReceiptHTML } from "@/lib/internalReceiptUtils";
 import { silentPrint } from "@/lib/receiptUtils";
+import { getCategoryEmoji } from "@/lib/categoryEmoji";
 import { PartnerModal } from "@/components/consumo-interno/PartnerModal";
 import {
   ProductCustomizer,
@@ -31,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -162,7 +164,7 @@ export function InternalPosView() {
     queryFn: async () => {
       let query = supabase
         .from("products")
-        .select("*, categories(id, name, sort_order)")
+        .select("*, categories(*)")
         .eq("available", true)
         .order("sort_order");
       if (storeId) {
@@ -436,20 +438,20 @@ export function InternalPosView() {
         </div>
 
         {/* Tabs: Empleados / Socios */}
-        <div className="flex items-center justify-center gap-2 max-w-xs mx-auto bg-accent/20 p-1.5 rounded-2xl border-2 border-accent/20">
+        <div className="flex items-center justify-center gap-1 max-w-xs mx-auto bg-slate-100/90 p-1 rounded-2xl border border-slate-200/70 shadow-2xs">
           <button
             onClick={() => {
               setConsumerTab("employee");
               setConsumerSearch("");
             }}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all",
+              "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all",
               consumerTab === "employee"
-                ? "bg-white text-primary shadow-md border"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-white text-slate-900 shadow-2xs font-extrabold"
+                : "text-slate-500 hover:text-slate-800",
             )}
           >
-            <Users className="h-4 w-4" />
+            <Users className="size-4 text-teal-600" />
             Empleados
           </button>
           <button
@@ -458,13 +460,13 @@ export function InternalPosView() {
               setConsumerSearch("");
             }}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all",
+              "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all",
               consumerTab === "partner"
-                ? "bg-white text-primary shadow-md border"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-white text-slate-900 shadow-2xs font-extrabold"
+                : "text-slate-500 hover:text-slate-800",
             )}
           >
-            <Handshake className="h-4 w-4" />
+            <Handshake className="size-4 text-blue-600" />
             Socios
           </button>
         </div>
@@ -522,17 +524,17 @@ export function InternalPosView() {
                       });
                       setStep("menu");
                     }}
-                    className="pos-card group p-4 sm:p-5 rounded-2xl border-2 text-left bg-white hover:border-primary hover:shadow-lg transition-all flex flex-col items-center text-center cursor-pointer"
+                    className="group p-4 sm:p-5 rounded-2xl border border-slate-200/90 text-left bg-white hover:border-teal-500/50 hover:shadow-lg hover:shadow-teal-900/5 transition-all duration-200 flex flex-col items-center text-center cursor-pointer active:scale-95"
                   >
-                    <div className="w-14 h-14 rounded-2xl bg-primary/10 border-2 border-primary/20 flex items-center justify-center text-primary font-black text-xl mb-3 group-hover:scale-110 transition-transform">
+                    <div className="size-14 rounded-2xl bg-gradient-to-br from-teal-500/15 to-emerald-500/20 border border-teal-500/20 flex items-center justify-center text-teal-700 font-black text-xl mb-3 group-hover:scale-105 transition-transform shadow-2xs">
                       {emp.name.charAt(0)}
                     </div>
-                    <span className="text-sm font-black text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                    <span className="text-xs sm:text-sm font-extrabold text-slate-800 line-clamp-1 group-hover:text-teal-700 transition-colors">
                       {emp.name}
                     </span>
                     <Badge
                       variant="outline"
-                      className="mt-2 text-[9px] font-black uppercase tracking-wider border-primary/20 text-primary bg-primary/5 px-2.5 py-0.5 rounded-lg"
+                      className="mt-2 text-[9px] font-bold uppercase tracking-wider border-teal-500/20 text-teal-700 bg-teal-50 px-2 py-0.5 rounded-lg"
                     >
                       {emp.role || "Personal"}
                     </Badge>
@@ -573,17 +575,17 @@ export function InternalPosView() {
                       });
                       setStep("menu");
                     }}
-                    className="pos-card group p-4 sm:p-5 rounded-2xl border-2 text-left bg-white hover:border-blue-500 hover:shadow-lg transition-all flex flex-col items-center text-center cursor-pointer"
+                    className="group p-4 sm:p-5 rounded-2xl border border-slate-200/90 text-left bg-white hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-900/5 transition-all duration-200 flex flex-col items-center text-center cursor-pointer active:scale-95"
                   >
-                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border-2 border-blue-500/20 flex items-center justify-center text-blue-600 font-black text-xl mb-3 group-hover:scale-110 transition-transform">
+                    <div className="size-14 rounded-2xl bg-gradient-to-br from-blue-500/15 to-indigo-500/20 border border-blue-500/20 flex items-center justify-center text-blue-700 font-black text-xl mb-3 group-hover:scale-105 transition-transform shadow-2xs">
                       {partner.name.charAt(0)}
                     </div>
-                    <span className="text-sm font-black text-foreground line-clamp-1 group-hover:text-blue-600 transition-colors">
+                    <span className="text-xs sm:text-sm font-extrabold text-slate-800 line-clamp-1 group-hover:text-blue-700 transition-colors">
                       {partner.name}
                     </span>
                     <Badge
                       variant="outline"
-                      className="mt-2 text-[9px] font-black uppercase tracking-wider border-blue-500/30 text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-lg"
+                      className="mt-2 text-[9px] font-bold uppercase tracking-wider border-blue-500/20 text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg"
                     >
                       Socio
                     </Badge>
@@ -665,6 +667,7 @@ export function InternalPosView() {
                   <SheetContent
                     side="right"
                     className="w-full sm:max-w-md p-0 flex flex-col h-full bg-white z-100"
+                    aria-describedby={undefined}
                   >
                     <SheetHeader className="p-4 sm:p-6 border-b text-left bg-accent/10">
                       <SheetTitle className="flex items-center gap-3 text-lg font-black tracking-tight">
@@ -673,6 +676,9 @@ export function InternalPosView() {
                         </div>
                         Pedido Interno · {consumer?.name}
                       </SheetTitle>
+                      <SheetDescription className="sr-only">
+                        Detalle de productos y cálculo del consumo interno.
+                      </SheetDescription>
                     </SheetHeader>
                     <InternalCartContent
                       cart={cart}
@@ -711,29 +717,34 @@ export function InternalPosView() {
                   <button
                     onClick={() => setActiveCategory("")}
                     className={cn(
-                      "px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 border-2",
+                      "px-3.5 py-2 rounded-xl text-xs font-extrabold tracking-tight transition-all shrink-0 border flex items-center gap-1.5",
                       !activeCategory
-                        ? "bg-primary text-white border-primary shadow-sm"
-                        : "bg-white text-muted-foreground border-accent/20 hover:border-primary/30",
+                        ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                        : "bg-white text-slate-600 border-slate-200/80 hover:border-slate-300 hover:text-slate-900",
                     )}
                   >
-                    Todos
+                    <span>✨</span>
+                    <span>Todos</span>
                   </button>
-                  {categories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setActiveCategory(cat.id)}
-                      className={cn(
-                        "px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 border-2 flex items-center gap-1.5",
-                        activeCategory === cat.id
-                          ? "bg-primary text-white border-primary shadow-sm"
-                          : "bg-white text-muted-foreground border-accent/20 hover:border-primary/30",
-                      )}
-                    >
-                      {cat.icon && <span>{cat.icon}</span>}
-                      <span>{cat.label || cat.name}</span>
-                    </button>
-                  ))}
+                  {categories.map((cat) => {
+                    const icon =
+                      cat.icon || getCategoryEmoji({ categories: cat });
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setActiveCategory(cat.id)}
+                        className={cn(
+                          "px-3.5 py-2 rounded-xl text-xs font-bold tracking-tight transition-all shrink-0 border flex items-center gap-1.5",
+                          activeCategory === cat.id
+                            ? "bg-slate-900 text-white border-slate-900 shadow-xs font-extrabold"
+                            : "bg-white text-slate-600 border-slate-200/80 hover:border-slate-300 hover:text-slate-900",
+                        )}
+                      >
+                        <span>{icon}</span>
+                        <span>{cat.label || cat.name}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -775,19 +786,20 @@ export function InternalPosView() {
                       key={product.id}
                       onClick={() => handleProductClick(product)}
                       className={cn(
-                        "pos-card group p-3 sm:p-4 text-left border-2 rounded-2xl transition-all relative cursor-pointer flex flex-col bg-white hover:border-primary/40 hover:shadow-lg",
-                        inCartCount > 0 && "border-primary bg-primary/2 shadow-sm",
+                        "group p-3 sm:p-3.5 text-left border border-slate-200/90 hover:border-teal-500/50 rounded-2xl transition-all duration-200 relative cursor-pointer flex flex-col justify-between bg-white hover:shadow-md hover:shadow-slate-900/5",
+                        inCartCount > 0 &&
+                          "border-teal-500/70 bg-teal-50/20 shadow-xs",
                       )}
                     >
                       {/* In Cart Badge */}
                       {inCartCount > 0 && (
-                        <div className="absolute -top-2 -right-2 h-8 w-8 rounded-xl bg-primary text-white border-2 border-white shadow-strong flex items-center justify-center font-black text-xs z-20 animate-in zoom-in duration-200">
+                        <div className="absolute -top-1.5 -right-1.5 size-7 rounded-full bg-teal-600 text-white shadow-md ring-2 ring-white flex items-center justify-center font-black text-xs z-20 animate-in zoom-in duration-200">
                           {inCartCount}
                         </div>
                       )}
 
                       {/* Image */}
-                      <div className="aspect-square rounded-xl bg-accent/20 mb-3 overflow-hidden flex items-center justify-center relative">
+                      <div className="aspect-square rounded-xl bg-slate-50 border border-slate-100 mb-2.5 overflow-hidden flex items-center justify-center relative">
                         {product.image_url ? (
                           <img
                             src={getOptimizedImageUrl(product.image_url, 300)}
@@ -796,20 +808,20 @@ export function InternalPosView() {
                             loading="lazy"
                           />
                         ) : (
-                          <span className="text-3xl sm:text-4xl opacity-30">
-                            {product.categories?.icon || "🍔"}
+                          <span className="text-3.5xl sm:text-4xl group-hover:scale-110 transition-transform duration-300">
+                            {getCategoryEmoji(product)}
                           </span>
                         )}
 
                         {/* Discount Tag on Image */}
                         <div className="absolute bottom-1.5 left-1.5">
                           {beverage ? (
-                            <Badge className="bg-amber-500/90 text-white font-black text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-xs">
+                            <Badge className="bg-amber-500/95 text-white font-extrabold text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-xs border-0 shadow-2xs">
                               <Coffee className="h-2.5 w-2.5 mr-0.5" />
                               Bebida
                             </Badge>
                           ) : (
-                            <Badge className="bg-green-600/90 text-white font-black text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-xs">
+                            <Badge className="bg-emerald-600/95 text-white font-extrabold text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-xs border-0 shadow-2xs">
                               <Percent className="h-2.5 w-2.5 mr-0.5" />
                               50% Dcto
                             </Badge>
@@ -819,27 +831,27 @@ export function InternalPosView() {
 
                       {/* Product Details */}
                       <div className="flex-1 space-y-1">
-                        <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">
+                        <p className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
                           {product.categories?.name}
                         </p>
-                        <h3 className="font-black text-xs sm:text-sm leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                        <h3 className="font-extrabold text-xs sm:text-sm leading-tight text-slate-800 group-hover:text-teal-700 transition-colors line-clamp-2">
                           {product.name}
                         </h3>
                       </div>
 
                       {/* Price Section */}
-                      <div className="mt-2.5 pt-2.5 border-t border-dashed border-accent/40 space-y-2">
+                      <div className="mt-2.5 pt-2 border-t border-dashed border-slate-200/80 space-y-2">
                         <div className="flex items-baseline gap-1.5">
                           {beverage ? (
-                            <span className="font-black text-sm sm:text-base text-foreground">
+                            <span className="font-black text-sm sm:text-base text-slate-900">
                               {formatPrice(product.price)}
                             </span>
                           ) : (
                             <>
-                              <span className="font-black text-sm sm:text-base text-green-600">
+                              <span className="font-black text-sm sm:text-base text-emerald-600">
                                 {formatPrice(discounted)}
                               </span>
-                              <span className="text-[10px] text-muted-foreground line-through font-bold">
+                              <span className="text-[10px] text-slate-400 line-through font-semibold">
                                 {formatPrice(product.price)}
                               </span>
                             </>
@@ -848,7 +860,7 @@ export function InternalPosView() {
 
                         <Button
                           size="sm"
-                          className="w-full h-8 sm:h-9 rounded-xl font-black text-[10px] uppercase tracking-wider shadow-soft bg-primary text-white hover:bg-primary/90 transition-all active:scale-95"
+                          className="w-full h-8 rounded-xl font-bold text-[10px] uppercase tracking-wider shadow-2xs bg-slate-900 text-white hover:bg-slate-800 transition-all active:scale-95"
                         >
                           AGREGAR
                         </Button>
@@ -1000,7 +1012,7 @@ export function InternalPosView() {
                     />
                   ) : (
                     <span className="text-base">
-                      {item.product.categories?.icon || "🍔"}
+                      {getCategoryEmoji(item.product)}
                     </span>
                   )}
                 </div>
@@ -1264,7 +1276,7 @@ function InternalCartContent({
                       />
                     ) : (
                       <span className="text-base">
-                        {item.product.categories?.icon || "🍔"}
+                        {getCategoryEmoji(item.product)}
                       </span>
                     )}
                   </div>

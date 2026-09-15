@@ -344,11 +344,12 @@ export default function Caja() {
 
   return (
     <ErrorBoundary>
-      <div className="section-container space-y-4 lg:space-y-6 pb-10 animate-in fade-in duration-300">
+      <div className="section-container space-y-4 sm:space-y-6 pb-12 animate-in fade-in duration-300">
         <Tabs defaultValue="pendientes" className="w-full">
-          <div className="bg-white/60 backdrop-blur-xl p-1 lg:p-2 rounded-2xl border-2 border-accent/20 shadow-sm mb-4 lg:mb-6 sticky top-14 lg:top-16 z-40 flex flex-col sm:flex-row items-center gap-2 lg:gap-4">
+          {/* Barra Superior Vidriada y Pegajosa para Celular, iPad y PC */}
+          <div className="bg-white/80 backdrop-blur-xl p-1.5 sm:p-2 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs mb-4 sm:mb-6 sticky top-14 sm:top-16 z-30 flex items-center justify-between gap-2 sm:gap-3">
             <div className="flex-1 w-full overflow-x-auto no-scrollbar">
-              <TabsList className="bg-transparent h-auto p-0 flex-nowrap w-full justify-start gap-1 lg:gap-2">
+              <TabsList className="bg-transparent h-auto p-0 flex-nowrap w-full justify-start gap-1 sm:gap-1.5">
                 {[
                   {
                     id: "pendientes",
@@ -384,60 +385,64 @@ export default function Caja() {
                   <TabsTrigger
                     key={tab.id}
                     value={tab.id}
-                    className="group rounded-lg lg:rounded-xl px-4 lg:px-8 py-2 lg:py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all font-black text-[9px] lg:text-[11px] uppercase tracking-widest flex items-center gap-2 lg:gap-3 border-2 data-[state=active]:border-primary/5 min-w-30 lg:min-w-35"
+                    className="group rounded-xl sm:rounded-2xl px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xs transition-all font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 sm:gap-2 border border-transparent data-[state=active]:border-slate-200/90 shrink-0 min-h-10 sm:min-h-11 cursor-pointer select-none"
                   >
                     <tab.icon
                       className={cn(
-                        "h-5 w-5 lg:h-6 lg:w-6 shrink-0 transition-all duration-200 group-hover:scale-110 group-active:scale-95",
+                        "size-3.5 sm:size-4 shrink-0 transition-transform duration-200 group-hover:scale-110",
                         tab.id === "cocina" && "animate-spin",
                       )}
-                      strokeWidth={2.5}
                     />
-                    {tab.label}
-                    <Badge className="bg-primary text-white border-none rounded-xl h-6 min-w-6 px-1.5 flex items-center justify-center font-black text-[10px] ml-auto shadow-md">
+                    <span>{tab.label}</span>
+                    <Badge className="bg-primary text-white border-none rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center font-black text-[9px] sm:text-[10px] ml-1 shadow-2xs">
                       {tab.count}
                     </Badge>
                   </TabsTrigger>
                 ))}
               </TabsList>
             </div>
+
             <Button
               size="sm"
-              className="rounded-xl h-10 lg:h-12 px-4 lg:px-6 bg-primary hover:bg-primary/90 text-white font-black text-[10px] lg:text-xs shadow-md shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all group shrink-0"
+              className="rounded-xl sm:rounded-2xl h-10 sm:h-11 px-3 sm:px-4.5 bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase tracking-wider shadow-md shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
               onClick={() => navigate("/kiosko")}
             >
-              <Plus
-                className="h-3.5 w-3.5 lg:h-4 lg:w-4 mr-2 group-hover:rotate-90 transition-transform duration-200"
-                strokeWidth={3}
-              />
-              NUEVA VENTA
+              <Plus className="size-4 group-hover:rotate-90 transition-transform duration-200" />
+              <span className="hidden sm:inline">NUEVA VENTA</span>
+              <span className="sm:hidden text-[11px]">VENTA</span>
             </Button>
           </div>
 
+          {/* TAB 1: PENDIENTES */}
           <TabsContent
             value="pendientes"
-            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
+            className="animate-in fade-in slide-in-from-bottom-3 duration-300 outline-none"
           >
-            <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-start">
               {pendientes.length === 0 ? (
-                <div className="col-span-full py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
-                  <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
-                    <Clock className="h-10 w-10 text-muted-foreground/60" />
+                <div className="col-span-full py-12 sm:py-16 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm rounded-3xl border border-dashed border-slate-200 text-center p-6 space-y-3">
+                  <div className="size-16 rounded-2xl bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-400">
+                    <Clock className="size-8 text-slate-400" />
                   </div>
-                  <p className="font-black uppercase tracking-[0.3em] text-sm text-muted-foreground/60">
-                    Sin pedidos pendientes
-                  </p>
+                  <div className="space-y-1">
+                    <h4 className="font-display text-base sm:text-lg font-black text-slate-800 tracking-tight">
+                      Sin pedidos pendientes
+                    </h4>
+                    <p className="text-xs text-slate-400 font-medium max-w-sm">
+                      Los pedidos creados desde Kiosko o comandas de mesero aparecerán aquí en tiempo real.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 pendientes.map((order) => (
                   <OrderCard
                     key={order.id}
                     order={order}
-                    className="bg-white/60 backdrop-blur-md"
                     actions={
-                      <div className="flex gap-2 w-full">
-                        <button
-                          className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-primary hover:bg-primary/90 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
+                      <div className="flex items-center gap-1.5 sm:gap-2 w-full">
+                        <Button
+                          size="sm"
+                          className="flex-1 rounded-xl h-10 font-bold uppercase tracking-wider text-[11px] bg-primary hover:bg-primary/90 text-white shadow-xs transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                           onClick={() =>
                             handleUpdateStatus(order.id, "confirmado")
                           }
@@ -446,40 +451,41 @@ export default function Caja() {
                           }
                         >
                           {order.isOptimistic || updatingIds.has(order.id) ? (
-                            <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                            <Loader2 className="size-3.5 mr-1.5 animate-spin" />
                           ) : (
-                            <CheckCircle
-                              className="h-3 w-3 mr-1.5"
-                              strokeWidth={3}
-                            />
+                            <CheckCircle className="size-3.5 mr-1.5" />
                           )}
-                          CONFIRMAR
-                        </button>
-                        <button
-                          className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-white border border-accent/20 hover:bg-accent/5 transition-all flex items-center justify-center disabled:opacity-50"
+                          Confirmar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 rounded-xl h-10 font-bold uppercase tracking-wider text-[11px] bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                           onClick={() => navigate(`/kiosko?edit=${order.id}`)}
                           disabled={
                             order.isOptimistic || updatingIds.has(order.id)
                           }
                         >
-                          <Edit className="h-3 w-3 mr-1.5" strokeWidth={3} />{" "}
-                          EDITAR
-                        </button>
-                        <button
-                          className="rounded-xl h-9 w-9 text-destructive hover:bg-destructive/5 border border-transparent hover:border-destructive/10 transition-all flex items-center justify-center disabled:opacity-50"
+                          <Edit className="size-3.5 mr-1.5" /> Editar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="rounded-xl size-10 text-red-500 hover:text-red-700 hover:bg-red-50 transition-all flex items-center justify-center cursor-pointer shrink-0"
                           onClick={() =>
                             handleUpdateStatus(order.id, "cancelado")
                           }
                           disabled={
                             order.isOptimistic || updatingIds.has(order.id)
                           }
+                          title="Cancelar pedido"
                         >
                           {updatingIds.has(order.id) ? (
-                            <Loader2 className="h-3 w-3 animate-spin text-destructive" />
+                            <Loader2 className="size-4 animate-spin text-red-500" />
                           ) : (
-                            <XCircle className="h-4 w-4" strokeWidth={3} />
+                            <XCircle className="size-4.5" />
                           )}
-                        </button>
+                        </Button>
                       </div>
                     }
                   />
@@ -488,19 +494,25 @@ export default function Caja() {
             </div>
           </TabsContent>
 
+          {/* TAB 2: POR COBRAR */}
           <TabsContent
             value="confirmados"
-            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
+            className="animate-in fade-in slide-in-from-bottom-3 duration-300 outline-none"
           >
-            <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-start">
               {confirmados.length === 0 ? (
-                <div className="col-span-full py-10 lg:py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
-                  <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
-                    <DollarSign className="h-10 w-10 text-muted-foreground/60" />
+                <div className="col-span-full py-12 sm:py-16 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm rounded-3xl border border-dashed border-slate-200 text-center p-6 space-y-3">
+                  <div className="size-16 rounded-2xl bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-400">
+                    <DollarSign className="size-8 text-slate-400" />
                   </div>
-                  <p className="font-black uppercase tracking-[0.3em] text-sm text-muted-foreground/60">
-                    Nada por cobrar
-                  </p>
+                  <div className="space-y-1">
+                    <h4 className="font-display text-base sm:text-lg font-black text-slate-800 tracking-tight">
+                      Nada pendiente por cobrar
+                    </h4>
+                    <p className="text-xs text-slate-400 font-medium max-w-sm">
+                      Todos los pedidos confirmados han sido cobrados o despachados a cocina.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 confirmados.map((order) => {
@@ -521,11 +533,10 @@ export default function Caja() {
                     <OrderCard
                       key={order.id}
                       order={order}
-                      className="bg-white/80 backdrop-blur-md border-primary/20 shadow-xl shadow-primary/5"
                       actions={
                         isFullyPaid ? (
-                          <button
-                            className="w-full rounded-xl h-10 font-black text-[10px] uppercase tracking-[0.2em] bg-green-500 hover:bg-green-600 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
+                          <Button
+                            className="w-full rounded-xl h-10 font-bold text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                             onClick={async () => {
                               try {
                                 await supabase.rpc("update_order_status", {
@@ -610,29 +621,25 @@ export default function Caja() {
                             disabled={order.isOptimistic}
                           >
                             {order.isOptimistic ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              <Loader2 className="size-4 mr-2 animate-spin" />
                             ) : (
-                              <Check className="h-4 w-4 mr-2" strokeWidth={3} />
+                              <Check className="size-4 mr-2" />
                             )}
                             ENVIAR A COCINA
-                          </button>
+                          </Button>
                         ) : (
-                          <button
-                            className="w-full rounded-xl h-10 font-black text-[10px] uppercase tracking-[0.2em] bg-primary hover:bg-primary/90 text-white shadow-sm group relative overflow-hidden transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
+                          <Button
+                            className="w-full rounded-xl h-10 font-bold text-xs uppercase tracking-wider bg-primary hover:bg-primary/90 text-white shadow-md shadow-primary/25 transition-all active:scale-95 flex items-center justify-center cursor-pointer group"
                             onClick={() => setPayingOrder(order)}
                             disabled={order.isOptimistic}
                           >
-                            <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                             {order.isOptimistic ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              <Loader2 className="size-4 mr-2 animate-spin" />
                             ) : (
-                              <DollarSign
-                                className="h-4 w-4 mr-2 group-hover:scale-125 transition-transform duration-200"
-                                strokeWidth={3}
-                              />
+                              <DollarSign className="size-4 mr-1.5 group-hover:scale-110 transition-transform" />
                             )}
                             COBRAR Y ENVIAR
-                          </button>
+                          </Button>
                         )
                       }
                     />
@@ -642,19 +649,25 @@ export default function Caja() {
             </div>
           </TabsContent>
 
+          {/* TAB 3: EN COCINA */}
           <TabsContent
             value="cocina"
-            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
+            className="animate-in fade-in slide-in-from-bottom-3 duration-300 outline-none"
           >
-            <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-start">
               {enCocina.length === 0 ? (
-                <div className="col-span-full py-10 lg:py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
-                  <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
-                    <Loader2 className="h-10 w-10 text-muted-foreground/60 animate-spin" />
+                <div className="col-span-full py-12 sm:py-16 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm rounded-3xl border border-dashed border-slate-200 text-center p-6 space-y-3">
+                  <div className="size-16 rounded-2xl bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-400">
+                    <Loader2 className="size-8 text-slate-400 animate-spin" />
                   </div>
-                  <p className="font-black uppercase tracking-[0.3em] text-sm text-muted-foreground/60">
-                    La cocina está al día
-                  </p>
+                  <div className="space-y-1">
+                    <h4 className="font-display text-base sm:text-lg font-black text-slate-800 tracking-tight">
+                      La cocina está al día
+                    </h4>
+                    <p className="text-xs text-slate-400 font-medium max-w-sm">
+                      No hay pedidos en preparación en este momento.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 enCocina.map((order) => {
@@ -671,15 +684,14 @@ export default function Caja() {
                       order={order}
                       checkable={true}
                       onToggleItem={toggleOrderItem}
-                      className="bg-white/60 backdrop-blur-md border-blue-500/10"
                       actions={
-                        <div className="flex flex-col gap-2 w-full">
-                          <button
+                        <div className="flex flex-col gap-1.5 w-full">
+                          <Button
                             className={cn(
-                              "w-full rounded-xl h-10 font-black uppercase tracking-widest text-[10px] transition-all duration-200 shadow-sm active:scale-95 flex items-center justify-center",
+                              "w-full rounded-xl h-10 font-bold uppercase tracking-wider text-xs transition-all shadow-xs flex items-center justify-center cursor-pointer",
                               allChecked
-                                ? "bg-green-500 hover:bg-green-600 text-white"
-                                : "bg-accent/10 text-muted-foreground/40 cursor-not-allowed",
+                                ? "bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95"
+                                : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed",
                             )}
                             onClick={() =>
                               handleUpdateStatus(order.id, "listo")
@@ -687,25 +699,21 @@ export default function Caja() {
                             disabled={updatingIds.has(order.id) || !allChecked}
                           >
                             {updatingIds.has(order.id) ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              <Loader2 className="size-4 mr-2 animate-spin" />
                             ) : (
-                              <CheckCircle
-                                className="h-4 w-4 mr-2"
-                                strokeWidth={3}
-                              />
+                              <CheckCircle className="size-4 mr-1.5" />
                             )}
-                            LISTO
-                          </button>
-                          <button
-                            className="w-full rounded-xl h-8 border border-accent/20 font-black uppercase tracking-widest text-[8px] hover:bg-accent/5 transition-all flex items-center justify-center"
+                            LISTO PARA ENTREGA
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full rounded-xl h-8 border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px] hover:bg-slate-50 transition-all cursor-pointer"
                             onClick={() => handleShowKitchenReceipt(order)}
                           >
-                            <Printer
-                              className="h-3 w-3 mr-1.5"
-                              strokeWidth={3}
-                            />{" "}
-                            REIMPRIMIR
-                          </button>
+                            <Printer className="size-3.5 mr-1.5 text-slate-400" />
+                            Reimprimir Comanda
+                          </Button>
                         </div>
                       }
                     />
@@ -715,19 +723,25 @@ export default function Caja() {
             </div>
           </TabsContent>
 
+          {/* TAB 4: LISTOS */}
           <TabsContent
             value="listos"
-            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
+            className="animate-in fade-in slide-in-from-bottom-3 duration-300 outline-none"
           >
-            <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-start">
               {listos.length === 0 ? (
-                <div className="col-span-full py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
-                  <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
-                    <CheckCircle className="h-10 w-10 text-muted-foreground/60" />
+                <div className="col-span-full py-12 sm:py-16 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm rounded-3xl border border-dashed border-slate-200 text-center p-6 space-y-3">
+                  <div className="size-16 rounded-2xl bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-400">
+                    <CheckCircle className="size-8 text-slate-400" />
                   </div>
-                  <p className="font-black uppercase tracking-[0.3em] text-sm text-muted-foreground/60">
-                    No hay pedidos listos
-                  </p>
+                  <div className="space-y-1">
+                    <h4 className="font-display text-base sm:text-lg font-black text-slate-800 tracking-tight">
+                      No hay pedidos listos
+                    </h4>
+                    <p className="text-xs text-slate-400 font-medium max-w-sm">
+                      Los pedidos completados por cocina aparecerán aquí para entrega al cliente.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 listos.map((order) => (
@@ -735,25 +749,21 @@ export default function Caja() {
                     key={order.id}
                     order={order}
                     compact
-                    className="bg-white/80 backdrop-blur-md border-green-500/20 shadow-xl shadow-green-500/5"
                     actions={
-                      <button
-                        className="w-full rounded-xl h-10 font-black uppercase tracking-widest text-[10px] bg-green-500 hover:bg-green-600 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center disabled:opacity-50"
+                      <Button
+                        className="w-full rounded-xl h-10 font-bold uppercase tracking-wider text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                         onClick={() =>
                           handleUpdateStatus(order.id, "entregado")
                         }
                         disabled={updatingIds.has(order.id)}
                       >
                         {updatingIds.has(order.id) ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="size-4 mr-2 animate-spin" />
                         ) : (
-                          <CheckCircle
-                            className="h-4 w-4 mr-2"
-                            strokeWidth={3}
-                          />
+                          <CheckCircle className="size-4 mr-2" />
                         )}
-                        ENTREGAR
-                      </button>
+                        ENTREGAR AL CLIENTE
+                      </Button>
                     }
                   />
                 ))
@@ -761,61 +771,67 @@ export default function Caja() {
             </div>
           </TabsContent>
 
+          {/* TAB 5: HISTORIAL Y CIERRE */}
           <TabsContent
             value="historial"
-            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
+            className="animate-in fade-in slide-in-from-bottom-3 duration-300 outline-none"
           >
-            <div className="space-y-6 lg:space-y-8">
-              {/* Cash Closing Section */}
-              <div className="bg-linear-to-br from-primary/5 via-white/40 to-accent/20 backdrop-blur-md border-2 border-primary/20 p-6 lg:p-8 rounded-3xl flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8 group shadow-md relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-150 transition-transform duration-1000">
-                  <DollarSign
-                    className="h-48 w-48 text-primary"
-                    strokeWidth={3}
-                  />
-                </div>
-
-                <div className="space-y-4 text-center lg:text-left relative z-10">
-                  <div className="flex items-center justify-center lg:justify-start gap-2 text-primary font-black uppercase tracking-[0.3em] text-[10px] mb-2">
-                    <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                    ADMINISTRACIÓN DE TURNO
+            <div className="space-y-4 sm:space-y-6">
+              {/* Banner de Cierre de Caja Diario */}
+              <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 lg:p-7 shadow-xs relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-5">
+                <div className="flex items-center gap-4 text-center md:text-left">
+                  <div className="size-12 sm:size-14 rounded-2xl bg-orange-50 border border-orange-200/80 text-orange-600 flex items-center justify-center shrink-0">
+                    <DollarSign className="size-7" />
                   </div>
-                  <h3 className="text-2xl lg:text-3xl font-black tracking-tighter text-foreground">
-                    Cierre de Caja Diario
-                  </h3>
-                  <p className="text-muted-foreground font-medium text-base lg:text-lg leading-relaxed max-w-xl">
-                    Consolida todas las transacciones del turno actual y genera
-                    el reporte oficial de ventas para administración.
-                  </p>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-center md:justify-start gap-1.5 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                      <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>ADMINISTRACIÓN DE TURNO</span>
+                    </div>
+                    <h3 className="font-display text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                      Cierre de Caja Diario
+                    </h3>
+                    <p className="text-xs text-slate-400 font-medium max-w-lg">
+                      Consolida todas las transacciones del turno actual y genera la tirilla oficial de ventas para administración.
+                    </p>
+                  </div>
                 </div>
 
                 <Button
                   size="lg"
                   onClick={handleGenerateClosing}
                   disabled={isClosing || completados.length === 0}
-                  className="rounded-2xl h-14 lg:h-16 px-8 lg:px-10 bg-primary hover:bg-primary/90 text-white font-black text-xs uppercase tracking-widest shadow-md shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all relative z-10 group"
+                  className="rounded-2xl h-11 sm:h-12 px-6 sm:px-8 bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase tracking-wider shadow-md shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0 cursor-pointer"
                 >
                   {isClosing ? (
-                    <Loader2 className="h-6 w-6 animate-spin mr-4" />
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="size-4 animate-spin" />
+                      <span>GENERANDO...</span>
+                    </div>
                   ) : (
-                    <DollarSign
-                      className="h-6 w-6 mr-4 group-hover:scale-125 transition-transform duration-200"
-                      strokeWidth={3}
-                    />
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="size-4" />
+                      <span>REALIZAR CIERRE DE TURNO</span>
+                    </div>
                   )}
-                  REALIZAR CIERRE DE TURNO
                 </Button>
               </div>
 
-              <div className="grid gap-6">
+              {/* Lista de Pedidos Completados */}
+              <div className="grid gap-3 sm:gap-4">
                 {completados.length === 0 ? (
-                  <div className="py-20 flex flex-col items-center justify-center bg-white/20 backdrop-blur-sm rounded-3xl border-2 border-dashed border-accent/20 opacity-60 space-y-6">
-                    <div className="h-24 w-24 rounded-full bg-accent/10 flex items-center justify-center">
-                      <History className="h-10 w-10 text-muted-foreground/60" />
+                  <div className="py-12 sm:py-16 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm rounded-3xl border border-dashed border-slate-200 text-center p-6 space-y-3">
+                    <div className="size-16 rounded-2xl bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-400">
+                      <History className="size-8 text-slate-400" />
                     </div>
-                    <p className="font-black uppercase tracking-[0.3em] text-sm text-muted-foreground/60">
-                      Sin historial en este turno
-                    </p>
+                    <div className="space-y-1">
+                      <h4 className="font-display text-base sm:text-lg font-black text-slate-800 tracking-tight">
+                        Sin historial en este turno
+                      </h4>
+                      <p className="text-xs text-slate-400 font-medium max-w-sm">
+                        Los pedidos entregados o cancelados se listarán aquí durante el turno activo.
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   completados.map((order, idx) => {
@@ -830,7 +846,6 @@ export default function Caja() {
                         : new Date(),
                     );
 
-                    // Invoice status check
                     const successInvoice = order.siigo_invoices?.find(
                       (inv) => inv.status === "success",
                     );
@@ -841,7 +856,6 @@ export default function Caja() {
                       order.siigo_invoice_number ||
                       "Facturado";
 
-                    // Reconstruct breakdown from payment for eligibility check
                     const lastPayment = order.payments?.[0];
                     const paymentMethod =
                       lastPayment?.method ?? order.payment_method;
@@ -871,76 +885,81 @@ export default function Caja() {
                             0),
                         0,
                       ) || 0;
-                    const baseRemaining = Math.max(
-                      0,
-                      (order.total || 0) - previouslyPaid,
-                    );
+                    const orderTotal = Number(order.total) || Number(order.total_amount) || 0;
+                    const baseRemaining = Math.max(0, orderTotal - previouslyPaid);
+                    const isPartiallyPaid = previouslyPaid > 0 && baseRemaining > 0;
 
                     return (
                       <div
                         key={order.id}
-                        className="bg-white/40 backdrop-blur-md border-2 border-accent/10 hover:border-primary/20 p-4 lg:p-6 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 lg:gap-6 group transition-all duration-200 shadow-sm hover:shadow-xl"
-                        style={{ animationDelay: `${idx * 50}ms` }}
+                        className="bg-white border border-slate-200/90 hover:border-slate-300 p-4 sm:p-5 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all shadow-2xs hover:shadow-md"
+                        style={{ animationDelay: `${idx * 40}ms` }}
                       >
-                        <div className="flex items-center gap-8">
+                        <div className="flex items-center gap-4 sm:gap-6 min-w-0">
                           <div
                             className={cn(
-                              "w-14 h-14 lg:w-16 lg:h-16 rounded-2xl flex flex-col items-center justify-center border-2 shadow-inner transition-all duration-200 group-hover:scale-110",
+                              "size-12 sm:size-14 rounded-2xl flex flex-col items-center justify-center shadow-xs shrink-0",
                               isEntregado
-                                ? "bg-accent/10 text-primary border-primary/5"
-                                : "bg-destructive/5 text-destructive border-destructive/10",
+                                ? "bg-slate-900 text-white"
+                                : "bg-red-50 text-red-600 border border-red-200/80",
                             )}
                           >
-                            <span className="text-[9px] font-black leading-none opacity-40 uppercase tracking-widest mb-1">
+                            <span className="text-[7px] font-black leading-none opacity-50 uppercase tracking-widest mb-0.5">
                               #LOC
                             </span>
-                            <span className="text-2xl font-black tracking-tighter">
+                            <span className="font-display font-black text-lg sm:text-xl tracking-tight">
                               {order.locator}
                             </span>
                           </div>
 
-                          <div className="space-y-2">
-                            <div className="flex flex-wrap items-center gap-3">
+                          <div className="space-y-1.5 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
                               <StatusBadge status={order.status} />
-                              <div className="flex items-center gap-1.5 text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest bg-accent/10 px-3 py-1.5 rounded-full">
-                                <Clock className="h-3 w-3" />
-                                {hora}
+                              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full">
+                                <Clock className="size-3" />
+                                <span>{hora}</span>
                               </div>
-                              <div className="text-[10px] font-black text-primary/60 uppercase tracking-widest bg-primary/5 px-3 py-1.5 rounded-full">
+                              <span className="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full truncate max-w-36">
                                 {order.profiles?.name
                                   ? `Mesero: ${order.profiles.name}`
                                   : "Kiosko"}
-                              </div>
-                              {/* Invoice status badge */}
+                              </span>
                               {hasInvoice && (
-                                <div className="flex items-center gap-1.5 text-[10px] font-black text-emerald-700 uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
-                                  <FileText className="h-3 w-3" />
-                                  {invoiceNumber}
+                                <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                                  <FileText className="size-3" />
+                                  <span>{invoiceNumber}</span>
                                 </div>
                               )}
                             </div>
+
                             <div className="flex items-baseline gap-2 flex-wrap">
-                              <p className="text-xl lg:text-2xl font-black tracking-tighter text-foreground">
-                                {formatPrice(baseRemaining)}
+                              <p className="font-display font-black text-lg sm:text-xl tracking-tight text-slate-900">
+                                {formatPrice(
+                                  isPartiallyPaid
+                                    ? baseRemaining
+                                    : orderTotal > 0
+                                      ? orderTotal
+                                      : previouslyPaid,
+                                )}
                               </p>
-                              {previouslyPaid > 0 && (
-                                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                  RESTANTE (Pagado:{" "}
-                                  {formatPrice(previouslyPaid)})
+                              {isPartiallyPaid && (
+                                <span className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                                  Abonado: {formatPrice(previouslyPaid)}
                                 </span>
                               )}
-                              <span className="text-xs font-bold text-muted-foreground/40 uppercase tracking-widest">
-                                • {(order.order_items ?? []).length} ITEMS
+                              <span className="text-xs font-medium text-slate-400">
+                                · {(order.order_items ?? []).length} items
                               </span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {/* Generate Invoice button */}
+                        {/* Botones de acción en fila de historial */}
+                        <div className="flex items-center gap-2 flex-wrap shrink-0">
                           {canGenerateInvoice && (
                             <Button
-                              className="rounded-2xl h-10 border-2 font-black text-[10px] uppercase tracking-widest px-6 bg-linear-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white transition-all active:scale-95 shadow-lg shadow-emerald-500/20 border-emerald-400/20"
+                              size="sm"
+                              className="rounded-xl h-9.5 px-4 font-bold text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
                               onClick={() =>
                                 setSiigoOrder({
                                   order,
@@ -949,8 +968,8 @@ export default function Caja() {
                                 })
                               }
                             >
-                              <Zap className="h-4 w-4 mr-2" strokeWidth={3} />
-                              Generar Factura
+                              <Zap className="size-3.5" />
+                              <span>Facturar</span>
                             </Button>
                           )}
 
@@ -959,7 +978,8 @@ export default function Caja() {
                               ?.public_url as string) && (
                               <Button
                                 variant="outline"
-                                className="rounded-2xl h-10 border-2 border-emerald-500/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-emerald-50 text-emerald-600 transition-all active:scale-95 shadow-sm"
+                                size="sm"
+                                className="rounded-xl h-9.5 px-4 border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-all cursor-pointer flex items-center gap-1.5"
                                 onClick={() =>
                                   window.open(
                                     successInvoice.response_payload
@@ -968,25 +988,20 @@ export default function Caja() {
                                   )
                                 }
                               >
-                                <FileText
-                                  className="h-4 w-4 mr-2"
-                                  strokeWidth={3}
-                                />
-                                PDF Siigo
+                                <FileText className="size-3.5 text-slate-400" />
+                                <span>PDF Siigo</span>
                               </Button>
                             )}
 
                           {isEntregado && (
                             <Button
                               variant="outline"
-                              className="rounded-2xl h-10 border-2 border-accent/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-accent/5 transition-all active:scale-95 shadow-sm"
+                              size="sm"
+                              className="rounded-xl h-9.5 px-4 border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-all cursor-pointer flex items-center gap-1.5"
                               onClick={() => handleReprintCustomer(order)}
                             >
-                              <RotateCcw
-                                className="h-4 w-4 mr-3"
-                                strokeWidth={3}
-                              />{" "}
-                              REIMPRIMIR FACTURA
+                              <RotateCcw className="size-3.5 text-slate-400" />
+                              <span>Reimprimir</span>
                             </Button>
                           )}
                         </div>

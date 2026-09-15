@@ -16,13 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Edit, Trash2, LayoutGrid, Loader2, MoreVertical, Power } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Plus, Edit, Trash2, LayoutGrid, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,6 +49,7 @@ export function CategoriesTab() {
   );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState<{
     name: string;
     label: string;
@@ -127,7 +122,7 @@ export function CategoriesTab() {
 
       const catData = {
         name: form.name.toLowerCase().replace(/\s+/g, "_"),
-        label: form.label,
+        label: form.label.trim(),
         icon: form.icon || null,
         sort_order: Number(form.sort_order) || 0,
         store_ids: form.store_ids,
@@ -144,7 +139,7 @@ export function CategoriesTab() {
           setSaving(false);
           return;
         }
-        toast.success("Categoría actualizada");
+        toast.success("Categoría actualizada con éxito");
       } else {
         const { error } = await supabase.from("categories").insert(catData);
 
@@ -153,12 +148,12 @@ export function CategoriesTab() {
           setSaving(false);
           return;
         }
-        toast.success("Categoría creada");
+        toast.success("Categoría creada con éxito");
       }
 
       await fetchCategories();
       setIsDialogOpen(false);
-    } catch (err: unknown) {
+    } catch {
       toast.error("Error interno al guardar la categoría");
     } finally {
       setSaving(false);
@@ -166,18 +161,28 @@ export function CategoriesTab() {
   };
 
   const toggleActive = async (id: string, currentStatus: boolean) => {
+    // Optimistic
+    setCategories((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, is_active: !currentStatus } : c)),
+    );
+
     const { error } = await supabase
       .from("categories")
       .update({ is_active: !currentStatus })
       .eq("id", id);
 
     if (error) {
-      toast.error(`Error: ${error.message}`);
+      setCategories((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, is_active: currentStatus } : c)),
+      );
+      toast.error(`Error al actualizar estado: ${error.message}`);
       return;
     }
 
-    setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, is_active: !currentStatus } : c)),
+    toast.success(
+      !currentStatus
+        ? "Categoría visible en menús"
+        : "Categoría ocultada de los menús",
     );
   };
 
@@ -200,15 +205,21 @@ export function CategoriesTab() {
     }
 
     setCategories((prev) => prev.filter((c) => c.id !== id));
-    toast.success("Categoría eliminada");
+    toast.success("Categoría eliminada con éxito");
     setCategoryToDelete(null);
   };
 
+  const filteredCategories = categories.filter(
+    (c) =>
+      c.label.toLowerCase().includes(search.toLowerCase()) ||
+      c.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
   if (loading) {
     return (
-      <div className="py-20 flex flex-col items-center justify-center space-y-4 opacity-40">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="font-black uppercase tracking-[0.2em] text-[10px]">
+      <div className="py-24 flex flex-col items-center justify-center space-y-3 text-slate-400">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+        <p className="font-semibold text-xs text-slate-500">
           Cargando categorías...
         </p>
       </div>
@@ -216,218 +227,159 @@ export function CategoriesTab() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-1000 fill-mode-both relative">
-      <div className="sticky top-[112px] lg:top-[128px] 2xl:top-[160px] z-40 bg-slate-50/95 backdrop-blur-md py-4 -mx-2 px-2 flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all duration-300">
-        <div className="flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner shrink-0">
-            <LayoutGrid className="h-5 w-5" strokeWidth={3} />
+    <div className="space-y-6">
+      {/* Modern Control Toolbar */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 shrink-0">
+            <LayoutGrid className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-lg font-black tracking-tight text-foreground leading-none">
-              Arquitectura de Menú
+            <h2 className="text-base font-bold text-slate-900 leading-tight">
+              Estructura de Categorías
             </h2>
-            <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest mt-1">
-              {categories.length} Categorías Definidas
+            <p className="text-xs text-slate-500">
+              {categories.length}{" "}
+              {categories.length === 1
+                ? "categoría configurada"
+                : "categorías configuradas"}
             </p>
           </div>
         </div>
 
-        <Button
-          onClick={openNew}
-          className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/90 text-white font-black shadow-strong hover:scale-[1.02] active:scale-[0.98] transition-all group text-[10px] uppercase tracking-widest"
-        >
-          <Plus
-            className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-500"
-            strokeWidth={3}
-          />
-          Nueva Categoría
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="relative max-w-xs flex-1 sm:w-60">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar categoría..."
+              className="h-10 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs"
+            />
+          </div>
+
+          <Button
+            onClick={openNew}
+            className="h-10 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5 shrink-0"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+            <span>Nueva Categoría</span>
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 lg:gap-6">
-        {categories.map((cat, idx) => (
+      {/* Grid of Categories */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {filteredCategories.map((cat) => (
           <div
             key={cat.id}
             className={cn(
-              "pos-card group flex flex-col h-full border-4 transition-all duration-300 relative overflow-hidden",
+              "group flex flex-col justify-between bg-white rounded-2xl border p-4 sm:p-5 transition-all duration-200 shadow-xs hover:shadow-md",
               !cat.is_active
-                ? "opacity-60 grayscale-[0.4] bg-accent/5 border-accent/20"
-                : "bg-white/60 border-white hover:bg-white hover:border-primary/20 hover:shadow-2xl hover:scale-[1.03]",
+                ? "opacity-75 bg-slate-50/50 border-slate-200"
+                : "border-slate-200/80 hover:border-slate-300",
             )}
-            style={{ animationDelay: `${idx * 50}ms` }}
           >
-            <div className="flex items-start justify-between p-6 pb-2">
-              <div className="h-20 w-20 rounded-3xl bg-white border-4 border-accent/5 flex items-center justify-center text-5xl shadow-md group-hover:scale-110 transition-all duration-300 group-hover:rotate-6 relative">
-                <div className="absolute inset-0 bg-primary/5 rounded-full blur-xl scale-0 group-hover:scale-100 transition-transform duration-300" />
-                <span className="relative">{cat.icon || "📦"}</span>
+            {/* Header: Emoji Avatar + Active Switch */}
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="h-14 w-14 rounded-2xl bg-amber-500/10 text-3xl flex items-center justify-center border border-amber-500/15 group-hover:scale-105 transition-transform">
+                <span>{cat.icon || "📦"}</span>
               </div>
-              <div className="flex flex-col items-end gap-4">
-                <div className="flex items-center gap-3">
-                  {/* Mobile Action Menu */}
-                  <div className="lg:hidden">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-11 w-11 rounded-2xl bg-white shadow-sm border border-accent/5 active:scale-95 transition-all"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreVertical className="h-6 w-6" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 p-2 rounded-3xl border-4 border-white shadow-md backdrop-blur-xl bg-white/95">
-                        <DropdownMenuItem
-                          className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 focus:bg-primary focus:text-white transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEdit(cat);
-                          }}
-                        >
-                          <Edit className="h-5 w-5" />
-                          EDITAR CATEGORÍA
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 focus:bg-primary focus:text-white transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleActive(cat.id, !!cat.is_active);
-                          }}
-                        >
-                          <Power className={cn("h-5 w-5", cat.is_active ? "text-primary" : "text-destructive")} />
-                          {cat.is_active ? "DESACTIVAR" : "ACTIVAR"}
-                        </DropdownMenuItem>
-                        <div className="h-px bg-accent/10 my-1 mx-2" />
-                        <DropdownMenuItem
-                          className="h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest gap-3 px-4 text-destructive focus:bg-destructive focus:text-white transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCategoryToDelete(cat);
-                          }}
-                        >
-                          <Trash2 className="h-5 w-5" />
-                          ELIMINAR CATEGORÍA
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
 
-                  <div className="hidden lg:block p-2 rounded-2xl bg-white/80 backdrop-blur-md shadow-sm border-2 border-accent/5 group-hover:border-primary/20 transition-colors">
-                    <Switch
-                      checked={cat.is_active}
-                      onCheckedChange={() =>
-                        toggleActive(cat.id, !!cat.is_active)
-                      }
-                      className="scale-90 data-[state=checked]:bg-primary"
-                    />
-                  </div>
-                </div>
-                <div
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={cat.is_active}
+                  onCheckedChange={() => toggleActive(cat.id, !!cat.is_active)}
+                  className="data-[state=checked]:bg-teal-600 scale-85"
+                />
+                <span
                   className={cn(
-                    "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border-2",
+                    "text-[10px] font-semibold px-2 py-0.5 rounded-full",
                     cat.is_active
-                      ? "bg-primary/5 text-primary border-primary/10"
-                      : "bg-muted/10 text-muted-foreground border-muted/20",
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                      : "bg-slate-100 text-slate-500",
                   )}
                 >
-                  {cat.is_active ? "VISIBLE" : "OCULTO"}
-                </div>
+                  {cat.is_active ? "Visible" : "Oculto"}
+                </span>
               </div>
             </div>
 
-            <div className="flex-1 p-4 lg:p-6 pt-2 space-y-4">
-              <div className="space-y-1">
-                <p className="text-[9px] font-black text-muted-foreground/30 uppercase tracking-[0.3em] leading-none">
-                  NOMBRE CLAVE: {cat.name}
-                </p>
-                <h3 className="font-black text-xl tracking-tighter leading-none group-hover:text-primary transition-colors duration-200">
-                  {cat.label}
-                </h3>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2.5 px-4 py-1.5 bg-accent/10 rounded-xl border border-accent/10 shadow-inner">
-                  <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground/40" />
-                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                    POSICIÓN #{cat.sort_order}
-                  </span>
-                </div>
+            {/* Info Body */}
+            <div className="space-y-1 mb-4">
+              <h3 className="font-bold text-slate-900 text-base group-hover:text-teal-700 transition-colors">
+                {cat.label}
+              </h3>
+              <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                <span>slug: {cat.name}</span>
+                <span>•</span>
+                <span>orden: #{cat.sort_order}</span>
               </div>
             </div>
 
-            <div className="p-4 lg:p-6 pt-0 flex items-center gap-3">
+            {/* Actions Footer */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
               <Button
-                size="lg"
-                className="flex-1 h-12 rounded-xl font-black text-[10px] tracking-widest shadow-md bg-white/95 backdrop-blur-md text-foreground hover:bg-primary hover:text-white transition-all border-none"
+                size="sm"
+                variant="outline"
                 onClick={() => openEdit(cat)}
+                className="flex-1 h-8 rounded-lg text-xs font-semibold text-slate-700 hover:text-teal-600 border-slate-200"
               >
-                <Edit className="h-4 w-4 mr-2" />
-                EDITAR
+                <Edit className="h-3.5 w-3.5 mr-1" />
+                <span>Editar</span>
               </Button>
+
               <Button
                 size="icon"
-                variant="destructive"
-                className="h-12 w-12 rounded-xl shadow-md bg-destructive/90 backdrop-blur-md hover:bg-destructive hover:scale-110 transition-all border-none"
+                variant="ghost"
                 onClick={() => setCategoryToDelete(cat)}
+                className="h-8 w-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
               >
-                <Trash2 className="h-5 w-5" />
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
-
-            {/* Decorative background element */}
-            <div className="absolute -right-12 -bottom-12 w-32 h-32 bg-primary/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
           </div>
         ))}
 
-        {categories.length === 0 && (
-          <div className="col-span-full py-48 flex flex-col items-center justify-center space-y-10 bg-white/40 rounded-[4rem] border-4 border-white shadow-sm group">
-            <div className="h-32 w-32 rounded-[3rem] bg-accent/5 flex items-center justify-center text-muted-foreground/20 group-hover:scale-110 transition-transform duration-300">
-              <LayoutGrid
-                className="h-16 w-16 animate-pulse"
-                strokeWidth={1.5}
-              />
-            </div>
-            <div className="text-center space-y-3">
-              <p className="font-black uppercase tracking-[0.5em] text-sm text-muted-foreground/40">
-                MENÚ SIN ESTRUCTURA
-              </p>
-              <p className="text-xs font-bold text-muted-foreground/20 italic max-w-xs mx-auto">
-                Define tu primera categoría para empezar a organizar tu oferta
-                gastronómica.
-              </p>
-            </div>
+        {filteredCategories.length === 0 && (
+          <div className="col-span-full py-16 flex flex-col items-center justify-center bg-white rounded-3xl border border-dashed border-slate-200 text-center p-8">
+            <LayoutGrid className="h-10 w-10 text-slate-300 mb-2" />
+            <h3 className="font-bold text-slate-700 text-sm">
+              No hay categorías
+            </h3>
+            <p className="text-xs text-slate-400 max-w-xs mt-1">
+              Crea tu primera categoría para organizar los platos de la carta.
+            </p>
           </div>
         )}
       </div>
 
-      {/* Editor Dialog */}
+      {/* Category Editor Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[95vh] overflow-y-auto rounded-[3.5rem] p-12 border-none shadow-md bg-white/95 backdrop-blur-2xl">
-          <DialogHeader className="space-y-6 mb-12">
-            <div className="h-20 w-20 rounded-4xl bg-primary/10 flex items-center justify-center text-primary mb-2 shadow-inner group-hover:rotate-12 transition-transform">
+        <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-2xl">
+          <DialogHeader className="space-y-2 mb-4">
+            <div className="h-12 w-12 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 mb-1">
               {editCategory ? (
-                <Edit className="h-10 w-10" />
+                <Edit className="h-6 w-6" />
               ) : (
-                <Plus className="h-10 w-10" />
+                <Plus className="h-6 w-6" />
               )}
             </div>
-            <div>
-              <DialogTitle className="text-5xl font-black tracking-tighter mb-3">
-                {editCategory ? "Editar Categoría" : "Nueva Categoría"}
-              </DialogTitle>
-              <DialogDescription className="text-xl font-medium text-muted-foreground leading-relaxed">
-                Organiza tu oferta gastronómica en grupos lógicos para una
-                navegación intuitiva.
-              </DialogDescription>
-            </div>
+            <DialogTitle className="text-xl font-bold text-slate-900 tracking-tight">
+              {editCategory ? "Editar Categoría" : "Nueva Categoría"}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Organiza la carta gastronómica en grupos lógicos para navegación
+              fácil.
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-10">
-            <div className="space-y-4">
-              <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
-                Identificador Visual (Emoji)
+          <div className="space-y-5">
+            {/* Emoji Selector */}
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-slate-700">
+                Icono o Emoji de la Categoría
               </Label>
-              <div className="bg-white/50 backdrop-blur-md p-10 rounded-[3rem] border-4 border-white shadow-sm flex justify-center group-focus-within:border-primary/20 transition-all">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 flex justify-center">
                 <EmojiPicker
                   value={form.icon}
                   onChange={(emoji) => setForm((f) => ({ ...f, icon: emoji }))}
@@ -435,138 +387,121 @@ export function CategoriesTab() {
               </div>
             </div>
 
-            <div className="space-y-10">
-              <div className="space-y-4">
-                <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
-                  Etiqueta de Navegación
-                </Label>
-                <div className="relative group">
-                  <Input
-                    value={form.label}
-                    onChange={(e) => {
-                      const label = e.target.value;
-                      setForm((f) => ({
-                        ...f,
-                        label,
-                        name: editCategory ? f.name : generateSlug(label),
-                      }));
-                    }}
-                    placeholder="Ej: Parrilla & Brasas"
-                    className="h-16 px-8 rounded-2xl border-4 border-white shadow-sm bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
-                  />
-                  {form.name && (
-                    <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-3">
-                      <span className="text-[10px] font-black text-primary/40 uppercase tracking-widest bg-primary/5 px-4 py-1.5 rounded-full border border-primary/10 shadow-inner">
-                        SLUG: {form.name}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
-                  Posición en el Menú
-                </Label>
-                <Input
-                  type="number"
-                  value={form.sort_order}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, sort_order: e.target.value }))
-                  }
-                  placeholder="0"
-                  className="h-16 px-8 rounded-2xl border-4 border-white shadow-sm bg-white/50 focus-visible:ring-primary/20 focus-visible:border-primary/40 text-xl font-black transition-all"
-                />
-                <p className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.2em] px-2 italic">
-                  * Define el orden de aparición de izquierda a derecha en el
-                  Kiosko.
+            {/* Label and Slug */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">
+                Nombre Visible (Etiqueta) *
+              </Label>
+              <Input
+                value={form.label}
+                onChange={(e) => {
+                  const label = e.target.value;
+                  setForm((f) => ({
+                    ...f,
+                    label,
+                    name: editCategory ? f.name : generateSlug(label),
+                  }));
+                }}
+                placeholder="Ej: Hamburguesas Especiales"
+                className="h-11 rounded-xl border border-slate-200 text-sm font-medium"
+              />
+              {form.name && (
+                <p className="text-[11px] font-mono text-slate-400 px-1">
+                  Identificador clave (slug): {form.name}
                 </p>
-              </div>
+              )}
             </div>
 
-            <div className="space-y-4">
-              <Label className="text-[11px] font-black uppercase tracking-[0.3em] ml-2 opacity-40">
-                Alcance de Tiendas
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">
+                Posición en Menú (Orden numérico)
               </Label>
-              <div className="bg-white/50 backdrop-blur-md p-8 rounded-[2.5rem] border-4 border-white shadow-sm">
-                <StoreMultiSelect
-                  selectedStoreIds={form.store_ids}
-                  onChange={(ids) => setForm((f) => ({ ...f, store_ids: ids }))}
-                />
-              </div>
+              <Input
+                type="number"
+                value={form.sort_order}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, sort_order: e.target.value }))
+                }
+                placeholder="0"
+                className="h-11 rounded-xl border border-slate-200 text-sm"
+              />
+              <p className="text-[11px] text-slate-400 px-1">
+                Define el orden de aparición de izquierda a derecha en los
+                pedidos.
+              </p>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <Label className="text-xs font-semibold text-slate-700">
+                Disponibilidad en Sedes
+              </Label>
+              <StoreMultiSelect
+                selectedStoreIds={form.store_ids}
+                onChange={(ids) => setForm((f) => ({ ...f, store_ids: ids }))}
+              />
             </div>
           </div>
 
-          <DialogFooter className="mt-16 gap-6">
+          <DialogFooter className="mt-8 gap-2.5 sm:gap-0">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => setIsDialogOpen(false)}
               disabled={saving}
-              className="h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] px-12"
+              className="h-11 rounded-xl font-semibold text-xs px-5 border-slate-200"
             >
-              Cerrar
+              Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="h-16 px-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-[0.2em] text-[11px] shadow-md shadow-primary/20 relative overflow-hidden group/save"
+              className="h-11 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs px-6 shadow-xs"
             >
               {saving ? (
                 <>
-                  <Loader2 className="h-5 w-5 mr-3 animate-spin" />
-                  SINCRONIZANDO...
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
                 </>
+              ) : editCategory ? (
+                "Guardar Cambios"
               ) : (
-                <>
-                  <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/save:translate-y-0 transition-transform duration-200" />
-                  <span className="relative">
-                    {editCategory ? "ACTUALIZAR CATEGORÍA" : "CREAR CATEGORÍA"}
-                  </span>
-                </>
+                "Crear Categoría"
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation Alert */}
       <AlertDialog
         open={!!categoryToDelete}
         onOpenChange={(open) => !open && setCategoryToDelete(null)}
       >
-        <AlertDialogContent className="rounded-[3.5rem] border-4 border-white p-12 max-w-lg bg-white/95 backdrop-blur-2xl shadow-md">
-          <AlertDialogHeader className="space-y-6">
-            <div className="h-24 w-24 rounded-[2.5rem] bg-destructive/10 flex items-center justify-center text-destructive mb-2 shadow-inner group-hover:rotate-12 transition-transform">
-              <Trash2 className="h-12 w-12" />
+        <AlertDialogContent className="rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-md">
+          <AlertDialogHeader className="space-y-3">
+            <div className="h-12 w-12 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 mb-1">
+              <Trash2 className="h-6 w-6" />
             </div>
-            <div>
-              <AlertDialogTitle className="text-4xl font-black tracking-tighter mb-4">
-                ¿Eliminar categoría?
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-lg font-medium text-muted-foreground leading-relaxed">
-                La categoría{" "}
-                <strong className="text-foreground">
-                  "{categoryToDelete?.label}"
-                </strong>{" "}
-                será removida del sistema de forma permanente.
-                <div className="mt-8 flex items-start gap-4 p-6 bg-destructive/5 rounded-3xl border-2 border-destructive/10">
-                  <div className="h-3 w-3 rounded-full bg-destructive mt-1.5 shrink-0 animate-pulse" />
-                  <p className="text-[11px] font-black uppercase tracking-widest text-destructive leading-tight">
-                    Nota: Esta acción solo se permitirá si la categoría no
-                    contiene productos activos.
-                  </p>
-                </div>
-              </AlertDialogDescription>
-            </div>
+            <AlertDialogTitle className="text-xl font-bold text-slate-900 tracking-tight">
+              ¿Eliminar categoría?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-500 leading-relaxed">
+              La categoría{" "}
+              <strong className="text-slate-800">
+                "{categoryToDelete?.label}"
+              </strong>{" "}
+              será eliminada. Solo se permitirá si no contiene productos activos
+              asociados.
+            </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="mt-12 gap-4">
-            <AlertDialogCancel className="h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] border-4 border-white bg-white/50 px-8 shadow-sm">
-              CANCELAR
+          <AlertDialogFooter className="mt-6 gap-2">
+            <AlertDialogCancel className="h-10 rounded-xl font-semibold text-xs">
+              Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="h-16 px-10 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] bg-destructive text-white hover:bg-destructive/90 shadow-md shadow-destructive/20 border-4 border-white/20"
+              className="h-10 rounded-xl font-semibold text-xs bg-rose-600 text-white hover:bg-rose-700"
             >
-              ELIMINAR DEFINITIVAMENTE
+              Confirmar Eliminación
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

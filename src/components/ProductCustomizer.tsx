@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { ProductWithCategory } from "@/types";
 import { formatPrice } from "@/lib/formatPrice";
+import { getCategoryEmoji } from "@/lib/categoryEmoji";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 
@@ -219,7 +220,7 @@ export function ProductCustomizer({
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-sm text-center p-6 space-y-4">
           <DialogTitle className="font-display text-xl font-bold flex flex-col items-center gap-4">
-            <span className="text-5xl">{product.categories?.icon || "🍔"}</span>
+            <span className="text-5xl">{getCategoryEmoji(product)}</span>
             {product.name}
           </DialogTitle>
           <DialogDescription className="text-2xl font-display font-bold text-primary">
@@ -250,7 +251,7 @@ export function ProductCustomizer({
       <DialogContent className="max-w-md p-0 gap-0 max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="p-4 pb-3 border-b">
           <DialogTitle className="font-display text-xl flex items-center gap-2">
-            <span className="text-2xl">{product.categories?.icon || "🍔"}</span>
+            <span className="text-2xl">{getCategoryEmoji(product)}</span>
             {product.name}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">

@@ -42,8 +42,8 @@ export default function Index() {
     );
   }
 
-  // User without an active store who can switch stores → send to store selector
-  if (canSwitchStore && !activeStore) {
+  // Si el usuario tiene más de una tienda asignada (o es admin), siempre ingresa al selector de tiendas
+  if (canSwitchStore) {
     return <Navigate to="/select-store" replace />;
   }
 

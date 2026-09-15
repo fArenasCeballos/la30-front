@@ -62,6 +62,7 @@ export interface SiigoInvoiceRecord {
 
 // Order with joined items (each item includes its product)
 export interface Order extends OrderRow {
+  is_paid: boolean;
   profiles: Profile | null;
   ticket_number: string;
   order_items: OrderItem[];

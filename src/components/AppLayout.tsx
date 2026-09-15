@@ -11,11 +11,11 @@ import {
   Wrench,
   ClipboardList,
   Truck,
-  Settings,
   UtensilsCrossed,
-  ChevronDown,
-  Check,
-  ExternalLink,
+  ArrowLeftRight,
+  Store as StoreIcon,
+  Settings,
+  MoreHorizontal,
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { NavLink } from "@/components/NavLink";
@@ -36,14 +36,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useEffect, useState } from "react";
 import { Logo } from "./ui/logo";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
 
 const NAV_ITEMS: {
   to: string;
@@ -82,12 +80,6 @@ const NAV_ITEMS: {
     label: "Consumo Interno",
     icon: UtensilsCrossed,
     roles: ["caja", "admin"],
-  },
-  {
-    to: "/administracion",
-    label: "Administración",
-    icon: Settings,
-    roles: ["admin"],
   },
 ];
 
@@ -165,12 +157,11 @@ export function AppLayout() {
   const {
     activeStore,
     canSwitchStore,
-    stores,
-    setActiveStore,
     loading: storeLoading,
   } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const isAdministracion = location.pathname.startsWith("/administracion");
   const ecosystem = location.pathname.startsWith("/kiosko")
     ? "kiosk"
     : "restaurant";
@@ -179,7 +170,20 @@ export function AppLayout() {
   const [showRestored, setShowRestored] = useState(false);
   const [hasOtherSessions, setHasOtherSessions] = useState(false);
 
-  const currentTheme = getStoreTheme(activeStore);
+  const adminTheme = {
+    bg: "bg-gradient-to-r from-teal-500/20 via-teal-500/10 to-teal-500/5 hover:from-teal-500/25 hover:to-teal-500/15",
+    border: "border-teal-500/50 hover:border-teal-600",
+    text: "text-teal-900",
+    badge: "bg-gradient-to-br from-teal-600 to-emerald-600 text-white shadow-md shadow-teal-500/30",
+    accent: "#0d9488",
+    glow: "shadow-lg shadow-teal-500/15",
+    defaultIcon: "⚙️",
+    label: "ADMINISTRACIÓN",
+    tag: "Gestión Global & Control",
+    accentBg: "bg-teal-600",
+  };
+
+  const currentTheme = isAdministracion ? adminTheme : getStoreTheme(activeStore);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -263,6 +267,12 @@ export function AppLayout() {
     );
   }
 
+  // Si el usuario tiene múltiples tiendas asignadas pero aún no ha seleccionado ninguna
+  // y no está en la vista global de administración, debe elegir primero su tienda
+  if (canSwitchStore && !activeStore && !isAdministracion) {
+    return <Navigate to="/select-store" replace />;
+  }
+
   const role = user?.role;
   const isCaja = role === "caja";
 
@@ -285,8 +295,18 @@ export function AppLayout() {
     return item.roles.includes(role);
   });
 
+  // Mobile / Tablet WhatsApp & Instagram style bottom bar navigation
+  const primaryMobileNav =
+    visibleNav.length > 5 ? visibleNav.slice(0, 4) : visibleNav;
+  const secondaryMobileNav =
+    visibleNav.length > 5 ? visibleNav.slice(4) : [];
+  const isMoreActive = secondaryMobileNav.some(
+    (item) => location.pathname === item.to
+  );
+  const hasMoreItems = secondaryMobileNav.length > 0;
+
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans selection:bg-primary selection:text-white pb-24 lg:pb-0">
+    <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans selection:bg-primary selection:text-white pb-28 lg:pb-0">
       {/* Offline Status Banners */}
       <AnimatePresence>
         {isOffline && (
@@ -318,43 +338,21 @@ export function AppLayout() {
         )}
       </AnimatePresence>
 
-      {/* Cross-session reset warning banner */}
-      <AnimatePresence>
-        {hasOtherSessions && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="bg-purple-900 text-white px-4 py-2.5 text-xs font-bold flex items-center justify-between gap-4 shadow-lg relative z-50 border-b border-purple-700"
-          >
-            <div className="flex items-center gap-2 mx-auto">
-              <span className="text-base">🔐</span>
-              <span>
-                Hay múltiples sesiones abiertas. Puedes cerrar todas las demás
-                sesiones desde el botón de cerrar sesión.
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* Premium Glass Header */}
-      <header className="relative h-14 lg:h-16 2xl:h-20 border-b bg-white/95 backdrop-blur-md flex items-center px-4 lg:px-6 2xl:px-10 gap-2 lg:gap-4 2xl:gap-8 sticky top-0 z-50 transition-all duration-300">
-        {/* Dynamic Top Ambient Indicator Line with Glow */}
-        <div
-          className="absolute top-0 left-0 right-0 h-1.5 transition-all duration-500"
-          style={{
-            backgroundColor: currentTheme.accent,
-            boxShadow: `0 2px 12px ${currentTheme.accent}80`,
-          }}
-        />
-
+      {/* Premium Glass Header with Subtle Ambient Store Aura */}
+      <header
+        className="relative h-14 lg:h-16 2xl:h-20 border-b bg-white/95 backdrop-blur-md flex items-center px-4 lg:px-6 2xl:px-10 gap-2 lg:gap-4 2xl:gap-8 sticky top-0 z-50 transition-all duration-300"
+        style={{
+          backgroundImage: `radial-gradient(450px circle at 180px 0px, ${currentTheme.accent}15, transparent 80%)`,
+        }}
+      >
         {/* Brand & Store Selector */}
         <div className="flex items-center gap-2 lg:gap-4 2xl:gap-6 flex-1 lg:flex-none">
           <div
             className="flex items-center gap-2 lg:gap-3 group cursor-pointer shrink-0"
             onClick={() => {
-              if (user?.role === "admin") navigate("/dashboard");
+              if (isAdministracion) navigate("/administracion");
+              else if (user?.role === "admin") navigate("/dashboard");
               else if (user?.role === "caja") navigate("/caja");
               else if (user?.role === "cocina") navigate("/cocina");
               else if (user?.role === "mesero") navigate("/kiosko");
@@ -369,7 +367,7 @@ export function AppLayout() {
                 La 30
               </span>
               <span className="text-[9px] text-primary uppercase font-black tracking-[0.2em] mt-1 block">
-                Plataforma POS
+                {isAdministracion ? "Administración" : "Plataforma POS"}
               </span>
             </div>
             <div className="hidden xl:block 2xl:hidden">
@@ -379,226 +377,142 @@ export function AppLayout() {
             </div>
           </div>
 
-          {activeStore && (
-            <div className="h-8 w-px bg-accent/60 mx-1 hidden lg:block" />
-          )}
+          <div className="h-8 w-px bg-accent/60 mx-1 hidden lg:block" />
 
-          {activeStore &&
-            (canSwitchStore ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className={cn(
-                      "group relative flex items-center gap-2 lg:gap-3 px-3 lg:px-4 2xl:px-5 py-1.5 lg:py-2 rounded-2xl transition-all duration-300 border-2 hover:scale-[1.03] active:scale-[0.98] cursor-pointer min-w-0 shadow-sm",
-                      currentTheme.bg,
-                      currentTheme.border,
-                      currentTheme.glow,
-                    )}
-                    title="Clic para cambiar de punto de venta"
-                  >
-                    {/* Store Icon Badge with 3D gradient & glow */}
-                    <div
-                      className={cn(
-                        "w-8 h-8 lg:w-9 lg:h-9 2xl:w-10 2xl:h-10 rounded-xl flex items-center justify-center text-base lg:text-lg shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3",
-                        currentTheme.badge,
-                      )}
-                    >
-                      <span>
-                        {activeStore.icon || currentTheme.defaultIcon}
-                      </span>
-                    </div>
-
-                    <div className="text-left flex flex-col justify-center min-w-0 pr-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[7.5px] lg:text-[8.5px] 2xl:text-[9.5px] font-black uppercase tracking-[0.22em] text-muted-foreground/80 leading-none">
-                          SEDE ACTIVA
-                        </span>
-                        <span className="relative flex h-2 w-2">
-                          <span
-                            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                            style={{ backgroundColor: currentTheme.accent }}
-                          />
-                          <span
-                            className="relative inline-flex rounded-full h-2 w-2 shadow-xs"
-                            style={{ backgroundColor: currentTheme.accent }}
-                          />
-                        </span>
-                      </div>
-                      <span
-                        className={cn(
-                          "font-black text-xs lg:text-sm 2xl:text-base tracking-tight leading-tight uppercase truncate max-w-32 sm:max-w-44 lg:max-w-none",
-                          currentTheme.text,
-                        )}
-                      >
-                        {activeStore.name}
-                      </span>
-                    </div>
-
-                    <div className="h-5 w-px bg-current/20 mx-1 hidden sm:block" />
-
-                    <div className="flex items-center gap-1">
-                      <span className="hidden sm:inline-block text-[8px] lg:text-[9px] font-black uppercase tracking-wider bg-white/80 dark:bg-black/20 border border-current/20 px-1.5 py-0.5 rounded-md opacity-80 group-hover:opacity-100 transition-opacity shadow-xs">
-                        Cambiar
-                      </span>
-                      <ChevronDown
-                        className={cn(
-                          "h-3.5 w-3.5 lg:h-4 lg:w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180 opacity-70 group-hover:opacity-100",
-                          currentTheme.text,
-                        )}
-                      />
-                    </div>
-                  </button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent
-                  align="start"
-                  className="w-72 sm:w-80 p-2 rounded-2xl border-2 shadow-2xl bg-white/95 backdrop-blur-xl animate-in fade-in-80 zoom-in-95 duration-200 z-50"
-                >
-                  <div className="px-3 py-2 border-b border-accent/20 mb-1.5">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                      Puntos de Venta
-                    </p>
-                    <p className="text-xs font-bold text-foreground">
-                      Selecciona la tienda para operar
-                    </p>
-                  </div>
-
-                  <div className="space-y-1">
-                    {stores.map((s) => {
-                      const isSelected = s.id === activeStore.id;
-                      const sTheme = getStoreTheme(s);
-                      return (
-                        <DropdownMenuItem
-                          key={s.id}
-                          onClick={() => {
-                            if (!isSelected) {
-                              setActiveStore(s);
-                              toast.success(`Cambiado a: ${s.name}`);
-                            }
-                          }}
-                          className={cn(
-                            "flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition-all border-2",
-                            isSelected
-                              ? `${sTheme.bg} ${sTheme.border} ${sTheme.text} font-black shadow-xs`
-                              : "hover:bg-accent/40 border-transparent text-foreground font-bold",
-                          )}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div
-                              className={cn(
-                                "w-8 h-8 rounded-lg flex items-center justify-center text-sm shadow-xs shrink-0",
-                                isSelected ? sTheme.badge : "bg-accent/40",
-                              )}
-                            >
-                              <span>{s.icon || sTheme.defaultIcon}</span>
-                            </div>
-                            <div className="min-w-0 text-left">
-                              <p className="text-xs font-black tracking-tight uppercase leading-tight truncate">
-                                {s.name}
-                              </p>
-                              <p className="text-[10px] font-bold text-muted-foreground leading-none mt-0.5">
-                                {sTheme.tag || "Punto de venta"}
-                              </p>
-                            </div>
-                          </div>
-
-                          {isSelected ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[9px] font-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded-md shadow-xs">
-                                Activo
-                              </span>
-                              <Check
-                                className="h-4 w-4 text-current shrink-0"
-                                strokeWidth={3}
-                              />
-                            </div>
-                          ) : (
-                            <span className="text-[10px] font-black text-muted-foreground/60 hover:text-primary">
-                              Cambiar
-                            </span>
-                          )}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </div>
-
-                  <DropdownMenuSeparator className="my-2 bg-accent/20" />
-
-                  <DropdownMenuItem
-                    onClick={() => navigate("/select-store")}
-                    className="flex items-center justify-center gap-2 p-2 rounded-xl text-xs font-black text-muted-foreground hover:text-primary hover:bg-primary/5 cursor-pointer"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    <span>Abrir selector en pantalla completa</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              /* Static Badge for single-store users */
-              <div
-                className={cn(
-                  "flex items-center gap-2.5 lg:gap-3 px-3 lg:px-4 2xl:px-5 py-1.5 lg:py-2 rounded-2xl border-2 shadow-sm min-w-0",
-                  currentTheme.bg,
-                  currentTheme.border,
-                )}
-              >
-                <div
-                  className={cn(
-                    "w-8 h-8 lg:w-9 lg:h-9 2xl:w-10 2xl:h-10 rounded-xl flex items-center justify-center text-base lg:text-lg shrink-0",
-                    currentTheme.badge,
-                  )}
-                >
-                  <span>{activeStore.icon || currentTheme.defaultIcon}</span>
-                </div>
-                <div className="text-left flex flex-col justify-center min-w-0 pr-0.5">
-                  <span className="text-[7.5px] lg:text-[8.5px] 2xl:text-[9.5px] font-black uppercase tracking-[0.22em] text-muted-foreground/80 leading-none">
-                    SEDE ACTIVA
-                  </span>
-                  <span
-                    className={cn(
-                      "font-black text-xs lg:text-sm 2xl:text-base tracking-tight leading-tight uppercase truncate",
-                      currentTheme.text,
-                    )}
-                  >
-                    {activeStore.name}
-                  </span>
-                </div>
+          {isAdministracion ? (
+            <div
+              onClick={() => navigate("/select-store")}
+              className="group relative flex items-center gap-3 rounded-2xl border px-3.5 py-1.5 transition-all duration-200 shadow-2xs min-w-0 border-teal-500/40 bg-gradient-to-r from-teal-50/90 via-teal-50/50 to-white hover:border-teal-500 hover:shadow-xs cursor-pointer select-none"
+              title="Clic para cambiar a un punto de venta"
+            >
+              <div className="size-8 rounded-xl bg-teal-500/15 border border-teal-500/30 text-teal-800 flex items-center justify-center text-sm shrink-0 font-bold group-hover:scale-105 transition-transform shadow-xs">
+                <Settings className="size-4 animate-spin-slow text-teal-700" />
               </div>
-            ))}
+              <div className="min-w-0 pr-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-teal-500 animate-pulse" />
+                  <p className="truncate text-xs font-black text-teal-950 leading-tight tracking-tight uppercase">
+                    Administración
+                  </p>
+                </div>
+                <p className="truncate text-[9px] text-teal-700/80 font-semibold leading-none mt-0.5">
+                  Gestión Global & Control
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center gap-1 pl-2 border-l border-teal-200/80 text-[10px] font-bold text-teal-700 group-hover:text-teal-900 group-hover:translate-x-0.5 transition-all shrink-0">
+                <span>Cambiar</span>
+                <ArrowLeftRight className="size-2.5" />
+              </div>
+            </div>
+          ) : activeStore && (
+            <div
+              onClick={() => canSwitchStore && navigate("/select-store")}
+              className={cn(
+                "group relative flex items-center gap-3 rounded-2xl border px-3.5 py-1.5 transition-all duration-200 shadow-xs min-w-0 select-none",
+                canSwitchStore ? "cursor-pointer hover:shadow-sm" : ""
+              )}
+              style={{
+                background: `linear-gradient(135deg, ${currentTheme.accent}14 0%, ${currentTheme.accent}06 50%, #ffffff 100%)`,
+                borderColor: `${currentTheme.accent}45`,
+              }}
+              title={canSwitchStore ? "Clic para cambiar de sede / punto de venta" : undefined}
+            >
+              {/* Left: Store Icon in dedicated themed badge */}
+              <div
+                className="size-8 rounded-xl border flex items-center justify-center text-base shrink-0 font-bold group-hover:scale-105 transition-transform shadow-xs"
+                style={{
+                  background: `linear-gradient(135deg, ${currentTheme.accent}18, ${currentTheme.accent}30)`,
+                  borderColor: `${currentTheme.accent}40`,
+                }}
+              >
+                {activeStore.icon ? (
+                  <span>{activeStore.icon}</span>
+                ) : (
+                  <StoreIcon className="size-4" style={{ color: currentTheme.accent }} />
+                )}
+              </div>
+
+              {/* Center: Store Name & Tag with Live Beacon */}
+              <div className="min-w-0 pr-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="relative flex size-2">
+                    <span
+                      className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                      style={{ backgroundColor: currentTheme.accent }}
+                    />
+                    <span
+                      className="relative inline-flex rounded-full size-2"
+                      style={{ backgroundColor: currentTheme.accent }}
+                    />
+                  </span>
+                  <p className="truncate text-xs font-black text-slate-900 leading-tight tracking-tight uppercase">
+                    {activeStore.name}
+                  </p>
+                </div>
+                <p className="truncate text-[10px] text-slate-500 font-semibold leading-none mt-0.5">
+                  {currentTheme.tag || "Punto de Venta"}
+                </p>
+              </div>
+
+              {/* Right: Pill Switcher */}
+              {canSwitchStore && (
+                <div
+                  className="hidden sm:flex items-center gap-1.5 pl-2.5 border-l text-[10px] font-bold group-hover:translate-x-0.5 transition-all shrink-0"
+                  style={{
+                    borderColor: `${currentTheme.accent}25`,
+                    color: currentTheme.accent,
+                  }}
+                >
+                  <span>Cambiar</span>
+                  <ArrowLeftRight className="size-2.5" />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex flex-1 items-center justify-center px-4 min-w-0">
-          <div className="flex items-center gap-1 xl:gap-2 2xl:gap-4 overflow-x-auto overflow-y-hidden premium-scrollbar scroll-smooth py-2">
-            {visibleNav.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className="flex items-center gap-1.5 xl:gap-2 px-3 xl:px-4 2xl:px-6 py-2 rounded-xl xl:rounded-2xl text-[10px] xl:text-xs 2xl:text-sm font-black text-muted-foreground hover:bg-accent/50 hover:text-primary transition-all whitespace-nowrap group relative"
-                activeClassName="bg-primary/5 text-primary shadow-inner"
-              >
-                {({ isActive }) => (
-                  <>
-                    <item.icon
-                      className={cn(
-                        "h-3.5 w-3.5 xl:h-4 xl:w-4 transition-all duration-200",
-                        isActive
-                          ? "scale-110 rotate-3"
-                          : "group-hover:scale-110",
-                      )}
-                    />
-                    <span className="hidden lg:inline uppercase tracking-[0.15em] text-[9px] xl:text-[10px] 2xl:text-[11px]">
-                      {item.label}
-                    </span>
-                    {isActive && (
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(249,115,22,0.8)] animate-in zoom-in duration-200" />
-                    )}
-                  </>
-                )}
-              </NavLink>
-            ))}
-          </div>
-        </nav>
+        <div className="hidden lg:flex flex-1 items-center justify-center px-4 min-w-0">
+          {isAdministracion ? (
+            <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-100/90 border border-slate-200/80 text-xs text-slate-700 shadow-2xs">
+              <span className="size-2 rounded-full bg-teal-500 animate-pulse" />
+              <span className="font-black uppercase tracking-wider text-[11px] text-slate-800">
+                Centro de Control Administrativo
+              </span>
+              <span className="text-slate-300">|</span>
+              <span className="text-[10px] font-semibold text-slate-500">
+                Gestión Global & Parámetros
+              </span>
+            </div>
+          ) : (
+            <nav className="flex items-center gap-1 p-1 rounded-2xl bg-slate-100/90 border border-slate-200/80 shadow-2xs overflow-x-auto no-scrollbar max-w-full">
+              {visibleNav.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white/60 transition-all whitespace-nowrap group shrink-0 active:scale-98"
+                  activeClassName="bg-white text-slate-900 shadow-xs border border-slate-200/80 font-black"
+                >
+                  {({ isActive }) => (
+                    <>
+                      <item.icon
+                        className={cn(
+                          "size-4 transition-transform duration-200 shrink-0",
+                          isActive
+                            ? "text-teal-600 scale-110"
+                            : "text-slate-400 group-hover:text-slate-600",
+                        )}
+                      />
+                      <span className="tracking-tight">
+                        {item.label}
+                      </span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
+          )}
+        </div>
 
         {/* User & Actions */}
         <div className="flex items-center gap-1.5 lg:gap-2 2xl:gap-4">
@@ -610,9 +524,17 @@ export function AppLayout() {
             <p className="text-[10px] 2xl:text-xs font-black uppercase tracking-widest leading-none mb-1">
               {user?.name}
             </p>
-            <p className="text-[8px] 2xl:text-[10px] font-bold text-muted-foreground/60 bg-accent px-1.5 py-0.5 rounded-md inline-block">
-              {user?.role?.toUpperCase()}
-            </p>
+            <div className="flex items-center justify-end gap-1.5">
+              {hasOtherSessions && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-bold bg-amber-500/15 text-amber-800 border border-amber-500/20">
+                  <span className="size-1 rounded-full bg-amber-500 animate-pulse" />
+                  2+ sesiones
+                </span>
+              )}
+              <p className="text-[8px] 2xl:text-[10px] font-bold text-muted-foreground/60 bg-accent px-1.5 py-0.5 rounded-md inline-block">
+                {user?.role?.toUpperCase()}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center bg-accent/30 p-1 lg:p-1 rounded-xl 2xl:rounded-[1.25rem] border-2 border-accent/20">
@@ -631,27 +553,47 @@ export function AppLayout() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="rounded-xl h-9 w-9 lg:h-10 lg:w-10 hover:bg-white hover:shadow-soft text-muted-foreground hover:text-destructive transition-all"
-                    title="Opciones de sesión"
+                    className="relative rounded-xl h-9 w-9 lg:h-10 lg:w-10 hover:bg-white hover:shadow-soft text-amber-700 hover:text-amber-800 transition-all cursor-pointer"
+                    title="Múltiples sesiones abiertas. Clic para ver opciones"
                   >
                     <LogOut className="h-4 w-4" />
+                    <span className="absolute top-2 right-2 flex size-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full size-2 bg-amber-500 ring-1 ring-white" />
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-56 rounded-2xl border-none shadow-strong p-2"
+                  className="w-64 rounded-2xl border border-slate-200/90 shadow-xl p-2 bg-white/95 backdrop-blur-md"
                 >
+                  <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                    <div className="flex items-center gap-1.5 text-xs font-black text-slate-900">
+                      <span className="relative flex size-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full size-2 bg-amber-500" />
+                      </span>
+                      <span>Múltiples Sesiones</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-medium mt-0.5 leading-snug">
+                      Tu cuenta está activa en otro dispositivo. Puedes cerrar las otras sesiones por seguridad.
+                    </p>
+                  </div>
+
                   <DropdownMenuItem
                     onClick={logout}
-                    className="rounded-xl font-bold py-3 focus:bg-red-50 focus:text-red-700 cursor-pointer mb-1"
+                    className="rounded-xl font-bold py-2.5 px-3 text-xs focus:bg-slate-100 text-slate-700 cursor-pointer mb-1"
                   >
-                    Cerrar sesión actual
+                    Cerrar solo esta sesión
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={logoutAll}
-                    className="rounded-xl font-bold py-3 focus:bg-red-50 focus:text-red-700 cursor-pointer"
+                    className="rounded-xl font-black py-2.5 px-3 text-xs bg-red-50 text-red-700 focus:bg-red-100 focus:text-red-800 cursor-pointer flex items-center justify-between"
                   >
-                    Cerrar de todos los dispositivos
+                    <span>Cerrar en todos los equipos</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-200 text-red-800 font-black">
+                      Seguro
+                    </span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -670,33 +612,121 @@ export function AppLayout() {
         </div>
       </header>
 
-      {/* Mobile Top Sub-Navbar (Always visible on mobile right below header) */}
-      <div className="lg:hidden border-b bg-white/95 backdrop-blur-md sticky top-14 z-40 px-3 py-2 overflow-x-auto no-scrollbar shadow-xs">
-        <div className="flex items-center gap-1.5 min-w-max">
-          {visibleNav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black text-muted-foreground hover:bg-accent/50 hover:text-primary transition-all whitespace-nowrap border-2 border-transparent"
-              activeClassName="bg-primary text-white border-primary shadow-xs"
-            >
-              {({ isActive }) => (
-                <>
-                  <item.icon
-                    className={cn(
-                      "h-3.5 w-3.5 transition-transform duration-200",
-                      isActive ? "text-white scale-110" : "text-muted-foreground",
+      {/* Mobile iPhone Instagram Style Liquid Glass Floating Dock */}
+      {!isAdministracion && (
+        <nav
+          aria-label="Barra de navegación móvil"
+          className="lg:hidden fixed left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-full max-w-md mx-auto z-40 rounded-full bg-gradient-to-b from-white/65 via-white/40 to-white/20 backdrop-blur-3xl backdrop-saturate-[200%] backdrop-contrast-[105%] border border-white/60 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.14),0_0_0_1px_rgba(255,255,255,0.4),inset_0_2px_4px_rgba(255,255,255,0.9),inset_0_-2px_4px_rgba(0,0,0,0.03)] px-2 py-1.5 transition-all duration-300 before:absolute before:inset-x-8 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white before:to-transparent"
+          style={{
+            bottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
+          }}
+        >
+          <div className="flex items-center justify-around relative z-10">
+            {primaryMobileNav.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className="relative flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-full transition-all duration-300 text-slate-500 active:scale-90 select-none min-h-[46px] group"
+                activeClassName="text-slate-950 font-black"
+              >
+                {({ isActive }) => (
+                  <>
+                    {/* Liquid droplet lens on active tab */}
+                    {isActive && (
+                      <div className="absolute inset-0.5 rounded-full bg-white/70 shadow-[0_2px_10px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.95)] border border-white/90 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200" />
                     )}
-                  />
-                  <span className="uppercase tracking-wider">
-                    {item.label}
-                  </span>
-                </>
-              )}
-            </NavLink>
-          ))}
-        </div>
-      </div>
+
+                    <div className="relative z-10 flex items-center justify-center">
+                      <item.icon
+                        className={cn(
+                          "size-5 transition-transform duration-200",
+                          isActive
+                            ? "text-slate-950 scale-110 stroke-[2.25]"
+                            : "text-slate-500 stroke-[1.75] group-hover:text-slate-800"
+                        )}
+                      />
+                      {isActive && (
+                        <div className="absolute -bottom-1 size-1 rounded-full bg-teal-600 shadow-[0_0_6px_rgba(13,148,136,0.9)]" />
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        "relative z-10 text-[10px] tracking-tight mt-1 transition-colors leading-none",
+                        isActive ? "font-black text-slate-950" : "font-semibold text-slate-500 group-hover:text-slate-700"
+                      )}
+                    >
+                      {item.label}
+                    </span>
+                  </>
+                )}
+              </NavLink>
+            ))}
+
+            {hasMoreItems && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Más opciones"
+                    className={cn(
+                      "relative flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-full transition-all duration-300 text-slate-500 active:scale-90 cursor-pointer select-none min-h-[46px] group",
+                      isMoreActive ? "text-slate-950" : "text-slate-500"
+                    )}
+                  >
+                    {/* Liquid droplet lens on active more button */}
+                    {isMoreActive && (
+                      <div className="absolute inset-0.5 rounded-full bg-white/70 shadow-[0_2px_10px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.95)] border border-white/90 backdrop-blur-md" />
+                    )}
+
+                    <div className="relative z-10 flex items-center justify-center">
+                      <MoreHorizontal
+                        className={cn(
+                          "size-5 transition-transform duration-200",
+                          isMoreActive
+                            ? "text-slate-950 scale-110 stroke-[2.25]"
+                            : "text-slate-500 stroke-[1.75] group-hover:text-slate-800"
+                        )}
+                      />
+                      {isMoreActive && (
+                        <div className="absolute -bottom-1 size-1 rounded-full bg-teal-600 shadow-[0_0_6px_rgba(13,148,136,0.9)]" />
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        "relative z-10 text-[10px] tracking-tight mt-1 transition-colors leading-none",
+                        isMoreActive ? "font-black text-slate-950" : "font-semibold text-slate-500 group-hover:text-slate-700"
+                      )}
+                    >
+                      Más
+                    </span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  side="top"
+                  className="w-56 rounded-3xl p-2.5 border border-white/70 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.18),inset_0_2px_4px_rgba(255,255,255,0.8)] bg-gradient-to-b from-white/85 via-white/70 to-white/50 backdrop-blur-3xl backdrop-saturate-[200%] mb-3.5"
+                >
+                  {secondaryMobileNav.map((item) => (
+                    <DropdownMenuItem
+                      key={item.to}
+                      onClick={() => navigate(item.to)}
+                      className={cn(
+                        "flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl font-bold text-xs cursor-pointer transition-colors",
+                        location.pathname === item.to
+                          ? "bg-teal-500/20 text-teal-950 font-black shadow-2xs"
+                          : "text-slate-800 hover:bg-white/60"
+                      )}
+                    >
+                      <item.icon className="size-4 shrink-0 text-slate-600" />
+                      <span>{item.label}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </nav>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 relative pb-6 lg:pb-0">

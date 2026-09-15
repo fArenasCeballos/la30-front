@@ -10,6 +10,7 @@ export interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
   markAllRead: () => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
   clearNotifications: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
 }
@@ -184,8 +185,21 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!error) {
       queryClient.setQueryData(['notifications', user?.id], (old: Notification[] | undefined) => {
         if (!old) return old;
-        return old.map(n => ({ ...n, read: true }));
+        return old.map(n => ({ ...n, read: true, is_read: true }));
       });
+    }
+  }, [queryClient, user?.id]);
+
+  const markAsRead = useCallback(async (id: string) => {
+    if (!user?.id) return;
+    queryClient.setQueryData(['notifications', user?.id], (old: Notification[] | undefined) => {
+      if (!old) return old;
+      return old.map(n => n.id === id ? { ...n, read: true, is_read: true } : n);
+    });
+    try {
+      await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+    } catch (err) {
+      console.error("Error marking notification as read:", err);
     }
   }, [queryClient, user?.id]);
 
@@ -205,9 +219,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     notifications,
     unreadCount,
     markAllRead,
+    markAsRead,
     clearNotifications,
     refreshNotifications: handleRefresh,
-  }), [notifications, unreadCount, markAllRead, clearNotifications, handleRefresh]);
+  }), [notifications, unreadCount, markAllRead, markAsRead, clearNotifications, handleRefresh]);
 
   return (
     <NotificationContext.Provider value={value}>

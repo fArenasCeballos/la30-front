@@ -1,20 +1,122 @@
+import pkg from "../../package.json";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
 import type { Store } from "@/types";
+import {
+  Store as StoreIcon,
+  Settings,
+  ShieldCheck,
+  ArrowRight,
+  LogOut,
+  Truck,
+  UtensilsCrossed,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
+import { cn } from "@/lib/utils";
+
+function getStoreTheme(store: Store) {
+  const slug = store.slug?.toLowerCase() || "";
+  const name = store.name?.toLowerCase() || "";
+
+  if (slug.includes("domicilio") || name.includes("domicilio")) {
+    return {
+      iconBox:
+        "bg-purple-50 text-purple-600 border-purple-200/80 group-hover:bg-purple-100/70",
+      badge: "bg-purple-50 text-purple-700 border-purple-200/80",
+      hoverBorder: "hover:border-purple-400 hover:shadow-purple-500/10",
+      btnText: "text-purple-600 group-hover:text-purple-700",
+      activeRing: "ring-2 ring-purple-500 border-purple-500 shadow-purple-500/10",
+      pingColor: "bg-purple-500",
+    };
+  }
+  if (
+    slug.includes("trailer") ||
+    slug.includes("carrito") ||
+    name.includes("trailer")
+  ) {
+    return {
+      iconBox:
+        "bg-emerald-50 text-emerald-600 border-emerald-200/80 group-hover:bg-emerald-100/70",
+      badge: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+      hoverBorder: "hover:border-emerald-400 hover:shadow-emerald-500/10",
+      btnText: "text-emerald-600 group-hover:text-emerald-700",
+      activeRing:
+        "ring-2 ring-emerald-500 border-emerald-500 shadow-emerald-500/10",
+      pingColor: "bg-emerald-500",
+    };
+  }
+  return {
+    iconBox:
+      "bg-orange-50 text-orange-600 border-orange-200/80 group-hover:bg-orange-100/70",
+    badge: "bg-orange-50 text-orange-700 border-orange-200/80",
+    hoverBorder: "hover:border-orange-400 hover:shadow-orange-500/10",
+    btnText: "text-orange-600 group-hover:text-orange-700",
+    activeRing: "ring-2 ring-orange-500 border-orange-500 shadow-orange-500/10",
+    pingColor: "bg-orange-500",
+  };
+}
+
+function getStoreIcon(store: Store) {
+  const slug = store.slug?.toLowerCase() || "";
+  const name = store.name?.toLowerCase() || "";
+
+  if (slug.includes("domicilio") || name.includes("domicilio")) {
+    return <Truck className="size-7 sm:size-8" />;
+  }
+  if (
+    slug.includes("trailer") ||
+    slug.includes("carrito") ||
+    name.includes("trailer")
+  ) {
+    return <Truck className="size-7 sm:size-8" />;
+  }
+  if (store.icon) {
+    return (
+      <span className="text-2xl sm:text-3xl leading-none">{store.icon}</span>
+    );
+  }
+  return <UtensilsCrossed className="size-7 sm:size-8" />;
+}
+
+function getStoreSubtitle(store: Store) {
+  const slug = store.slug?.toLowerCase() || "";
+  const name = store.name?.toLowerCase() || "";
+
+  if (slug.includes("domicilio") || name.includes("domicilio")) {
+    return "Centro de Despacho & Entregas";
+  }
+  if (
+    slug.includes("trailer") ||
+    slug.includes("carrito") ||
+    name.includes("trailer")
+  ) {
+    return "Punto Móvil / Carrito";
+  }
+  return "Sede Principal";
+}
 
 export default function StoreSelector() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, loading } = useAuth();
-  const { stores, setActiveStore, loading: storeLoading } = useStore();
+  const { user, isAuthenticated, logout, loading } = useAuth();
+  const {
+    stores,
+    activeStore,
+    setActiveStore,
+    loading: storeLoading,
+  } = useStore();
 
   if (loading || storeLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A]">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-900">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <span className="text-primary font-black uppercase tracking-[0.3em] text-[10px]">
-            Cargando sedes
+          <div className="size-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center animate-pulse">
+            <StoreIcon className="size-6 text-teal-600" />
+          </div>
+          <div className="w-8 h-8 border-3 border-teal-500/20 border-t-teal-600 rounded-full animate-spin" />
+          <span className="text-teal-700 font-bold uppercase tracking-widest text-xs">
+            Cargando sedes...
           </span>
         </div>
       </div>
@@ -26,12 +128,15 @@ export default function StoreSelector() {
   }
 
   const activeStores = stores.filter((s) => s.is_active);
-  const inactiveStores = stores.filter((s) => !s.is_active);
+  const isAdmin = user?.role === "admin" || user?.role === "bodega";
 
   const handleSelect = (store: Store) => {
     setActiveStore(store);
-    
-    if (store.slug === "domicilios" && (user?.role === "admin" || user?.role === "caja")) {
+
+    if (
+      store.slug === "domicilios" &&
+      (user?.role === "admin" || user?.role === "caja")
+    ) {
       navigate("/domicilios", { replace: true });
     } else if (user?.role === "mesero") {
       navigate("/kiosko", { replace: true });
@@ -40,102 +145,206 @@ export default function StoreSelector() {
     } else if (user?.role === "caja") {
       navigate("/caja", { replace: true });
     } else if (user?.role === "admin") {
-      navigate(store.slug === "domicilios" ? "/domicilios" : "/dashboard", { replace: true });
+      navigate(store.slug === "domicilios" ? "/domicilios" : "/dashboard", {
+        replace: true,
+      });
     } else if (user?.role === "bodega") {
       navigate("/administracion?tab=bodega", { replace: true });
     } else {
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#0A0A0A]">
-      {/* Dynamic Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-orange-600/5 blur-[120px] animate-pulse delay-1000" />
-      </div>
+  const totalCards = activeStores.length + (isAdmin ? 1 : 0);
 
-      <div className="w-full max-w-4xl relative z-10 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="font-display text-6xl font-bold tracking-tight text-white">
-            La 30
-          </h1>
-          <p className="text-white/50 text-xl font-medium uppercase tracking-[0.2em]">
-            Selecciona el punto de venta
-          </p>
-          <div className="h-1 w-24 bg-primary mx-auto rounded-full shadow-[0_0_20px_rgba(249,115,22,0.5)]" />
+  return (
+    <div className="relative h-screen min-h-screen w-full bg-slate-50/70 text-slate-900 flex flex-col justify-between p-4 sm:p-6 lg:p-8 overflow-y-auto select-none">
+      {/* Luces sutiles de fondo con armonía pastel */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[250px] bg-teal-500/5 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[200px] bg-orange-500/5 blur-[90px] rounded-full pointer-events-none" />
+
+      {/* Cabecera Superior */}
+      <header className="relative z-10 flex items-center justify-between max-w-4xl w-full mx-auto shrink-0 py-1">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-9 sm:size-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-600/15 p-1.5">
+            <Logo className="size-5 sm:size-6 text-white" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-display text-base sm:text-lg font-black tracking-tight text-slate-900">
+                La 30
+              </span>
+              <span className="rounded-md bg-teal-500/15 border border-teal-500/20 px-1.5 py-0.2 text-[9px] font-black text-teal-700 uppercase">
+                POS
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium">
+              Plataforma Multi-Negocio
+            </p>
+          </div>
         </div>
 
-        {/* Active stores */}
-        <div className="grid gap-8 sm:grid-cols-2">
-          {activeStores.map((store, idx) => (
-            <button
-              key={store.id}
-              onClick={() => handleSelect(store)}
-              style={{ "--delay": `${idx * 100}ms` } as React.CSSProperties}
-              className="group relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/5 backdrop-blur-xl p-10 text-left transition-all duration-500 hover:scale-[1.05] hover:border-primary/50 hover:shadow-[0_0_40px_rgba(249,115,22,0.15)] active:scale-[0.98] focus:outline-none animate-in fade-in slide-in-from-bottom-8 fill-mode-both"
-            >
-              {/* Internal Glow */}
-              <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500"
-                style={{
-                  background: `radial-gradient(circle at center, ${store.color || "#F97316"}, transparent 70%)`,
-                }}
-              />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-700 bg-white border border-slate-200/80 px-3 py-1 rounded-full shadow-2xs">
+            <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-bold text-slate-800">
+              {user?.name || user?.email}
+            </span>
+            <span className="text-[10px] text-slate-400 uppercase font-extrabold">
+              ({user?.role})
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={logout}
+            className="text-xs text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer h-8 px-2.5"
+          >
+            <LogOut className="size-3.5 mr-1" />
+            Cerrar Sesión
+          </Button>
+        </div>
+      </header>
 
-              <div className="relative z-10 flex flex-col items-center gap-6">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-white/20 blur-2xl rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <span className="text-8xl relative z-10 drop-shadow-2xl group-hover:scale-110 transition-transform duration-500 block">
-                    {store.icon}
+      {/* Área Central: Selector de Puntos de Venta */}
+      <main className="relative z-10 max-w-4xl w-full mx-auto my-auto py-2 sm:py-4 space-y-4 sm:space-y-6 shrink-0">
+        {/* Título Principal */}
+        <div className="text-center space-y-1.5">
+          <h1 className="font-display text-2xl sm:text-4xl font-black tracking-tight text-slate-900">
+            Puntos de Venta
+          </h1>
+          <div className="flex items-center justify-center gap-2">
+            <div className="h-0.5 w-8 bg-teal-500/40 rounded-full" />
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
+              SELECCIONA EL PUNTO DE VENTA O TIENDA
+            </p>
+            <div className="h-0.5 w-8 bg-teal-500/40 rounded-full" />
+          </div>
+        </div>
+
+        {/* Grid de Tarjetas */}
+        <div
+          className={cn(
+            "grid gap-4 sm:gap-5 mx-auto w-full",
+            totalCards === 4
+              ? "grid-cols-1 sm:grid-cols-2 max-w-4xl"
+              : totalCards === 3
+                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl"
+                : totalCards === 2
+                  ? "grid-cols-1 sm:grid-cols-2 max-w-3xl"
+                  : "grid-cols-1 max-w-md",
+          )}
+        >
+          {/* 1. Tiendas Asignadas Activas */}
+          {activeStores.map((s) => {
+            const isSelected = s.id === activeStore?.id;
+            const theme = getStoreTheme(s);
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => handleSelect(s)}
+                className={cn(
+                  "group relative flex flex-col items-center justify-center p-5 sm:p-6 rounded-3xl border transition-all duration-300 text-center cursor-pointer",
+                  "bg-white hover:bg-slate-50/50",
+                  "border-slate-200/90 shadow-xs hover:shadow-xl hover:-translate-y-1",
+                  theme.hoverBorder,
+                  isSelected && theme.activeRing,
+                )}
+              >
+                {/* Badge Activa */}
+                <div className="absolute top-3.5 right-3.5">
+                  <span
+                    className={cn(
+                      "flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full border shadow-2xs uppercase tracking-wider",
+                      theme.badge,
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "size-1.5 rounded-full animate-pulse",
+                        theme.pingColor,
+                      )}
+                    />
+                    ACTIVA
                   </span>
                 </div>
 
-                <div className="text-center space-y-2">
-                  <h2 className="font-display text-4xl font-bold text-white tracking-tight">
-                    {store.name}
-                  </h2>
-                  <p className="text-white/40 text-sm font-medium uppercase tracking-widest group-hover:text-primary transition-colors duration-300">
-                    Ingresar ahora
-                  </p>
+                {/* Icono de Tienda */}
+                <div
+                  className={cn(
+                    "flex size-14 sm:size-16 items-center justify-center rounded-2xl border transition-all duration-300 shadow-2xs mb-3 group-hover:scale-105",
+                    theme.iconBox,
+                  )}
+                >
+                  {getStoreIcon(s)}
                 </div>
+
+                {/* Nombre de la Tienda */}
+                <h3 className="font-display text-lg sm:text-xl font-black text-slate-900 group-hover:text-slate-950 transition-colors tracking-tight">
+                  {s.name}
+                </h3>
+
+                {/* Ubicación y Tipo */}
+                <p className="text-xs text-slate-400 font-medium mt-0.5">
+                  {getStoreSubtitle(s)}
+                </p>
+
+                {/* Botón Ingresar */}
+                <div
+                  className={cn(
+                    "mt-3.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors",
+                    theme.btnText,
+                  )}
+                >
+                  <span>INGRESAR AHORA</span>
+                  <ArrowRight className="size-3.5 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </button>
+            );
+          })}
+
+          {/* 2. Tarjeta: Administración Global */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => navigate("/administracion")}
+              className="group relative flex flex-col items-center justify-center p-5 sm:p-6 rounded-3xl border border-slate-200/90 hover:border-teal-400/80 bg-white hover:bg-slate-50/50 transition-all duration-300 text-center cursor-pointer shadow-xs hover:shadow-xl hover:shadow-teal-500/10 hover:-translate-y-1"
+            >
+              <div className="absolute top-3.5 right-3.5">
+                <span className="flex items-center gap-1 text-[9px] font-black text-teal-700 bg-teal-50 border border-teal-200/80 px-2 py-0.5 rounded-full shadow-2xs uppercase tracking-wider">
+                  <ShieldCheck className="size-3" />
+                  ADMIN
+                </span>
               </div>
 
-              {/* Decorative Corner */}
-              <div
-                className="absolute top-0 right-0 w-24 h-24 bg-linear-to-bl from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }}
-              />
+              <div className="flex size-14 sm:size-16 items-center justify-center rounded-2xl bg-teal-50 border border-teal-200/80 text-teal-600 group-hover:scale-105 group-hover:bg-teal-100/70 transition-all duration-300 shadow-2xs mb-3">
+                <Settings className="size-7 sm:size-8" />
+              </div>
+
+              <h3 className="font-display text-lg sm:text-xl font-black text-slate-900 group-hover:text-slate-950 transition-colors tracking-tight">
+                Administración
+              </h3>
+
+              <p className="text-xs text-slate-400 font-medium mt-0.5">
+                Gestión Global de Tiendas & Roles
+              </p>
+
+              <div className="mt-3.5 flex items-center gap-1.5 text-xs font-bold text-teal-600 group-hover:text-teal-700 uppercase tracking-wider transition-colors">
+                <span>CONFIGURAR</span>
+                <ArrowRight className="size-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
             </button>
-          ))}
+          )}
         </div>
+      </main>
 
-        {/* Inactive stores */}
-        {inactiveStores.length > 0 && (
-          <div className="grid gap-6 sm:grid-cols-2 opacity-40">
-            {inactiveStores.map((store) => (
-              <div
-                key={store.id}
-                className="relative overflow-hidden rounded-4xl border border-dashed border-white/10 bg-white/5 p-8 text-center"
-              >
-                <div className="flex items-center justify-center gap-6">
-                  <span className="text-5xl grayscale">{store.icon}</span>
-                  <div className="text-left">
-                    <h2 className="font-display text-xl font-bold text-white/50">
-                      {store.name}
-                    </h2>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
-                      Próximamente
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Pie de Página */}
+      <footer className="relative z-10 text-center text-[11px] text-slate-400 max-w-4xl w-full mx-auto py-1 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-1 shrink-0">
+        <span>La 30 POS SaaS · Aislamiento total de datos por tienda</span>
+        <span>v{pkg.version}</span>
+      </footer>
     </div>
   );
 }
+

@@ -7,6 +7,7 @@ import {
   buildInternalConsumptionReceiptHTML,
 } from "@/lib/internalReceiptUtils";
 import { silentPrint } from "@/lib/receiptUtils";
+import { getCategoryEmoji } from "@/lib/categoryEmoji";
 import type { InternalConsumptionWithItems, InternalPaymentStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -291,29 +292,39 @@ export function InternalHistoryView() {
 
                 {/* Items */}
                 <div className="space-y-1">
-                  {(c.internal_consumption_items ?? []).map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex justify-between text-xs"
-                    >
-                      <span className="text-muted-foreground">
-                        {item.quantity}x {item.product_name}
-                        {item.is_beverage && (
-                          <span className="text-amber-600 ml-1 text-[9px]">
-                            (Bebida)
+                  {(c.internal_consumption_items ?? []).map((item) => {
+                    const emoji = getCategoryEmoji({
+                      name: item.product_name,
+                      categories: item.is_beverage ? { name: "Bebidas" } : undefined,
+                    });
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex justify-between items-center text-xs py-0.5"
+                      >
+                        <span className="text-slate-600 flex items-center gap-1.5 flex-wrap">
+                          <span>{emoji}</span>
+                          <span className="font-bold text-slate-800">
+                            {item.quantity}x
                           </span>
-                        )}
-                        {item.discount_percent > 0 && (
-                          <span className="text-green-600 ml-1 text-[9px]">
-                            (-{item.discount_percent}%)
-                          </span>
-                        )}
-                      </span>
-                      <span className="font-bold">
-                        {formatPrice(item.subtotal)}
-                      </span>
-                    </div>
-                  ))}
+                          <span>{item.product_name}</span>
+                          {item.is_beverage && (
+                            <span className="text-amber-700 bg-amber-50 border border-amber-200/60 px-1 py-0.2 rounded text-[9px] font-bold">
+                              Bebida
+                            </span>
+                          )}
+                          {item.discount_percent > 0 && (
+                            <span className="text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1 py-0.2 rounded text-[9px] font-bold">
+                              -50%
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-extrabold text-slate-900">
+                          {formatPrice(item.subtotal)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Footer */}

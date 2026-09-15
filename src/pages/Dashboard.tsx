@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useContext, useState } from "react";
+import React, { useMemo, useEffect, useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import pkg from "../../package.json";
 import { useQuery } from "@tanstack/react-query";
@@ -10,7 +10,7 @@ import { OrderContext } from "@/context/OrderContext";
 import {
   DollarSign,
   Clock,
-  CheckCircle,
+  CheckCircle2,
   TrendingUp,
   Banknote,
   CreditCard,
@@ -18,12 +18,15 @@ import {
   Truck,
   ShoppingBag,
   Sparkles,
+  Store as StoreIcon,
+  ChefHat,
+  Monitor,
+  Activity,
+  ArrowRight,
 } from "lucide-react";
 import { AdminNewsModal } from "@/components/admin/AdminNewsModal";
-import { AdminNewsBanner } from "@/components/admin/AdminNewsBanner";
 import { LATEST_UPDATE_ID } from "@/data/appUpdates";
-
-type DashboardOrder = OrderRow & { profiles: { name: string } | null };
+import { StatusBadge } from "@/components/StatusBadge";
 import {
   BarChart,
   Bar,
@@ -41,15 +44,26 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-const COLORS = [
-  "hsl(24, 90%, 50%)",
-  "hsl(142, 72%, 40%)",
-  "hsl(200, 80%, 50%)",
-  "hsl(45, 93%, 47%)",
-  "hsl(0, 72%, 51%)",
-  "hsl(270, 60%, 50%)",
+type DashboardOrder = OrderRow & { profiles: { name: string } | null };
+
+const DONUT_COLORS = [
+  "#0d9488", // Teal 600
+  "#3b82f6", // Blue 500
+  "#f59e0b", // Amber 500
+  "#ef4444", // Rose 500
+  "#8b5cf6", // Purple 500
 ];
+
+interface PrimaryCard {
+  label: string;
+  value: string | number;
+  icon: React.ElementType;
+  accent: string;
+  description?: string;
+  loading: boolean;
+}
 
 export default function Dashboard() {
   const { activeStore } = useStore();
@@ -85,6 +99,7 @@ export default function Dashboard() {
   const handleOpenNews = (updateId?: string) => {
     setSelectedUpdateId(updateId || null);
     setNewsModalOpen(true);
+    handleMarkAsRead();
   };
 
   // Role Guard
@@ -104,11 +119,11 @@ export default function Dashboard() {
   const orderContext = useContext(OrderContext);
   const shiftOrders = useMemo(
     () => orderContext?.orders || [],
-    [orderContext?.orders],
+    [orderContext?.orders]
   );
   const loadingOrders = orderContext?.loading || false;
 
-  // Top Products from RPC (this one is okay as it's more complex to calculate locally)
+  // Top Products from RPC
   const { data: productStats = [], isLoading: loadingProducts } = useQuery({
     queryKey: ["top-products", storeId, shiftStart],
     queryFn: async () => {
@@ -127,7 +142,7 @@ export default function Dashboard() {
   const stats = useMemo(() => {
     const delivered = shiftOrders.filter((o) => o.status === "entregado");
     const active = shiftOrders.filter((o) =>
-      ["pendiente", "confirmado", "en_preparacion", "listo"].includes(o.status),
+      ["pendiente", "confirmado", "en_preparacion", "listo"].includes(o.status)
     );
     const cancelled = shiftOrders.filter((o) => o.status === "cancelado");
 
@@ -140,11 +155,11 @@ export default function Dashboard() {
 
     const deliveryRevenue = deliveryDelivered.reduce(
       (acc, o) => acc + (o.total || 0),
-      0,
+      0
     );
     const cajaRevenue = cajaDelivered.reduce(
       (acc, o) => acc + (o.total || 0),
-      0,
+      0
     );
 
     const deliveryCompletedCount = deliveryDelivered.length;
@@ -152,14 +167,14 @@ export default function Dashboard() {
 
     // Delivery Specific Metrics
     const dispatchedCount = shiftOrders.filter(
-      (o) => o.status === "listo" && o.is_dispatched === true,
+      (o) => o.status === "listo" && o.is_dispatched === true
     ).length;
     const readyNotSentCount = shiftOrders.filter(
-      (o) => o.status === "listo" && o.is_dispatched !== true,
+      (o) => o.status === "listo" && o.is_dispatched !== true
     ).length;
     const deliveryFees = delivered.reduce(
       (acc, o) => acc + (o.delivery_fee || 0),
-      0,
+      0
     );
 
     // Payment breakdown
@@ -175,16 +190,14 @@ export default function Dashboard() {
             card += p.amount_tarjeta || 0;
             nequi += p.amount_nequi || 0;
           } else {
-            if (p.method === "efectivo")
-              cash += p.amount_total || 0;
-            else if (p.method === "tarjeta")
-              card += p.amount_total || 0;
-            else if (p.method === "nequi")
-              nequi += p.amount_total || 0;
+            if (p.method === "efectivo") cash += p.amount_total || 0;
+            else if (p.method === "tarjeta") card += p.amount_total || 0;
+            else if (p.method === "nequi") nequi += p.amount_total || 0;
           }
         });
       }
     });
+
     return {
       revenue,
       activeCount: active.length,
@@ -201,7 +214,7 @@ export default function Dashboard() {
       cajaRevenue,
       deliveryCompletedCount,
       cajaCompletedCount,
-      recentOrders: shiftOrders.slice(0, 8),
+      recentOrders: shiftOrders.slice(0, 10),
     };
   }, [shiftOrders]);
 
@@ -215,126 +228,187 @@ export default function Dashboard() {
             { name: "Listos en Local", value: stats.readyNotSentCount },
             { name: "Completados", value: stats.completedCount },
             { name: "Cancelados", value: stats.cancelledCount },
-          ]
+          ].filter((item) => item.value > 0)
         : [
             { name: "Activos", value: stats.activeCount },
             { name: "Completados", value: stats.completedCount },
             { name: "Cancelados", value: stats.cancelledCount },
-          ],
-    [stats, isDeliveryStore],
+          ].filter((item) => item.value > 0),
+    [stats, isDeliveryStore]
   );
 
-  const statCards = isDeliveryStore
+  const primaryCards: PrimaryCard[] = isDeliveryStore
     ? [
         {
           label: "Ventas Domicilios",
           value: formatPrice(stats.deliveryRevenue),
-          icon: DollarSign,
-          color: "text-purple-500",
+          icon: Truck,
+          accent: "text-purple-600 bg-purple-50 border-purple-200",
+          description: "Despachos a domicilio",
           loading: loadingOrders,
         },
         {
           label: "Ventas Caja",
           value: formatPrice(stats.cajaRevenue),
           icon: Banknote,
-          color: "text-emerald-500",
+          accent: "text-teal-600 bg-teal-50 border-teal-200",
+          description: "Ventas en mostrador",
           loading: loadingOrders,
         },
         {
           label: "Ventas Totales",
           value: formatPrice(stats.revenue),
           icon: DollarSign,
-          color: "text-primary",
+          accent: "text-emerald-600 bg-emerald-50 border-emerald-200",
+          description: "Total recaudado",
           loading: loadingOrders,
         },
         {
-          label: "Domicilios Completados",
+          label: "Domicilios Entregados",
           value: stats.deliveryCompletedCount,
-          icon: CheckCircle,
-          color: "text-purple-500",
-          loading: loadingOrders,
-        },
-        {
-          label: "Completados en Caja",
-          value: stats.cajaCompletedCount,
-          icon: ShoppingBag,
-          color: "text-emerald-500",
-          loading: loadingOrders,
-        },
-        {
-          label: "Domicilios en camino",
-          value: stats.dispatchedCount,
-          icon: Truck,
-          color: "text-blue-500",
-          loading: loadingOrders,
-        },
-        {
-          label: "Listos por despachar",
-          value: stats.readyNotSentCount,
-          icon: Clock,
-          color: "text-amber-500",
-          loading: loadingOrders,
-        },
-        {
-          label: "Ingreso por envíos",
-          value: formatPrice(stats.deliveryFees),
-          icon: TrendingUp,
-          color: "text-green-500",
+          icon: CheckCircle2,
+          accent: "text-blue-600 bg-blue-50 border-blue-200",
+          description: "Entregas completadas",
           loading: loadingOrders,
         },
       ]
     : [
         {
-          label: "Ventas del día",
+          label: "Ventas Netas Turno",
           value: formatPrice(stats.revenue),
           icon: DollarSign,
-          color: "text-green-500",
+          accent: "text-teal-700 bg-teal-50 border-teal-200",
+          description: "Órdenes entregadas hoy",
           loading: loadingOrders,
         },
         {
-          label: "Pedidos activos",
+          label: "Comandas Activas",
           value: stats.activeCount,
           icon: Clock,
-          color: "text-orange-500",
+          accent: "text-amber-700 bg-amber-50 border-amber-200",
+          description: "En cocina o preparación",
           loading: loadingOrders,
         },
         {
-          label: "Completados",
+          label: "Completadas",
           value: stats.completedCount,
-          icon: CheckCircle,
-          color: "text-green-500",
+          icon: CheckCircle2,
+          accent: "text-emerald-700 bg-emerald-50 border-emerald-200",
+          description: "Despachadas con éxito",
           loading: loadingOrders,
         },
         {
-          label: "Ticket promedio",
+          label: "Ticket Promedio",
           value: formatPrice(stats.avgTicket),
           icon: TrendingUp,
-          color: "text-blue-500",
+          accent: "text-blue-700 bg-blue-50 border-blue-200",
+          description: "Promedio por comanda",
           loading: loadingOrders,
         },
       ];
 
+  const totalPayments = stats.cash + stats.card + stats.nequi || 1;
   const paymentCards = [
     {
       label: "Efectivo",
       value: formatPrice(stats.cash),
+      percentage: Math.round((stats.cash / totalPayments) * 100),
       icon: Banknote,
-      color: "text-emerald-500",
-      bgColor: "bg-emerald-500/10",
+      color: "text-emerald-600 bg-emerald-50 border-emerald-200",
+      barColor: "bg-emerald-500",
     },
     {
-      label: "Tarjeta",
+      label: "Datáfono / Tarjeta",
       value: formatPrice(stats.card),
+      percentage: Math.round((stats.card / totalPayments) * 100),
       icon: CreditCard,
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
+      color: "text-blue-600 bg-blue-50 border-blue-200",
+      barColor: "bg-blue-500",
     },
     {
       label: "Nequi / Transferencia",
       value: formatPrice(stats.nequi),
+      percentage: Math.round((stats.nequi / totalPayments) * 100),
       icon: Smartphone,
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/10",
+      color: "text-purple-600 bg-purple-50 border-purple-200",
+      barColor: "bg-purple-500",
+    },
+  ];
+
+  // Instagram / WhatsApp style operational stories (adaptive for desktop & mobile)
+  const stories = [
+    {
+      id: "turno",
+      label: "Turno Activo",
+      sub: "4PM - 4AM",
+      icon: Activity,
+      ringGradient: "bg-gradient-to-tr from-emerald-500 via-teal-400 to-teal-600 animate-pulse",
+      iconColor: "text-teal-600",
+      bgClass: "bg-teal-50/80",
+      badgeText: "EN VIVO",
+      badgeColor: "bg-emerald-500",
+      onClick: () => navigate("/reporteria"),
+    },
+    {
+      id: "kiosko",
+      label: "Nueva Orden",
+      sub: "Kiosko",
+      icon: ShoppingBag,
+      ringGradient: "bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500",
+      iconColor: "text-orange-600",
+      bgClass: "bg-orange-50/80",
+      badgeText: "+ Comanda",
+      badgeColor: "bg-orange-500",
+      onClick: () => navigate("/kiosko"),
+    },
+    {
+      id: "caja",
+      label: "Terminal Caja",
+      sub: `${stats.completedCount} cobradas`,
+      icon: Monitor,
+      ringGradient: "bg-gradient-to-tr from-emerald-400 via-teal-500 to-cyan-500",
+      iconColor: "text-emerald-600",
+      bgClass: "bg-emerald-50/80",
+      badgeText: formatPrice(stats.revenue),
+      badgeColor: "bg-teal-600",
+      onClick: () => navigate("/caja"),
+    },
+    {
+      id: "cocina",
+      label: "KDS Cocina",
+      sub: `${stats.activeCount} en marcha`,
+      icon: ChefHat,
+      ringGradient: "bg-gradient-to-tr from-rose-500 via-amber-500 to-yellow-400",
+      iconColor: "text-amber-600",
+      bgClass: "bg-amber-50/80",
+      badgeText: stats.activeCount > 0 ? `${stats.activeCount} activas` : "Al día",
+      badgeColor: stats.activeCount > 0 ? "bg-amber-500" : "bg-emerald-500",
+      onClick: () => navigate("/cocina"),
+    },
+    {
+      id: "reporteria",
+      label: "Auditoría",
+      sub: "Cierre & KPIs",
+      icon: TrendingUp,
+      ringGradient: "bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500",
+      iconColor: "text-blue-600",
+      bgClass: "bg-blue-50/80",
+      badgeText: "Excel",
+      badgeColor: "bg-blue-600",
+      onClick: () => navigate("/reporteria"),
+    },
+    {
+      id: "novedades",
+      label: "Novedades",
+      sub: isUnreadNews ? "¡Nueva versión!" : `v${pkg.version}`,
+      icon: Sparkles,
+      ringGradient: "bg-gradient-to-tr from-fuchsia-500 via-pink-500 to-rose-400",
+      iconColor: "text-pink-600",
+      bgClass: isUnreadNews ? "bg-pink-100" : "bg-pink-50/80",
+      badgeText: isUnreadNews ? "NUEVA" : `v${pkg.version}`,
+      badgeColor: isUnreadNews ? "bg-pink-600" : "bg-slate-600",
+      isPulsing: isUnreadNews,
+      onClick: () => handleOpenNews(),
     },
   ];
 
@@ -342,287 +416,491 @@ export default function Dashboard() {
 
   return (
     <ErrorBoundary>
-      <div className="section-container space-y-8 pb-12">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-[0.2em] text-[10px]">
-              <div className="h-px w-8 bg-primary/30" />
-              Vista General
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
-              Panel de Control
-            </h1>
-            <p className="text-muted-foreground font-medium text-sm sm:text-base">
-              Hoy en{" "}
-              <span className="text-primary">
-                {activeStore?.name || "Todas las sedes"}
-              </span>
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 bg-white/50 border p-1 rounded-2xl shadow-sm">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleOpenNews()}
-              className="relative px-3 py-1.5 h-auto rounded-xl font-black gap-2 bg-gradient-to-r from-orange-500/10 to-amber-500/10 hover:from-orange-500/20 hover:to-amber-500/20 border-primary/20 text-foreground transition-all shadow-xs cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
-              <span>Novedades</span>
-              {isUnreadNews && (
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-                </span>
-              )}
-            </Button>
-
-            <Badge
-              variant="secondary"
-              className="px-3 py-1.5 rounded-xl font-bold gap-2 bg-white shadow-sm border-primary/10"
-            >
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Sincronizado
-            </Badge>
-            <Badge
-              variant="outline"
-              className="px-3 py-1.5 rounded-xl font-black gap-2 bg-white/50 text-muted-foreground border-accent/20"
-            >
-              v{pkg.version}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Admin Updates Poster Banner */}
-        <AdminNewsBanner
-          onOpenFullModal={(id) => handleOpenNews(id)}
-          isUnread={isUnreadNews}
-          onInteract={handleMarkAsRead}
-        />
-
-        {/* Primary Metrics Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
-          {statCards.map((card) => (
-            <div
-              key={card.label}
-              className="pos-card group relative overflow-hidden p-4 lg:p-6"
-            >
-              <card.icon
-                className={`absolute -right-2 -bottom-2 w-16 h-16 lg:w-24 lg:h-24 opacity-[0.03] ${card.color} group-hover:scale-110 transition-transform duration-200`}
-              />
-              <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-2 lg:gap-4">
-                <div
-                  className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center bg-accent/50 border border-white shrink-0`}
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 animate-in fade-in duration-200 select-none">
+        {/* ── 1. Unified Operational Header & Adaptive Action Hub ── */}
+        <section className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-5">
+          {/* Top Row: Store Identity & Turno Live Status */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge
+                  variant="outline"
+                  className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-50 text-teal-700 border-teal-200 gap-1.5"
                 >
-                  <card.icon
-                    className={`h-5 w-5 lg:h-6 lg:w-6 ${card.color}`}
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[9px] lg:text-sm font-bold text-muted-foreground uppercase tracking-widest truncate">
+                  <span className="size-2 rounded-full bg-teal-500 animate-pulse" />
+                  Turno Activo (4:00 PM - 4:00 AM)
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100/90 text-slate-700 border-slate-200 shadow-2xs gap-1.5"
+                >
+                  {activeStore?.icon || "🏪"} {activeStore?.name || "Todas las sedes"}
+                </Badge>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
+                Centro de Operaciones
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium">
+                Monitor en tiempo real de ventas, comandas de cocina y actividad operativa.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge
+                variant="outline"
+                className="h-10 px-3.5 rounded-xl font-semibold text-xs gap-1.5 bg-slate-50 border-slate-200 text-slate-600"
+              >
+                v{pkg.version}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Adaptive Actions: Horizontal Stories on Mobile, Executive Grid on iPad & Desktop */}
+          <div className="pt-3 border-t border-slate-100">
+            {/* Mobile View (< 640px): Instagram / WhatsApp Horizontal Story Circles */}
+            <div className="sm:hidden flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-1">
+              {stories.map((story) => (
+                <button
+                  key={story.id}
+                  type="button"
+                  onClick={story.onClick}
+                  className="flex flex-col items-center gap-1.5 shrink-0 group active:scale-95 transition-transform cursor-pointer select-none focus:outline-none"
+                >
+                  <div
+                    className={cn(
+                      "p-0.5 rounded-full transition-all duration-300 relative",
+                      story.ringGradient,
+                      story.isPulsing && "ring-2 ring-pink-500/80 animate-pulse"
+                    )}
+                  >
+                    <div className="size-14 rounded-full bg-white p-0.5 flex items-center justify-center shadow-xs">
+                      <div
+                        className={cn(
+                          "size-full rounded-full flex items-center justify-center transition-colors",
+                          story.bgClass
+                        )}
+                      >
+                        <story.icon className={cn("size-6", story.iconColor)} strokeWidth={2} />
+                      </div>
+                    </div>
+
+                    {story.isPulsing && (
+                      <span className="absolute top-0 right-0 flex size-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-500 opacity-75" />
+                        <span className="relative inline-flex rounded-full size-3 bg-pink-600 ring-1 ring-white" />
+                      </span>
+                    )}
+
+                    {story.badgeText && (
+                      <span
+                        className={cn(
+                          "absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.2 text-[8px] font-black text-white rounded-full uppercase tracking-wider shadow-xs truncate max-w-[64px] leading-tight",
+                          story.badgeColor
+                        )}
+                      >
+                        {story.badgeText}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-center max-w-[72px] mt-0.5">
+                    <span className="text-xs font-black text-slate-900 tracking-tight leading-tight block truncate">
+                      {story.label}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-[10px] font-semibold block truncate leading-none mt-0.5",
+                        story.isPulsing ? "text-pink-600 font-bold" : "text-slate-400"
+                      )}
+                    >
+                      {story.sub}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Desktop & iPad View (>= 640px): Sleek Executive 6-Column Action Grid */}
+            <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {stories.map((story) => (
+                <button
+                  key={story.id}
+                  type="button"
+                  onClick={story.onClick}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-2xl border transition-all duration-200 group active:scale-98 text-left cursor-pointer relative overflow-hidden",
+                    story.isPulsing
+                      ? "border-pink-300 bg-gradient-to-r from-pink-50/90 via-rose-50/50 to-white shadow-md shadow-pink-500/10 ring-2 ring-pink-500/50 animate-pulse hover:bg-pink-50"
+                      : "border-slate-200/90 bg-slate-50/60 hover:bg-white hover:border-slate-300 hover:shadow-xs"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "p-0.5 rounded-full transition-transform group-hover:scale-105 shrink-0 relative",
+                      story.ringGradient
+                    )}
+                  >
+                    <div className="size-10 rounded-full bg-white p-0.5 flex items-center justify-center shadow-xs">
+                      <div
+                        className={cn(
+                          "size-full rounded-full flex items-center justify-center transition-colors",
+                          story.bgClass
+                        )}
+                      >
+                        <story.icon className={cn("size-4.5", story.iconColor)} strokeWidth={2.25} />
+                      </div>
+                    </div>
+
+                    {story.isPulsing && (
+                      <span className="absolute -top-0.5 -right-0.5 flex size-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-500 opacity-75" />
+                        <span className="relative inline-flex rounded-full size-2.5 bg-pink-600" />
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-black text-slate-900 leading-snug group-hover:text-teal-700 transition-colors truncate">
+                        {story.label}
+                      </p>
+                      {story.isPulsing && (
+                        <span className="px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider bg-pink-600 text-white rounded-full leading-tight">
+                          NEW
+                        </span>
+                      )}
+                    </div>
+                    <p
+                      className={cn(
+                        "text-[10px] font-semibold truncate",
+                        story.isPulsing ? "text-pink-600 font-bold" : "text-slate-400"
+                      )}
+                    >
+                      {story.sub}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── 2. Primary Executive KPI Cards ── */}
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4.5">
+          {primaryCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <div
+                key={card.label}
+                className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-3 transition-all hover:border-slate-300 hover:shadow-sm"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
                     {card.label}
-                  </p>
+                  </span>
+                  <div
+                    className={cn(
+                      "size-8 rounded-xl flex items-center justify-center border shrink-0",
+                      card.accent
+                    )}
+                  >
+                    <Icon className="size-4" />
+                  </div>
+                </div>
+
+                <div>
                   {card.loading ? (
-                    <div className="h-6 w-24 bg-accent/30 animate-pulse rounded mt-1" />
+                    <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg mt-1" />
                   ) : (
-                    <p className="text-base lg:text-3xl font-black mt-0.5 lg:mt-1 tracking-tight truncate">
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight truncate">
                       {card.value}
+                    </p>
+                  )}
+                  {card.description && (
+                    <p className="text-[10px] font-semibold text-slate-400 mt-0.5 truncate">
+                      {card.description}
                     </p>
                   )}
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            );
+          })}
+        </section>
 
-        {/* Payment Methods Section */}
-        <div className="space-y-4">
-          <h2 className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-2 opacity-40 px-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-            Ingresos por método
-          </h2>
-          <div className="grid grid-cols-3 gap-2 lg:gap-6">
-            {paymentCards.map((card) => (
-              <div
-                key={card.label}
-                className="pos-card bg-white/40 shadow-sm p-3 lg:p-5 border-l-4"
-                style={{
-                  borderColor: "currentColor",
-                  color: card.color.includes("emerald")
-                    ? "#059669"
-                    : card.color.includes("blue")
-                      ? "#2563eb"
-                      : "#9333ea",
-                }}
-              >
-                <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-4 text-center lg:text-left">
-                  <div
-                    className={`w-8 h-8 lg:w-12 lg:h-12 rounded-full flex items-center justify-center ${card.bgColor} shrink-0`}
-                  >
-                    <card.icon className="h-4 w-4 lg:h-6 lg:w-6" />
+        {/* ── 3. Payment Methods Mix ── */}
+        <section className="space-y-2.5">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-teal-500" />
+              Recaudación por Método de Pago
+            </h3>
+            <span className="text-[11px] font-semibold text-slate-400">
+              Total Turno: {formatPrice(stats.revenue)}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {paymentCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <div
+                  key={card.label}
+                  className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div
+                        className={cn(
+                          "size-8 rounded-xl flex items-center justify-center border shrink-0",
+                          card.color
+                        )}
+                      >
+                        <Icon className="size-4" />
+                      </div>
+                      <span className="text-xs font-black text-slate-800 uppercase tracking-tight truncate">
+                        {card.label}
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-slate-500 shrink-0">
+                      {card.percentage}%
+                    </span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[7px] lg:text-[10px] font-black text-muted-foreground uppercase tracking-widest truncate">
-                      {card.label}
+
+                  <div className="space-y-1.5">
+                    <p className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                      {card.value}
                     </p>
-                    {loadingOrders ? (
-                      <div className="h-5 w-20 bg-accent/20 animate-pulse rounded mt-1" />
-                    ) : (
-                      <p className="text-[10px] lg:text-2xl font-black truncate">
-                        {card.value}
-                      </p>
-                    )}
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={cn("h-full rounded-full transition-all duration-500", card.barColor)}
+                        style={{ width: `${Math.min(100, Math.max(4, card.percentage))}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </div>
+        </section>
 
-        {/* Analytics & Activity Section */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <div className="pos-card bg-white p-6 lg:p-8">
-              <h3 className="text-xl font-bold mb-8">Productos más vendidos</h3>
-              <div className="h-75 w-full">
-                {loadingProducts ? (
-                  <div className="h-full flex items-center justify-center">
-                    Cargando...
-                  </div>
+        {/* ── 4. Analytics: Top Products & Order Distribution (Balanced Desktop Grid) ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Top Products (7 cols on desktop) */}
+          <div className="lg:col-span-7 bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                  Platos Más Vendidos del Turno
+                </h3>
+                <p className="text-xs text-slate-400 font-medium">
+                  Ranking según cantidad despachada hoy
+                </p>
+              </div>
+              <span className="text-xs font-bold text-teal-600">
+                {productStats.length} productos registrados
+              </span>
+            </div>
+
+            <div className="h-64 w-full pt-2">
+              {loadingProducts ? (
+                <div className="h-full flex items-center justify-center text-xs text-slate-400">
+                  Cargando platos más vendidos...
+                </div>
+              ) : productStats.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center gap-2 text-slate-400 text-xs">
+                  <StoreIcon className="size-8 stroke-1 text-slate-300" />
+                  <span>Sin registros de platos vendidos aún en este turno.</span>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={productStats} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                    <XAxis type="number" fontSize={11} stroke="#94a3b8" axisLine={false} tickLine={false} />
+                    <YAxis
+                      type="category"
+                      dataKey="product_name"
+                      width={130}
+                      fontSize={11}
+                      stroke="#64748b"
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#0f172a",
+                        borderRadius: "12px",
+                        border: "none",
+                        color: "#ffffff",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                      }}
+                    />
+                    <Bar dataKey="quantity" fill="#0d9488" radius={[0, 8, 8, 0]} barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+
+          {/* Status Distribution Donut (5 cols on desktop) */}
+          <div className="lg:col-span-5 bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-4 flex flex-col justify-between">
+            <div className="border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                Balance de Comandas del Turno
+              </h3>
+              <p className="text-xs text-slate-400 font-medium">
+                Estado de la operación en cocina y servicio
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 items-center gap-4 flex-1">
+              <div className="h-44 w-full flex items-center justify-center">
+                {statusDistribution.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">Sin comandas activas</p>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={productStats} layout="vertical">
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        horizontal={false}
-                        stroke="rgba(0,0,0,0.05)"
+                    <PieChart>
+                      <Pie
+                        data={statusDistribution}
+                        innerRadius={45}
+                        outerRadius={65}
+                        paddingAngle={4}
+                        dataKey="value"
+                      >
+                        {statusDistribution.map((_, index) => (
+                          <Cell
+                            key={index}
+                            fill={DONUT_COLORS[index % DONUT_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#0f172a",
+                          borderRadius: "12px",
+                          border: "none",
+                          color: "#ffffff",
+                          fontSize: "12px",
+                          fontWeight: "bold",
+                        }}
                       />
-                      <XAxis
-                        type="number"
-                        fontSize={10}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="product_name"
-                        width={100}
-                        fontSize={10}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip />
-                      <Bar
-                        dataKey="quantity"
-                        fill="hsl(var(--primary))"
-                        radius={[0, 8, 8, 0]}
-                        barSize={24}
-                      />
-                    </BarChart>
+                    </PieChart>
                   </ResponsiveContainer>
                 )}
               </div>
-            </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="pos-card bg-white p-8 h-62.5">
-                <h3 className="text-lg font-bold mb-4 text-center">
-                  Estados de Pedido
-                </h3>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusDistribution}
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {statusDistribution.map((_, index) => (
-                        <Cell
-                          key={index}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="pos-card bg-primary p-8 text-white flex flex-col justify-between">
-                <div>
-                  <h3 className="text-lg font-bold mb-2">Reportes Completos</h3>
-                  <p className="text-sm text-white/70">
-                    Consulta históricos detallados y exporta datos.
-                  </p>
-                </div>
-                <Button
-                  className="w-full bg-white text-primary font-bold mt-4 hover:bg-white/90"
-                  onClick={() => navigate("/administracion?tab=reportes")}
-                >
-                  IR A REPORTES
-                </Button>
+              <div className="space-y-2.5">
+                {statusDistribution.map((item, idx) => (
+                  <div key={item.name} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="size-3 rounded-full shrink-0"
+                        style={{ backgroundColor: DONUT_COLORS[idx % DONUT_COLORS.length] }}
+                      />
+                      <span className="font-semibold text-slate-700">{item.name}</span>
+                    </div>
+                    <span className="font-black text-slate-900">{item.value} comandas</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="pos-card bg-white p-6 lg:p-8 flex flex-col">
-            <h3 className="text-xl font-bold mb-8 flex items-center justify-between">
-              Actividad Reciente
-              <span className="text-[10px] bg-green-500/10 text-green-600 px-2 py-1 rounded-full animate-pulse">
-                EN VIVO
+        {/* ── 5. Live Recent Activity Stream (Full Width Grid on Desktop) ── */}
+        <section className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <Activity className="size-4 text-teal-600" />
+              <div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                  Comandas del Turno en Vivo
+                </h3>
+                <p className="text-xs text-slate-400 font-medium">
+                  Flujo operacional actualizado en tiempo real
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
+                <span className="size-1.5 rounded-full bg-teal-500 animate-ping" />
+                En Vivo
               </span>
-            </h3>
-            <div className="flex-1 space-y-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/reporteria")}
+                className="text-xs font-bold text-teal-700 hover:text-teal-900 hover:bg-teal-50 gap-1 hidden sm:flex cursor-pointer"
+              >
+                <span>Ver todo en Reportería</span>
+                <ArrowRight className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+
+          {stats.recentOrders.length === 0 ? (
+            <div className="text-center py-16 text-slate-400 space-y-2">
+              <Clock className="mx-auto size-8 text-slate-300 stroke-1" />
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Sin comandas activas
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Las nuevas órdenes registradas en el turno aparecerán aquí en tiempo real.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
               {stats.recentOrders.map((order: DashboardOrder) => (
                 <div
                   key={order.id}
-                  className="flex items-center gap-3 p-2 rounded-xl hover:bg-accent/5 transition-colors border border-transparent hover:border-accent/10"
+                  className="p-3.5 rounded-2xl bg-slate-50/70 hover:bg-white border border-slate-200/70 hover:border-slate-300 hover:shadow-xs transition-all space-y-2 flex flex-col justify-between"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-accent/30 flex flex-col items-center justify-center shrink-0">
-                    <span className="text-[8px] font-black opacity-30 leading-none">
-                      LOC
-                    </span>
-                    <span className="font-black text-xs">{order.locator}</span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex justify-between items-center">
-                      <p className="font-bold text-xs truncate">
-                        {order.profiles?.name || "Kiosko"}
-                      </p>
-                      <p className="text-[10px] font-black text-primary">
-                        {formatPrice(order.total)}
-                      </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="size-9 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center shrink-0 font-black">
+                      <span className="text-[7px] text-slate-400 leading-none">
+                        {order.is_delivery ? "DOM" : "ORD"}
+                      </span>
+                      <span className="text-xs text-slate-900">{order.locator}</span>
                     </div>
-                    <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
-                      {order.status.replace("_", " ")} •{" "}
+                    <StatusBadge status={order.status} className="scale-75 origin-right" />
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-slate-800 truncate">
+                      {order.profiles?.name || "Kiosko"}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-medium">
                       {new Date(order.created_at).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
+                        hour12: true,
                       })}
                     </p>
                   </div>
+
+                  <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Total</span>
+                    <span className="text-xs sm:text-sm font-black text-slate-900">
+                      {formatPrice(order.total)}
+                    </span>
+                  </div>
                 </div>
               ))}
-              {stats.recentOrders.length === 0 && (
-                <div className="text-center py-20 opacity-20">
-                  <Clock className="mx-auto h-8 w-8 mb-2" />
-                  <p className="text-[10px] font-black uppercase">
-                    Sin actividad
-                  </p>
-                </div>
-              )}
             </div>
+          )}
+
+          <div className="sm:hidden pt-2">
             <Button
-              variant="ghost"
-              className="mt-8 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/5"
-              onClick={() => navigate("/administracion?tab=reportes")}
+              variant="outline"
+              onClick={() => navigate("/reporteria")}
+              className="w-full h-11 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 border-slate-200 hover:bg-slate-50 transition-all gap-1.5 cursor-pointer"
             >
-              Ver todo el historial
+              <span>Ver Historial Completo en Reportería</span>
+              <ArrowRight className="size-3.5" />
             </Button>
           </div>
-        </div>
+        </section>
 
         {/* Modal Poster de Novedades */}
         <AdminNewsModal

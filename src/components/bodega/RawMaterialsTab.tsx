@@ -25,27 +25,33 @@ import {
   Trash2,
   AlertTriangle,
   AlertCircle,
-  Tag,
   FolderPlus,
-  ChevronRight,
+  X,
+  Scale,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
 import { getBaseUnits } from "@/lib/unitConversions";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 // ─── Preset colours for categories ──────────────────────────────────────────
 const PRESET_COLORS = [
-  "#6366f1", "#f59e0b", "#10b981", "#ef4444",
-  "#3b82f6", "#ec4899", "#8b5cf6", "#14b8a6",
-  "#f97316", "#84cc16",
+  "#0d9488", "#0284c7", "#6366f1", "#8b5cf6",
+  "#d97706", "#ea580c", "#e11d48", "#16a34a",
+  "#475569", "#059669",
 ];
 
 // ─── CategoryBadge ───────────────────────────────────────────────────────────
 function CategoryBadge({ name, color }: { name: string; color: string }) {
   return (
     <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
+      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-white shadow-2xs"
       style={{ backgroundColor: color }}
     >
-      {name}
+      <span className="w-1.5 h-1.5 rounded-full bg-white/80" />
+      <span>{name}</span>
     </span>
   );
 }
@@ -55,6 +61,7 @@ export function RawMaterialsTab() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [stockFilter, setStockFilter] = useState<"all" | "low" | "ok">("all");
 
   // ─── Insumo modal ─────────────────────────────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -91,14 +98,24 @@ export function RawMaterialsTab() {
     const matchCat = activeCategoryId
       ? m.category_id === activeCategoryId
       : true;
-    return matchSearch && matchCat;
+    const isLow = m.current_stock <= m.min_stock;
+    const matchStock =
+      stockFilter === "all"
+        ? true
+        : stockFilter === "low"
+          ? isLow
+          : !isLow;
+
+    return matchSearch && matchCat && matchStock;
   });
+
+  const lowStockCount = materials.filter((m) => m.current_stock <= m.min_stock).length;
 
   // ─── Mutations: Insumos ──────────────────────────────────────────────────
   const createMutation = useMutation({
     mutationFn: (data: RawMaterialInsert) => createRawMaterial(data),
     onSuccess: () => {
-      toast.success("Insumo creado correctamente");
+      toast.success("Insumo registrado exitosamente");
       queryClient.invalidateQueries({ queryKey: ["raw_materials"] });
       closeModal();
     },
@@ -171,7 +188,7 @@ export function RawMaterialsTab() {
     if (!activeStore) return;
 
     const payload = {
-      name: formData.name,
+      name: formData.name.trim(),
       unit: formData.unit,
       category_id: formData.category_id || null,
       min_stock: Number(formData.min_stock) || 0,
@@ -239,285 +256,444 @@ export function RawMaterialsTab() {
     else createCatMutation.mutate();
   };
 
-  // ─── Render ───────────────────────────────────────────────────────────────
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      {/* ── Sidebar: Categorías ── */}
-      <div className="lg:col-span-1 space-y-4">
-        <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b bg-slate-50 flex items-center justify-between">
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-600 flex items-center gap-1.5">
-              <Tag className="h-3.5 w-3.5" />
-              Categorías
-            </h3>
-            <button
-              onClick={() => openCatModal()}
-              className="p-1 rounded-lg hover:bg-primary/10 text-primary transition-colors"
-              title="Nueva categoría"
-            >
-              <FolderPlus className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="p-2 space-y-1">
-            <button
-              onClick={() => setActiveCategoryId(null)}
-              className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-colors flex items-center justify-between ${
-                activeCategoryId === null
-                  ? "bg-slate-800 text-white"
-                  : "hover:bg-slate-100 text-slate-600"
-              }`}
-            >
-              <span>Todos los insumos</span>
-              <span className="text-xs font-medium opacity-60">{materials.length}</span>
-            </button>
-
-            {categories.map((cat) => {
-              const count = materials.filter((m) => m.category_id === cat.id).length;
-              return (
-                <div key={cat.id} className="group flex items-center gap-1">
-                  <button
-                    onClick={() =>
-                      setActiveCategoryId(
-                        activeCategoryId === cat.id ? null : cat.id
-                      )
-                    }
-                    className={`flex-1 text-left px-3 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${
-                      activeCategoryId === cat.id
-                        ? "text-white"
-                        : "hover:bg-slate-100 text-slate-600"
-                    }`}
-                    style={
-                      activeCategoryId === cat.id
-                        ? { backgroundColor: cat.color }
-                        : {}
-                    }
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: cat.color }}
-                    />
-                    <span className="truncate">{cat.name}</span>
-                    <span className="ml-auto text-xs font-medium opacity-60">{count}</span>
-                  </button>
-                  <button
-                    onClick={() => openCatModal(cat)}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 transition-all"
-                  >
-                    <Edit2 className="h-3 w-3" />
-                  </button>
-                </div>
-              );
-            })}
-
-            {categories.length === 0 && (
-              <p className="text-xs text-slate-400 text-center py-3 px-2">
-                Sin categorías. Crea la primera.
-              </p>
-            )}
-          </div>
-        </div>
+  if (isLoading) {
+    return (
+      <div className="py-24 flex flex-col items-center justify-center space-y-3 text-slate-400">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+        <p className="font-semibold text-xs text-slate-500">
+          Cargando inventario de insumos...
+        </p>
       </div>
+    );
+  }
 
-      {/* ── Panel principal ── */}
-      <div className="lg:col-span-3 space-y-4">
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Buscar insumo..."
+  return (
+    <div className="space-y-6">
+      {/* Unified Modern Toolbar */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search box */}
+          <div className="relative flex-1 max-w-md group">
+            <Search
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-teal-600 transition-colors"
+              strokeWidth={2}
+            />
+            <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+              placeholder="Buscar insumo (ej: carne, queso, pan)..."
+              className="pl-9.5 pr-9 h-10 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-50 focus:bg-white text-sm transition-all focus-visible:ring-1 focus-visible:ring-teal-500/40"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
+
+          {/* Quick status filters & Action button */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0">
+            {/* Status pills */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setStockFilter("all")}
+                className={cn(
+                  "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                  stockFilter === "all"
+                    ? "bg-white text-slate-800 shadow-2xs"
+                    : "text-slate-500 hover:text-slate-800",
+                )}
+              >
+                Todos ({materials.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStockFilter("low")}
+                className={cn(
+                  "px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+                  stockFilter === "low"
+                    ? "bg-rose-500 text-white shadow-2xs"
+                    : "text-rose-600 hover:bg-rose-50",
+                )}
+              >
+                <AlertTriangle className="h-3 w-3" />
+                <span>Bajo Stock ({lowStockCount})</span>
+              </button>
+            </div>
+
+            <Button
+              onClick={() => openModal()}
+              className="h-10 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2.5} />
+              <span>Nuevo Insumo</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Category Filter Chips Bar */}
+        <div className="pt-2 border-t border-slate-100 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          <button
+            type="button"
+            onClick={() => setActiveCategoryId(null)}
+            className={cn(
+              "px-3.5 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer",
+              activeCategoryId === null
+                ? "bg-slate-900 text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200/70 hover:text-slate-900",
+            )}
+          >
+            Todas las categorías
+          </button>
+
+          {categories.map((cat) => {
+            const count = materials.filter((m) => m.category_id === cat.id).length;
+            const isSelected = activeCategoryId === cat.id;
+            return (
+              <div key={cat.id} className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveCategoryId(isSelected ? null : cat.id)
+                  }
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer",
+                    isSelected
+                      ? "text-white shadow-xs"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200/70",
+                  )}
+                  style={isSelected ? { backgroundColor: cat.color } : {}}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: isSelected ? "#fff" : cat.color }}
+                  />
+                  <span>{cat.name}</span>
+                  <span
+                    className={cn(
+                      "text-[10px] px-1.5 py-0.2 rounded-full",
+                      isSelected
+                        ? "bg-white/20 text-white"
+                        : "bg-slate-200 text-slate-600",
+                    )}
+                  >
+                    {count}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openCatModal(cat)}
+                  className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  title="Editar categoría"
+                >
+                  <Edit2 className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
 
           <button
-            onClick={() => openModal()}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all shadow-sm font-bold text-sm"
+            type="button"
+            onClick={() => openCatModal()}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-dashed border-slate-300 text-slate-500 hover:text-teal-600 hover:border-teal-500 hover:bg-teal-50/50 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
           >
-            <Plus className="h-4 w-4" />
-            Nuevo Insumo
+            <FolderPlus className="h-3.5 w-3.5" />
+            <span>Nueva Categoría</span>
           </button>
         </div>
+      </div>
 
-        {/* Breadcrumb if category active */}
-        {activeCategoryId && (
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-            <span
-              className="cursor-pointer hover:text-primary"
-              onClick={() => setActiveCategoryId(null)}
-            >
-              Todos
-            </span>
-            <ChevronRight className="h-3 w-3" />
-            <span
-              className="px-2 py-0.5 rounded-full text-white text-[10px]"
-              style={{
-                backgroundColor:
-                  categories.find((c) => c.id === activeCategoryId)?.color ??
-                  "#6366f1",
-              }}
-            >
-              {categories.find((c) => c.id === activeCategoryId)?.name}
-            </span>
-          </div>
-        )}
+      {/* Responsive View: Desktop Table + Mobile/Tablet Cards */}
 
-        {/* Table */}
-        <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50/50 border-b text-[10px] uppercase font-black tracking-wider text-slate-500">
-                <tr>
-                  <th className="px-6 py-4">Insumo</th>
-                  <th className="px-6 py-4">Categoría</th>
-                  <th className="px-6 py-4">Unidad</th>
-                  <th className="px-6 py-4 text-right">Mín.</th>
-                  <th className="px-6 py-4 text-right">Stock</th>
-                  <th className="px-6 py-4 text-center">Estado</th>
-                  <th className="px-6 py-4 text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {isLoading ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-8 text-center text-slate-400"
-                    >
-                      Cargando insumos...
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-8 text-center text-slate-400"
-                    >
-                      {activeCategoryId
-                        ? "No hay insumos en esta categoría."
-                        : "No se encontraron insumos."}
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-slate-50/50 transition-colors"
-                    >
-                      <td className="px-6 py-4 font-bold text-slate-700">
-                        {item.name}
-                      </td>
-                      <td className="px-6 py-4">
-                        {item.raw_material_categories ? (
-                          <CategoryBadge
-                            name={item.raw_material_categories.name}
-                            color={item.raw_material_categories.color}
-                          />
-                        ) : (
-                          <span className="text-xs text-slate-300">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-slate-500 uppercase text-xs font-bold">
-                        {item.unit}
-                      </td>
-                      <td className="px-6 py-4 text-right font-medium text-slate-600">
-                        {item.min_stock}
-                      </td>
-                      <td className="px-6 py-4 text-right font-black">
-                        <span
-                          className={
-                            item.current_stock <= item.min_stock
-                              ? "text-red-500"
-                              : "text-emerald-500"
-                          }
-                        >
-                          {item.current_stock}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {item.current_stock <= item.min_stock ? (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">
-                            <AlertTriangle className="h-3.5 w-3.5" />
-                            Stock Bajo
-                          </div>
-                        ) : (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">
-                            Normal
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => openModal(item)}
-                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  "¿Seguro que deseas eliminar este insumo?"
-                                )
-                              ) {
-                                deleteMutation.mutate(item.id);
-                              }
-                            }}
-                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+      {/* ── Mobile / Tablet Cards View (hidden on xl screens) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 xl:hidden">
+        {filtered.map((item) => {
+          const isLow = item.current_stock <= item.min_stock;
+          const ratio =
+            item.min_stock > 0
+              ? Math.min(Math.round((item.current_stock / item.min_stock) * 100), 200)
+              : 100;
+          return (
+            <div
+              key={item.id}
+              className={cn(
+                "bg-white rounded-2xl border p-4 transition-all duration-200 shadow-xs flex flex-col justify-between space-y-3",
+                isLow
+                  ? "border-rose-200 bg-rose-50/20"
+                  : "border-slate-200/80 hover:border-slate-300",
+              )}
+            >
+              <div className="space-y-1.5">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="font-bold text-slate-900 text-sm leading-snug">
+                    {item.name}
+                  </h4>
+                  {isLow ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 shrink-0">
+                      <AlertTriangle className="h-3 w-3" />
+                      Stock Bajo
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 shrink-0">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Normal
+                    </span>
+                  )}
+                </div>
+
+                {item.raw_material_categories && (
+                  <CategoryBadge
+                    name={item.raw_material_categories.name}
+                    color={item.raw_material_categories.color}
+                  />
                 )}
-              </tbody>
-            </table>
-          </div>
+              </div>
+
+              {/* Stock Numbers & Visual Meter */}
+              <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <div className="flex items-baseline justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Stock Actual:</span>
+                  <span
+                    className={cn(
+                      "font-bold text-base",
+                      isLow ? "text-rose-600" : "text-slate-900",
+                    )}
+                  >
+                    {item.current_stock} {item.unit}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>Mínimo requerido:</span>
+                  <span className="font-semibold text-slate-600">
+                    {item.min_stock} {item.unit}
+                  </span>
+                </div>
+
+                <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      isLow ? "bg-rose-500" : "bg-teal-500",
+                    )}
+                    style={{ width: `${Math.min(ratio, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Actions Footer */}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openModal(item)}
+                  className="flex-1 h-8 rounded-lg text-xs font-semibold text-slate-700 hover:text-teal-600 border-slate-200"
+                >
+                  <Edit2 className="h-3.5 w-3.5 mr-1" />
+                  <span>Editar</span>
+                </Button>
+
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => {
+                    if (window.confirm("¿Seguro que deseas eliminar este insumo?")) {
+                      deleteMutation.mutate(item.id);
+                    }
+                  }}
+                  className="h-8 w-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Desktop Table View (visible on xl+ screens) ── */}
+      <div className="hidden xl:block bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50/70 border-b border-slate-200/80 text-[11px] uppercase font-bold tracking-wider text-slate-500">
+              <tr>
+                <th className="px-6 py-3.5">Insumo</th>
+                <th className="px-6 py-3.5">Categoría</th>
+                <th className="px-6 py-3.5">Unidad Base</th>
+                <th className="px-6 py-3.5 text-right">Stock Mínimo</th>
+                <th className="px-6 py-3.5 text-right">Stock Actual</th>
+                <th className="px-6 py-3.5 text-center">Estado</th>
+                <th className="px-6 py-3.5 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((item) => {
+                const isLow = item.current_stock <= item.min_stock;
+                return (
+                  <tr
+                    key={item.id}
+                    className="hover:bg-slate-50/60 transition-colors group"
+                  >
+                    <td className="px-6 py-4 font-bold text-slate-900">
+                      {item.name}
+                    </td>
+                    <td className="px-6 py-4">
+                      {item.raw_material_categories ? (
+                        <CategoryBadge
+                          name={item.raw_material_categories.name}
+                          color={item.raw_material_categories.color}
+                        />
+                      ) : (
+                        <span className="text-xs text-slate-300 font-medium">
+                          Sin categoría
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-slate-500 font-semibold text-xs uppercase">
+                      {item.unit}
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium text-slate-500">
+                      {item.min_stock} {item.unit}
+                    </td>
+                    <td className="px-6 py-4 text-right font-bold">
+                      <span
+                        className={
+                          isLow
+                            ? "text-rose-600 font-black text-base"
+                            : "text-slate-900 text-base"
+                        }
+                      >
+                        {item.current_stock} {item.unit}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {isLow ? (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-bold shadow-2xs">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          <span>Stock Bajo</span>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-xs font-semibold">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span>Normal</span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openModal(item)}
+                          className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors cursor-pointer"
+                          title="Editar"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "¿Seguro que deseas eliminar este insumo?",
+                              )
+                            ) {
+                              deleteMutation.mutate(item.id);
+                            }
+                          }}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
+
+      {filtered.length === 0 && (
+        <div className="py-20 flex flex-col items-center justify-center space-y-4 bg-white rounded-3xl border border-dashed border-slate-200 p-8 text-center">
+          <div className="h-16 w-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
+            <Scale className="h-7 w-7" />
+          </div>
+          <div className="max-w-sm space-y-1">
+            <h3 className="font-bold text-slate-800 text-base">
+              No se encontraron insumos
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              {activeCategoryId
+                ? "No hay insumos asignados a la categoría seleccionada."
+                : "No hay materias primas que coincidan con la búsqueda o filtro."}
+            </p>
+          </div>
+          {(searchTerm || activeCategoryId || stockFilter !== "all") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchTerm("");
+                setActiveCategoryId(null);
+                setStockFilter("all");
+              }}
+              className="rounded-xl text-xs font-semibold cursor-pointer"
+            >
+              Restablecer filtros
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* ── Modal: Insumo ─────────────────────────────────────────────────── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b bg-slate-50 flex justify-between items-center">
-              <h3 className="font-black text-lg text-slate-800">
-                {editingItem ? "Editar Insumo" : "Nuevo Insumo"}
-              </h3>
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200/80 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4.5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                  <Scale className="h-5 w-5" />
+                </div>
+                <h3 className="font-bold text-base text-slate-900">
+                  {editingItem ? "Editar Insumo" : "Nuevo Insumo"}
+                </h3>
+              </div>
               <button
+                type="button"
                 onClick={closeModal}
-                className="text-slate-400 hover:text-slate-600"
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                ×
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  Nombre del Insumo
+                <label className="text-xs font-semibold text-slate-700">
+                  Nombre del Insumo *
                 </label>
-                <input
+                <Input
                   required
                   type="text"
                   value={formData.name}
                   onChange={(e) =>
                     setFormData((p) => ({ ...p, name: e.target.value }))
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="Ej: Carne de Res"
+                  className="h-11 rounded-xl border border-slate-200 text-sm font-medium"
+                  placeholder="Ej: Carne de Res Molida Premium"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">
+                <label className="text-xs font-semibold text-slate-700">
                   Categoría
                 </label>
                 <select
@@ -525,7 +701,7 @@ export function RawMaterialsTab() {
                   onChange={(e) =>
                     setFormData((p) => ({ ...p, category_id: e.target.value }))
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full h-11 px-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                 >
                   <option value="">Sin categoría</option>
                   {categories.map((c) => (
@@ -536,17 +712,17 @@ export function RawMaterialsTab() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3.5">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Unidad
+                  <label className="text-xs font-semibold text-slate-700">
+                    Unidad Base *
                   </label>
                   <select
                     value={formData.unit}
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, unit: e.target.value }))
                     }
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full h-11 px-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   >
                     {getBaseUnits().map((u) => (
                       <option key={u.id} value={u.id}>
@@ -557,10 +733,11 @@ export function RawMaterialsTab() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> Stock Mínimo
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3 text-slate-400" />
+                    <span>Stock Mínimo</span>
                   </label>
-                  <input
+                  <Input
                     type="number"
                     step="0.01"
                     value={formData.min_stock}
@@ -571,7 +748,7 @@ export function RawMaterialsTab() {
                       }))
                     }
                     onWheel={(e) => e.currentTarget.blur()}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="h-11 rounded-xl border border-slate-200 text-sm font-semibold"
                     placeholder="0"
                   />
                 </div>
@@ -579,10 +756,10 @@ export function RawMaterialsTab() {
 
               {!editingItem && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase">
+                  <label className="text-xs font-semibold text-slate-700">
                     Stock Inicial
                   </label>
-                  <input
+                  <Input
                     type="number"
                     step="0.01"
                     value={formData.current_stock}
@@ -593,32 +770,32 @@ export function RawMaterialsTab() {
                       }))
                     }
                     onWheel={(e) => e.currentTarget.blur()}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="h-11 rounded-xl border border-slate-200 text-sm font-semibold"
                     placeholder="0"
                   />
-                  <p className="text-[10px] text-slate-400 font-medium">
-                    Puedes empezar con stock en cero y registrar una compra luego.
+                  <p className="text-[11px] text-slate-400">
+                    Puedes iniciar con stock en cero y registrar compras
+                    después.
                   </p>
                 </div>
               )}
 
-              <div className="pt-4 flex gap-3">
-                <button
+              <div className="pt-3 flex gap-2.5">
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={closeModal}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-sm"
+                  className="flex-1 h-11 rounded-xl text-xs font-semibold border-slate-200 cursor-pointer"
                 >
                   Cancelar
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={
-                    createMutation.isPending || updateMutation.isPending
-                  }
-                  className="flex-1 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-colors text-sm disabled:opacity-50"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="flex-1 h-11 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs cursor-pointer"
                 >
-                  {editingItem ? "Actualizar" : "Crear Insumo"}
-                </button>
+                  {editingItem ? "Guardar Cambios" : "Crear Insumo"}
+                </Button>
               </div>
             </form>
           </div>
@@ -627,40 +804,41 @@ export function RawMaterialsTab() {
 
       {/* ── Modal: Categoría ──────────────────────────────────────────────── */}
       {isCatModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b bg-slate-50 flex justify-between items-center">
-              <h3 className="font-black text-lg text-slate-800">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-200/80 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <h3 className="font-bold text-base text-slate-900">
                 {editingCat ? "Editar Categoría" : "Nueva Categoría"}
               </h3>
               <button
+                type="button"
                 onClick={closeCatModal}
-                className="text-slate-400 hover:text-slate-600"
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                ×
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             <form onSubmit={handleCatSubmit} className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  Nombre
+                <label className="text-xs font-semibold text-slate-700">
+                  Nombre de Categoría *
                 </label>
-                <input
+                <Input
                   required
                   type="text"
                   value={catForm.name}
                   onChange={(e) =>
                     setCatForm((p) => ({ ...p, name: e.target.value }))
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="Ej: Bebidas, Salsas, Empaques..."
+                  className="h-11 rounded-xl border border-slate-200 text-sm font-medium"
+                  placeholder="Ej: Carnes, Salsas, Empaques..."
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  Color
+                <label className="text-xs font-semibold text-slate-700">
+                  Color Identificador
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {PRESET_COLORS.map((c) => (
@@ -668,68 +846,65 @@ export function RawMaterialsTab() {
                       key={c}
                       type="button"
                       onClick={() => setCatForm((p) => ({ ...p, color: c }))}
-                      className="w-8 h-8 rounded-full transition-transform hover:scale-110 ring-offset-2"
+                      className="w-7 h-7 rounded-full transition-transform hover:scale-110 cursor-pointer"
                       style={{
                         backgroundColor: c,
                         outline:
-                          catForm.color === c ? `3px solid ${c}` : "none",
+                          catForm.color === c ? `2.5px solid ${c}` : "none",
                         outlineOffset: "2px",
                       }}
                     />
                   ))}
                 </div>
-                <div className="flex items-center gap-3 mt-1">
-                  <div
-                    className="w-8 h-8 rounded-full shrink-0"
-                    style={{ backgroundColor: catForm.color }}
-                  />
-                  <input
-                    type="color"
-                    value={catForm.color}
-                    onChange={(e) =>
-                      setCatForm((p) => ({ ...p, color: e.target.value }))
-                    }
-                    className="w-full h-9 cursor-pointer rounded-lg border border-slate-200 bg-slate-50 px-1"
-                  />
-                </div>
               </div>
 
-              <div className="p-3 rounded-xl border bg-slate-50 flex items-center gap-3">
-                <CategoryBadge name={catForm.name || "Preview"} color={catForm.color} />
+              <div className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center gap-3">
+                <CategoryBadge
+                  name={catForm.name || "Ejemplo"}
+                  color={catForm.color}
+                />
                 <span className="text-xs text-slate-400">
-                  Así se verá la etiqueta
+                  Previsualización de etiqueta
                 </span>
               </div>
 
-              <div className="flex gap-3">
+              <div className="pt-2 flex gap-2">
                 {editingCat && (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
                     onClick={() => {
-                      if (window.confirm("¿Eliminar esta categoría? Los insumos quedarán sin categoría.")) {
+                      if (
+                        window.confirm(
+                          "¿Eliminar esta categoría? Los insumos quedarán sin categoría.",
+                        )
+                      ) {
                         deleteCatMutation.mutate(editingCat.id);
                         closeCatModal();
                       }
                     }}
-                    className="px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-colors text-sm"
+                    className="h-10 px-3 text-rose-600 hover:bg-rose-50 border-rose-200 cursor-pointer"
                   >
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={closeCatModal}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-sm"
+                  className="flex-1 h-10 rounded-xl text-xs font-semibold border-slate-200 cursor-pointer"
                 >
                   Cancelar
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={createCatMutation.isPending || updateCatMutation.isPending}
-                  className="flex-1 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-colors text-sm disabled:opacity-50"
+                  disabled={
+                    createCatMutation.isPending || updateCatMutation.isPending
+                  }
+                  className="flex-1 h-10 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs cursor-pointer"
                 >
                   {editingCat ? "Guardar" : "Crear"}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

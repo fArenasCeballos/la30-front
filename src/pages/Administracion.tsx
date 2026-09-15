@@ -5,19 +5,33 @@ import {
   FileText,
   Users,
   Search,
-  ChevronRight,
-  Settings,
   Boxes,
   Map,
   Bike,
   Smartphone,
+  Store as StoreIcon,
+  ChevronRight,
+  ArrowLeftRight,
+  Menu,
+  PanelLeftClose,
+  PanelLeft,
+  LayoutDashboard,
 } from "lucide-react";
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
+const PanelDeControl = lazy(() => import("@/components/admin/PanelDeControl"));
 const Inventario = lazy(() => import("./Inventario"));
 const Bodega = lazy(() => import("./Bodega"));
 const Reporteria = lazy(() => import("./Reporteria"));
@@ -27,68 +41,112 @@ const ZonasDomicilio = lazy(() => import("./ZonasDomicilio"));
 const DomiciliariosAdmin = lazy(() => import("./DomiciliariosAdmin"));
 const AppConfigAdmin = lazy(() => import("./AppConfigAdmin"));
 
-const TABS = [
+interface TabItem {
+  id: string;
+  label: string;
+  desc: string;
+  icon: React.ElementType;
+  component: ComponentType<{ onSelectTab?: (tabId: string) => void }>;
+}
+
+interface NavGroup {
+  title: string;
+  items: TabItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
   {
-    id: "inventario",
-    label: "Inventario",
-    icon: Package,
-    component: Inventario,
-    desc: "Gestionar productos, categorías y stock del sistema",
+    title: "Visión General",
+    items: [
+      {
+        id: "panel",
+        label: "Panel de Control",
+        desc: "Resumen ejecutivo y accesos directos",
+        icon: LayoutDashboard,
+        component: PanelDeControl,
+      },
+    ],
   },
   {
-    id: "bodega",
-    label: "Bodega",
-    icon: Boxes,
-    component: Bodega,
-    desc: "Materia prima, compras, stock real y recetas",
+    title: "Catálogo & Suministros",
+    items: [
+      {
+        id: "inventario",
+        label: "Inventario & Menú",
+        desc: "Productos, categorías y extras",
+        icon: Package,
+        component: Inventario,
+      },
+      {
+        id: "bodega",
+        label: "Bodega & Insumos",
+        desc: "Materia prima, compras y recetas",
+        icon: Boxes,
+        component: Bodega,
+      },
+    ],
   },
   {
-    id: "config-app",
-    label: "App Móvil",
-    icon: Smartphone,
-    component: AppConfigAdmin,
-    desc: "Configurar catálogo, combos, cupones y horarios de la App Móvil",
+    title: "Canales & Despacho",
+    items: [
+      {
+        id: "config-app",
+        label: "App Móvil",
+        desc: "Catálogo web, combos y horarios",
+        icon: Smartphone,
+        component: AppConfigAdmin,
+      },
+      {
+        id: "zonas-domicilio",
+        label: "Zonas de Domicilio",
+        desc: "Tarifas y polígonos de reparto",
+        icon: Map,
+        component: ZonasDomicilio,
+      },
+      {
+        id: "domiciliarios",
+        label: "Domiciliarios",
+        desc: "Flota de reparto y entregas",
+        icon: Bike,
+        component: DomiciliariosAdmin,
+      },
+    ],
   },
   {
-    id: "reportes",
-    label: "Reportes",
-    icon: FileText,
-    component: Reporteria,
-    desc: "Visualizar ventas, analíticas y auditorías del turno",
+    title: "Auditoría & Análisis",
+    items: [
+      {
+        id: "reportes",
+        label: "Reportes & KPIs",
+        desc: "Ventas, turnos y métricas clave",
+        icon: FileText,
+        component: Reporteria,
+      },
+      {
+        id: "consultas",
+        label: "Consultas de Órdenes",
+        desc: "Búsqueda avanzada y reimpresión",
+        icon: Search,
+        component: Consultas,
+      },
+    ],
   },
   {
-    id: "usuarios",
-    label: "Usuarios",
-    icon: Users,
-    component: Usuarios,
-    desc: "Administrar perfiles de personal, meseros y accesos",
-  },
-  {
-    id: "consultas",
-    label: "Consultas",
-    icon: Search,
-    component: Consultas,
-    desc: "Búsqueda quirúrgica y control detallado de órdenes del día",
-  },
-  {
-    id: "zonas-domicilio",
-    label: "Zonas Domicilio",
-    icon: Map,
-    component: ZonasDomicilio,
-    desc: "Configurar zonas geográficas y precios de domicilio en el mapa",
-  },
-  {
-    id: "domiciliarios",
-    label: "Domiciliarios",
-    icon: Bike,
-    component: DomiciliariosAdmin,
-    desc: "Gestionar repartidores, motocicletas e historial de entregas",
+    title: "Control de Acceso",
+    items: [
+      {
+        id: "usuarios",
+        label: "Usuarios & Roles",
+        desc: "Personal, perfiles y permisos",
+        icon: Users,
+        component: Usuarios,
+      },
+    ],
   },
 ];
 
-
 const TabLoading = () => (
-  <div className="p-8 space-y-6 animate-pulse max-w-5xl mx-auto">
+  <div className="p-6 sm:p-8 space-y-6 animate-pulse max-w-5xl mx-auto">
     <div className="space-y-2">
       <Skeleton className="h-8 w-1/4 rounded-xl" />
       <Skeleton className="h-4 w-1/3 rounded-xl" />
@@ -106,7 +164,20 @@ export default function Administracion() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const currentTab = searchParams.get("tab");
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Persistent sidebar collapsed state on desktop/iPad landscape
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    return localStorage.getItem("la30_admin_sidebar_collapsed") === "true";
+  });
+
+  const toggleSidebar = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("la30_admin_sidebar_collapsed", String(next));
+      return next;
+    });
+  };
 
   // Role Guard
   useEffect(() => {
@@ -117,13 +188,28 @@ export default function Administracion() {
         mesero: "/kiosko",
       };
       navigate(defaultPaths[user.role] || "/", { replace: true });
-    } else if (user && user.role === "bodega" && currentTab !== "bodega") {
-      navigate("/administracion?tab=bodega", { replace: true });
     }
-  }, [user, navigate, currentTab]);
+  }, [user, navigate]);
 
-  const visibleTabs = user?.role === "bodega" ? TABS.filter((t) => t.id === "bodega") : TABS;
-  const activeTab = visibleTabs.find((t) => t.id === currentTab);
+  // Flatten all items
+  const allTabs = useMemo(() => NAV_GROUPS.flatMap((g) => g.items), []);
+
+  // Filter for bodega role if applicable
+  const availableGroups = useMemo(() => {
+    if (user?.role === "bodega") {
+      return [
+        {
+          title: "Suministros",
+          items: allTabs.filter((t) => t.id === "bodega"),
+        },
+      ];
+    }
+    return NAV_GROUPS;
+  }, [user?.role, allTabs]);
+
+  const defaultTab = user?.role === "bodega" ? "bodega" : "panel";
+  const currentTabId = searchParams.get("tab") || defaultTab;
+  const activeTab = allTabs.find((t) => t.id === currentTabId) || allTabs[0];
 
   const handleTabChange = (tabId: string) => {
     setSearchParams({ tab: tabId });
@@ -131,54 +217,151 @@ export default function Administracion() {
 
   if (user?.role !== "admin" && user?.role !== "bodega") return null;
 
+  const ActiveComponent = activeTab.component;
+
   return (
-    <div className="min-h-screen bg-slate-50/30">
-      {/* Sub-header navigation for Administracion */}
-      <div className="bg-white border-b sticky top-14 lg:top-16 2xl:top-20 z-40 px-4 lg:px-6 2xl:px-10 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-soft no-print">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-            <Settings className="h-5 w-5 animate-spin-slow" />
+    <div className="min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)] 2xl:min-h-[calc(100vh-5rem)] flex flex-col lg:flex-row bg-[#F8FAFC]">
+      {/* Mobile & iPad Portrait (< lg) Navigation Header */}
+      <div className="lg:hidden bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-14 z-30 px-3.5 py-2.5 flex flex-col gap-2.5 shadow-2xs">
+        <div className="flex items-center justify-between gap-3">
+          {/* Drawer trigger button */}
+          <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+            <SheetTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-teal-600 text-white font-bold text-xs shadow-xs hover:bg-teal-700 active:scale-95 transition-all cursor-pointer"
+                title="Abrir menú de módulos"
+              >
+                <Menu className="size-4" />
+                <span>Módulos</span>
+              </button>
+            </SheetTrigger>
+
+            <SheetContent
+              side="left"
+              className="w-[85vw] max-w-xs sm:max-w-sm p-0 flex flex-col justify-between bg-white"
+            >
+              <SheetHeader className="p-4 border-b border-slate-100 text-left bg-slate-50/50">
+                <SheetTitle className="text-xs font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-teal-500 animate-pulse" />
+                  Centro de Control La 30
+                </SheetTitle>
+                <SheetDescription className="sr-only">
+                  Menú de navegación para los módulos administrativos y de configuración de La 30 POS.
+                </SheetDescription>
+              </SheetHeader>
+
+              {/* Scrollable menu content inside Sheet */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-4">
+                {availableGroups.map((group) => (
+                  <div key={group.title} className="space-y-1">
+                    <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-2.5 mb-1">
+                      {group.title}
+                    </h4>
+                    <div className="space-y-0.5">
+                      {group.items.map((item) => {
+                        const isActive = item.id === activeTab.id;
+                        const Icon = item.icon;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              handleTabChange(item.id);
+                              setIsDrawerOpen(false);
+                            }}
+                            className={cn(
+                              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer",
+                              isActive
+                                ? "bg-teal-600 text-white shadow-md shadow-teal-600/20 font-bold"
+                                : "text-slate-700 hover:bg-slate-100/80 active:bg-slate-200"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "size-8 rounded-lg flex items-center justify-center shrink-0",
+                                isActive
+                                  ? "bg-white/20 text-white"
+                                  : "bg-slate-100 text-slate-600"
+                              )}
+                            >
+                              <Icon className="size-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold leading-tight truncate">
+                                {item.label}
+                              </p>
+                              <p
+                                className={cn(
+                                  "text-[10px] leading-tight truncate mt-0.5",
+                                  isActive ? "text-teal-100" : "text-slate-400"
+                                )}
+                              >
+                                {item.desc}
+                              </p>
+                            </div>
+                            {isActive && (
+                              <ChevronRight className="size-4 text-white/80 shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="p-3 border-t border-slate-100 space-y-2 bg-slate-50/50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDrawerOpen(false);
+                    navigate("/select-store");
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <StoreIcon className="size-4 text-teal-600" />
+                    <span>Puntos de Venta</span>
+                  </div>
+                  <ArrowLeftRight className="size-3 text-slate-400" />
+                </button>
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          {/* Active module name indicator on mobile */}
+          <div className="flex items-center gap-2 min-w-0 flex-1 justify-center sm:justify-start">
+            <activeTab.icon className="size-4 text-teal-600 shrink-0" />
+            <span className="text-xs font-black uppercase tracking-tight text-slate-900 truncate">
+              {activeTab.label}
+            </span>
           </div>
-          <div>
-            <h1 className="text-sm font-black uppercase tracking-widest text-primary leading-none mb-1">
-              Administración
-            </h1>
-            <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-              Configuración y Control
-            </p>
+
+          <div className="flex items-center gap-2">
+            <SiigoProductsModal />
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full py-1 premium-scrollbar">
-          <SiigoProductsModal />
-          {user?.role === "admin" && (
-            <button
-              onClick={() => setSearchParams({})}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
-                !currentTab
-                  ? "bg-primary text-white shadow-md shadow-primary/20"
-                  : "text-muted-foreground/60 hover:bg-accent/40 hover:text-primary",
-              )}
-            >
-              Panel General
-            </button>
-          )}
-          {visibleTabs.map((tab) => {
+        {/* Quick horizontal swipeable pills for 1-tap fast switching on touch */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+          {availableGroups.flatMap((g) => g.items).map((tab) => {
+            const isActive = tab.id === activeTab.id;
             const Icon = tab.icon;
-            const isActive = currentTab === tab.id;
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => handleTabChange(tab.id)}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0",
                   isActive
-                    ? "bg-primary text-white shadow-md shadow-primary/20"
-                    : "text-muted-foreground/60 hover:bg-accent/40 hover:text-primary",
+                    ? "bg-teal-600 text-white shadow-xs"
+                    : "bg-slate-100/90 text-slate-600 hover:bg-slate-200/80 active:scale-95"
                 )}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="size-3.5" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -186,56 +369,179 @@ export default function Administracion() {
         </div>
       </div>
 
-      {/* Main Content Area */}
-      {!activeTab ? (
-        <div className="section-container max-w-5xl mx-auto py-12 lg:py-20 px-4 animate-in fade-in duration-500">
-          <div className="text-center max-w-xl mx-auto mb-12 lg:mb-16">
-            <h2 className="text-3xl font-black tracking-tight text-primary uppercase">
-              Centro de Control
-            </h2>
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mt-2">
-              Gestión de Parámetros de La 30
-            </p>
+      {/* Desktop & iPad Landscape Sidebar (lg:) with Collapsible Mode */}
+      <aside
+        className={cn(
+          "hidden lg:flex bg-white border-r border-slate-200/80 shrink-0 flex-col justify-between py-4 transition-all duration-300 sticky top-14 lg:top-16 2xl:top-20 h-[calc(100vh-3.5rem)] lg:h-[calc(100vh-4rem)] 2xl:h-[calc(100vh-5rem)] shadow-2xs select-none",
+          isCollapsed ? "w-20 px-2" : "w-64 xl:w-72 px-3"
+        )}
+      >
+        <div className="space-y-4 overflow-y-auto premium-scrollbar pr-0.5">
+          {/* Header of Sidebar with Collapse/Expand button */}
+          <div className="flex items-center justify-between px-2 pt-1">
+            {!isCollapsed && (
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Módulos Globales
+                </span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className={cn(
+                "p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer",
+                isCollapsed && "mx-auto"
+              )}
+              title={isCollapsed ? "Expandir menú lateral" : "Colapsar menú lateral"}
+            >
+              {isCollapsed ? (
+                <PanelLeft className="size-4.5 text-teal-600" />
+              ) : (
+                <PanelLeftClose className="size-4" />
+              )}
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {visibleTabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <div
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className="pos-card p-8 cursor-pointer hover:border-primary/30 hover:shadow-xl transition-all group flex items-start gap-6 relative overflow-hidden bg-white border-2 rounded-3xl"
-                >
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-linear-to-bl from-primary/5 to-transparent rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform duration-300" />
-
-                  <div className="w-14 h-14 rounded-2xl bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shrink-0 shadow-inner">
-                    <Icon className="h-6 w-6" />
-                  </div>
-
-                  <div className="space-y-2 flex-1">
-                    <h3 className="text-lg font-black uppercase tracking-wider text-primary flex items-center gap-2">
-                      {tab.label}
-                      <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                    </h3>
-                    <p className="text-xs font-semibold text-muted-foreground/80 leading-relaxed">
-                      {tab.desc}
-                    </p>
-                  </div>
+          {/* Navigation Groups */}
+          <nav className="space-y-4">
+            {availableGroups.map((group) => (
+              <div key={group.title} className="space-y-1">
+                {!isCollapsed && (
+                  <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-400/90 px-2.5 mb-1.5 truncate">
+                    {group.title}
+                  </h3>
+                )}
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const isActive = item.id === activeTab.id;
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleTabChange(item.id)}
+                        title={item.label + " — " + item.desc}
+                        className={cn(
+                          "w-full flex items-center rounded-xl text-left transition-all duration-200 group cursor-pointer relative",
+                          isCollapsed
+                            ? "justify-center p-2.5"
+                            : "gap-3 px-3 py-2",
+                          isActive
+                            ? "bg-teal-600 text-white shadow-md shadow-teal-600/20"
+                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "size-8 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105",
+                            isActive
+                              ? "bg-white/20 text-white"
+                              : "bg-slate-100 text-slate-500 group-hover:bg-slate-200/80 group-hover:text-teal-700"
+                          )}
+                        >
+                          <Icon className="size-4" />
+                        </div>
+                        {!isCollapsed && (
+                          <>
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={cn(
+                                  "text-xs font-bold truncate leading-tight",
+                                  isActive ? "text-white" : "text-slate-800"
+                                )}
+                              >
+                                {item.label}
+                              </p>
+                              <p
+                                className={cn(
+                                  "text-[10px] truncate leading-tight mt-0.5",
+                                  isActive ? "text-teal-100" : "text-slate-400"
+                                )}
+                              >
+                                {item.desc}
+                              </p>
+                            </div>
+                            {isActive && (
+                              <ChevronRight className="size-3.5 text-white/80 shrink-0" />
+                            )}
+                          </>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            ))}
+          </nav>
+        </div>
+
+        {/* Footer of Sidebar */}
+        <div className="pt-3 border-t border-slate-100 space-y-2">
+          <button
+            type="button"
+            onClick={() => navigate("/select-store")}
+            title="Volver a la selección de puntos de venta"
+            className={cn(
+              "w-full flex items-center rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-slate-700 hover:text-slate-900 text-xs font-bold transition-all group cursor-pointer shadow-2xs",
+              isCollapsed ? "justify-center p-2.5" : "justify-between px-3 py-2"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <StoreIcon className="size-4 text-teal-600 group-hover:scale-110 transition-transform shrink-0" />
+              {!isCollapsed && <span>Puntos de Venta</span>}
+            </div>
+            {!isCollapsed && (
+              <ArrowLeftRight className="size-3 text-slate-400 group-hover:text-teal-600 transition-colors" />
+            )}
+          </button>
+
+          {!isCollapsed && (
+            <div className="flex items-center justify-between px-2 text-[10px] text-slate-400 font-medium">
+              <span>La 30 Back-Office</span>
+              <span className="font-bold text-slate-500">v2.1.33</span>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* Main Content Workspace */}
+      <main className="flex-1 min-w-0 flex flex-col">
+        {/* Subtle Module Header Bar (Visible on desktop & tablets) */}
+        <div className="hidden sm:flex bg-white/80 backdrop-blur-md border-b border-slate-200/60 px-4 lg:px-8 py-3 items-center justify-between shadow-2xs no-print">
+          <div className="flex items-center gap-3">
+            <div className="size-9 rounded-xl bg-teal-50 border border-teal-200/60 text-teal-700 flex items-center justify-center shadow-inner shrink-0">
+              <activeTab.icon className="size-4.5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm lg:text-base font-black uppercase tracking-tight text-slate-900 leading-none">
+                  {activeTab.label}
+                </h1>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600 uppercase">
+                  {activeTab.id === "panel" ? "Principal" : "Módulo Activo"}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium leading-none mt-1">
+                {activeTab.desc}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <SiigoProductsModal />
           </div>
         </div>
-      ) : (
-        <div className="animate-in fade-in duration-300">
+
+        {/* Dynamic Component Canvas */}
+        <div className="flex-1">
           <ErrorBoundary>
             <Suspense fallback={<TabLoading />}>
-              <activeTab.component />
+              <ActiveComponent onSelectTab={handleTabChange} />
             </Suspense>
           </ErrorBoundary>
         </div>
-      )}
+      </main>
     </div>
   );
 }
