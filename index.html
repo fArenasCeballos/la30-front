@@ -9,9 +9,90 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="La 30" />
     <title>La 30 Perros y Hamburguesas</title>
+    <script>
+      // 1. Manejo de chunks dinámicos desactualizados tras un nuevo despliegue
+      window.addEventListener('vite:preloadError', function (event) {
+        event.preventDefault();
+        var lastReload = Number(sessionStorage.getItem('pwa_preload_reload') || '0');
+        var now = Date.now();
+        if (now - lastReload > 4000) {
+          sessionStorage.setItem('pwa_preload_reload', String(now));
+          window.location.reload();
+        }
+      });
+
+      // 2. Recarga automática cuando el Service Worker instala una nueva versión (autoUpdate)
+      if ('serviceWorker' in navigator) {
+        var refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Pantalla de recuperación y actualización en caso de caché obsoleta en PWA móvil -->
+    <div id="pwa-recovery" style="display:none;position:fixed;inset:0;background:#ffffff;z-index:99999;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:system-ui,-apple-system,sans-serif;text-align:center;">
+      <div style="width:64px;height:64px;border-radius:20px;background:#f0fdf4;border:1px solid #bbf7d0;display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+        <span style="font-size:28px;">⚡</span>
+      </div>
+      <h2 style="font-size:20px;font-weight:900;color:#0f172a;margin:0 0 8px 0;letter-spacing:-0.02em;">Actualización Disponible</h2>
+      <p style="font-size:13px;color:#64748b;max-width:280px;margin:0 0 20px 0;line-height:1.4;">
+        Se ha desplegado una nueva versión del sistema. Presiona el botón para actualizar la aplicación.
+      </p>
+      <button id="pwa-force-update-btn" style="background:#0d9488;color:#ffffff;border:none;padding:12px 28px;border-radius:14px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(13,148,136,0.3);">
+        Actualizar ahora
+      </button>
+    </div>
+
+    <script>
+      (function() {
+        var btn = document.getElementById('pwa-force-update-btn');
+        function clearAndReload() {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              for (var i = 0; i < regs.length; i++) {
+                regs[i].unregister();
+              }
+            });
+          }
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (var i = 0; i < names.length; i++) {
+                caches.delete(names[i]);
+              }
+            });
+          }
+          setTimeout(function() {
+            window.location.reload();
+          }, 300);
+        }
+        if (btn) btn.addEventListener('click', clearAndReload);
+
+        // Si después de 3.5s #root sigue vacío (pantalla en blanco), mostrar botón de actualización
+        setTimeout(function() {
+          var root = document.getElementById('root');
+          var recovery = document.getElementById('pwa-recovery');
+          if (root && root.children.length === 0 && recovery) {
+            recovery.style.display = 'flex';
+          }
+        }, 3500);
+
+        // Si ocurre un error fatal global antes de montar React
+        window.addEventListener('error', function() {
+          var root = document.getElementById('root');
+          var recovery = document.getElementById('pwa-recovery');
+          if (root && root.children.length === 0 && recovery) {
+            recovery.style.display = 'flex';
+          }
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

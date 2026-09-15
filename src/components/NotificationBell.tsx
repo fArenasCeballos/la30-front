@@ -39,6 +39,25 @@ function formatNotifTime(dateStr: string | undefined | null): string {
   });
 }
 
+function extractTitleEmoji(title?: string | null): string | undefined {
+  if (!title) return undefined;
+  try {
+    const match = title.match(/[\p{Extended_Pictographic}]/u);
+    return match ? match[0] : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function sanitizeNotificationTitle(title?: string | null): string {
+  if (!title) return "";
+  try {
+    return title.replace(/[\p{Extended_Pictographic}\s]+$/u, "").trim();
+  } catch {
+    return title.trim();
+  }
+}
+
 export interface NotificationBellProps {
   ecosystem?: "restaurant" | "kiosk";
 }
@@ -58,7 +77,7 @@ export function NotificationBell({
   }, [notifications, filter]);
 
   const renderIcon = (n: Notification) => {
-    const titleEmoji = n.title?.match(/[\p{Emoji}]/u)?.[0];
+    const titleEmoji = extractTitleEmoji(n.title);
 
     if (n.type === "warning") {
       return (
@@ -232,9 +251,7 @@ export function NotificationBell({
           ) : (
             displayedNotifications.map((n) => {
               const isUnread = !n.read;
-              const cleanTitle = n.title
-                ? n.title.replace(/[\p{Emoji}\s]+$/u, "").trim()
-                : "";
+              const cleanTitle = sanitizeNotificationTitle(n.title);
 
               return (
                 <div

@@ -49,13 +49,14 @@ const queryClient = new QueryClient({
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster position="top-right" richColors closeButton />
-      <AuthProvider>
-        <StoreProvider>
-          <NotificationProvider>
-            <OrderProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster position="top-right" richColors closeButton />
+        <AuthProvider>
+          <StoreProvider>
+            <NotificationProvider>
+              <OrderProvider>
               <BrowserRouter>
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoading />}>
@@ -142,9 +143,10 @@ const App = () => (
             </OrderProvider>
           </NotificationProvider>
         </StoreProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
