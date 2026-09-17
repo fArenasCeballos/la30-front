@@ -135,63 +135,71 @@ BEGIN
       updated_at = now()
   WHERE id = p_order_id;
 
-  -- 7. Registrar en bitácora de auditoría
-  INSERT INTO public.order_status_logs (
-    order_id,
-    previous_status,
-    new_status,
-    changed_by,
-    changed_by_name,
-    changed_by_role,
-    reason,
-    store_id,
-    company_id,
-    created_at
-  ) VALUES (
-    p_order_id,
-    v_order.status,
-    p_status,
-    auth.uid(),
-    COALESCE(v_user_name, 'Usuario'),
-    v_user_role,
-    NULLIF(trim(p_reason), ''),
-    v_store_id,
-    v_company_id,
-    now()
-  )
-  RETURNING id INTO v_log_id;
+  -- 7. Registrar en bitácora de auditoría (protegido contra fallos no críticos)
+  BEGIN
+    INSERT INTO public.order_status_logs (
+      order_id,
+      previous_status,
+      new_status,
+      changed_by,
+      changed_by_name,
+      changed_by_role,
+      reason,
+      store_id,
+      company_id,
+      created_at
+    ) VALUES (
+      p_order_id,
+      v_order.status,
+      p_status,
+      auth.uid(),
+      COALESCE(v_user_name, 'Usuario'),
+      v_user_role,
+      NULLIF(trim(p_reason), ''),
+      v_store_id,
+      v_company_id,
+      now()
+    )
+    RETURNING id INTO v_log_id;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'No se pudo registrar en order_status_logs: %', SQLERRM;
+  END;
 
   -- 8. Notificar a los administradores en tiempo real si el cambio lo hizo un cajero
   IF v_user_role = 'caja' THEN
-    FOR v_admin_record IN
-      SELECT p.id AS admin_id
-      FROM profiles p
-      WHERE p.role = 'admin'
-        AND p.is_active = TRUE
-        AND (
-          v_company_id IS NULL
-          OR p.company_ids IS NULL
-          OR (p.company_ids IS NOT NULL AND p.company_ids @> ARRAY[v_company_id])
-        )
-    LOOP
-      INSERT INTO notifications (
-        user_id,
-        company_id,
-        title,
-        message,
-        type,
-        is_read,
-        created_at
-      ) VALUES (
-        v_admin_record.admin_id,
-        v_company_id,
-        'Cambio de Estado por Cajero' || COALESCE(' [' || v_store_name || ']', ''),
-        'El cajero ' || COALESCE(v_user_name, 'Caja') || ' cambió la orden #' || COALESCE(v_order.locator, substring(p_order_id::text, 1, 6)) || ' de "' || v_order.status || '" a "' || p_status || '".' || CASE WHEN p_reason IS NOT NULL AND trim(p_reason) != '' THEN ' Motivo: ' || trim(p_reason) ELSE '' END,
-        'warning',
-        FALSE,
-        now()
-      );
-    END LOOP;
+    BEGIN
+      FOR v_admin_record IN
+        SELECT p.id AS admin_id
+        FROM profiles p
+        WHERE p.role = 'admin'
+          AND p.is_active = TRUE
+          AND (
+            v_company_id IS NULL
+            OR p.company_ids IS NULL
+            OR (p.company_ids IS NOT NULL AND p.company_ids @> ARRAY[v_company_id])
+          )
+      LOOP
+        INSERT INTO notifications (
+          user_id,
+          company_id,
+          title,
+          message,
+          type,
+          is_read,
+          created_at
+        ) VALUES (
+          v_admin_record.admin_id,
+          v_company_id,
+          'Cambio de Estado por Cajero' || COALESCE(' [' || v_store_name || ']', ''),
+          'El cajero ' || COALESCE(v_user_name, 'Caja') || ' cambió la orden #' || COALESCE(v_order.locator, substring(p_order_id::text, 1, 6)) || ' de "' || v_order.status::text || '" a "' || p_status::text || '".' || CASE WHEN p_reason IS NOT NULL AND trim(p_reason) != '' THEN ' Motivo: ' || trim(p_reason) ELSE '' END,
+          'warning',
+          FALSE,
+          now()
+        );
+      END LOOP;
+    EXCEPTION WHEN OTHERS THEN
+      RAISE WARNING 'No se pudo enviar notificación de cambio de estado: %', SQLERRM;
+    END;
   END IF;
 
   RETURN jsonb_build_object(

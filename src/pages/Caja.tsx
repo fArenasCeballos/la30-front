@@ -568,10 +568,12 @@ export default function Caja() {
                             className="w-full rounded-xl h-10 font-bold text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                             onClick={async () => {
                               try {
-                                await supabase.rpc("update_order_status", {
-                                  p_order_id: order.id,
-                                  p_status: "en_preparacion",
-                                });
+                                const ok = await updateOrderStatus(
+                                  order.id,
+                                  "en_preparacion",
+                                );
+                                if (!ok) return;
+
                                 deductStockFromOrder(order.id).catch(
                                   console.warn,
                                 );

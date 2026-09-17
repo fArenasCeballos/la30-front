@@ -1107,10 +1107,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
       if (targetStatus) {
-        await supabase.rpc("update_order_status", {
-          p_order_id: orderId,
-          p_status: targetStatus,
-        });
+        await updateOrderStatus(orderId, targetStatus);
 
         // Fire-and-forget: deducir stock de materia prima vía recetas
         // No bloquea el flujo de pago — errores se logean silenciosamente
