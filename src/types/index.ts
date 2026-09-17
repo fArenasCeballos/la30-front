@@ -206,3 +206,26 @@ export type {
   InternalConsumptionPayment,
   MonthlyAccountStatement,
 } from "./internalConsumption.types";
+
+export type OrderStatusLogRow = Tables<"order_status_logs">;
+
+export interface OrderStatusLog extends OrderStatusLogRow {
+  orders?: {
+    id?: string | null;
+    locator: string | null;
+    ticket_number: number | null;
+    total: number | null;
+    is_delivery?: boolean | null;
+  } | null;
+  profiles?: {
+    name: string | null;
+    role: UserRole | null;
+  } | null;
+  stores?: {
+    id?: string | null;
+    name: string | null;
+    slug?: string | null;
+    icon?: string | null;
+  } | null;
+}
+

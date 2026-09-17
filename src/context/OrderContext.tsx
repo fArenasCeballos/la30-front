@@ -58,7 +58,11 @@ export interface OrderContextType {
       driver_id?: string;
     },
   ) => Promise<void>;
-  updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
+  updateOrderStatus: (
+    orderId: string,
+    status: OrderStatus,
+    reason?: string,
+  ) => Promise<void>;
   dispatchOrder: (orderId: string) => Promise<void>;
   toggleOrderItem: (itemId: string, completed: boolean) => Promise<void>;
   processPayment: (
@@ -913,7 +917,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateOrderStatus = useCallback(
-    async (orderId: string, status: OrderStatus) => {
+    async (orderId: string, status: OrderStatus, reason?: string) => {
       const previousOrders = queryClient.getQueryData([
         "orders",
         user?.id,
@@ -937,6 +941,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.rpc("update_order_status", {
         p_order_id: orderId,
         p_status: status as string,
+        p_reason: reason?.trim() || null,
       });
 
       if (error) {

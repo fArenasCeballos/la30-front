@@ -28,6 +28,7 @@ import {
   Printer,
   Edit,
   Plus,
+  Search,
   History,
   RotateCcw,
   XCircle,
@@ -417,15 +418,28 @@ export default function Caja() {
               </TabsList>
             </div>
 
-            <Button
-              size="sm"
-              className="rounded-xl sm:rounded-2xl h-10 sm:h-11 px-3 sm:px-4.5 bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase tracking-wider shadow-md shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
-              onClick={() => navigate("/kiosko")}
-            >
-              <Plus className="size-4 group-hover:rotate-90 transition-transform duration-200" />
-              <span className="hidden sm:inline">NUEVA VENTA</span>
-              <span className="sm:hidden text-[11px]">VENTA</span>
-            </Button>
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl sm:rounded-2xl h-10 sm:h-11 px-2.5 sm:px-3.5 border-slate-200/90 hover:bg-slate-50 text-slate-700 font-bold text-xs uppercase tracking-wider shrink-0 cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                onClick={() => navigate("/consultas")}
+                title="Búsqueda avanzada y consulta de pedidos"
+              >
+                <Search className="size-4 text-primary" />
+                <span className="hidden md:inline">CONSULTAS</span>
+              </Button>
+
+              <Button
+                size="sm"
+                className="rounded-xl sm:rounded-2xl h-10 sm:h-11 px-3 sm:px-4.5 bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase tracking-wider shadow-md shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                onClick={() => navigate("/kiosko")}
+              >
+                <Plus className="size-4 group-hover:rotate-90 transition-transform duration-200" />
+                <span className="hidden sm:inline">NUEVA VENTA</span>
+                <span className="sm:hidden text-[11px]">VENTA</span>
+              </Button>
+            </div>
           </div>
 
           {/* TAB 1: PENDIENTES */}

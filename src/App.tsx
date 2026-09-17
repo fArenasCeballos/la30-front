@@ -21,6 +21,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MisPedidos = lazy(() => import("./pages/MisPedidos"));
 const Domicilios = lazy(() => import("./pages/Domicilios"));
 const Administracion = lazy(() => import("./pages/Administracion"));
+const Consultas = lazy(() => import("./pages/Consultas"));
 const ConsumoInterno = lazy(() => import("./pages/ConsumoInterno"));
 const StoreSelector = lazy(() => import("./pages/StoreSelector"));
 const CompanySelector = lazy(() => import("./pages/CompanySelector"));
@@ -131,12 +132,7 @@ const App = () => (
                         />
                         <Route
                           path="/consultas"
-                          element={
-                            <Navigate
-                              to="/administracion?tab=consultas"
-                              replace
-                            />
-                          }
+                          element={<Consultas />}
                         />
                       </Route>
                       <Route path="*" element={<NotFound />} />

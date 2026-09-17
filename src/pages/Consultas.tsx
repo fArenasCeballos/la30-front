@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
 import { useOrders } from "@/context/OrderContext";
@@ -7,6 +8,15 @@ import { formatPrice } from "@/lib/formatPrice";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Search,
   Trash2,
@@ -27,10 +37,18 @@ import {
   ShoppingCart,
   CheckCircle,
   AlertTriangle,
+  ShieldCheck,
+  History,
+  Eye,
+  CheckCircle2,
+  AlertOctagon,
+  UserCheck,
+  Building2,
+  Loader2,
 } from "lucide-react";
 import { getOptimizedImageUrl } from "@/lib/imageUtils";
 import { toast } from "sonner";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import type {
   Order,
@@ -39,16 +57,13 @@ import type {
   ProductWithCategory,
   InternalConsumptionWithItems,
   InternalPaymentStatus,
+  OrderStatusLog,
 } from "@/types";
+import { getCurrentShiftDate, getCalendarShiftRange } from "@/lib/shiftUtils";
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
-import {
-  buildCustomerReceiptHTML,
-  silentPrint,
-} from "@/lib/receiptUtils";
-import {
-  buildInternalConsumptionReceiptHTML,
-} from "@/lib/internalReceiptUtils";
+import { buildCustomerReceiptHTML, silentPrint } from "@/lib/receiptUtils";
+import { buildInternalConsumptionReceiptHTML } from "@/lib/internalReceiptUtils";
 import {
   deleteConsumption,
   updateConsumptionPaymentStatus,
@@ -124,9 +139,12 @@ export default function Consultas() {
   const { user } = useAuth();
   const { stores, activeStore } = useStore();
   const { updateOrderStatus, refreshOrders } = useOrders();
+  const queryClient = useQueryClient();
 
   // ─── Tab State ─────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<"orders" | "consumptions">("orders");
+  const [activeTab, setActiveTab] = useState<
+    "orders" | "consumptions" | "audit"
+  >("orders");
 
   // ─── Orders State ──────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
@@ -135,21 +153,135 @@ export default function Consultas() {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
+  // ─── Status Change Modal State ─────────────────────────────────────────────
+  const [statusModal, setStatusModal] = useState<{
+    order: Order;
+    targetStatus: OrderStatus;
+  } | null>(null);
+  const [statusReason, setStatusReason] = useState("");
+  const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
+
   // ─── Consumption State ─────────────────────────────────────────────────────
   const [cSearchQuery, setCSearchQuery] = useState("");
-  const [foundConsumptions, setFoundConsumptions] = useState<InternalConsumptionWithItems[]>([]);
+  const [foundConsumptions, setFoundConsumptions] = useState<
+    InternalConsumptionWithItems[]
+  >([]);
   const [isCSearching, setIsCSearching] = useState(false);
   const [isCActionLoading, setIsCActionLoading] = useState(false);
-  const [selectedConsumption, setSelectedConsumption] = useState<InternalConsumptionWithItems | null>(null);
+  const [selectedConsumption, setSelectedConsumption] =
+    useState<InternalConsumptionWithItems | null>(null);
+
+  // ─── Shift Audit State (Admin Exclusive) ──────────────────────────────────
+  const [shiftPreset, setShiftPreset] = useState<
+    "current" | "previous" | "custom"
+  >("current");
+  const [customAuditDateRange, setCustomAuditDateRange] = useState<
+    DateRange | undefined
+  >(undefined);
+  const [auditStoreId, setAuditStoreId] = useState<string>("all");
+  const [auditUserId, setAuditUserId] = useState<string>("all");
+  const [auditSearchQuery, setAuditSearchQuery] = useState("");
+
+  const auditShiftRange = useMemo(() => {
+    if (shiftPreset === "current") {
+      const shiftDate = getCurrentShiftDate();
+      return getCalendarShiftRange(shiftDate, shiftDate);
+    }
+    if (shiftPreset === "previous") {
+      const shiftDate = subDays(getCurrentShiftDate(), 1);
+      return getCalendarShiftRange(shiftDate, shiftDate);
+    }
+    if (customAuditDateRange?.from) {
+      return getCalendarShiftRange(
+        customAuditDateRange.from,
+        customAuditDateRange.to,
+      );
+    }
+    const today = getCurrentShiftDate();
+    return getCalendarShiftRange(today, today);
+  }, [shiftPreset, customAuditDateRange]);
+
+  const {
+    data: auditLogs = [],
+    isLoading: isAuditLoading,
+    refetch: refetchAuditLogs,
+  } = useQuery({
+    queryKey: [
+      "order-status-shift-logs",
+      auditShiftRange.from.toISOString(),
+      auditShiftRange.to.toISOString(),
+      auditStoreId,
+      auditUserId,
+    ],
+    queryFn: async () => {
+      let query = supabase
+        .from("order_status_logs" as never)
+        .select(
+          "*, orders(id, locator, ticket_number, total, is_delivery), profiles:changed_by(name, role), stores(id, name, icon)" as never,
+        )
+        .gte("created_at" as never, auditShiftRange.from.toISOString())
+        .lte("created_at" as never, auditShiftRange.to.toISOString())
+        .order("created_at", { ascending: false });
+
+      if (auditStoreId !== "all") {
+        query = query.eq("store_id" as never, auditStoreId);
+      }
+      if (auditUserId !== "all") {
+        query = query.eq("changed_by" as never, auditUserId);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("Error fetching audit logs:", error);
+        return [];
+      }
+      return (data || []) as unknown as OrderStatusLog[];
+    },
+    enabled: user?.role === "admin" && activeTab === "audit",
+  });
+
+  const {
+    data: selectedOrderLogs = [],
+    isLoading: isLoadingSelectedOrderLogs,
+  } = useQuery({
+    queryKey: ["order-audit-history", selectedOrder?.id],
+    queryFn: async () => {
+      if (!selectedOrder?.id) return [];
+      const { data, error } = await supabase
+        .from("order_status_logs" as never)
+        .select("*, profiles:changed_by(name, role)" as never)
+        .eq("order_id" as never, selectedOrder.id)
+        .order("created_at", { ascending: false });
+      if (error) return [];
+      return (data || []) as unknown as OrderStatusLog[];
+    },
+    enabled: user?.role === "admin" && !!selectedOrder?.id,
+  });
 
   // ─── Shared Filters ────────────────────────────────────────────────────────
-  const [storeId, setStoreId] = useState<string>("all");
+  const [storeId, setStoreId] = useState<string>(() => {
+    if (user?.role === "caja" && activeStore?.id) {
+      return activeStore.id;
+    }
+    return "all";
+  });
+
+  useEffect(() => {
+    if (user?.role === "caja" && activeStore?.id) {
+      setStoreId(activeStore.id);
+    }
+  }, [user?.role, activeStore?.id]);
+
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
-  const [cStatusFilter, setCStatusFilter] = useState<InternalPaymentStatus | "all">("all");
+  const [cStatusFilter, setCStatusFilter] = useState<
+    InternalPaymentStatus | "all"
+  >("all");
   const [cTypeFilter, setCTypeFilter] = useState<string>("all");
   const [waiterId, setWaiterId] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [cDateRange, setCDateRange] = useState<DateRange | undefined>(undefined);
+  const [cDateRange, setCDateRange] = useState<DateRange | undefined>(
+    undefined,
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [showCFilters, setShowCFilters] = useState(false);
   const [profiles, setProfiles] = useState<
@@ -165,7 +297,7 @@ export default function Consultas() {
         .order("name");
       if (data) setProfiles(data);
     }
-    if (user?.role === "admin") fetchProfiles();
+    if (user?.role === "admin" || user?.role === "caja") fetchProfiles();
   }, [user]);
 
   // Reset selections when changing tabs
@@ -175,7 +307,7 @@ export default function Consultas() {
   }, [activeTab]);
 
   // Security check
-  if (user?.role !== "admin") {
+  if (user?.role !== "admin" && user?.role !== "caja") {
     return (
       <div className="h-[80vh] flex flex-col items-center justify-center space-y-4">
         <AlertCircle className="h-16 w-16 text-destructive opacity-20" />
@@ -183,7 +315,7 @@ export default function Consultas() {
           Acceso Restringido
         </h1>
         <p className="text-muted-foreground">
-          Solo los administradores pueden acceder a este módulo.
+          Solo administradores y personal de caja pueden acceder a este módulo.
         </p>
       </div>
     );
@@ -314,23 +446,64 @@ export default function Consultas() {
   const handleStatusChange = async (
     orderId: string,
     newStatus: OrderStatus,
+    reason?: string,
   ) => {
     setIsActionLoading(true);
+    setIsSubmittingStatus(true);
 
     try {
-      await updateOrderStatus(orderId, newStatus);
+      await updateOrderStatus(orderId, newStatus, reason);
       // Refresh local view
       setFoundOrders((prev) =>
         prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)),
       );
       if (selectedOrder?.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: newStatus });
+        setSelectedOrder((prev) =>
+          prev ? { ...prev, status: newStatus } : null,
+        );
       }
       refreshOrders();
+      queryClient.invalidateQueries({
+        queryKey: ["order-audit-history", orderId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["order-status-shift-logs"] });
+      toast.success(
+        user?.role === "caja"
+          ? "Estado actualizado y notificado a administración"
+          : "Estado del pedido actualizado correctamente",
+      );
+      setStatusModal(null);
+      setStatusReason("");
     } catch (err) {
       toast.error("Error al actualizar el estado");
     } finally {
       setIsActionLoading(false);
+      setIsSubmittingStatus(false);
+    }
+  };
+
+  const handleInspectOrderFromAudit = async (
+    orderId: string,
+    locator?: string | null,
+  ) => {
+    setActiveTab("orders");
+    setSearchQuery(locator || orderId);
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .select(
+          "*, order_items(*, products(*, categories(*))), profiles(*), payments(*), delivery_drivers(id, first_name, last_name)",
+        )
+        .eq("id", orderId)
+        .single();
+      if (!error && data) {
+        const ord = data as unknown as Order;
+        setFoundOrders([ord]);
+        setSelectedOrder(ord);
+        toast.success(`Orden #${ord.locator || ord.ticket_number} cargada`);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -383,16 +556,17 @@ export default function Consultas() {
 
       let query = supabase
         .from("internal_consumptions" as never)
-        .select(
-          "*, internal_consumption_items(*)" as never,
-        );
+        .select("*, internal_consumption_items(*)" as never);
 
       // Text search
       if (trimmedQuery) {
         if (isUUID) {
           query = query.eq("id" as never, trimmedQuery as never);
         } else {
-          query = query.ilike("consumer_name" as never, `%${trimmedQuery}%` as never);
+          query = query.ilike(
+            "consumer_name" as never,
+            `%${trimmedQuery}%` as never,
+          );
         }
       }
 
@@ -403,7 +577,10 @@ export default function Consultas() {
       } else if (cCompanyStoreIds.length > 0) {
         query = query.in("store_id" as never, cCompanyStoreIds as never);
       } else {
-        query = query.eq("store_id" as never, "00000000-0000-0000-0000-000000000000" as never);
+        query = query.eq(
+          "store_id" as never,
+          "00000000-0000-0000-0000-000000000000" as never,
+        );
       }
 
       // Payment status filter
@@ -423,7 +600,10 @@ export default function Consultas() {
           startOfDay(cDateRange.from).toISOString() as never,
         );
         if (cDateRange.to) {
-          query = query.lte("created_at" as never, endOfDay(cDateRange.to).toISOString() as never);
+          query = query.lte(
+            "created_at" as never,
+            endOfDay(cDateRange.to).toISOString() as never,
+          );
         } else {
           query = query.lte(
             "created_at" as never,
@@ -463,8 +643,11 @@ export default function Consultas() {
     try {
       await deleteConsumption(consumptionId);
       toast.success("Consumo interno eliminado permanentemente");
-      setFoundConsumptions((prev) => prev.filter((c) => c.id !== consumptionId));
-      if (selectedConsumption?.id === consumptionId) setSelectedConsumption(null);
+      setFoundConsumptions((prev) =>
+        prev.filter((c) => c.id !== consumptionId),
+      );
+      if (selectedConsumption?.id === consumptionId)
+        setSelectedConsumption(null);
     } catch (err) {
       const error = err as Error;
       toast.error(`Error al eliminar: ${error.message}`);
@@ -486,7 +669,10 @@ export default function Consultas() {
         ),
       );
       if (selectedConsumption?.id === consumptionId) {
-        setSelectedConsumption({ ...selectedConsumption, payment_status: newStatus });
+        setSelectedConsumption({
+          ...selectedConsumption,
+          payment_status: newStatus,
+        });
       }
       toast.success("Estado de pago actualizado");
     } catch (err) {
@@ -496,7 +682,9 @@ export default function Consultas() {
     }
   };
 
-  const handlePrintConsumption = async (consumption: InternalConsumptionWithItems) => {
+  const handlePrintConsumption = async (
+    consumption: InternalConsumptionWithItems,
+  ) => {
     try {
       const html = buildInternalConsumptionReceiptHTML({
         consumption,
@@ -525,17 +713,19 @@ export default function Consultas() {
               Consultas de Control
             </h1>
             <p className="text-[8px] lg:text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest mt-0.5 lg:mt-1">
-              Administración Central • Búsqueda Quirúrgica
+              {user?.role === "caja"
+                ? "Punto de Venta & Caja • Control de Pedidos"
+                : "Administración Central • Búsqueda Quirúrgica & Auditoría"}
             </p>
           </div>
         </div>
 
         {/* Tab Toggle */}
-        <div className="flex items-center gap-2 bg-accent/10 p-1.5 rounded-2xl w-fit">
+        <div className="flex items-center gap-2 bg-accent/10 p-1.5 rounded-2xl w-fit flex-wrap">
           <button
             onClick={() => setActiveTab("orders")}
             className={cn(
-              "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+              "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
               activeTab === "orders"
                 ? "bg-white text-primary shadow-soft"
                 : "text-muted-foreground/50 hover:text-muted-foreground",
@@ -547,7 +737,7 @@ export default function Consultas() {
           <button
             onClick={() => setActiveTab("consumptions")}
             className={cn(
-              "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+              "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
               activeTab === "consumptions"
                 ? "bg-white text-primary shadow-soft"
                 : "text-muted-foreground/50 hover:text-muted-foreground",
@@ -556,6 +746,20 @@ export default function Consultas() {
             <UtensilsCrossed className="h-4 w-4" />
             Consumo Interno
           </button>
+          {user?.role === "admin" && (
+            <button
+              onClick={() => setActiveTab("audit")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
+                activeTab === "audit"
+                  ? "bg-white text-emerald-700 shadow-soft"
+                  : "text-muted-foreground/50 hover:text-muted-foreground",
+              )}
+            >
+              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+              Auditoría de Turno
+            </button>
+          )}
         </div>
       </div>
 
@@ -614,7 +818,9 @@ export default function Consultas() {
                       <>
                         <Search className="h-4 w-4 lg:hidden" />
                         <span className="hidden lg:inline">BUSCAR</span>
-                        <span className="hidden sm:inline lg:hidden">BUSCAR</span>
+                        <span className="hidden sm:inline lg:hidden">
+                          BUSCAR
+                        </span>
                       </>
                     )}
                   </Button>
@@ -739,8 +945,13 @@ export default function Consultas() {
                             {dateRange?.from ? (
                               dateRange.to ? (
                                 <>
-                                  {format(dateRange.from, "dd LLL", { locale: es })}{" "}
-                                  - {format(dateRange.to, "dd LLL", { locale: es })}
+                                  {format(dateRange.from, "dd LLL", {
+                                    locale: es,
+                                  })}{" "}
+                                  -{" "}
+                                  {format(dateRange.to, "dd LLL", {
+                                    locale: es,
+                                  })}
                                 </>
                               ) : (
                                 format(dateRange.from, "dd LLL", { locale: es })
@@ -795,7 +1006,9 @@ export default function Consultas() {
                       <StatusBadge status={order.status} />
                     </div>
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">
-                      {format(new Date(order.created_at), "PPp", { locale: es })}
+                      {format(new Date(order.created_at), "PPp", {
+                        locale: es,
+                      })}
                     </p>
                     <p className="text-lg font-black text-primary">
                       {formatPrice(order.total)}
@@ -846,9 +1059,13 @@ export default function Consultas() {
                         <div className="flex items-center gap-4 mt-1 text-muted-foreground">
                           <span className="flex items-center gap-1.5 text-xs font-bold">
                             <Clock className="h-3.5 w-3.5" />
-                            {format(new Date(selectedOrder.created_at), "PPP pp", {
-                              locale: es,
-                            })}
+                            {format(
+                              new Date(selectedOrder.created_at),
+                              "PPP pp",
+                              {
+                                locale: es,
+                              },
+                            )}
                           </span>
                         </div>
                       </div>
@@ -880,45 +1097,49 @@ export default function Consultas() {
                         <X className="h-5 w-5" />
                       </Button>
 
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="destructive"
-                            className="rounded-xl h-12 px-6 font-black shadow-lg shadow-destructive/10"
-                            disabled={isActionLoading}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            ELIMINAR
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-3xl border-none shadow-strong">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="text-2xl font-black tracking-tight">
-                              ¿Eliminar definitivamente?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription className="font-medium text-muted-foreground text-base">
-                              Esta acción es irreversible. Se eliminarán los
-                              registros de venta, pagos e ítems asociados al
-                              localizador{" "}
-                              <span className="text-primary font-black">
-                                {selectedOrder.locator}
-                              </span>
-                              .
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="mt-6">
-                            <AlertDialogCancel className="rounded-2xl h-12 font-black">
-                              CANCELAR
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteOrder(selectedOrder.id)}
-                              className="rounded-2xl h-12 font-black bg-destructive hover:bg-destructive/90"
+                      {user?.role === "admin" && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              className="rounded-xl h-12 px-6 font-black shadow-lg shadow-destructive/10 cursor-pointer"
+                              disabled={isActionLoading}
                             >
-                              SÍ, ELIMINAR TODO
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              ELIMINAR
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="rounded-3xl border-none shadow-strong">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-2xl font-black tracking-tight">
+                                ¿Eliminar definitivamente?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription className="font-medium text-muted-foreground text-base">
+                                Esta acción es irreversible. Se eliminarán los
+                                registros de venta, pagos e ítems asociados al
+                                localizador{" "}
+                                <span className="text-primary font-black">
+                                  {selectedOrder.locator}
+                                </span>
+                                .
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="mt-6">
+                              <AlertDialogCancel className="rounded-2xl h-12 font-black cursor-pointer">
+                                CANCELAR
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() =>
+                                  handleDeleteOrder(selectedOrder.id)
+                                }
+                                className="rounded-2xl h-12 font-black bg-destructive hover:bg-destructive/90 cursor-pointer"
+                              >
+                                SÍ, ELIMINAR TODO
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
                   </div>
 
@@ -960,14 +1181,17 @@ export default function Consultas() {
                         <div className="flex items-center gap-3">
                           <Select
                             value={selectedOrder.status}
-                            onValueChange={(val) =>
-                              handleStatusChange(
-                                selectedOrder.id,
-                                val as OrderStatus,
-                              )
-                            }
+                            onValueChange={(val) => {
+                              if (val !== selectedOrder.status) {
+                                setStatusModal({
+                                  order: selectedOrder,
+                                  targetStatus: val as OrderStatus,
+                                });
+                                setStatusReason("");
+                              }
+                            }}
                           >
-                            <SelectTrigger className="h-12 rounded-xl font-black text-xs tracking-widest uppercase bg-white/50 border-2 border-primary/10">
+                            <SelectTrigger className="h-12 rounded-xl font-black text-xs tracking-widest uppercase bg-white/50 border-2 border-primary/10 cursor-pointer">
                               <SelectValue placeholder="Cambiar Estado" />
                             </SelectTrigger>
                             <SelectContent className="rounded-2xl border-none shadow-strong">
@@ -982,7 +1206,7 @@ export default function Consultas() {
                                 <SelectItem
                                   key={s}
                                   value={s}
-                                  className="font-black text-[10px] tracking-widest uppercase py-3"
+                                  className="font-black text-[10px] tracking-widest uppercase py-3 cursor-pointer"
                                 >
                                   {s.replace("_", " ")}
                                 </SelectItem>
@@ -991,8 +1215,9 @@ export default function Consultas() {
                           </Select>
                         </div>
                         <p className="text-[10px] font-medium text-muted-foreground/60 leading-relaxed italic">
-                          * Mover un pedido a "Entregado" lo sacará de la vista
-                          activa de Caja y Cocina.
+                          {user?.role === "caja"
+                            ? "* Como cajero, al cambiar el estado se solicitará una justificación y se alertará al administrador."
+                            : '* Mover un pedido a "Entregado" lo sacará de la vista activa de Caja y Cocina.'}
                         </p>
                       </div>
                     </div>
@@ -1046,6 +1271,94 @@ export default function Consultas() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Admin Exclusive: Order Modification Audit History */}
+                    {user?.role === "admin" && (
+                      <div className="md:col-span-2 pt-6 border-t border-slate-200/80 space-y-4 no-print">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                            Historial de Modificaciones del Pedido
+                            {selectedOrderLogs.length > 0 && (
+                              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] font-black ml-1">
+                                {selectedOrderLogs.length} cambio(s)
+                              </Badge>
+                            )}
+                          </h3>
+                        </div>
+
+                        {isLoadingSelectedOrderLogs ? (
+                          <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 animate-pulse text-xs text-muted-foreground">
+                            Cargando historial de cambios...
+                          </div>
+                        ) : selectedOrderLogs.length === 0 ? (
+                          <div className="p-4 bg-slate-50/60 rounded-2xl border border-dashed border-slate-200 text-xs text-muted-foreground flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                            <span>
+                              No se registran cambios manuales para este pedido.
+                              Siguió el flujo estándar.
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {selectedOrderLogs.map((log) => (
+                              <div
+                                key={log.id}
+                                className="p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="size-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-bold shrink-0">
+                                    <User className="size-4" />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-slate-900">
+                                        {log.changed_by_name || "Usuario"}
+                                      </span>
+                                      <Badge
+                                        className={cn(
+                                          "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
+                                          log.changed_by_role === "admin"
+                                            ? "bg-teal-100 text-teal-800 border-teal-300"
+                                            : "bg-amber-100 text-amber-800 border-amber-300",
+                                        )}
+                                      >
+                                        {log.changed_by_role === "caja"
+                                          ? "Cajero/a"
+                                          : log.changed_by_role}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                                      {format(
+                                        new Date(log.created_at),
+                                        "dd 'de' MMMM, yyyy • hh:mm a",
+                                        { locale: es },
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <div className="flex items-center gap-1.5 font-bold">
+                                    <StatusBadge status={log.previous_status} />
+                                    <ArrowRight className="size-3 text-muted-foreground" />
+                                    <StatusBadge status={log.new_status} />
+                                  </div>
+                                  {log.reason && (
+                                    <div
+                                      className="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/80 text-[11px] font-medium text-slate-700 italic max-w-xs truncate"
+                                      title={log.reason}
+                                    >
+                                      "{log.reason}"
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1133,7 +1446,9 @@ export default function Consultas() {
                       <>
                         <Search className="h-4 w-4 lg:hidden" />
                         <span className="hidden lg:inline">BUSCAR</span>
-                        <span className="hidden sm:inline lg:hidden">BUSCAR</span>
+                        <span className="hidden sm:inline lg:hidden">
+                          BUSCAR
+                        </span>
                       </>
                     )}
                   </Button>
@@ -1160,9 +1475,17 @@ export default function Consultas() {
                           <SelectValue placeholder="Todas las tiendas" />
                         </SelectTrigger>
                         <SelectContent className="rounded-2xl border-none shadow-strong">
-                          <SelectItem value="all" className="font-bold">Todos los Puntos</SelectItem>
+                          <SelectItem value="all" className="font-bold">
+                            Todos los Puntos
+                          </SelectItem>
                           {stores.map((s) => (
-                            <SelectItem key={s.id} value={s.id} className="font-bold">{s.name}</SelectItem>
+                            <SelectItem
+                              key={s.id}
+                              value={s.id}
+                              className="font-bold"
+                            >
+                              {s.name}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -1175,16 +1498,26 @@ export default function Consultas() {
                       </label>
                       <Select
                         value={cStatusFilter}
-                        onValueChange={(val) => setCStatusFilter(val as InternalPaymentStatus | "all")}
+                        onValueChange={(val) =>
+                          setCStatusFilter(val as InternalPaymentStatus | "all")
+                        }
                       >
                         <SelectTrigger className="rounded-xl border-2 border-primary/5 bg-accent/5 font-bold">
                           <SelectValue placeholder="Cualquier estado" />
                         </SelectTrigger>
                         <SelectContent className="rounded-2xl border-none shadow-strong">
-                          <SelectItem value="all" className="font-bold">Todos los Estados</SelectItem>
-                          <SelectItem value="paid" className="font-bold">✅ Pagado</SelectItem>
-                          <SelectItem value="pending" className="font-bold">🔴 Pendiente</SelectItem>
-                          <SelectItem value="partial" className="font-bold">⚠️ Parcial</SelectItem>
+                          <SelectItem value="all" className="font-bold">
+                            Todos los Estados
+                          </SelectItem>
+                          <SelectItem value="paid" className="font-bold">
+                            ✅ Pagado
+                          </SelectItem>
+                          <SelectItem value="pending" className="font-bold">
+                            🔴 Pendiente
+                          </SelectItem>
+                          <SelectItem value="partial" className="font-bold">
+                            ⚠️ Parcial
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1194,14 +1527,23 @@ export default function Consultas() {
                       <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2 px-1">
                         <User className="h-3 w-3" /> Tipo de Consumidor
                       </label>
-                      <Select value={cTypeFilter} onValueChange={setCTypeFilter}>
+                      <Select
+                        value={cTypeFilter}
+                        onValueChange={setCTypeFilter}
+                      >
                         <SelectTrigger className="rounded-xl border-2 border-primary/5 bg-accent/5 font-bold">
                           <SelectValue placeholder="Todos" />
                         </SelectTrigger>
                         <SelectContent className="rounded-2xl border-none shadow-strong">
-                          <SelectItem value="all" className="font-bold">Todos</SelectItem>
-                          <SelectItem value="employee" className="font-bold">👤 Empleado</SelectItem>
-                          <SelectItem value="partner" className="font-bold">🤝 Socio</SelectItem>
+                          <SelectItem value="all" className="font-bold">
+                            Todos
+                          </SelectItem>
+                          <SelectItem value="employee" className="font-bold">
+                            👤 Empleado
+                          </SelectItem>
+                          <SelectItem value="partner" className="font-bold">
+                            🤝 Socio
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1224,18 +1566,28 @@ export default function Consultas() {
                             {cDateRange?.from ? (
                               cDateRange.to ? (
                                 <>
-                                  {format(cDateRange.from, "dd LLL", { locale: es })}{" "}
-                                  - {format(cDateRange.to, "dd LLL", { locale: es })}
+                                  {format(cDateRange.from, "dd LLL", {
+                                    locale: es,
+                                  })}{" "}
+                                  -{" "}
+                                  {format(cDateRange.to, "dd LLL", {
+                                    locale: es,
+                                  })}
                                 </>
                               ) : (
-                                format(cDateRange.from, "dd LLL", { locale: es })
+                                format(cDateRange.from, "dd LLL", {
+                                  locale: es,
+                                })
                               )
                             ) : (
                               <span>Seleccionar fecha</span>
                             )}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 rounded-3xl border-none shadow-strong" align="end">
+                        <PopoverContent
+                          className="w-auto p-0 rounded-3xl border-none shadow-strong"
+                          align="end"
+                        >
                           <Calendar
                             initialFocus
                             mode="range"
@@ -1276,21 +1628,29 @@ export default function Consultas() {
                         <div className="w-12 h-12 rounded-xl bg-amber-50 border-2 border-amber-500/10 flex items-center justify-center group-hover:border-amber-500/30 transition-all">
                           <UtensilsCrossed className="h-5 w-5 text-amber-600" />
                         </div>
-                        <Badge className={cn("text-[9px] font-black uppercase gap-1", statusCfg.className)}>
+                        <Badge
+                          className={cn(
+                            "text-[9px] font-black uppercase gap-1",
+                            statusCfg.className,
+                          )}
+                        >
                           <StatusIcon className="h-3 w-3" />
                           {statusCfg.label}
                         </Badge>
                       </div>
                       <p className="text-sm font-black">{c.consumer_name}</p>
                       <p className="text-[10px] font-bold text-muted-foreground mb-2">
-                        {c.consumer_type === "employee" ? "Empleado" : "Socio"} ·{" "}
+                        {c.consumer_type === "employee" ? "Empleado" : "Socio"}{" "}
+                        ·{" "}
                         {format(new Date(c.created_at), "PPp", { locale: es })}
                       </p>
                       <p className="text-lg font-black text-amber-600">
                         {formatPrice(c.total)}
                       </p>
                       <div className="mt-4 flex items-center justify-between text-[9px] font-bold text-muted-foreground/50 uppercase">
-                        <span>{c.internal_consumption_items?.length || 0} items</span>
+                        <span>
+                          {c.internal_consumption_items?.length || 0} items
+                        </span>
                         <div className="flex items-center gap-1">
                           Ver Detalles <ArrowRight className="h-3 w-3" />
                         </div>
@@ -1326,18 +1686,41 @@ export default function Consultas() {
                       <div>
                         <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
                           {selectedConsumption.consumer_name}
-                          <Badge className={cn("text-[9px] font-black uppercase gap-1", PAYMENT_STATUS_CONFIG[selectedConsumption.payment_status].className)}>
-                            {(() => { const Ic = PAYMENT_STATUS_CONFIG[selectedConsumption.payment_status].icon; return <Ic className="h-3 w-3" />; })()}
-                            {PAYMENT_STATUS_CONFIG[selectedConsumption.payment_status].label}
+                          <Badge
+                            className={cn(
+                              "text-[9px] font-black uppercase gap-1",
+                              PAYMENT_STATUS_CONFIG[
+                                selectedConsumption.payment_status
+                              ].className,
+                            )}
+                          >
+                            {(() => {
+                              const Ic =
+                                PAYMENT_STATUS_CONFIG[
+                                  selectedConsumption.payment_status
+                                ].icon;
+                              return <Ic className="h-3 w-3" />;
+                            })()}
+                            {
+                              PAYMENT_STATUS_CONFIG[
+                                selectedConsumption.payment_status
+                              ].label
+                            }
                           </Badge>
                         </h2>
                         <div className="flex items-center gap-4 mt-1 text-muted-foreground">
                           <span className="flex items-center gap-1.5 text-xs font-bold">
                             <Clock className="h-3.5 w-3.5" />
-                            {format(new Date(selectedConsumption.created_at), "PPP pp", { locale: es })}
+                            {format(
+                              new Date(selectedConsumption.created_at),
+                              "PPP pp",
+                              { locale: es },
+                            )}
                           </span>
                           <span className="text-xs font-bold">
-                            {selectedConsumption.consumer_type === "employee" ? "👤 Empleado" : "🤝 Socio"}
+                            {selectedConsumption.consumer_type === "employee"
+                              ? "👤 Empleado"
+                              : "🤝 Socio"}
                           </span>
                         </div>
                       </div>
@@ -1348,7 +1731,9 @@ export default function Consultas() {
                         variant="outline"
                         size="icon"
                         className="rounded-xl h-12 w-12 border-2 hover:bg-white transition-all"
-                        onClick={() => handlePrintConsumption(selectedConsumption)}
+                        onClick={() =>
+                          handlePrintConsumption(selectedConsumption)
+                        }
                       >
                         <Printer className="h-5 w-5" />
                       </Button>
@@ -1386,8 +1771,8 @@ export default function Consultas() {
                               ¿Eliminar consumo interno?
                             </AlertDialogTitle>
                             <AlertDialogDescription className="font-medium text-muted-foreground text-base">
-                              Esta acción es irreversible. Se eliminarán los registros de consumo,
-                              ítems y pagos asociados a{" "}
+                              Esta acción es irreversible. Se eliminarán los
+                              registros de consumo, ítems y pagos asociados a{" "}
                               <span className="text-amber-600 font-black">
                                 {selectedConsumption.consumer_name}
                               </span>
@@ -1399,7 +1784,9 @@ export default function Consultas() {
                               CANCELAR
                             </AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => handleDeleteConsumption(selectedConsumption.id)}
+                              onClick={() =>
+                                handleDeleteConsumption(selectedConsumption.id)
+                              }
                               className="rounded-2xl h-12 font-black bg-destructive hover:bg-destructive/90"
                             >
                               SÍ, ELIMINAR TODO
@@ -1421,13 +1808,21 @@ export default function Consultas() {
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="bg-accent/5 p-4 rounded-2xl border border-accent/10">
-                            <p className="text-[10px] font-black opacity-30 uppercase mb-1">ID Único</p>
-                            <p className="text-xs font-mono font-bold truncate">{selectedConsumption.id}</p>
+                            <p className="text-[10px] font-black opacity-30 uppercase mb-1">
+                              ID Único
+                            </p>
+                            <p className="text-xs font-mono font-bold truncate">
+                              {selectedConsumption.id}
+                            </p>
                           </div>
                           <div className="bg-accent/5 p-4 rounded-2xl border border-accent/10">
-                            <p className="text-[10px] font-black opacity-30 uppercase mb-1">Tipo</p>
+                            <p className="text-[10px] font-black opacity-30 uppercase mb-1">
+                              Tipo
+                            </p>
                             <p className="text-xs font-bold">
-                              {selectedConsumption.consumer_type === "employee" ? "👤 Empleado" : "🤝 Socio"}
+                              {selectedConsumption.consumer_type === "employee"
+                                ? "👤 Empleado"
+                                : "🤝 Socio"}
                             </p>
                           </div>
                         </div>
@@ -1452,20 +1847,30 @@ export default function Consultas() {
                               <SelectValue placeholder="Cambiar Estado" />
                             </SelectTrigger>
                             <SelectContent className="rounded-2xl border-none shadow-strong">
-                              <SelectItem value="pending" className="font-black text-[10px] tracking-widest uppercase py-3">
+                              <SelectItem
+                                value="pending"
+                                className="font-black text-[10px] tracking-widest uppercase py-3"
+                              >
                                 🔴 Pendiente
                               </SelectItem>
-                              <SelectItem value="partial" className="font-black text-[10px] tracking-widest uppercase py-3">
+                              <SelectItem
+                                value="partial"
+                                className="font-black text-[10px] tracking-widest uppercase py-3"
+                              >
                                 ⚠️ Parcial
                               </SelectItem>
-                              <SelectItem value="paid" className="font-black text-[10px] tracking-widest uppercase py-3">
+                              <SelectItem
+                                value="paid"
+                                className="font-black text-[10px] tracking-widest uppercase py-3"
+                              >
                                 ✅ Pagado
                               </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <p className="text-[10px] font-medium text-muted-foreground/60 leading-relaxed italic">
-                          * Cambiar a "Pagado" marcará el consumo como liquidado.
+                          * Cambiar a "Pagado" marcará el consumo como
+                          liquidado.
                         </p>
                       </div>
                     </div>
@@ -1476,12 +1881,19 @@ export default function Consultas() {
                         <h3 className="text-xs font-black uppercase tracking-widest text-amber-600 mb-4 flex items-center justify-between">
                           Contenido del Consumo
                           <span className="bg-amber-500/10 px-2 py-0.5 rounded-lg">
-                            {selectedConsumption.internal_consumption_items?.length || 0} ITEMS
+                            {selectedConsumption.internal_consumption_items
+                              ?.length || 0}{" "}
+                            ITEMS
                           </span>
                         </h3>
                         <div className="space-y-3">
-                          {(selectedConsumption.internal_consumption_items ?? []).map((item) => (
-                            <div key={item.id} className="flex items-center justify-between gap-4">
+                          {(
+                            selectedConsumption.internal_consumption_items ?? []
+                          ).map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between gap-4"
+                            >
                               <div>
                                 <p className="text-xs font-black leading-tight">
                                   {item.quantity}x {item.product_name}
@@ -1508,15 +1920,23 @@ export default function Consultas() {
                         <div className="mt-6 pt-4 border-t border-dashed border-amber-500/20 space-y-2">
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <span>Original</span>
-                            <span className="line-through">{formatPrice(selectedConsumption.total_original)}</span>
+                            <span className="line-through">
+                              {formatPrice(selectedConsumption.total_original)}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between text-xs text-green-600">
                             <span>Descuento</span>
-                            <span>-{formatPrice(selectedConsumption.discount_total)}</span>
+                            <span>
+                              -{formatPrice(selectedConsumption.discount_total)}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between pt-2 border-t border-amber-500/10">
-                            <p className="text-xs font-black text-amber-600 uppercase">Total</p>
-                            <p className="text-xl font-black text-amber-600">{formatPrice(selectedConsumption.total)}</p>
+                            <p className="text-xs font-black text-amber-600 uppercase">
+                              Total
+                            </p>
+                            <p className="text-xl font-black text-amber-600">
+                              {formatPrice(selectedConsumption.total)}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1524,7 +1944,9 @@ export default function Consultas() {
                   </div>
                 </div>
               </div>
-            ) : cSearchQuery && !isCSearching && foundConsumptions.length === 0 ? (
+            ) : cSearchQuery &&
+              !isCSearching &&
+              foundConsumptions.length === 0 ? (
               <div className="lg:col-span-12 text-center py-20 space-y-6 opacity-30">
                 <div className="h-24 w-24 rounded-4xl border-4 border-dashed border-amber-500 mx-auto flex items-center justify-center">
                   <UtensilsCrossed className="h-10 w-10 text-amber-600" />
@@ -1552,6 +1974,588 @@ export default function Consultas() {
           </div>
         </>
       )}
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* AUDIT BY SHIFT TAB (ADMIN EXCLUSIVE) */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === "audit" && user?.role === "admin" && (
+        <div className="space-y-6 no-print">
+          {/* Shift & Filter Controls Header */}
+          <div className="bg-white p-5 lg:p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="size-5 text-emerald-600" />
+                  <h2 className="text-lg lg:text-xl font-black tracking-tight text-slate-900">
+                    Auditoría de Modificaciones por Turno
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500 font-medium mt-1">
+                  Supervisión y control inmutable de cambios de estado
+                  realizados por cajeros y personal de turno.
+                </p>
+              </div>
+
+              {/* Shift Presets */}
+              <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-1.5 rounded-2xl w-fit">
+                <button
+                  type="button"
+                  onClick={() => setShiftPreset("current")}
+                  className={cn(
+                    "px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
+                    shiftPreset === "current"
+                      ? "bg-white text-emerald-700 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900",
+                  )}
+                >
+                  Turno en Curso
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShiftPreset("previous")}
+                  className={cn(
+                    "px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
+                    shiftPreset === "previous"
+                      ? "bg-white text-emerald-700 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900",
+                  )}
+                >
+                  Turno Anterior
+                </button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setShiftPreset("custom")}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
+                        shiftPreset === "custom"
+                          ? "bg-white text-emerald-700 shadow-xs"
+                          : "text-slate-600 hover:text-slate-900",
+                      )}
+                    >
+                      <CalendarIcon className="size-3.5" />
+                      <span>
+                        {customAuditDateRange?.from
+                          ? format(customAuditDateRange.from, "dd/MM/yy") +
+                            (customAuditDateRange.to
+                              ? ` - ${format(customAuditDateRange.to, "dd/MM/yy")}`
+                              : "")
+                          : "Calendario"}
+                      </span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-auto p-0 rounded-3xl"
+                    align="end"
+                  >
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={customAuditDateRange?.from || new Date()}
+                      selected={customAuditDateRange}
+                      onSelect={(range) => {
+                        setCustomAuditDateRange(range);
+                        setShiftPreset("custom");
+                      }}
+                      numberOfMonths={2}
+                      locale={es}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Sub-Filters: Store, Cashier, Text search */}
+            <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Store Filter */}
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1 block">
+                  Sede / Tienda
+                </label>
+                <Select value={auditStoreId} onValueChange={setAuditStoreId}>
+                  <SelectTrigger className="h-10 rounded-xl font-bold text-xs bg-slate-50 border-slate-200">
+                    <SelectValue placeholder="Todas las tiendas" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    <SelectItem value="all" className="font-bold text-xs">
+                      Todas las Sedes
+                    </SelectItem>
+                    {stores.map((s) => (
+                      <SelectItem
+                        key={s.id}
+                        value={s.id}
+                        className="font-bold text-xs"
+                      >
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Cashier / User Filter */}
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1 block">
+                  Responsable
+                </label>
+                <Select value={auditUserId} onValueChange={setAuditUserId}>
+                  <SelectTrigger className="h-10 rounded-xl font-bold text-xs bg-slate-50 border-slate-200">
+                    <SelectValue placeholder="Todos los usuarios" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    <SelectItem value="all" className="font-bold text-xs">
+                      Todos los Responsables
+                    </SelectItem>
+                    {profiles.map((p) => (
+                      <SelectItem
+                        key={p.id}
+                        value={p.id}
+                        className="font-bold text-xs"
+                      >
+                        {p.name || "Sin nombre"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Text Search inside audit */}
+              <div className="sm:col-span-2 lg:col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1 block">
+                  Filtrar en vivo
+                </label>
+                <div className="relative">
+                  <Search className="size-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Input
+                    type="text"
+                    value={auditSearchQuery}
+                    onChange={(e) => setAuditSearchQuery(e.target.value)}
+                    placeholder="Filtrar por localizador, ticket o motivo..."
+                    className="h-10 pl-9 rounded-xl text-xs font-bold bg-slate-50 border-slate-200"
+                  />
+                  {auditSearchQuery && (
+                    <button
+                      onClick={() => setAuditSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Live Shift Window Indicator */}
+            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 font-medium">
+              <div className="flex items-center gap-1.5">
+                <Clock className="size-3.5 text-emerald-600" />
+                <span>
+                  Ventana de Turno:{" "}
+                  <strong className="text-slate-800">
+                    {format(auditShiftRange.from, "dd MMM yyyy, hh:mm a", {
+                      locale: es,
+                    })}
+                  </strong>{" "}
+                  ➔{" "}
+                  <strong className="text-slate-800">
+                    {format(auditShiftRange.to, "dd MMM yyyy, hh:mm a", {
+                      locale: es,
+                    })}
+                  </strong>
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => refetchAuditLogs()}
+                className="h-7 px-2.5 text-[11px] font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
+              >
+                <RefreshCcw className="size-3 mr-1" />
+                Actualizar
+              </Button>
+            </div>
+          </div>
+
+          {/* KPI Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+            <div className="bg-white p-4 lg:p-5 rounded-2xl lg:rounded-3xl border border-slate-200/90 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] lg:text-xs font-black uppercase tracking-wider text-slate-500">
+                  Total Cambios
+                </span>
+                <div className="size-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
+                  <History className="size-4" />
+                </div>
+              </div>
+              <p className="text-2xl lg:text-3xl font-black text-slate-900 mt-2 tabular-nums">
+                {auditLogs.length}
+              </p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">
+                Registros en este turno
+              </p>
+            </div>
+
+            <div className="bg-white p-4 lg:p-5 rounded-2xl lg:rounded-3xl border border-slate-200/90 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] lg:text-xs font-black uppercase tracking-wider text-amber-600">
+                  Por Cajeros
+                </span>
+                <div className="size-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                  <UserCheck className="size-4" />
+                </div>
+              </div>
+              <p className="text-2xl lg:text-3xl font-black text-amber-600 mt-2 tabular-nums">
+                {auditLogs.filter((l) => l.changed_by_role === "caja").length}
+              </p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">
+                Operaciones supervisadas
+              </p>
+            </div>
+
+            <div className="bg-white p-4 lg:p-5 rounded-2xl lg:rounded-3xl border border-slate-200/90 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] lg:text-xs font-black uppercase tracking-wider text-rose-600">
+                  Cancelaciones
+                </span>
+                <div className="size-8 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
+                  <AlertOctagon className="size-4" />
+                </div>
+              </div>
+              <p className="text-2xl lg:text-3xl font-black text-rose-600 mt-2 tabular-nums">
+                {auditLogs.filter((l) => l.new_status === "cancelado").length}
+              </p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">
+                Órdenes canceladas
+              </p>
+            </div>
+
+            <div className="bg-white p-4 lg:p-5 rounded-2xl lg:rounded-3xl border border-slate-200/90 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] lg:text-xs font-black uppercase tracking-wider text-teal-600">
+                  Órdenes Únicas
+                </span>
+                <div className="size-8 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
+                  <ShoppingCart className="size-4" />
+                </div>
+              </div>
+              <p className="text-2xl lg:text-3xl font-black text-teal-700 mt-2 tabular-nums">
+                {new Set(auditLogs.map((l) => l.order_id)).size}
+              </p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">
+                Afectadas en el turno
+              </p>
+            </div>
+          </div>
+
+          {/* Audit Records List */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-4 lg:p-5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <History className="size-4 text-primary" />
+                <span>
+                  Bitácora Cronológica de Eventos ({auditLogs.length})
+                </span>
+              </h3>
+            </div>
+
+            {isAuditLoading ? (
+              <div className="p-12 text-center space-y-3">
+                <Loader2 className="size-8 text-primary animate-spin mx-auto" />
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Consultando bitácora del turno...
+                </p>
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <div className="py-16 px-6 text-center space-y-4">
+                <div className="size-16 rounded-3xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 mx-auto shadow-xs">
+                  <ShieldCheck className="size-8" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-base text-slate-800">
+                    Sin modificaciones en este turno
+                  </h4>
+                  <p className="text-xs text-slate-400 font-medium max-w-sm mx-auto">
+                    No se han registrado modificaciones manuales de estado
+                    durante la jornada seleccionada.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {auditLogs
+                  .filter((log) => {
+                    if (!auditSearchQuery.trim()) return true;
+                    const q = auditSearchQuery.toLowerCase().trim();
+                    const loc = (log.orders?.locator || "").toLowerCase();
+                    const reason = (log.reason || "").toLowerCase();
+                    const user = (log.changed_by_name || "").toLowerCase();
+                    return (
+                      loc.includes(q) || reason.includes(q) || user.includes(q)
+                    );
+                  })
+                  .map((log) => {
+                    const isCaja = log.changed_by_role === "caja";
+                    const isCancel = log.new_status === "cancelado";
+
+                    return (
+                      <div
+                        key={log.id}
+                        className={cn(
+                          "p-4 lg:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors",
+                          isCancel && "bg-rose-50/20",
+                        )}
+                      >
+                        {/* Col 1: Time & Date */}
+                        <div className="flex items-center gap-3 min-w-44 shrink-0">
+                          <div
+                            className={cn(
+                              "size-10 rounded-2xl flex items-center justify-center font-bold shrink-0",
+                              isCaja
+                                ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                : "bg-teal-100 text-teal-800 border border-teal-200",
+                            )}
+                          >
+                            {isCaja ? (
+                              <User className="size-5" />
+                            ) : (
+                              <ShieldCheck className="size-5" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-slate-900 tabular-nums">
+                              {format(new Date(log.created_at), "hh:mm:ss a")}
+                            </p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">
+                              {format(new Date(log.created_at), "dd MMM yyyy", {
+                                locale: es,
+                              })}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Col 2: Order Info & Store */}
+                        <div className="min-w-48 shrink-0 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-black text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                              #{log.orders?.locator || log.order_id.slice(0, 8)}
+                            </span>
+                            {log.orders?.is_delivery && (
+                              <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-[9px] font-bold">
+                                Domicilio
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+                            <Building2 className="size-3 text-slate-400" />
+                            <span>{log.stores?.name || "Tienda Central"}</span>
+                          </p>
+                        </div>
+
+                        {/* Col 3: Responsible User */}
+                        <div className="min-w-44 shrink-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-xs text-slate-800">
+                              {log.changed_by_name || "Usuario"}
+                            </span>
+                          </div>
+                          <Badge
+                            className={cn(
+                              "text-[9px] font-black uppercase px-2 py-0.5 rounded-md mt-1",
+                              isCaja
+                                ? "bg-amber-100 text-amber-800 border-amber-300"
+                                : "bg-teal-100 text-teal-800 border-teal-300",
+                            )}
+                          >
+                            {isCaja
+                              ? "Cajero/a"
+                              : log.changed_by_role || "Admin"}
+                          </Badge>
+                        </div>
+
+                        {/* Col 4: State Transition Badges */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <StatusBadge status={log.previous_status} />
+                          <ArrowRight className="size-3.5 text-slate-400" />
+                          <StatusBadge status={log.new_status} />
+                        </div>
+
+                        {/* Col 5: Reason */}
+                        <div className="flex-1 min-w-0">
+                          {log.reason ? (
+                            <div className="bg-slate-100/90 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 italic">
+                              "{log.reason}"
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">
+                              Sin motivo documentado
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Col 6: Inspect Action */}
+                        <div className="shrink-0 flex items-center justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleInspectOrderFromAudit(
+                                log.order_id,
+                                log.orders?.locator,
+                              )
+                            }
+                            className="rounded-xl h-9 px-3 font-bold text-xs text-slate-700 hover:text-primary hover:border-primary/40 cursor-pointer shadow-2xs flex items-center gap-1.5"
+                          >
+                            <Eye className="size-3.5" />
+                            <span>Ver Orden</span>
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* STATUS CHANGE CONFIRMATION & REASON MODAL */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog
+        open={!!statusModal}
+        onOpenChange={(open) => {
+          if (!open) {
+            setStatusModal(null);
+            setStatusReason("");
+          }
+        }}
+      >
+        <DialogContent className="rounded-3xl border-none shadow-strong max-w-lg p-6 sm:p-8">
+          <DialogHeader className="space-y-2">
+            <div className="flex items-center gap-2.5">
+              <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                <RefreshCcw className="size-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-black tracking-tight text-slate-900">
+                  Confirmar Cambio de Estado
+                </DialogTitle>
+                <DialogDescription className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Orden #
+                  {statusModal?.order.locator ||
+                    statusModal?.order.ticket_number}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-5 py-3">
+            {/* Visual State Transition */}
+            {statusModal && (
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-center gap-3">
+                <StatusBadge status={statusModal.order.status} />
+                <ArrowRight className="size-4 text-slate-400 shrink-0" />
+                <StatusBadge status={statusModal.targetStatus} />
+              </div>
+            )}
+
+            {/* Notification alert banner */}
+            <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-900 font-medium">
+              <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold">Aviso de Auditoría y Supervisión</p>
+                <p className="text-[11px] text-amber-800/90 leading-relaxed">
+                  {user?.role === "caja"
+                    ? "Esta modificación se notificará en tiempo real al Administrador y quedará registrada en el log de auditoría del turno actual."
+                    : "Esta modificación quedará registrada con tu usuario en la auditoría del turno actual."}
+                </p>
+              </div>
+            </div>
+
+            {/* Reason / Justification Field */}
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-700 block">
+                Motivo / Justificación del Cambio
+              </label>
+
+              {/* Quick Pills */}
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {[
+                  "Solicitud del cliente",
+                  "Error en digitación",
+                  "Cancelación autorizada",
+                  "Cobrado por fuera",
+                  "Mesa reubicada",
+                  "Entregado directamente",
+                ].map((pill) => (
+                  <button
+                    key={pill}
+                    type="button"
+                    onClick={() => setStatusReason(pill)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer",
+                      statusReason === pill
+                        ? "bg-primary text-white border-primary shadow-xs"
+                        : "bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:bg-slate-50",
+                    )}
+                  >
+                    {pill}
+                  </button>
+                ))}
+              </div>
+
+              <Textarea
+                rows={3}
+                value={statusReason}
+                onChange={(e) => setStatusReason(e.target.value)}
+                placeholder="Escribe una observación o selecciona una opción rápida..."
+                className="rounded-2xl border-slate-200 text-xs font-medium focus-visible:ring-primary/20"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-3 mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setStatusModal(null);
+                setStatusReason("");
+              }}
+              className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-wider cursor-pointer"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={isSubmittingStatus}
+              onClick={() => {
+                if (statusModal) {
+                  handleStatusChange(
+                    statusModal.order.id,
+                    statusModal.targetStatus,
+                    statusReason,
+                  );
+                }
+              }}
+              className="rounded-xl h-11 px-6 font-black text-xs uppercase tracking-wider bg-primary hover:bg-primary/90 text-white shadow-md shadow-primary/25 cursor-pointer flex items-center gap-2"
+            >
+              {isSubmittingStatus ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Guardando...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="size-4" />
+                  <span>Confirmar Cambio</span>
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -707,6 +707,103 @@ export type Database = {
           },
         ];
       };
+      order_status_logs: {
+        Row: {
+          id: string;
+          order_id: string;
+          previous_status:
+            | "pendiente"
+            | "confirmado"
+            | "en_preparacion"
+            | "listo"
+            | "entregado"
+            | "cancelado";
+          new_status:
+            | "pendiente"
+            | "confirmado"
+            | "en_preparacion"
+            | "listo"
+            | "entregado"
+            | "cancelado";
+          changed_by: string;
+          changed_by_name: string | null;
+          changed_by_role: "admin" | "caja" | "mesero" | "cocina" | "bodega" | null;
+          reason: string | null;
+          store_id: string | null;
+          company_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          previous_status:
+            | "pendiente"
+            | "confirmado"
+            | "en_preparacion"
+            | "listo"
+            | "entregado"
+            | "cancelado";
+          new_status:
+            | "pendiente"
+            | "confirmado"
+            | "en_preparacion"
+            | "listo"
+            | "entregado"
+            | "cancelado";
+          changed_by: string;
+          changed_by_name?: string | null;
+          changed_by_role?: "admin" | "caja" | "mesero" | "cocina" | "bodega" | null;
+          reason?: string | null;
+          store_id?: string | null;
+          company_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          previous_status?:
+            | "pendiente"
+            | "confirmado"
+            | "en_preparacion"
+            | "listo"
+            | "entregado"
+            | "cancelado";
+          new_status?:
+            | "pendiente"
+            | "confirmado"
+            | "en_preparacion"
+            | "listo"
+            | "entregado"
+            | "cancelado";
+          changed_by?: string;
+          changed_by_name?: string | null;
+          changed_by_role?: "admin" | "caja" | "mesero" | "cocina" | "bodega" | null;
+          reason?: string | null;
+          store_id?: string | null;
+          company_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_status_logs_order_id_fkey";
+            columns: ["order_id"];
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_status_logs_changed_by_fkey";
+            columns: ["changed_by"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_status_logs_store_id_fkey";
+            columns: ["store_id"];
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       payments: {
         Row: {
           id: string;
@@ -1050,7 +1147,11 @@ export type Database = {
         Returns: Json;
       };
       update_order_status: {
-        Args: { p_order_id: string; p_status: string };
+        Args: {
+          p_order_id: string;
+          p_status: string;
+          p_reason?: string | null;
+        };
         Returns: Json;
       };
       toggle_order_item_completed: {

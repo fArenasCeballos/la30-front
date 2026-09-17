@@ -12,6 +12,7 @@ import {
   ClipboardList,
   Truck,
   UtensilsCrossed,
+  Search,
   ArrowLeftRight,
   Store as StoreIcon,
   Settings,
@@ -81,6 +82,12 @@ const NAV_ITEMS: {
     to: "/consumo-interno",
     label: "Consumo Interno",
     icon: UtensilsCrossed,
+    roles: ["caja", "admin"],
+  },
+  {
+    to: "/consultas",
+    label: "Consultas",
+    icon: Search,
     roles: ["caja", "admin"],
   },
 ];
