@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
+import { useCompany } from "@/context/CompanyContext";
+import { getProductRecipeCostMap } from "@/lib/inventoryService";
 import type { OrderStatus } from "@/types";
 import { supabase } from "@/lib/supabase";
 import {
@@ -95,6 +97,8 @@ interface ReportStatsData {
 export default function Reporteria() {
   const { user } = useAuth();
   const { stores, activeStore } = useStore();
+  const { activeCompany } = useCompany();
+  const isProfitabilityEnabled = Boolean(activeCompany?.profitability_enabled);
 
   const [activeTab, setActiveTab] = useState<string>("resumen");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
@@ -285,6 +289,87 @@ export default function Reporteria() {
   const pagedOrders = pagedOrdersResponse.data;
   const totalPages = Math.ceil(pagedOrdersResponse.count / PAGE_SIZE) || 1;
 
+  // ── Profitability & Recipe Costing (Solo si la empresa tiene el check activo) ──
+  const targetStoreIds = useMemo(() => {
+    if (selectedStoreId !== "all") return [selectedStoreId];
+    return stores.map((s) => s.id);
+  }, [selectedStoreId, stores]);
+
+  const { data: recipeCostMap = {} } = useQuery({
+    queryKey: ["reporteria-recipe-costs", targetStoreIds],
+    queryFn: () => getProductRecipeCostMap(targetStoreIds),
+    enabled: isProfitabilityEnabled && targetStoreIds.length > 0,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: periodSoldItems = [] } = useQuery({
+    queryKey: [
+      "reporteria-sold-items",
+      shiftRange?.from?.toISOString(),
+      shiftRange?.to?.toISOString(),
+      selectedStoreId,
+      typeFilter,
+    ],
+    queryFn: async () => {
+      if (!shiftRange) return [];
+      let query = supabase
+        .from("order_items")
+        .select("product_id, quantity, orders!inner(created_at, status, store_id, is_delivery)")
+        .gte("orders.created_at", shiftRange.from.toISOString())
+        .lte("orders.created_at", shiftRange.to.toISOString())
+        .eq("orders.status", "entregado");
+
+      if (selectedStoreId !== "all") {
+        query = query.eq("orders.store_id", selectedStoreId);
+      } else {
+        const companyStoreIds = stores.map((s) => s.id);
+        if (companyStoreIds.length > 0) {
+          query = query.in("orders.store_id", companyStoreIds);
+        }
+      }
+
+      if (typeFilter === "delivery") query = query.eq("orders.is_delivery", true);
+      if (typeFilter === "caja") query = query.filter("orders.is_delivery", "in", "(false,null)");
+
+      const { data, error } = await query;
+      if (error) {
+        console.warn("Error fetching sold items for profitability:", error);
+        return [];
+      }
+      return data || [];
+    },
+    enabled: isProfitabilityEnabled && !!shiftRange,
+  });
+
+  const profitabilityData = useMemo(() => {
+    if (!isProfitabilityEnabled) return null;
+    let totalCogs = 0;
+    let itemsWithRecipe = 0;
+
+    periodSoldItems.forEach((item) => {
+      const unitCost = item.product_id ? (recipeCostMap[item.product_id] || 0) : 0;
+      const qty = Number(item.quantity) || 1;
+      if (unitCost > 0) {
+        itemsWithRecipe += qty;
+        totalCogs += qty * unitCost;
+      }
+    });
+
+    const totalSales = reportStats.total_sales ?? 0;
+    const grossProfit = totalSales - totalCogs;
+    const marginPct = totalSales > 0 ? (grossProfit / totalSales) * 100 : 0;
+    const cogsPct = totalSales > 0 ? (totalCogs / totalSales) * 100 : 0;
+
+    return {
+      enabled: true,
+      totalCogs,
+      grossProfit,
+      marginPct,
+      cogsPct,
+      itemsWithRecipe,
+    };
+  }, [isProfitabilityEnabled, periodSoldItems, recipeCostMap, reportStats.total_sales]);
+
   // ── Handlers ─────────────────────────────────────────────────────────────────
   const handleQuickRangeSelect = (label: string) => {
     const range = QUICK_RANGES.find((r) => r.label === label);
@@ -420,6 +505,12 @@ export default function Reporteria() {
         { header: "PRODUCTO", key: "product", width: 35 },
         { header: "CANTIDAD", key: "qty", width: 12 },
         { header: "PRECIO UNIT", key: "price", width: 16 },
+        ...(isProfitabilityEnabled
+          ? [
+              { header: "COSTO RECETA", key: "recipe_cost", width: 16 },
+              { header: "GANANCIA ITEM", key: "item_profit", width: 16 },
+            ]
+          : []),
         { header: "EXTRAS", key: "extras_total", width: 14 },
         { header: "TOTAL ITEM", key: "total", width: 18 },
         { header: "OPCIONES", key: "options", width: 30 },
@@ -442,11 +533,23 @@ export default function Reporteria() {
 
       ordersToExport.forEach((o) => {
         o.order_items?.forEach((item) => {
+          const productId = item.product_id || item.products?.id;
+          const unitRecipeCost =
+            isProfitabilityEnabled && productId
+              ? recipeCostMap[productId] || 0
+              : 0;
           const row = wsItems.addRow({
             loc: o.locator,
             product: item.products?.name,
             qty: item.quantity,
             price: item.unit_price,
+            ...(isProfitabilityEnabled
+              ? {
+                  recipe_cost: unitRecipeCost * item.quantity,
+                  item_profit:
+                    (item.unit_price - unitRecipeCost) * item.quantity,
+                }
+              : {}),
             extras_total: item.extras_total,
             total: (item.unit_price + item.extras_total) * item.quantity,
             options: item.selected_options
@@ -459,6 +562,10 @@ export default function Reporteria() {
 
           row.getCell("loc").font = { bold: true };
           row.getCell("price").numFmt = '"$"#,##0.00';
+          if (isProfitabilityEnabled) {
+            row.getCell("recipe_cost").numFmt = '"$"#,##0.00';
+            row.getCell("item_profit").numFmt = '"$"#,##0.00';
+          }
           row.getCell("extras_total").numFmt = '"$"#,##0.00';
           row.getCell("total").numFmt = '"$"#,##0.00';
         });
@@ -549,6 +656,7 @@ export default function Reporteria() {
                 paymentSummary={paymentSummary}
                 hourlyData={hourlyData}
                 isMultiDay={isMultiDay}
+                profitabilityData={profitabilityData}
               />
             )}
 

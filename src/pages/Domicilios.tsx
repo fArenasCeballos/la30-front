@@ -514,7 +514,14 @@ export default function Domicilios() {
             buildKitchenReceiptHTML(receiptData),
             `Comanda - ${order.locator}`,
           );
+
+          toast.success("Domicilio confirmado. Pasando a Cocina...");
+          setCurrentNavTab("cocina");
         }
+      } else if (status === "en_preparacion") {
+        setCurrentNavTab("cocina");
+      } else if (status === "listo") {
+        setCurrentNavTab("en_ruta");
       }
     } finally {
       setUpdatingIds((prev) => {

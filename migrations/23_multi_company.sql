@@ -226,7 +226,17 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION update_user_company_access IS 'Permite a un admin actualizar las empresas a las que un usuario tiene acceso.';
+-- ── 10.1. Asegurar columna supplier_name en raw_material_entries ──
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'raw_material_entries') THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'raw_material_entries' AND column_name = 'supplier_name'
+    ) THEN
+      ALTER TABLE public.raw_material_entries ADD COLUMN supplier_name TEXT;
+    END IF;
+  END IF;
+END $$;
 
 -- ── 11. Verificar migración ─────────────────────────────────
 SELECT 'EMPRESAS' AS seccion;

@@ -78,6 +78,7 @@ export default function Caja() {
   const [receipt, setReceipt] = useState<ReceiptState | null>(null);
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
   const [isClosing, setIsClosing] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("pendientes");
   const [siigoOrder, setSiigoOrder] = useState<{
     order: Order;
     method: string;
@@ -168,6 +169,10 @@ export default function Caja() {
 
     try {
       await updateOrderStatus(orderId, status);
+      if (status === "confirmado") {
+        toast.success("Pedido confirmado. Pasando a Cobro...");
+        setActiveTab("confirmados");
+      }
     } finally {
       setUpdatingIds((prev) => {
         const next = new Set(prev);
@@ -240,6 +245,10 @@ export default function Caja() {
       targetStatus,
     );
     if (!success) return false;
+
+    if (targetStatus === "en_preparacion") {
+      setActiveTab("cocina");
+    }
 
     // Ejecutar tareas de Siigo y de Impresión en segundo plano sin bloquear el calculador
     (async () => {
@@ -347,7 +356,11 @@ export default function Caja() {
   return (
     <ErrorBoundary>
       <div className="section-container space-y-4 sm:space-y-6 pb-12 animate-in fade-in duration-300">
-        <Tabs defaultValue="pendientes" className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="w-full"
+        >
           {/* Barra Superior Vidriada y Pegajosa para Celular, iPad y PC */}
           <div className="bg-white/80 backdrop-blur-xl p-1.5 sm:p-2 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs mb-4 sm:mb-6 sticky top-14 sm:top-16 z-30 flex items-center justify-between gap-2 sm:gap-3">
             <div className="flex-1 w-full overflow-x-auto no-scrollbar">
@@ -549,6 +562,7 @@ export default function Caja() {
                                   console.warn,
                                 );
                                 toast.success("Enviado a cocina");
+                                setActiveTab("cocina");
 
                                 const pMethod =
                                   order.payments?.[0]?.method || "efectivo";

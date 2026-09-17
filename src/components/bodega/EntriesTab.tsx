@@ -139,6 +139,13 @@ export function EntriesTab() {
           toast.error("No se pudo crear el proveedor automáticamente");
         }
       }
+    } else if (finalSupplierName) {
+      const existingByName = suppliers.find(
+        (s) => s.name.toLowerCase() === finalSupplierName.toLowerCase(),
+      );
+      if (existingByName) {
+        supplierId = existingByName.id;
+      }
     }
 
     const purchaseNotes =

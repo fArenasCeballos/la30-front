@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import type { Store, Profile } from "@/types";
 
 const STORAGE_KEY = "la30_active_store";
+const STORAGE_DATA_KEY = "la30_active_store_data";
 
 export interface StoreContextType {
   stores: Store[];
@@ -19,10 +20,17 @@ export interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const { activeCompany } = useCompany();
+  const { user, loading: authLoading } = useAuth();
+  const { activeCompany, loading: companyLoading } = useCompany();
   const [stores, setStores] = useState<Store[]>([]);
-  const [activeStore, setActiveStoreState] = useState<Store | null>(null);
+  const [activeStore, setActiveStoreState] = useState<Store | null>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_DATA_KEY);
+      return raw ? (JSON.parse(raw) as Store) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
 
   const isAdmin = user?.role === "admin";
@@ -33,9 +41,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     async function initializeStores() {
       if (!user) {
-        setStores([]);
-        setActiveStoreState(null);
-        setLoading(false);
+        if (!authLoading) {
+          setStores([]);
+          setActiveStoreState(null);
+          setLoading(false);
+        }
         return;
       }
 
@@ -43,7 +53,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!activeCompany) {
         setStores([]);
         setActiveStoreState(null);
-        setLoading(false);
+        if (!companyLoading) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -115,8 +127,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           setActiveStoreState((prev) =>
             prev?.id !== storeToSet?.id ? storeToSet : prev,
           );
+          localStorage.setItem(STORAGE_KEY, storeToSet.slug);
+          localStorage.setItem(STORAGE_DATA_KEY, JSON.stringify(storeToSet));
         } else {
           setActiveStoreState(null);
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(STORAGE_DATA_KEY);
         }
       } catch (err) {
         console.error("Error initializing stores:", err);
@@ -132,12 +148,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isCancelled = true;
     };
-  }, [user, activeCompany]); // Depend on user and activeCompany to reload stores when either changes
+  }, [user, authLoading, activeCompany, companyLoading]); // Depend on user and activeCompany to reload stores when either changes
 
   const setActiveStore = useCallback(
     (store: Store) => {
       setActiveStoreState(store);
       localStorage.setItem(STORAGE_KEY, store.slug);
+      localStorage.setItem(STORAGE_DATA_KEY, JSON.stringify(store));
     },
     [],
   );

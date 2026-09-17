@@ -161,7 +161,7 @@ export function AppLayout() {
     canSwitchStore,
     loading: storeLoading,
   } = useStore();
-  const { activeCompany, canSwitchCompany } = useCompany();
+  const { activeCompany, canSwitchCompany, loading: companyLoading } = useCompany();
   const navigate = useNavigate();
   const location = useLocation();
   const isAdministracion = location.pathname.startsWith("/administracion");
@@ -236,7 +236,7 @@ export function AppLayout() {
     user?.role,
   ]);
 
-  if (loading) {
+  if (loading || companyLoading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-accent/20">
         <div className="flex flex-col items-center gap-4">
@@ -253,6 +253,10 @@ export function AppLayout() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (canSwitchCompany && !activeCompany) {
+    return <Navigate to="/select-company" replace />;
   }
 
   if (storeLoading) {

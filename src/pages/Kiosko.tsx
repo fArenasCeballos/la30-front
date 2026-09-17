@@ -14,6 +14,7 @@ import type {
 import type { Tables } from "@/types/database.types";
 import { useOrders } from "@/context/OrderContext";
 import { useStore } from "@/context/StoreContext";
+import { useAuth } from "@/context/AuthContext";
 import { ProductCustomizer } from "@/components/ProductCustomizer";
 import type { CustomizationValues } from "@/components/ProductCustomizer";
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,7 @@ function clearDraft() {
 
 export default function Kiosko() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const editOrderId = searchParams.get("edit");
   const { addOrder, addDeliveryOrder, updateOrder, orders } = useOrders();
@@ -643,10 +645,15 @@ export default function Kiosko() {
       setLocator("");
       setOrderNotes("");
       setIsDeliveryOrder(false);
-      if (!isDeliveryOrder) {
-        setStep("locator");
-      }
       clearDraft();
+
+      if (!isDeliveryOrder) {
+        if (user?.role === "caja" || user?.role === "admin") {
+          navigate("/caja");
+        } else {
+          setStep("locator");
+        }
+      }
     } finally {
       setIsSending(false);
     }

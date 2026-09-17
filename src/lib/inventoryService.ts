@@ -229,8 +229,48 @@ export async function addMaterialEntry(
     .select()
     .single();
 
-  if (error)
+  if (error) {
+    // Si la columna supplier_name no existe en la base de datos remota
+    if (
+      (error.message.includes("supplier_name") ||
+        error.message.includes("schema cache")) &&
+      input.supplier_name
+    ) {
+      const { supplier_name, notes, ...rest } = input;
+      const combinedNotes = [
+        notes,
+        supplier_name ? `Proveedor: ${supplier_name}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      const retry = await supabase
+        .from("raw_material_entries")
+        .insert({ ...rest, notes: combinedNotes })
+        .select()
+        .single();
+
+      if (!retry.error) {
+        return {
+          ...(retry.data as RawMaterialEntry),
+          supplier_name,
+        };
+      }
+      throw new Error(`Error al registrar entrada: ${retry.error.message}`);
+    }
     throw new Error(`Error al registrar entrada: ${error.message}`);
+  }
+
+  if (input.unit_cost && input.unit_cost > 0) {
+    supabase
+      .from("raw_materials")
+      .update({
+        cost_per_unit: input.unit_cost,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", input.raw_material_id)
+      .then(() => {});
+  }
   return data as RawMaterialEntry;
 }
 
@@ -249,7 +289,14 @@ export async function getMaterialEntries(
     .limit(limit);
 
   if (error) throw new Error(`Error al obtener entradas: ${error.message}`);
-  return (data ?? []) as RawMaterialEntry[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((data ?? []) as any[]).map((entry) => ({
+    ...entry,
+    supplier_name:
+      entry.supplier_name ||
+      entry.suppliers?.name ||
+      (entry.notes?.match(/Proveedor:\s*([^\n]+)/)?.[1] ?? null),
+  })) as RawMaterialEntry[];
 }
 
 // ─── Recipes ────────────────────────────────────────────────────────────────
@@ -364,3 +411,42 @@ export async function getLowStockMaterials(
     is_low_stock: m.current_stock <= m.min_stock,
   }));
 }
+
+// ─── Profitability & Recipe Costing ──────────────────────────────────────────
+
+/**
+ * Get map of product_id -> total recipe cost (sum of ingredient quantity_required * cost_per_unit).
+ */
+export async function getProductRecipeCostMap(
+  storeIds?: string[] | null,
+): Promise<Record<string, number>> {
+  try {
+    let query = supabase
+      .from("recipes")
+      .select("product_id, quantity_required, raw_materials!inner(store_id, cost_per_unit)");
+
+    if (storeIds && storeIds.length > 0) {
+      query = query.in("raw_materials.store_id", storeIds);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.warn("Error fetching recipes with costs:", error);
+      return {};
+    }
+
+    const map: Record<string, number> = {};
+    for (const row of data || []) {
+      const pId = row.product_id;
+      const qty = Number(row.quantity_required) || 0;
+      const rawMat = row.raw_materials as unknown as { cost_per_unit: number } | null;
+      const unitCost = Number(rawMat?.cost_per_unit) || 0;
+      map[pId] = (map[pId] || 0) + qty * unitCost;
+    }
+    return map;
+  } catch (err) {
+    console.error("Error in getProductRecipeCostMap:", err);
+    return {};
+  }
+}
+

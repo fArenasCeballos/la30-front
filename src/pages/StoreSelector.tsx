@@ -102,7 +102,7 @@ function getStoreSubtitle(store: Store) {
 export default function StoreSelector() {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, loading } = useAuth();
-  const { activeCompany, canSwitchCompany } = useCompany();
+  const { activeCompany, canSwitchCompany, loading: companyLoading } = useCompany();
   const {
     stores,
     activeStore,
@@ -110,7 +110,7 @@ export default function StoreSelector() {
     loading: storeLoading,
   } = useStore();
 
-  if (loading || storeLoading) {
+  if (loading || companyLoading || storeLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-900">
         <div className="flex flex-col items-center gap-4">
@@ -128,6 +128,10 @@ export default function StoreSelector() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (canSwitchCompany && !activeCompany) {
+    return <Navigate to="/select-company" replace />;
   }
 
   const activeStores = stores.filter((s) => s.is_active);

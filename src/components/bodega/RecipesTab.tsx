@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useStore } from "@/context/StoreContext";
 import { supabase } from "@/lib/supabase";
@@ -10,6 +10,7 @@ import {
   getMaterialCategories,
 } from "@/lib/inventoryService";
 import { getCompatibleUnits, convertToBase } from "@/lib/unitConversions";
+import { formatPrice } from "@/lib/formatPrice";
 import { toast } from "sonner";
 import {
   Plus,
@@ -19,10 +20,15 @@ import {
   X,
   Loader2,
   Package,
+  TrendingUp,
+  DollarSign,
+  Coins,
+  Percent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 export function RecipesTab() {
   const { activeStore } = useStore();
@@ -49,7 +55,7 @@ export function RecipesTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, available, category_id, categories(name)")
+        .select("id, name, price, available, category_id, categories(name)")
         .contains("store_ids", [activeStore!.id])
         .eq("available", true)
         .order("name");
@@ -154,10 +160,6 @@ export function RecipesTab() {
     setIsDropdownOpen(false);
   };
 
-  const selectedProduct = products.find(
-    (p) => p.id === effectiveSelectedProductId,
-  );
-
   const filteredMaterials = materials.filter((m) => {
     const matchCat = activeMaterialCategoryId
       ? m.category_id === activeMaterialCategoryId
@@ -168,34 +170,54 @@ export function RecipesTab() {
     return matchCat && matchSearch;
   });
 
+  const selectedProduct = filteredProducts.find(
+    (p) => p.id === effectiveSelectedProductId,
+  );
+
+  const totalRecipeCost = useMemo(() => {
+    return recipes.reduce((sum, r) => {
+      const costPerUnit = Number(r.raw_materials?.cost_per_unit || 0);
+      const qty = Number(r.quantity_required || 0);
+      return sum + qty * costPerUnit;
+    }, 0);
+  }, [recipes]);
+
+  const productPrice = Number(selectedProduct?.price || 0);
+  const grossProfit = productPrice - totalRecipeCost;
+  const profitMargin = productPrice > 0 ? (grossProfit / productPrice) * 100 : 0;
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
       {/* Selector de Producto (Lado Izquierdo) */}
-      <div className="lg:col-span-1 space-y-3">
-        <div className="bg-white p-4 sm:p-5 border border-slate-200/80 rounded-2xl shadow-xs flex flex-col h-auto max-h-[280px] sm:max-h-[340px] lg:max-h-[800px]">
-          <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-              <Package className="h-4 w-4 text-teal-600" />
-              <span>Platos & Bebidas ({filteredProducts.length})</span>
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden flex flex-col h-full min-h-[500px]">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 text-teal-600" />
+            <h3 className="font-bold text-xs text-slate-900 uppercase tracking-wider">
+              Platos del Menú
             </h3>
           </div>
+          <span className="text-[10px] font-black bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+            {filteredProducts.length}
+          </span>
+        </div>
 
-          <div className="space-y-2.5 mb-3 shrink-0">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Buscar plato en la carta..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-9.5 rounded-xl border border-slate-200/80 bg-slate-50/60 text-xs"
-              />
-            </div>
+        <div className="p-3.5 flex-1 flex flex-col min-h-0 space-y-3">
+          <div className="relative">
+            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar producto..."
+              className="pl-9 h-9 text-xs rounded-xl bg-slate-50/50 border-slate-200"
+            />
+          </div>
 
+          <div className="space-y-1.5">
             <select
               value={activeProductCategoryId}
               onChange={(e) => setActiveProductCategoryId(e.target.value)}
-              className="w-full h-9.5 px-3 bg-slate-50/60 border border-slate-200/80 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-teal-500/30 text-slate-700"
+              className="w-full h-8 px-2.5 bg-slate-50/50 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 focus:outline-none"
             >
               <option value="">Todas las categorías</option>
               {productCategories.map((c) => (
@@ -230,7 +252,12 @@ export function RecipesTab() {
                         : "border-slate-100 hover:border-slate-200 bg-white hover:bg-slate-50/60 text-slate-800",
                     )}
                   >
-                    <div className="font-bold text-xs truncate">{p.name}</div>
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="font-bold text-xs truncate">{p.name}</div>
+                      <span className="text-[10px] font-black text-slate-600 shrink-0">
+                        {formatPrice(p.price || 0)}
+                      </span>
+                    </div>
                     {p.categories?.name && (
                       <div className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5 tracking-wider">
                         {p.categories.name}
@@ -251,15 +278,15 @@ export function RecipesTab() {
             {/* Header */}
             <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600">
-                  <UtensilsCrossed className="h-4 w-4" />
+                <div className="h-9 w-9 rounded-xl bg-teal-50 border border-teal-200/60 flex items-center justify-center text-teal-600">
+                  <UtensilsCrossed className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-slate-900 leading-tight">
+                  <h2 className="text-base font-black text-slate-900 leading-tight">
                     {selectedProduct.name}
                   </h2>
                   <p className="text-xs text-slate-500 font-medium">
-                    Ficha técnica de ingredientes para descuento de stock
+                    Ficha técnica de ingredientes, inversión y rentabilidad
                   </p>
                 </div>
               </div>
@@ -271,6 +298,98 @@ export function RecipesTab() {
                 <Plus className="h-4 w-4" strokeWidth={2.5} />
                 <span>Agregar Ingrediente</span>
               </Button>
+            </div>
+
+            {/* Financial Comparison Summary Ribbon */}
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-50 via-white to-slate-50 border-b border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {/* Costo Inversión */}
+              <div className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                  <Coins className="size-3 text-amber-500" />
+                  Inversión Receta
+                </span>
+                <p className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
+                  {formatPrice(totalRecipeCost)}
+                </p>
+                <span className="text-[9px] text-slate-400 font-medium">
+                  Costo de insumos
+                </span>
+              </div>
+
+              {/* Precio Venta */}
+              <div className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                  <DollarSign className="size-3 text-blue-500" />
+                  Precio Venta
+                </span>
+                <p className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
+                  {formatPrice(productPrice)}
+                </p>
+                <span className="text-[9px] text-slate-400 font-medium">
+                  Carta / Menú
+                </span>
+              </div>
+
+              {/* Ganancia Bruta */}
+              <div className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                  <TrendingUp className="size-3 text-emerald-500" />
+                  Ganancia Bruta
+                </span>
+                <p
+                  className={cn(
+                    "text-base sm:text-lg font-black mt-0.5",
+                    grossProfit >= 0 ? "text-emerald-700" : "text-rose-600",
+                  )}
+                >
+                  {formatPrice(grossProfit)}
+                </p>
+                <span className="text-[9px] text-slate-400 font-medium">
+                  Por unidad vendida
+                </span>
+              </div>
+
+              {/* Margen % */}
+              <div className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                  <Percent className="size-3 text-purple-500" />
+                  Rentabilidad
+                </span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span
+                    className={cn(
+                      "text-base sm:text-lg font-black",
+                      profitMargin >= 50
+                        ? "text-emerald-700"
+                        : profitMargin >= 30
+                          ? "text-amber-600"
+                          : "text-rose-600",
+                    )}
+                  >
+                    {productPrice > 0 ? `${profitMargin.toFixed(1)}%` : "0%"}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[9px] font-black uppercase px-1.5 py-0.2 rounded",
+                      profitMargin >= 50
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : profitMargin >= 30
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-rose-50 text-rose-700 border-rose-200",
+                    )}
+                  >
+                    {profitMargin >= 50
+                      ? "Óptimo"
+                      : profitMargin >= 30
+                        ? "Moderado"
+                        : "Bajo"}
+                  </Badge>
+                </div>
+                <span className="text-[9px] text-slate-400 font-medium">
+                  Margen sobre venta
+                </span>
+              </div>
             </div>
 
             {/* List of Ingredients */}
@@ -288,47 +407,66 @@ export function RecipesTab() {
                   </p>
                   <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                     Agrega los insumos que componen este plato para que se
-                    descuenten del stock automáticamente en cada venta.
+                    descuenten del stock automáticamente en cada venta y se calcule su costo.
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {recipes.map((recipe) => (
-                    <div
-                      key={recipe.id}
-                      className="flex items-center justify-between p-3.5 bg-white border border-slate-200/80 rounded-xl hover:border-slate-300 hover:shadow-2xs transition-all"
-                    >
-                      <div className="min-w-0 flex-1 pr-2">
-                        <h4 className="font-bold text-slate-900 text-xs truncate">
-                          {recipe.raw_materials?.name}
-                        </h4>
-                        <p className="text-[11px] font-semibold text-slate-500 mt-0.5">
-                          Consumo:{" "}
-                          <span className="font-bold text-teal-700">
-                            {recipe.quantity_required}{" "}
-                            {recipe.raw_materials?.unit}
-                          </span>
-                        </p>
-                      </div>
+                  {recipes.map((recipe) => {
+                    const costPerUnit = Number(
+                      recipe.raw_materials?.cost_per_unit || 0,
+                    );
+                    const qty = Number(recipe.quantity_required || 0);
+                    const subtotalCost = qty * costPerUnit;
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              "¿Quitar este ingrediente de la receta?",
-                            )
-                          ) {
-                            deleteMutation.mutate(recipe.raw_material_id);
-                          }
-                        }}
-                        className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
-                        title="Quitar ingrediente"
+                    return (
+                      <div
+                        key={recipe.id}
+                        className="flex items-center justify-between p-3.5 bg-white border border-slate-200/80 rounded-xl hover:border-slate-300 hover:shadow-2xs transition-all"
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="min-w-0 flex-1 pr-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <h4 className="font-bold text-slate-900 text-xs truncate">
+                              {recipe.raw_materials?.name}
+                            </h4>
+                            <span className="text-xs font-black text-slate-800 tabular-nums">
+                              {formatPrice(subtotalCost)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 mt-1">
+                            <span>
+                              Consumo:{" "}
+                              <strong className="text-teal-700 font-bold">
+                                {recipe.quantity_required}{" "}
+                                {recipe.raw_materials?.unit}
+                              </strong>
+                            </span>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-[10px] text-slate-400 font-normal">
+                              {formatPrice(costPerUnit)} / {recipe.raw_materials?.unit}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "¿Quitar este ingrediente de la receta?",
+                              )
+                            ) {
+                              deleteMutation.mutate(recipe.raw_material_id);
+                            }
+                          }}
+                          className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
+                          title="Quitar ingrediente"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

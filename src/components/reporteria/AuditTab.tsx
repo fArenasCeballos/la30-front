@@ -40,6 +40,7 @@ export interface ReportOrder {
   profiles?: { name: string };
   order_items?: {
     id: string;
+    product_id?: string | null;
     quantity: number;
     unit_price: number;
     extras_total: number;
@@ -47,6 +48,7 @@ export interface ReportOrder {
     selected_options: Record<string, string> | null;
     selected_extras: string[] | null;
     products: {
+      id?: string;
       name: string;
       categories: { name: string } | null;
     };

@@ -45,6 +45,14 @@ interface SummaryTabProps {
   };
   hourlyData: { hora?: string; date?: string; ventas: number }[];
   isMultiDay: boolean;
+  profitabilityData?: {
+    enabled: boolean;
+    totalCogs: number;
+    grossProfit: number;
+    marginPct: number;
+    cogsPct: number;
+    itemsWithRecipe: number;
+  } | null;
 }
 
 export function SummaryTab({
@@ -54,6 +62,7 @@ export function SummaryTab({
   paymentSummary,
   hourlyData,
   isMultiDay,
+  profitabilityData,
 }: SummaryTabProps) {
   const topProducts = reportStats.top_products || [];
   const maxProductQty = Math.max(...topProducts.map((p) => p.quantity), 1);
@@ -142,6 +151,125 @@ export function SummaryTab({
           </div>
         </div>
       </section>
+
+      {/* ── 1.1 Profitability & Recipe Cost Analysis (Solo si está habilitado para la empresa) ── */}
+      {profitabilityData?.enabled && (
+        <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 rounded-3xl p-5 sm:p-6 text-white shadow-lg space-y-5 border border-slate-700/50">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-2xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-400">
+                <TrendingUp className="size-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
+                    Rentabilidad & Retorno del Período
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40 text-[10px] uppercase font-bold">
+                    Fórmulas Técnicas
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 font-medium">
+                  Cálculo consolidado de recetas de órdenes entregadas frente al ingreso neto.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-slate-300">
+                Margen Bruto:
+              </span>
+              <span
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-black tracking-wide border",
+                  profitabilityData.marginPct >= 50
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                    : profitabilityData.marginPct >= 30
+                      ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                      : "bg-rose-500/20 text-rose-300 border-rose-500/40",
+                )}
+              >
+                {profitabilityData.marginPct.toFixed(1)}% MARGEN
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Inversión en Recetas */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2 backdrop-blur-xs">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold uppercase tracking-wider">Inversión (Insumos)</span>
+                <span className="text-[11px] font-bold text-amber-400">
+                  {profitabilityData.cogsPct.toFixed(1)}% de venta
+                </span>
+              </div>
+              <p className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                {formatPrice(profitabilityData.totalCogs)}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Costo total de materias primas según fichas técnicas
+              </p>
+              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden mt-2">
+                <div
+                  className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, Math.max(2, profitabilityData.cogsPct))}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Ganancia Bruta */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2 backdrop-blur-xs">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold uppercase tracking-wider">Ganancia Bruta</span>
+                <span className="text-[11px] font-bold text-emerald-400">
+                  Ventas - Inversión
+                </span>
+              </div>
+              <p className="text-xl sm:text-2xl font-black text-emerald-400 tracking-tight">
+                {formatPrice(profitabilityData.grossProfit)}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Utilidad directa generada por las ventas del período
+              </p>
+              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden mt-2">
+                <div
+                  className="h-full bg-emerald-400 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, Math.max(2, profitabilityData.marginPct))}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Salud Financiera / Resumen */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2 backdrop-blur-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-semibold uppercase tracking-wider">Desglose Técnico</span>
+                  <span className="text-[11px] text-teal-300 font-bold">
+                    {profitabilityData.itemsWithRecipe} platos con receta
+                  </span>
+                </div>
+                <div className="mt-2 space-y-1 text-xs">
+                  <div className="flex justify-between text-slate-300">
+                    <span>Ventas período:</span>
+                    <span className="font-bold text-white">{formatPrice(summary.total)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Costo insumos:</span>
+                    <span className="font-semibold text-amber-300">-{formatPrice(profitabilityData.totalCogs)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs">
+                <span className="text-slate-400 font-medium">Ganancia x $100 vendidos:</span>
+                <span className="font-black text-teal-300">
+                  {formatPrice(Math.round(profitabilityData.marginPct * 100))}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── 2. Channel Breakdown Banner (Mostrador vs Domicilios) ── */}
       {isDomiciliosStore && (

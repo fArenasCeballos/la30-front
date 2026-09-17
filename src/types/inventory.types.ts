@@ -76,6 +76,7 @@ export interface RawMaterial {
   unit: string;
   min_stock: number;
   current_stock: number;
+  cost_per_unit: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -90,6 +91,7 @@ export interface RawMaterialInsert {
   unit: string;
   min_stock?: number;
   current_stock?: number;
+  cost_per_unit?: number;
   is_active?: boolean;
 }
 
@@ -99,6 +101,7 @@ export interface RawMaterialUpdate {
   unit?: string;
   min_stock?: number;
   current_stock?: number;
+  cost_per_unit?: number;
   is_active?: boolean;
 }
 

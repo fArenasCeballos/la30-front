@@ -307,6 +307,7 @@ export type Database = {
           color: string;
           is_active: boolean;
           siigo_enabled: boolean;
+          profitability_enabled: boolean;
           created_at: string;
         };
         Insert: {
@@ -318,6 +319,7 @@ export type Database = {
           color?: string;
           is_active?: boolean;
           siigo_enabled?: boolean;
+          profitability_enabled?: boolean;
           created_at?: string;
         };
         Update: {
@@ -329,6 +331,7 @@ export type Database = {
           color?: string;
           is_active?: boolean;
           siigo_enabled?: boolean;
+          profitability_enabled?: boolean;
           created_at?: string;
         };
         Relationships: [];
@@ -803,6 +806,7 @@ export type Database = {
           unit: string;
           min_stock: number;
           current_stock: number;
+          cost_per_unit: number;
           is_active: boolean;
           created_at: string;
           updated_at: string;
@@ -815,6 +819,7 @@ export type Database = {
           unit: string;
           min_stock?: number;
           current_stock?: number;
+          cost_per_unit?: number;
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -827,6 +832,7 @@ export type Database = {
           unit?: string;
           min_stock?: number;
           current_stock?: number;
+          cost_per_unit?: number;
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -1200,6 +1206,13 @@ export type Database = {
         Args: {
           p_user_id: string;
           p_company_ids: string[] | null;
+        };
+        Returns: void;
+      };
+      admin_update_company_profitability: {
+        Args: {
+          p_company_id: string;
+          p_enabled: boolean;
         };
         Returns: void;
       };

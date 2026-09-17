@@ -12,11 +12,16 @@ import { supabase } from "@/lib/supabase";
 import type { Company } from "@/types";
 
 const STORAGE_KEY = "la30_active_company";
+const STORAGE_DATA_KEY = "la30_active_company_data";
 
 export interface CompanyContextType {
   companies: Company[];
   activeCompany: Company | null;
   setActiveCompany: (company: Company) => void;
+  updateCompanyProfitability: (
+    companyId: string,
+    enabled: boolean,
+  ) => Promise<void>;
   loading: boolean;
   canSwitchCompany: boolean;
 }
@@ -24,9 +29,16 @@ export interface CompanyContextType {
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
 export function CompanyProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [activeCompany, setActiveCompanyState] = useState<Company | null>(null);
+  const [activeCompany, setActiveCompanyState] = useState<Company | null>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_DATA_KEY);
+      return raw ? (JSON.parse(raw) as Company) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
 
   // Fetch accessible companies and resolve the active one
@@ -35,9 +47,11 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
 
     async function initializeCompanies() {
       if (!user) {
-        setCompanies([]);
-        setActiveCompanyState(null);
-        setLoading(false);
+        if (!authLoading) {
+          setCompanies([]);
+          setActiveCompanyState(null);
+          setLoading(false);
+        }
         return;
       }
 
@@ -103,8 +117,11 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
           prev?.id !== companyToSet?.id ? companyToSet : prev,
         );
         localStorage.setItem(STORAGE_KEY, companyToSet.slug);
+        localStorage.setItem(STORAGE_DATA_KEY, JSON.stringify(companyToSet));
       } else {
         setActiveCompanyState(null);
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_DATA_KEY);
       }
 
       setLoading(false);
@@ -115,14 +132,50 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isCancelled = true;
     };
-  }, [user]);
+  }, [user, authLoading]);
 
   const setActiveCompany = useCallback((company: Company) => {
     setActiveCompanyState(company);
     localStorage.setItem(STORAGE_KEY, company.slug);
+    localStorage.setItem(STORAGE_DATA_KEY, JSON.stringify(company));
     // Clear the active store when switching companies to force re-selection
     localStorage.removeItem("la30_active_store");
   }, []);
+
+  const updateCompanyProfitability = useCallback(
+    async (companyId: string, enabled: boolean) => {
+      const { error: rpcError } = await supabase.rpc(
+        "admin_update_company_profitability",
+        {
+          p_company_id: companyId,
+          p_enabled: enabled,
+        },
+      );
+      if (rpcError) {
+        const { error: updateError } = await supabase
+          .from("companies")
+          .update({ profitability_enabled: enabled })
+          .eq("id", companyId);
+        if (updateError) throw updateError;
+      }
+
+      setActiveCompanyState((prev) => {
+        if (prev && prev.id === companyId) {
+          const updated = { ...prev, profitability_enabled: enabled };
+          localStorage.setItem(STORAGE_DATA_KEY, JSON.stringify(updated));
+          return updated;
+        }
+        return prev;
+      });
+
+      setCompanies((prev) =>
+        prev.map((c) =>
+          c.id === companyId ? { ...c, profitability_enabled: enabled } : c,
+        ),
+      );
+    },
+    [],
+  );
 
   const canSwitchCompany = companies.length > 1;
 
@@ -131,10 +184,18 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       companies,
       activeCompany,
       setActiveCompany,
+      updateCompanyProfitability,
       loading,
       canSwitchCompany,
     }),
-    [companies, activeCompany, setActiveCompany, loading, canSwitchCompany],
+    [
+      companies,
+      activeCompany,
+      setActiveCompany,
+      updateCompanyProfitability,
+      loading,
+      canSwitchCompany,
+    ],
   );
 
   return (

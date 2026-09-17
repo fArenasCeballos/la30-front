@@ -72,6 +72,7 @@ export function RawMaterialsTab() {
     category_id: "",
     min_stock: "",
     current_stock: "",
+    cost_per_unit: "",
   });
 
   // ─── Categorías modal ─────────────────────────────────────────────────────
@@ -192,6 +193,7 @@ export function RawMaterialsTab() {
       unit: formData.unit,
       category_id: formData.category_id || null,
       min_stock: Number(formData.min_stock) || 0,
+      cost_per_unit: Number(formData.cost_per_unit) || 0,
     };
 
     if (editingItem) {
@@ -214,6 +216,7 @@ export function RawMaterialsTab() {
         category_id: item.category_id ?? "",
         min_stock: String(item.min_stock),
         current_stock: String(item.current_stock),
+        cost_per_unit: item.cost_per_unit != null ? String(item.cost_per_unit) : "0",
       });
     } else {
       setEditingItem(null);
@@ -223,6 +226,7 @@ export function RawMaterialsTab() {
         category_id: activeCategoryId ?? "",
         min_stock: "",
         current_stock: "",
+        cost_per_unit: "",
       });
     }
     setIsModalOpen(true);
@@ -476,6 +480,13 @@ export function RawMaterialsTab() {
                   </span>
                 </div>
 
+                <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200/60">
+                  <span className="text-slate-500 font-medium">Costo Base:</span>
+                  <span className="font-bold text-teal-700">
+                    ${Number(item.cost_per_unit || 0).toLocaleString("es-CO")} / {item.unit}
+                  </span>
+                </div>
+
                 <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                   <div
                     className={cn(
@@ -526,6 +537,7 @@ export function RawMaterialsTab() {
                 <th className="px-6 py-3.5">Insumo</th>
                 <th className="px-6 py-3.5">Categoría</th>
                 <th className="px-6 py-3.5">Unidad Base</th>
+                <th className="px-6 py-3.5 text-right">Costo Base</th>
                 <th className="px-6 py-3.5 text-right">Stock Mínimo</th>
                 <th className="px-6 py-3.5 text-right">Stock Actual</th>
                 <th className="px-6 py-3.5 text-center">Estado</th>
@@ -557,6 +569,9 @@ export function RawMaterialsTab() {
                     </td>
                     <td className="px-6 py-4 text-slate-500 font-semibold text-xs uppercase">
                       {item.unit}
+                    </td>
+                    <td className="px-6 py-4 text-right font-bold text-teal-700 text-xs">
+                      ${Number(item.cost_per_unit || 0).toLocaleString("es-CO")} <span className="text-slate-400 font-normal">/ {item.unit}</span>
                     </td>
                     <td className="px-6 py-4 text-right font-medium text-slate-500">
                       {item.min_stock} {item.unit}
@@ -752,6 +767,32 @@ export function RawMaterialsTab() {
                     placeholder="0"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
+                  <span>Costo Unitario de Referencia ($)</span>
+                  <span className="text-[10px] text-teal-600 font-medium">
+                    Por cada {formData.unit || "unidad"}
+                  </span>
+                </label>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  value={formData.cost_per_unit}
+                  onChange={(e) =>
+                    setFormData((p) => ({
+                      ...p,
+                      cost_per_unit: e.target.value,
+                    }))
+                  }
+                  onWheel={(e) => e.currentTarget.blur()}
+                  className="h-11 rounded-xl border border-slate-200 text-sm font-semibold"
+                  placeholder="0.00"
+                />
+                <p className="text-[11px] text-slate-400">
+                  Costo de referencia por {formData.unit}. Se actualiza automáticamente cuando registras compras o entradas de inventario.
+                </p>
               </div>
 
               {!editingItem && (

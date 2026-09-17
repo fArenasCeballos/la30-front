@@ -43,6 +43,8 @@ import { getShiftStart } from "@/lib/shiftUtils";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
+import { useCompany } from "@/context/CompanyContext";
+import { getProductRecipeCostMap } from "@/lib/inventoryService";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -68,8 +70,18 @@ interface PrimaryCard {
 export default function Dashboard() {
   const { activeStore } = useStore();
   const { user } = useAuth();
+  const { activeCompany } = useCompany();
   const navigate = useNavigate();
   const storeId = activeStore?.id || null;
+  const isProfitabilityEnabled = Boolean(activeCompany?.profitability_enabled);
+
+  // Costos de recetas para cálculo de rentabilidad
+  const { data: recipeCostMap = {} } = useQuery({
+    queryKey: ["recipe-costs-map", storeId],
+    queryFn: () => getProductRecipeCostMap(storeId ? [storeId] : null),
+    enabled: !!storeId && isProfitabilityEnabled,
+    staleTime: 1000 * 60 * 5,
+  });
 
   // News / Updates Modal State
   const [newsModalOpen, setNewsModalOpen] = useState(false);
@@ -217,6 +229,43 @@ export default function Dashboard() {
       recentOrders: shiftOrders.slice(0, 10),
     };
   }, [shiftOrders]);
+
+  // Rentabilidad del Turno (Inversión en Recetas vs Ventas)
+  const profitabilityStats = useMemo(() => {
+    if (!isProfitabilityEnabled) return null;
+    const delivered = shiftOrders.filter((o) => o.status === "entregado");
+    let totalCogs = 0;
+    let totalRevenue = 0;
+    let itemsWithRecipe = 0;
+    let totalItems = 0;
+
+    delivered.forEach((order) => {
+      totalRevenue += order.total || 0;
+      order.order_items?.forEach((item) => {
+        const qty = Number(item.quantity) || 1;
+        totalItems += qty;
+        const recipeCost = item.product_id ? (recipeCostMap[item.product_id] || 0) : 0;
+        if (recipeCost > 0) {
+          itemsWithRecipe += qty;
+          totalCogs += qty * recipeCost;
+        }
+      });
+    });
+
+    const grossProfit = totalRevenue - totalCogs;
+    const marginPct = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+    const cogsPct = totalRevenue > 0 ? (totalCogs / totalRevenue) * 100 : 0;
+
+    return {
+      totalCogs,
+      totalRevenue,
+      grossProfit,
+      marginPct,
+      cogsPct,
+      itemsWithRecipe,
+      totalItems,
+    };
+  }, [shiftOrders, recipeCostMap, isProfitabilityEnabled]);
 
   const isDeliveryStore = activeStore?.slug === "domicilios";
 
@@ -626,6 +675,125 @@ export default function Dashboard() {
             );
           })}
         </section>
+
+        {/* ── 2.1 Profitability & Recipe Cost Analysis (Solo si está activo en la empresa) ── */}
+        {isProfitabilityEnabled && profitabilityStats && (
+          <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 rounded-3xl p-5 sm:p-6 text-white shadow-lg space-y-5 border border-slate-700/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-2xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-400">
+                  <TrendingUp className="size-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
+                      Rentabilidad & Ganancias del Turno
+                    </h3>
+                    <Badge className="bg-teal-500/20 text-teal-300 border-teal-500/40 text-[10px] uppercase font-bold">
+                      Fórmulas Técnicas
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-300 font-medium">
+                    Calculado en tiempo real con las recetas de platos vendidos y costo de insumos.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-300">
+                  Margen Bruto:
+                </span>
+                <span
+                  className={cn(
+                    "px-3 py-1 rounded-full text-xs font-black tracking-wide border",
+                    profitabilityStats.marginPct >= 50
+                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                      : profitabilityStats.marginPct >= 30
+                        ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                        : "bg-rose-500/20 text-rose-300 border-rose-500/40",
+                  )}
+                >
+                  {profitabilityStats.marginPct.toFixed(1)}% MARGEN
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Inversión en Recetas */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2 backdrop-blur-xs">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-semibold uppercase tracking-wider">Inversión (Insumos)</span>
+                  <span className="text-[11px] font-bold text-amber-400">
+                    {profitabilityStats.cogsPct.toFixed(1)}% de venta
+                  </span>
+                </div>
+                <p className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  {formatPrice(profitabilityStats.totalCogs)}
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  Costo de materias primas consumidas según recetas
+                </p>
+                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(2, profitabilityStats.cogsPct))}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Ganancia Bruta */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2 backdrop-blur-xs">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-semibold uppercase tracking-wider">Ganancia Bruta</span>
+                  <span className="text-[11px] font-bold text-emerald-400">
+                    Ingresos - Costos
+                  </span>
+                </div>
+                <p className="text-xl sm:text-2xl font-black text-emerald-400 tracking-tight">
+                  {formatPrice(profitabilityStats.grossProfit)}
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  Retorno neto tras descontar el valor de las recetas
+                </p>
+                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-emerald-400 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(2, profitabilityStats.marginPct))}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Salud Financiera / Resumen */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2 backdrop-blur-xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span className="font-semibold uppercase tracking-wider">Desglose Operativo</span>
+                    <span className="text-[11px] text-teal-300 font-bold">
+                      {profitabilityStats.itemsWithRecipe} platos con receta
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1 text-xs">
+                    <div className="flex justify-between text-slate-300">
+                      <span>Ventas entregadas:</span>
+                      <span className="font-bold text-white">{formatPrice(profitabilityStats.totalRevenue)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400">
+                      <span>Inversión insumos:</span>
+                      <span className="font-semibold text-amber-300">-{formatPrice(profitabilityStats.totalCogs)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-medium">Ganancia x $100 vendidos:</span>
+                  <span className="font-black text-teal-300">
+                    {formatPrice(Math.round(profitabilityStats.marginPct * 100))}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ── 3. Payment Methods Mix ── */}
         <section className="space-y-2.5">

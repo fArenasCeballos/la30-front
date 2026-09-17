@@ -7,6 +7,7 @@ import { useStore } from "@/context/StoreContext";
 import { useCompany } from "@/context/CompanyContext";
 import { supabase } from "@/lib/supabase";
 import { getRawMaterials } from "@/lib/inventoryService";
+import { toast } from "sonner";
 import {
   Package,
   Boxes,
@@ -25,11 +26,14 @@ import {
   ShieldCheck,
   Calendar,
   Layers,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { AdminNewsModal } from "@/components/admin/AdminNewsModal";
 import { LATEST_UPDATE_ID } from "@/data/appUpdates";
+import { cn } from "@/lib/utils";
 
 interface PanelDeControlProps {
   onSelectTab?: (tabId: string) => void;
@@ -38,7 +42,7 @@ interface PanelDeControlProps {
 export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
   const { user } = useAuth();
   const { stores, activeStore } = useStore();
-  const { activeCompany } = useCompany();
+  const { activeCompany, updateCompanyProfitability } = useCompany();
   const companyStoreIds = useMemo(() => stores.map((s) => s.id), [stores]);
   const navigate = useNavigate();
 
@@ -108,7 +112,11 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
   } = useQuery({
     queryKey: ["admin-kpi-materials", activeStore?.id, companyStoreIds],
     queryFn: async () => {
-      let items: { is_active?: boolean | null; min_stock?: number | null; current_stock?: number | null }[] = [];
+      let items: {
+        is_active?: boolean | null;
+        min_stock?: number | null;
+        current_stock?: number | null;
+      }[] = [];
       if (activeStore?.id) {
         items = await getRawMaterials(activeStore.id);
       } else if (companyStoreIds.length > 0) {
@@ -124,7 +132,7 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
           m.is_active !== false &&
           m.min_stock != null &&
           m.min_stock > 0 &&
-          (m.current_stock || 0) <= m.min_stock
+          (m.current_stock || 0) <= m.min_stock,
       );
       return {
         total: items.length,
@@ -145,7 +153,12 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
       const { data } = await supabase
         .from("profiles")
         .select("id, role, is_active, company_ids");
-      const allProfiles = (data || []) as unknown as { id: string; role: string; is_active?: boolean; company_ids?: string[] | null }[];
+      const allProfiles = (data || []) as unknown as {
+        id: string;
+        role: string;
+        is_active?: boolean;
+        company_ids?: string[] | null;
+      }[];
       const profiles = allProfiles.filter((p) => {
         if (!activeCompany) return true;
         if (!p.company_ids || p.company_ids.length === 0) return true;
@@ -168,15 +181,22 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
   } = useQuery({
     queryKey: ["admin-kpi-logistics", activeCompany?.id],
     queryFn: async () => {
-      let zonesQuery = supabase.from("delivery_zones").select("id, is_active, company_id");
-      let driversQuery = supabase.from("delivery_drivers").select("id, is_active, company_id");
+      let zonesQuery = supabase
+        .from("delivery_zones")
+        .select("id, is_active, company_id");
+      let driversQuery = supabase
+        .from("delivery_drivers")
+        .select("id, is_active, company_id");
 
       if (activeCompany?.id) {
         zonesQuery = zonesQuery.eq("company_id", activeCompany.id);
         driversQuery = driversQuery.eq("company_id", activeCompany.id);
       }
 
-      const [zonesRes, driversRes] = await Promise.all([zonesQuery, driversQuery]);
+      const [zonesRes, driversRes] = await Promise.all([
+        zonesQuery,
+        driversQuery,
+      ]);
       if (zonesRes.error) throw zonesRes.error;
       if (driversRes.error) throw driversRes.error;
       const zones = zonesRes.data || [];
@@ -221,7 +241,9 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
               </span>
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-800/90 text-slate-300 border border-slate-700/60">
                 <ShieldCheck className="size-3 text-teal-400" />
-                {user?.role === "bodega" ? "Encargado Bodega" : "Administración General"}
+                {user?.role === "bodega"
+                  ? "Encargado Bodega"
+                  : "Administración General"}
               </span>
             </div>
 
@@ -280,6 +302,71 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
         </div>
       </section>
 
+      {/* ── 1.1 Configuración de Rentabilidad y Ganancias por Empresa ── */}
+      {activeCompany && (
+        <section className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="size-11 rounded-2xl bg-emerald-50 border border-emerald-200/60 text-emerald-600 flex items-center justify-center shrink-0">
+              <TrendingUp className="size-5.5" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                  Cálculo de rentabilidad, ganancias e ingresos
+                </h3>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
+                    activeCompany.profitability_enabled
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-slate-100 text-slate-500 border-slate-200",
+                  )}
+                >
+                  {activeCompany.profitability_enabled ? "Activo" : "Inactivo"}
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Calcula la inversión en insumos según las recetas y muestra la
+                rentabilidad y ganancias en el Dashboard y Reportería para{" "}
+                {activeCompany.name}.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 self-end sm:self-center shrink-0 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200/80">
+            <Switch
+              id="profitability-toggle"
+              checked={!!activeCompany.profitability_enabled}
+              onCheckedChange={async (checked) => {
+                try {
+                  await updateCompanyProfitability(activeCompany.id, checked);
+                  toast.success(
+                    checked
+                      ? "Cálculo de rentabilidad y ganancias activado para " +
+                          activeCompany.name
+                      : "Cálculo de rentabilidad desactivado para " +
+                          activeCompany.name,
+                  );
+                } catch (err: unknown) {
+                  const msg =
+                    err instanceof Error ? err.message : "Error al actualizar";
+                  toast.error(msg);
+                }
+              }}
+            />
+            <label
+              htmlFor="profitability-toggle"
+              className="text-xs font-bold text-slate-700 cursor-pointer select-none"
+            >
+              {activeCompany.profitability_enabled
+                ? "Habilitado"
+                : "Deshabilitado"}
+            </label>
+          </div>
+        </section>
+      )}
+
       {/* ── 2. Executive KPI Cards ── */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* KPI 1: Catálogo & Menú */}
@@ -301,16 +388,19 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
                 {loadingCatalog ? (
                   <span className="text-slate-300 text-base">...</span>
                 ) : (
-                  catalogData?.activeProducts ?? 0
+                  (catalogData?.activeProducts ?? 0)
                 )}
               </span>
-              <span className="text-[11px] sm:text-xs text-slate-500 font-semibold truncate">platos activos</span>
+              <span className="text-[11px] sm:text-xs text-slate-500 font-semibold truncate">
+                platos activos
+              </span>
             </div>
             <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1 flex items-center gap-1 sm:gap-1.5">
               <span>{catalogData?.totalCategories ?? 0} cat.</span>
               <span className="text-slate-300">•</span>
               <span className="text-teal-600 font-semibold group-hover:underline inline-flex items-center gap-0.5">
-                Ver Menú <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
+                Ver Menú{" "}
+                <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
               </span>
             </p>
           </div>
@@ -325,7 +415,8 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
             <div className="size-9 sm:size-11 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-200/60 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
               <Boxes className="size-4.5 sm:size-5.5" />
             </div>
-            {rawMaterialsData?.lowStockCount && rawMaterialsData.lowStockCount > 0 ? (
+            {rawMaterialsData?.lowStockCount &&
+            rawMaterialsData.lowStockCount > 0 ? (
               <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 truncate max-w-[95px] sm:max-w-none">
                 <AlertTriangle className="size-2.5 sm:size-3 shrink-0" />
                 <span>{rawMaterialsData.lowStockCount} Bajo</span>
@@ -342,16 +433,19 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
                 {loadingMaterials ? (
                   <span className="text-slate-300 text-base">...</span>
                 ) : (
-                  rawMaterialsData?.total ?? 0
+                  (rawMaterialsData?.total ?? 0)
                 )}
               </span>
-              <span className="text-[11px] sm:text-xs text-slate-500 font-semibold truncate">insumos</span>
+              <span className="text-[11px] sm:text-xs text-slate-500 font-semibold truncate">
+                insumos
+              </span>
             </div>
             <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1 flex items-center gap-1 sm:gap-1.5">
               <span>Recetas</span>
               <span className="text-slate-300">•</span>
               <span className="text-amber-700 font-semibold group-hover:underline inline-flex items-center gap-0.5">
-                Gestionar <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
+                Gestionar{" "}
+                <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
               </span>
             </p>
           </div>
@@ -376,16 +470,19 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
                 {loadingStaff ? (
                   <span className="text-slate-300 text-base">...</span>
                 ) : (
-                  staffData?.active ?? 0
+                  (staffData?.active ?? 0)
                 )}
               </span>
-              <span className="text-[11px] sm:text-xs text-slate-500 font-semibold truncate">usuarios</span>
+              <span className="text-[11px] sm:text-xs text-slate-500 font-semibold truncate">
+                usuarios
+              </span>
             </div>
             <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1 flex items-center gap-1 sm:gap-1.5">
               <span>Caja, meseros</span>
               <span className="text-slate-300">•</span>
               <span className="text-blue-600 font-semibold group-hover:underline inline-flex items-center gap-0.5">
-                Roles <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
+                Roles{" "}
+                <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
               </span>
             </p>
           </div>
@@ -410,16 +507,19 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
                 {loadingLogistics ? (
                   <span className="text-slate-300 text-base">...</span>
                 ) : (
-                  logisticsData?.activeZones ?? 0
+                  (logisticsData?.activeZones ?? 0)
                 )}
               </span>
-              <span className="text-[11px] sm:text-xs text-slate-500 font-semibold truncate">zonas activas</span>
+              <span className="text-[11px] sm:text-xs text-slate-500 font-semibold truncate">
+                zonas activas
+              </span>
             </div>
             <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1 flex items-center gap-1 sm:gap-1.5">
               <span>{logisticsData?.totalDrivers ?? 0} domis</span>
               <span className="text-slate-300">•</span>
               <span className="text-purple-600 font-semibold group-hover:underline inline-flex items-center gap-0.5">
-                Zonas <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
+                Zonas{" "}
+                <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
               </span>
             </p>
           </div>
@@ -531,12 +631,16 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
                   <h3 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
                     Inventario & Menú
                   </h3>
-                  <Badge variant="outline" className="text-[9px] sm:text-[10px] font-bold border-teal-200 text-teal-700 bg-teal-50">
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] sm:text-[10px] font-bold border-teal-200 text-teal-700 bg-teal-50"
+                  >
                     Menú POS
                   </Badge>
                 </div>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                  Configuración de productos, precios, categorías, opciones y disponibilidad instantánea en caja.
+                  Configuración de productos, precios, categorías, opciones y
+                  disponibilidad instantánea en caja.
                 </p>
                 <div className="mt-2.5 sm:mt-3 flex items-center gap-1 text-[11px] sm:text-xs font-bold text-teal-600 group-hover:text-teal-700">
                   <span>Abrir Inventario</span>
@@ -558,12 +662,16 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
                   <h3 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-amber-800 transition-colors">
                     Bodega & Insumos
                   </h3>
-                  <Badge variant="outline" className="text-[9px] sm:text-[10px] font-bold border-amber-200 text-amber-700 bg-amber-50">
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] sm:text-[10px] font-bold border-amber-200 text-amber-700 bg-amber-50"
+                  >
                     Stock & Recetas
                   </Badge>
                 </div>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                  Materia prima, compras con conversión de unidades, recetas estándar, Kardex y directorio de proveedores.
+                  Materia prima, compras con conversión de unidades, recetas
+                  estándar, Kardex y directorio de proveedores.
                 </p>
                 <div className="mt-2.5 sm:mt-3 flex items-center gap-1 text-[11px] sm:text-xs font-bold text-amber-700 group-hover:text-amber-800">
                   <span>Abrir Bodega</span>
@@ -593,7 +701,8 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
                   App Móvil & Menú Web
                 </h3>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                  Personaliza combos, banners y horarios para pedidos online de clientes.
+                  Personaliza combos, banners y horarios para pedidos online de
+                  clientes.
                 </p>
                 <div className="mt-2.5 sm:mt-3 flex items-center gap-1 text-[11px] sm:text-xs font-bold text-indigo-600">
                   <span>Configurar</span>
@@ -615,7 +724,8 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
                   Zonas de Domicilio
                 </h3>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                  Polígonos geográficos en mapa, tarifas dinámicas por radio y cobertura.
+                  Polígonos geográficos en mapa, tarifas dinámicas por radio y
+                  cobertura.
                 </p>
                 <div className="mt-2.5 sm:mt-3 flex items-center gap-1 text-[11px] sm:text-xs font-bold text-purple-600">
                   <span>Ver Zonas</span>
@@ -637,7 +747,8 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
                   Domiciliarios
                 </h3>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                  Registro de flota de reparto, estados de entrega y liquidación de envíos.
+                  Registro de flota de reparto, estados de entrega y liquidación
+                  de envíos.
                 </p>
                 <div className="mt-2.5 sm:mt-3 flex items-center gap-1 text-[11px] sm:text-xs font-bold text-emerald-600">
                   <span>Ver Flota</span>
@@ -667,7 +778,8 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
                   Reportes & KPIs
                 </h3>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                  Ventas totales, cierres de turno, desglose por métodos de pago y exportación.
+                  Ventas totales, cierres de turno, desglose por métodos de pago
+                  y exportación.
                 </p>
                 <div className="mt-2.5 sm:mt-3 flex items-center gap-1 text-[11px] sm:text-xs font-bold text-emerald-600">
                   <span>Ver Reportes</span>
@@ -689,7 +801,8 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
                   Consultas de Órdenes
                 </h3>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                  Búsqueda detallada por fecha, estado, cliente y reimpresión de comprobantes.
+                  Búsqueda detallada por fecha, estado, cliente y reimpresión de
+                  comprobantes.
                 </p>
                 <div className="mt-2.5 sm:mt-3 flex items-center gap-1 text-[11px] sm:text-xs font-bold text-sky-600">
                   <span>Consultar</span>
@@ -711,7 +824,8 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
                   Usuarios & Roles
                 </h3>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                  Creación de cuentas, asignación de permisos, restablecimiento de accesos y perfiles.
+                  Creación de cuentas, asignación de permisos, restablecimiento
+                  de accesos y perfiles.
                 </p>
                 <div className="mt-2.5 sm:mt-3 flex items-center gap-1 text-[11px] sm:text-xs font-bold text-blue-600">
                   <span>Gestionar</span>
