@@ -452,7 +452,8 @@ export default function Consultas() {
     setIsSubmittingStatus(true);
 
     try {
-      await updateOrderStatus(orderId, newStatus, reason);
+      const ok = await updateOrderStatus(orderId, newStatus, reason);
+      if (!ok) return;
       // Refresh local view
       setFoundOrders((prev) =>
         prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)),

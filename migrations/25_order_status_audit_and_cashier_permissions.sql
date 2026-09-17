@@ -97,7 +97,18 @@ BEGIN
   FROM stores
   WHERE id = v_store_id;
 
-  -- 4. Validar permisos según el rol
+  -- 4. Si el pedido ya tiene ese estado, evitar registrar logs duplicados
+  IF v_order.status = p_status THEN
+    RETURN jsonb_build_object(
+      'order_id',        p_order_id,
+      'locator',         v_order.locator,
+      'previous_status', v_order.status,
+      'new_status',      p_status,
+      'message',         'El pedido ya se encontraba en el estado solicitado'
+    );
+  END IF;
+
+  -- 5. Validar permisos según el rol
   IF v_user_role = 'admin' THEN
     -- Administrador tiene control total
     v_allowed := TRUE;
@@ -116,17 +127,6 @@ BEGIN
   IF NOT v_allowed THEN
     RAISE EXCEPTION 'Transición no permitida: % → % (rol: %)',
       v_order.status, p_status, v_user_role;
-  END IF;
-
-  -- 5. Si el pedido ya tiene ese estado, evitar registrar logs duplicados
-  IF v_order.status = p_status THEN
-    RETURN jsonb_build_object(
-      'order_id',        p_order_id,
-      'locator',         v_order.locator,
-      'previous_status', v_order.status,
-      'new_status',      p_status,
-      'message',         'El pedido ya se encontraba en el estado solicitado'
-    );
   END IF;
 
   -- 6. Actualizar el estado del pedido
@@ -170,9 +170,8 @@ BEGIN
         AND p.is_active = TRUE
         AND (
           v_company_id IS NULL
-          OR p.company_id = v_company_id
+          OR p.company_ids IS NULL
           OR (p.company_ids IS NOT NULL AND p.company_ids @> ARRAY[v_company_id])
-          OR p.company_id IS NULL
         )
     LOOP
       INSERT INTO notifications (
@@ -181,6 +180,7 @@ BEGIN
         title,
         message,
         type,
+        is_read,
         created_at
       ) VALUES (
         v_admin_record.admin_id,
@@ -188,6 +188,7 @@ BEGIN
         'Cambio de Estado por Cajero' || COALESCE(' [' || v_store_name || ']', ''),
         'El cajero ' || COALESCE(v_user_name, 'Caja') || ' cambió la orden #' || COALESCE(v_order.locator, substring(p_order_id::text, 1, 6)) || ' de "' || v_order.status || '" a "' || p_status || '".' || CASE WHEN p_reason IS NOT NULL AND trim(p_reason) != '' THEN ' Motivo: ' || trim(p_reason) ELSE '' END,
         'warning',
+        FALSE,
         now()
       );
     END LOOP;

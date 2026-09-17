@@ -169,8 +169,8 @@ export default function Caja() {
     });
 
     try {
-      await updateOrderStatus(orderId, status);
-      if (status === "confirmado") {
+      const ok = await updateOrderStatus(orderId, status);
+      if (ok && status === "confirmado") {
         toast.success("Pedido confirmado. Pasando a Cobro...");
         setActiveTab("confirmados");
       }

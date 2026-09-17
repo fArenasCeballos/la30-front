@@ -62,7 +62,7 @@ export interface OrderContextType {
     orderId: string,
     status: OrderStatus,
     reason?: string,
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   dispatchOrder: (orderId: string) => Promise<void>;
   toggleOrderItem: (itemId: string, completed: boolean) => Promise<void>;
   processPayment: (
@@ -917,7 +917,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateOrderStatus = useCallback(
-    async (orderId: string, status: OrderStatus, reason?: string) => {
+    async (
+      orderId: string,
+      status: OrderStatus,
+      reason?: string,
+    ): Promise<boolean> => {
       const previousOrders = queryClient.getQueryData([
         "orders",
         user?.id,
@@ -937,23 +941,45 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       };
 
       queryClient.setQueryData(["active-orders", user?.id, storeId], updateFn);
+      queryClient.setQueryData(["orders", user?.id, storeId], updateFn);
 
-      const { error } = await supabase.rpc("update_order_status", {
+      let rpcRes = await supabase.rpc("update_order_status", {
         p_order_id: orderId,
         p_status: status as string,
         p_reason: reason?.trim() || null,
       });
 
-      if (error) {
-        toast.error(`Error: ${error.message}`);
+      // Fallback si la versión en base de datos aún no tiene la firma con p_reason
+      if (
+        rpcRes.error &&
+        (rpcRes.error.message?.includes("p_reason") ||
+          rpcRes.error.code === "PGRST202")
+      ) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        rpcRes = await (supabase.rpc as any)("update_order_status", {
+          p_order_id: orderId,
+          p_status: status as string,
+        });
+      }
+
+      if (rpcRes.error) {
+        toast.error(`Error: ${rpcRes.error.message}`);
         queryClient.setQueryData(["orders", user?.id, storeId], previousOrders);
         queryClient.setQueryData(
           ["active-orders", user?.id, storeId],
           previousActive,
         );
-        return;
+        return false;
       }
+
       toast.success(`Pedido: ${STATUS_LABELS[status]}`);
+      queryClient.invalidateQueries({
+        queryKey: ["active-orders", user?.id, storeId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["orders", user?.id, storeId],
+      });
+      return true;
     },
     [queryClient, user?.id, storeId],
   );

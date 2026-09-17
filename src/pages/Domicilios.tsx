@@ -485,7 +485,8 @@ export default function Domicilios() {
   const handleStatusChange = async (orderId: string, status: OrderStatus) => {
     setUpdatingIds((prev) => new Set(prev).add(orderId));
     try {
-      await updateOrderStatus(orderId, status);
+      const ok = await updateOrderStatus(orderId, status);
+      if (!ok) return;
 
       // Al confirmar un domicilio: imprimir factura (sin pago) + comandas de cocina
       if (status === "confirmado") {
