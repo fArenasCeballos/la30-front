@@ -24,6 +24,7 @@ export default function Login() {
       const { success, error } = await login(email, password);
       if (success) {
         localStorage.removeItem("la30_active_store");
+        localStorage.removeItem("la30_active_company");
         navigate("/");
       } else {
         toast.error(error || "Credenciales inválidas");

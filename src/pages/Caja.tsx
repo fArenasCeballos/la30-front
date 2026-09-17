@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useOrders } from "@/context/OrderContext";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
+import { useCompany } from "@/context/CompanyContext";
 import { supabase } from "@/lib/supabase";
 import { getShiftStart } from "@/lib/shiftUtils";
 import { toast } from "sonner";
@@ -63,6 +64,7 @@ export default function Caja() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { activeStore } = useStore();
+  const { activeCompany } = useCompany();
   const {
     orders,
     updateOrderStatus,
@@ -245,7 +247,7 @@ export default function Caja() {
         const activeOrder = payingOrder;
 
         // Abrir modal de facturación electrónica Siigo si aplica
-        if (shouldGenerateInvoice(method, breakdown)) {
+        if (activeCompany?.siigo_enabled && shouldGenerateInvoice(method, breakdown)) {
           setSiigoOrder({ order: activeOrder, method, breakdown });
         }
 
@@ -562,6 +564,7 @@ export default function Caja() {
                                   : undefined;
 
                                 if (
+                                  activeCompany?.siigo_enabled &&
                                   shouldGenerateInvoice(pMethod, pBreakdown)
                                 ) {
                                   setSiigoOrder({
@@ -867,6 +870,7 @@ export default function Caja() {
                         }
                       : undefined;
                     const canGenerateInvoice =
+                      (activeCompany?.siigo_enabled ?? false) &&
                       order.status !== "cancelado" &&
                       !hasInvoice &&
                       shouldGenerateInvoice(

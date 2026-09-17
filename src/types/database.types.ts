@@ -56,6 +56,7 @@ export type Database = {
           discount_value: number;
           min_order_total: number;
           is_active: boolean;
+          company_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -65,6 +66,7 @@ export type Database = {
           discount_value: number;
           min_order_total?: number;
           is_active?: boolean;
+          company_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -74,12 +76,12 @@ export type Database = {
           discount_value?: number;
           min_order_total?: number;
           is_active?: boolean;
+          company_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
       };
       delivery_drivers: {
-
         Row: {
           id: string;
           first_name: string;
@@ -87,6 +89,7 @@ export type Database = {
           phone: string;
           motorcycle_plate: string;
           is_active: boolean;
+          company_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -97,6 +100,7 @@ export type Database = {
           phone: string;
           motorcycle_plate: string;
           is_active?: boolean;
+          company_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -107,6 +111,7 @@ export type Database = {
           phone?: string;
           motorcycle_plate?: string;
           is_active?: boolean;
+          company_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -120,6 +125,7 @@ export type Database = {
           polygon: Json;
           color: string;
           is_active: boolean;
+          company_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -129,6 +135,7 @@ export type Database = {
           polygon?: Json;
           color?: string;
           is_active?: boolean;
+          company_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -138,6 +145,7 @@ export type Database = {
           polygon?: Json;
           color?: string;
           is_active?: boolean;
+          company_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -215,6 +223,7 @@ export type Database = {
           icon: string | null;
           color: string | null;
           is_active: boolean;
+          company_id: string;
           created_at: string;
         };
         Insert: {
@@ -224,6 +233,7 @@ export type Database = {
           icon?: string | null;
           color?: string | null;
           is_active?: boolean;
+          company_id?: string;
           created_at?: string;
         };
         Update: {
@@ -233,6 +243,7 @@ export type Database = {
           icon?: string | null;
           color?: string | null;
           is_active?: boolean;
+          company_id?: string;
           created_at?: string;
         };
         Relationships: [];
@@ -247,6 +258,7 @@ export type Database = {
           is_active: boolean;
           store_id: string | null;
           allowed_store_ids: string[] | null;
+          company_ids: string[] | null;
           created_at: string;
           updated_at: string;
         };
@@ -259,6 +271,7 @@ export type Database = {
           is_active?: boolean;
           store_id?: string | null;
           allowed_store_ids?: string[] | null;
+          company_ids?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -271,6 +284,7 @@ export type Database = {
           is_active?: boolean;
           store_id?: string | null;
           allowed_store_ids?: string[] | null;
+          company_ids?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -282,6 +296,42 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      companies: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          logo_url: string | null;
+          icon: string | null;
+          color: string;
+          is_active: boolean;
+          siigo_enabled: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          logo_url?: string | null;
+          icon?: string | null;
+          color?: string;
+          is_active?: boolean;
+          siigo_enabled?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          slug?: string;
+          logo_url?: string | null;
+          icon?: string | null;
+          color?: string;
+          is_active?: boolean;
+          siigo_enabled?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       categories: {
         Row: {
@@ -708,6 +758,7 @@ export type Database = {
           read: unknown;
           id: string;
           user_id: string | null;
+          company_id: string | null;
           title: string;
           message: string;
           type: "info" | "success" | "warning";
@@ -717,6 +768,7 @@ export type Database = {
         Insert: {
           id?: string;
           user_id?: string | null;
+          company_id?: string | null;
           title: string;
           message: string;
           type: "info" | "success" | "warning";
@@ -726,6 +778,7 @@ export type Database = {
         Update: {
           id?: string;
           user_id?: string | null;
+          company_id?: string | null;
           title?: string;
           message?: string;
           type?: "info" | "success" | "warning";
@@ -1126,6 +1179,27 @@ export type Database = {
         Args: {
           p_user_id: string;
           p_store_ids: string[] | null;
+        };
+        Returns: void;
+      };
+      get_user_companies: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          name: string;
+          slug: string;
+          logo_url: string | null;
+          icon: string | null;
+          color: string;
+          is_active: boolean;
+          siigo_enabled: boolean;
+          created_at: string;
+        }[];
+      };
+      update_user_company_access: {
+        Args: {
+          p_user_id: string;
+          p_company_ids: string[] | null;
         };
         Returns: void;
       };

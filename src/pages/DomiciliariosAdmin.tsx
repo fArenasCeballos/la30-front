@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useCompany } from "@/context/CompanyContext";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import {
@@ -39,6 +40,7 @@ type DeliveryDriver = Tables<"delivery_drivers">;
 type Order = Tables<"orders">;
 
 export default function DomiciliariosAdmin() {
+  const { activeCompany } = useCompany();
   const [adminSubTab, setAdminSubTab] = useState<"gestion" | "liquidacion">(
     "gestion",
   );
@@ -67,10 +69,16 @@ export default function DomiciliariosAdmin() {
 
   const fetchDrivers = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("delivery_drivers")
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (activeCompany?.id) {
+        query = query.eq("company_id", activeCompany.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setDrivers(data || []);
@@ -79,7 +87,7 @@ export default function DomiciliariosAdmin() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeCompany]);
 
   useEffect(() => {
     const load = async () => {
@@ -150,6 +158,7 @@ export default function DomiciliariosAdmin() {
             last_name: lastName,
             phone: phone,
             motorcycle_plate: plate,
+            company_id: activeCompany?.id || null,
           },
         ]);
 

@@ -17,6 +17,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { useCompany } from "@/context/CompanyContext";
 import type { DeliveryZone, LatLngPoint } from "@/types";
 
 interface DeliveryZoneComboboxProps {
@@ -39,15 +40,22 @@ export function DeliveryZoneCombobox({
   selectedZoneId,
 }: DeliveryZoneComboboxProps) {
   const [open, setOpen] = useState(false);
+  const { activeCompany } = useCompany();
 
   const { data: zones = [] } = useQuery<DeliveryZone[]>({
-    queryKey: ["delivery-zones-active"],
+    queryKey: ["delivery-zones-active", activeCompany?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("delivery_zones")
         .select("*")
         .eq("is_active", true)
         .order("name");
+
+      if (activeCompany?.id) {
+        query = query.eq("company_id", activeCompany.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 

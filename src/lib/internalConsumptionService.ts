@@ -124,12 +124,18 @@ export function calculateInternalPrice(
 
 // ─── Partner CRUD ────────────────────────────────────────────────────────────
 
-/** Fetches all active internal partners, ordered by name. */
-export async function fetchPartners(): Promise<InternalPartner[]> {
-  const { data, error } = await supabase
+/** Fetches all active internal partners, ordered by name, optionally filtered by company. */
+export async function fetchPartners(companyId?: string): Promise<InternalPartner[]> {
+  let query = supabase
     .from("internal_partners" as never)
     .select("*")
     .order("name");
+
+  if (companyId) {
+    query = query.eq("company_id" as never, companyId as never);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw new Error(`Error al cargar socios: ${error.message}`);
   return (data ?? []) as unknown as InternalPartner[];
@@ -137,7 +143,7 @@ export async function fetchPartners(): Promise<InternalPartner[]> {
 
 /** Creates a new internal partner. */
 export async function createPartner(
-  partner: Pick<InternalPartner, "name" | "document_id" | "phone" | "email">,
+  partner: Pick<InternalPartner, "name" | "document_id" | "phone" | "email"> & { company_id?: string | null },
 ): Promise<InternalPartner> {
   const { data, error } = await supabase
     .from("internal_partners" as never)
@@ -273,11 +279,16 @@ export async function createInternalConsumption(
 /** Fetches consumptions for a given period, optionally filtered. */
 export async function fetchConsumptions(filters: {
   storeId?: string;
+  storeIds?: string[];
   monthStart: string; // ISO date
   monthEnd: string;   // ISO date
   consumerType?: InternalConsumerType;
   paymentStatus?: InternalPaymentStatus;
 }): Promise<InternalConsumptionWithItems[]> {
+  if (filters.storeIds && filters.storeIds.length === 0) {
+    return [];
+  }
+
   let query = supabase
     .from("internal_consumptions" as never)
     .select("*, internal_consumption_items(*)" as never)
@@ -287,7 +298,10 @@ export async function fetchConsumptions(filters: {
 
   if (filters.storeId) {
     query = query.eq("store_id" as never, filters.storeId as never);
+  } else if (filters.storeIds && filters.storeIds.length > 0) {
+    query = query.in("store_id" as never, filters.storeIds as never);
   }
+
   if (filters.consumerType) {
     query = query.eq("consumer_type" as never, filters.consumerType as never);
   }
@@ -308,7 +322,16 @@ export async function fetchPayments(filters: {
   consumerType?: InternalConsumerType;
   employeeId?: string;
   partnerId?: string;
+  employeeIds?: string[];
+  partnerIds?: string[];
 }): Promise<InternalConsumptionPayment[]> {
+  if (filters.employeeIds && filters.employeeIds.length === 0) {
+    return [];
+  }
+  if (filters.partnerIds && filters.partnerIds.length === 0) {
+    return [];
+  }
+
   let query = supabase
     .from("internal_consumption_payments" as never)
     .select("*" as never)
@@ -321,9 +344,14 @@ export async function fetchPayments(filters: {
   }
   if (filters.employeeId) {
     query = query.eq("employee_id" as never, filters.employeeId as never);
+  } else if (filters.employeeIds && filters.employeeIds.length > 0) {
+    query = query.in("employee_id" as never, filters.employeeIds as never);
   }
+
   if (filters.partnerId) {
     query = query.eq("partner_id" as never, filters.partnerId as never);
+  } else if (filters.partnerIds && filters.partnerIds.length > 0) {
+    query = query.in("partner_id" as never, filters.partnerIds as never);
   }
 
   const { data, error } = await query;

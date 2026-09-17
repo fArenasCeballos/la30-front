@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useStore } from "@/context/StoreContext";
+import { useCompany } from "@/context/CompanyContext";
 import { formatPrice } from "@/lib/formatPrice";
 import {
   fetchPartners,
@@ -68,7 +69,7 @@ function navigateMonth(monthStr: string, delta: number): string {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function PartnerAccountsView() {
-  const { activeStore } = useStore();
+  const { activeStore, stores } = useStore();
   const queryClient = useQueryClient();
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -89,6 +90,12 @@ export function PartnerAccountsView() {
 
   const { start, end } = getMonthRange(selectedMonth);
 
+  const { activeCompany } = useCompany();
+  const companyStoreIds = useMemo(
+    () => new Set(stores.map((s) => s.id)),
+    [stores],
+  );
+
   // ── Data Queries ───────────────────────────────────────────────────────────
 
   const {
@@ -96,8 +103,8 @@ export function PartnerAccountsView() {
     isLoading: loadingPartners,
     refetch: refetchPartners,
   } = useQuery<InternalPartner[]>({
-    queryKey: ["partner-accounts-list"],
-    queryFn: fetchPartners,
+    queryKey: ["partner-accounts-list", activeCompany?.id],
+    queryFn: () => fetchPartners(activeCompany?.id),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -106,28 +113,44 @@ export function PartnerAccountsView() {
     isLoading: loadingConsumptions,
     refetch: refetchConsumptions,
   } = useQuery<InternalConsumptionWithItems[]>({
-    queryKey: ["partner-consumptions", selectedMonth, activeStore?.id],
-    queryFn: () =>
-      fetchConsumptions({
+    queryKey: [
+      "partner-consumptions",
+      selectedMonth,
+      activeStore?.id,
+      stores.map((s) => s.id).join(","),
+    ],
+    queryFn: () => {
+      const storeIds = stores.map((s) => s.id);
+      if (storeIds.length === 0) return [];
+      return fetchConsumptions({
         storeId: activeStore?.id,
+        storeIds: activeStore?.id ? undefined : storeIds,
         monthStart: start,
         monthEnd: end,
         consumerType: "partner",
-      }),
+      });
+    },
     staleTime: 60 * 1000,
   });
 
-  const {
-    data: payments = [],
-    refetch: refetchPayments,
-  } = useQuery<InternalConsumptionPayment[]>({
-    queryKey: ["partner-payments", selectedMonth],
-    queryFn: () =>
-      fetchPayments({
+  const { data: payments = [], refetch: refetchPayments } = useQuery<
+    InternalConsumptionPayment[]
+  >({
+    queryKey: [
+      "partner-payments",
+      selectedMonth,
+      partners.map((p) => p.id).join(","),
+    ],
+    queryFn: () => {
+      const pIds = partners.map((p) => p.id);
+      if (pIds.length === 0) return [];
+      return fetchPayments({
         monthStart: start,
         monthEnd: end,
         consumerType: "partner",
-      }),
+        partnerIds: pIds,
+      });
+    },
     staleTime: 60 * 1000,
   });
 
@@ -145,12 +168,16 @@ export function PartnerAccountsView() {
 
     for (const c of consumptions) {
       if (!c.partner_id) continue;
+      if (c.store_id && !companyStoreIds.has(c.store_id)) continue;
+      const partner = partners.find((pt) => pt.id === c.partner_id);
+      if (!partner) continue;
+
       const existing = partnerMap.get(c.partner_id);
       if (existing) {
         existing.consumptions.push(c);
       } else {
         partnerMap.set(c.partner_id, {
-          name: c.consumer_name,
+          name: partner.name || c.consumer_name,
           consumptions: [c],
           payments: [],
         });
@@ -159,13 +186,15 @@ export function PartnerAccountsView() {
 
     for (const p of payments) {
       if (!p.partner_id) continue;
+      const partner = partners.find((pt) => pt.id === p.partner_id);
+      if (!partner) continue;
+
       const existing = partnerMap.get(p.partner_id);
       if (existing) {
         existing.payments.push(p);
       } else {
-        const partner = partners.find((pt) => pt.id === p.partner_id);
         partnerMap.set(p.partner_id, {
-          name: partner?.name ?? "Desconocido",
+          name: partner.name,
           consumptions: [],
           payments: [p],
         });
@@ -183,15 +212,15 @@ export function PartnerAccountsView() {
           data.payments,
         ),
       )
-      .sort((a, b) => b.balance - a.balance || a.consumerName.localeCompare(b.consumerName));
-  }, [consumptions, payments, partners, selectedMonth]);
+      .sort(
+        (a, b) =>
+          b.balance - a.balance || a.consumerName.localeCompare(b.consumerName),
+      );
+  }, [consumptions, companyStoreIds, partners, payments, selectedMonth]);
 
   // ── Aggregated Metrics ─────────────────────────────────────────────────────
 
-  const totalConsumed = statements.reduce(
-    (sum, s) => sum + s.totalConsumed,
-    0,
-  );
+  const totalConsumed = statements.reduce((sum, s) => sum + s.totalConsumed, 0);
   const totalPaid = statements.reduce((sum, s) => sum + s.totalPaid, 0);
   const totalBalance = statements.reduce((sum, s) => sum + s.balance, 0);
 
@@ -440,10 +469,7 @@ export function PartnerAccountsView() {
                     Saldo
                   </p>
                   {s.balance > 0 ? (
-                    <Badge
-                      variant="destructive"
-                      className="font-black text-xs"
-                    >
+                    <Badge variant="destructive" className="font-black text-xs">
                       {formatPrice(s.balance)}
                     </Badge>
                   ) : (
@@ -501,8 +527,7 @@ export function PartnerAccountsView() {
               {selectedPartnerDetail?.consumerName}
             </DialogTitle>
             <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">
-              Detalle de Consumos ·{" "}
-              {formatMonthLabel(selectedMonth)}
+              Detalle de Consumos · {formatMonthLabel(selectedMonth)}
             </p>
           </DialogHeader>
 
@@ -511,7 +536,12 @@ export function PartnerAccountsView() {
               {selectedPartnerDetail.consumptions.map((c) => {
                 const date = new Date(c.created_at).toLocaleDateString(
                   "es-CO",
-                  { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" },
+                  {
+                    day: "2-digit",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  },
                 );
                 return (
                   <div

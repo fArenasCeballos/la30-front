@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import type { Notification } from "@/types";
 import { useStore } from "@/context/StoreContext";
+import { useCompany } from "@/context/CompanyContext";
 
 export interface NotificationContextType {
   notifications: Notification[];
@@ -76,7 +77,7 @@ export function isNotificationForStore(
   }
 
   // Tienda Restaurante
-  if (slug === "restaurante" || slug === "restaurant") {
+  if (slug === "restaurante" || slug === "restaurant" || slug === "mira-ve-restaurante") {
     // Excluir estrictamente cualquier notificación que pertenezca a Domicilios o Tráiler
     const isDomicilio =
       text.includes("domicilio") ||
@@ -105,23 +106,37 @@ export function isNotificationForStore(
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { activeStore } = useStore();
+  const { activeCompany } = useCompany();
   const queryClient = useQueryClient();
 
   const activeStoreRef = React.useRef(activeStore);
+  const activeCompanyRef = React.useRef(activeCompany);
+  activeStoreRef.current = activeStore;
+  activeCompanyRef.current = activeCompany;
+
   useEffect(() => {
     activeStoreRef.current = activeStore;
   }, [activeStore]);
+  useEffect(() => {
+    activeCompanyRef.current = activeCompany;
+  }, [activeCompany]);
 
   const { data: allNotifications = [], refetch: refreshNotifications } = useQuery({
-    queryKey: ['notifications', user?.id],
+    queryKey: ['notifications', user?.id, activeCompany?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("notifications")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(50);
+
+      if (activeCompany?.id) {
+        query = query.eq("company_id", activeCompany.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return (data || []) as Notification[];
@@ -153,12 +168,30 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           try {
             const newNotif = payload.new as Notification;
             if (!newNotif || !newNotif.id) return;
-            queryClient.setQueryData(['notifications', user.id], (old: Notification[] | undefined) => {
+            const currentCompany = activeCompanyRef.current;
+            
+            // ── FILTRADO ESTRICTO DE NOTIFICACIONES Y SONIDOS POR EMPRESA ──
+            if (currentCompany) {
+              if (currentCompany.slug === "la30") {
+                // En La 30: rechazar si pertenece explícitamente a otra empresa (ej. Mirá Ve)
+                if (newNotif.company_id && newNotif.company_id !== currentCompany.id) {
+                  return;
+                }
+              } else {
+                // En Mirá Ve: rechazar OBLIGATORIAMENTE si no trae company_id o pertenece a La 30
+                if (!newNotif.company_id || newNotif.company_id !== currentCompany.id) {
+                  return; // SILENCIO TOTAL: ni se agrega a la lista, ni suena el timbre
+                }
+              }
+            }
+
+            queryClient.setQueryData(['notifications', user.id, currentCompany?.id], (old: Notification[] | undefined) => {
               const list = old || [];
               // Prevent duplicates
               if (list.some(n => n.id === newNotif.id)) return list;
               return [newNotif, ...list].slice(0, 50);
             });
+
             if (isNotificationForStore(newNotif, activeStoreRef.current?.slug)) {
               playNotificationSound();
             }
@@ -181,18 +214,24 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const markAllRead = useCallback(async () => {
     if (!user?.id) return;
-    const { error } = await supabase.rpc("mark_notifications_read");
-    if (!error) {
-      queryClient.setQueryData(['notifications', user?.id], (old: Notification[] | undefined) => {
-        if (!old) return old;
-        return old.map(n => ({ ...n, read: true, is_read: true }));
-      });
+    if (activeCompany?.id) {
+      await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("user_id", user.id)
+        .eq("company_id", activeCompany.id);
+    } else {
+      await supabase.rpc("mark_notifications_read");
     }
-  }, [queryClient, user?.id]);
+    queryClient.setQueryData(['notifications', user?.id, activeCompany?.id], (old: Notification[] | undefined) => {
+      if (!old) return old;
+      return old.map(n => ({ ...n, read: true, is_read: true }));
+    });
+  }, [queryClient, user?.id, activeCompany?.id]);
 
   const markAsRead = useCallback(async (id: string) => {
     if (!user?.id) return;
-    queryClient.setQueryData(['notifications', user?.id], (old: Notification[] | undefined) => {
+    queryClient.setQueryData(['notifications', user?.id, activeCompany?.id], (old: Notification[] | undefined) => {
       if (!old) return old;
       return old.map(n => n.id === id ? { ...n, read: true, is_read: true } : n);
     });
@@ -201,15 +240,21 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     } catch (err) {
       console.error("Error marking notification as read:", err);
     }
-  }, [queryClient, user?.id]);
+  }, [queryClient, user?.id, activeCompany?.id]);
 
   const clearNotifications = useCallback(async () => {
     if (!user?.id) return;
-    const { error } = await supabase.rpc("clear_my_notifications");
-    if (!error) {
-      queryClient.setQueryData(['notifications', user?.id], []);
+    if (activeCompany?.id) {
+      await supabase
+        .from("notifications")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("company_id", activeCompany.id);
+    } else {
+      await supabase.rpc("clear_my_notifications");
     }
-  }, [queryClient, user?.id]);
+    queryClient.setQueryData(['notifications', user?.id, activeCompany?.id], []);
+  }, [queryClient, user?.id, activeCompany?.id]);
 
   const handleRefresh = useCallback(async () => {
     await refreshNotifications();

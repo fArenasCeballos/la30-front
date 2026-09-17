@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
+import { useCompany } from "@/context/CompanyContext";
 import { useOrders } from "@/context/OrderContext";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/formatPrice";
@@ -108,6 +109,7 @@ export default function Domicilios() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { activeStore } = useStore();
+  const { activeCompany } = useCompany();
   const {
     orders,
     activeOrders,
@@ -242,13 +244,17 @@ export default function Domicilios() {
 
   // Fetch Active Drivers
   const { data: drivers = [] } = useQuery({
-    queryKey: ["delivery-drivers-active"],
+    queryKey: ["delivery-drivers-active", activeCompany?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from("delivery_drivers")
         .select("*")
         .eq("is_active", true)
         .order("first_name", { ascending: true });
+      if (activeCompany?.id) {
+        query = query.eq("company_id", activeCompany.id);
+      }
+      const { data } = await query;
       return (
         (data as Array<{
           id: string;
@@ -571,7 +577,7 @@ export default function Domicilios() {
           // Abrir modal de facturación electrónica Siigo si aplica
           const isFacturacionAllowed =
             user?.role === "admin" || user?.role === "caja";
-          if (isFullyPaid && isFacturacionAllowed && shouldGenerateInvoice(method, breakdown)) {
+          if (activeCompany?.siigo_enabled && isFullyPaid && isFacturacionAllowed && shouldGenerateInvoice(method, breakdown)) {
             setSiigoOrder({ order: activeOrder, method, breakdown });
           }
 
@@ -579,7 +585,7 @@ export default function Domicilios() {
           const receiptData: ReceiptData = {
             order: activeOrder,
             cajeroName,
-            storeName: activeStore?.name || "La 30 Perros y Hamburguesas",
+            storeName: activeStore?.name || activeCompany?.name || "Restaurante",
             paymentMethod: method,
             paymentReceived: received,
             paymentChange: change,
@@ -1190,6 +1196,7 @@ export default function Domicilios() {
                   const isFacturacionAllowed =
                     user?.role === "admin" || user?.role === "caja";
                   const canGenerateInvoice =
+                    (activeCompany?.siigo_enabled ?? false) &&
                     order.status !== "cancelado" &&
                     isFacturacionAllowed &&
                     !hasInvoice &&
@@ -1316,7 +1323,8 @@ export default function Domicilios() {
                           </Button>
                         )}
 
-                        {successInvoice &&
+                        {activeCompany?.siigo_enabled &&
+                          successInvoice &&
                           !!(successInvoice.response_payload
                             ?.public_url as string) && (
                             <Button

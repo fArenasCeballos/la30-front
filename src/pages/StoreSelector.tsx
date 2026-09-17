@@ -1,6 +1,7 @@
 import pkg from "../../package.json";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useStore } from "@/context/StoreContext";
+import { useCompany } from "@/context/CompanyContext";
 import { useAuth } from "@/context/AuthContext";
 import type { Store } from "@/types";
 import {
@@ -11,6 +12,7 @@ import {
   LogOut,
   Truck,
   UtensilsCrossed,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
@@ -100,6 +102,7 @@ function getStoreSubtitle(store: Store) {
 export default function StoreSelector() {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, loading } = useAuth();
+  const { activeCompany, canSwitchCompany } = useCompany();
   const {
     stores,
     activeStore,
@@ -174,20 +177,27 @@ export default function StoreSelector() {
       {/* Cabecera Superior */}
       <header className="relative z-10 flex items-center justify-between max-w-4xl w-full mx-auto shrink-0 py-1">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-9 sm:size-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-600/15 p-1.5">
-            <Logo className="size-5 sm:size-6 text-white" />
+          <div
+            className="flex size-9 sm:size-10 items-center justify-center rounded-2xl text-white shadow-md p-1.5"
+            style={{ background: `linear-gradient(135deg, ${activeCompany?.color || '#059669'}, ${activeCompany?.color || '#0d9488'}cc)`, boxShadow: `0 4px 14px ${activeCompany?.color || '#059669'}25` }}
+          >
+            {activeCompany?.icon ? (
+              <span className="text-lg">{activeCompany.icon}</span>
+            ) : (
+              <Logo className="size-5 sm:size-6 text-white" />
+            )}
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-display text-base sm:text-lg font-black tracking-tight text-slate-900">
-                La 30
+                {activeCompany?.name || "La 30"}
               </span>
               <span className="rounded-md bg-teal-500/15 border border-teal-500/20 px-1.5 py-0.2 text-[9px] font-black text-teal-700 uppercase">
                 POS
               </span>
             </div>
             <p className="text-[10px] text-slate-400 font-medium">
-              Plataforma Multi-Negocio
+              Plataforma de Gestión
             </p>
           </div>
         </div>
@@ -211,6 +221,17 @@ export default function StoreSelector() {
             <LogOut className="size-3.5 mr-1" />
             Cerrar Sesión
           </Button>
+          {canSwitchCompany && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/select-company")}
+              className="text-xs text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded-xl transition-colors cursor-pointer h-8 px-2.5"
+            >
+              <Building2 className="size-3.5 mr-1" />
+              Cambiar Empresa
+            </Button>
+          )}
         </div>
       </header>
 
@@ -349,7 +370,7 @@ export default function StoreSelector() {
 
       {/* Pie de Página */}
       <footer className="relative z-10 text-center text-[11px] text-slate-400 max-w-4xl w-full mx-auto py-1 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-1 shrink-0">
-        <span>La 30 POS SaaS · Aislamiento total de datos por tienda</span>
+        <span>{activeCompany?.name || "La 30"} POS · Aislamiento total de datos por tienda</span>
         <span>v{pkg.version}</span>
       </footer>
     </div>

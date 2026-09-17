@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useOrders } from "@/context/OrderContext";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
+import { useCompany } from "@/context/CompanyContext";
 import type { Profile, UserRole } from "@/types";
 import {
   Users,
@@ -74,6 +75,7 @@ export default function Usuarios() {
   const [isGlobalAccess, setIsGlobalAccess] = useState<boolean>(false);
 
   const { stores } = useStore();
+  const { activeCompany } = useCompany();
   const [newPassword, setNewPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -107,11 +109,24 @@ export default function Usuarios() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return profiles.filter(
-      (u) =>
-        u.name?.toLowerCase().includes(q) || u.role?.toLowerCase().includes(q),
-    );
-  }, [profiles, search]);
+    return profiles.filter((u) => {
+      // Filter by active company: show users that belong to this company
+      // A user belongs to a company if:
+      // - company_ids is null (super-admin, global access) — always show
+      // - company_ids contains the active company id
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const profileCompanyIds = (u as any).company_ids as string[] | null;
+      if (activeCompany && profileCompanyIds) {
+        if (!profileCompanyIds.includes(activeCompany.id)) {
+          return false;
+        }
+      }
+
+      return (
+        u.name?.toLowerCase().includes(q) || u.role?.toLowerCase().includes(q)
+      );
+    });
+  }, [profiles, search, activeCompany]);
 
   const openCreate = () => {
     setEditingProfile(null);
@@ -212,6 +227,7 @@ export default function Usuarios() {
           role: formRole,
           store_id: targetStoreId,
           allowed_store_ids: targetAllowedStoreIds,
+          ...(activeCompany ? { company_ids: [activeCompany.id] } : {}),
         })
         .eq("id", editingProfile.id);
 
@@ -289,6 +305,7 @@ export default function Usuarios() {
               .update({
                 allowed_store_ids: targetAllowedStoreIds,
                 store_id: targetStoreId,
+                ...(activeCompany ? { company_ids: [activeCompany.id] } : {}),
               })
               .eq("id", signUpData.user.id);
 

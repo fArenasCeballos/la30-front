@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useStore } from "@/context/StoreContext";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/formatPrice";
 import { cn } from "@/lib/utils";
@@ -79,6 +80,8 @@ import { StoreMultiSelect } from "./StoreMultiSelect";
 
 export function ProductsTab() {
   const { user } = useAuth();
+  const { stores } = useStore();
+  const companyStoreIds = useMemo(() => new Set(stores.map((s) => s.id)), [stores]);
   const [products, setProducts] = useState<ProductWithCategory[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,8 +128,17 @@ export function ProductsTab() {
       .from("categories")
       .select("*")
       .order("sort_order");
-    if (catData) setCategories(catData as Category[]);
-  }, []);
+    if (catData) {
+      const allCats = catData as Category[];
+      setCategories(
+        allCats.filter(
+          (c) =>
+            stores.length === 0 ||
+            Boolean(c.store_ids && c.store_ids.some((id) => companyStoreIds.has(id))),
+        ),
+      );
+    }
+  }, [stores, companyStoreIds]);
 
   useEffect(() => {
     if (!user) return;
@@ -137,15 +149,26 @@ export function ProductsTab() {
     load();
   }, [fetchProducts, fetchCategories, user]);
 
-  const filtered = (products || []).filter((p) => {
-    if (!p || !p.name) return false;
-    const matchesSearch = p.name
-      .toLowerCase()
-      .includes((search || "").toLowerCase());
-    const matchesCategory =
-      categoryFilter === "all" || p.category_id === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const companyProducts = useMemo(() => {
+    return (products || []).filter((p) => {
+      if (stores.length > 0) {
+        return Boolean(p.store_ids && p.store_ids.some((id) => companyStoreIds.has(id)));
+      }
+      return true;
+    });
+  }, [products, stores, companyStoreIds]);
+
+  const filtered = useMemo(() => {
+    return companyProducts.filter((p) => {
+      if (!p || !p.name) return false;
+      const matchesSearch = p.name
+        .toLowerCase()
+        .includes((search || "").toLowerCase());
+      const matchesCategory =
+        categoryFilter === "all" || p.category_id === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [companyProducts, search, categoryFilter]);
 
   const openNew = () => {
     setEditProduct(null);
@@ -154,7 +177,7 @@ export function ProductsTab() {
       category_id: categories[0]?.id || "",
       price: "",
       sort_order: "0",
-      store_ids: categories[0]?.store_ids || [],
+      store_ids: stores.map((s) => s.id),
       siigo_code: "",
     });
     if (imagePreview && imagePreview.startsWith("blob:"))
@@ -501,10 +524,10 @@ export function ProductsTab() {
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200/70 hover:text-slate-900",
             )}
           >
-            Todos ({products.length})
+            Todos ({companyProducts.length})
           </button>
           {categories.map((cat) => {
-            const count = products.filter((p) => p.category_id === cat.id).length;
+            const count = companyProducts.filter((p) => p.category_id === cat.id).length;
             const isSelected = categoryFilter === cat.id;
             return (
               <button

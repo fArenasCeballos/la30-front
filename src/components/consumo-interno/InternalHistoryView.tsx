@@ -79,7 +79,7 @@ const STATUS_CONFIG: Record<
 
 export function InternalHistoryView() {
   const { user } = useAuth();
-  const { activeStore } = useStore();
+  const { activeStore, stores } = useStore();
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
@@ -92,13 +92,22 @@ export function InternalHistoryView() {
   const { data: consumptions = [], isLoading } = useQuery<
     InternalConsumptionWithItems[]
   >({
-    queryKey: ["internal-history", selectedMonth, activeStore?.id],
-    queryFn: () =>
-      fetchConsumptions({
+    queryKey: [
+      "internal-history",
+      selectedMonth,
+      activeStore?.id,
+      stores.map((s) => s.id).join(","),
+    ],
+    queryFn: () => {
+      const storeIds = stores.map((s) => s.id);
+      if (storeIds.length === 0) return [];
+      return fetchConsumptions({
         storeId: activeStore?.id,
+        storeIds: activeStore?.id ? undefined : storeIds,
         monthStart: start,
         monthEnd: end,
-      }),
+      });
+    },
     staleTime: 60 * 1000,
   });
 

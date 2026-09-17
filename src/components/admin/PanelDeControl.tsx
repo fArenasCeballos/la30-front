@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
+import { useCompany } from "@/context/CompanyContext";
 import { supabase } from "@/lib/supabase";
 import { getRawMaterials } from "@/lib/inventoryService";
 import {
@@ -36,7 +37,9 @@ interface PanelDeControlProps {
 
 export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
   const { user } = useAuth();
-  const { activeStore } = useStore();
+  const { stores, activeStore } = useStore();
+  const { activeCompany } = useCompany();
+  const companyStoreIds = useMemo(() => stores.map((s) => s.id), [stores]);
   const navigate = useNavigate();
 
   // News Modal State
@@ -60,22 +63,33 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
     }).format(new Date());
   }, []);
 
-  // 1. Products & Categories Count
+  // 1. Products & Categories Count (filtered by active company's stores)
   const {
     data: catalogData,
     isLoading: loadingCatalog,
     refetch: refetchCatalog,
   } = useQuery({
-    queryKey: ["admin-kpi-catalog-v2"],
+    queryKey: ["admin-kpi-catalog-v2", activeCompany?.id, companyStoreIds],
     queryFn: async () => {
       const [prodRes, catRes] = await Promise.all([
-        supabase.from("products").select("id, available"),
-        supabase.from("categories").select("id"),
+        supabase.from("products").select("id, available, store_ids"),
+        supabase.from("categories").select("id, store_ids"),
       ]);
       if (prodRes.error) throw prodRes.error;
       if (catRes.error) throw catRes.error;
-      const products = prodRes.data || [];
-      const categories = catRes.data || [];
+
+      const companyStoreSet = new Set(companyStoreIds);
+      const products = (prodRes.data || []).filter((p) => {
+        if (companyStoreIds.length === 0) return false;
+        if (!p.store_ids || p.store_ids.length === 0) return false;
+        return p.store_ids.some((id: string) => companyStoreSet.has(id));
+      });
+      const categories = (catRes.data || []).filter((c) => {
+        if (companyStoreIds.length === 0) return false;
+        if (!c.store_ids || c.store_ids.length === 0) return false;
+        return c.store_ids.some((id: string) => companyStoreSet.has(id));
+      });
+
       const activeProducts = products.filter((p) => p.available !== false);
       return {
         totalProducts: products.length,
@@ -86,21 +100,22 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
     staleTime: 1000 * 60 * 3,
   });
 
-  // 2. Raw Materials & Low Stock Alert
+  // 2. Raw Materials & Low Stock Alert (scoped to company's stores)
   const {
     data: rawMaterialsData,
     isLoading: loadingMaterials,
     refetch: refetchMaterials,
   } = useQuery({
-    queryKey: ["admin-kpi-materials", activeStore?.id],
+    queryKey: ["admin-kpi-materials", activeStore?.id, companyStoreIds],
     queryFn: async () => {
       let items: { is_active?: boolean | null; min_stock?: number | null; current_stock?: number | null }[] = [];
       if (activeStore?.id) {
         items = await getRawMaterials(activeStore.id);
-      } else {
+      } else if (companyStoreIds.length > 0) {
         const { data, error } = await supabase
           .from("raw_materials")
-          .select("id, current_stock, min_stock, is_active");
+          .select("id, current_stock, min_stock, is_active")
+          .in("store_id", companyStoreIds);
         if (error) throw error;
         items = data || [];
       }
@@ -119,18 +134,23 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
     staleTime: 1000 * 60 * 3,
   });
 
-  // 3. Profiles / Staff
+  // 3. Profiles / Staff (filtered by active company)
   const {
     data: staffData,
     isLoading: loadingStaff,
     refetch: refetchStaff,
   } = useQuery({
-    queryKey: ["admin-kpi-staff"],
+    queryKey: ["admin-kpi-staff", activeCompany?.id],
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("id, role, is_active");
-      const profiles = data || [];
+        .select("id, role, is_active, company_ids");
+      const allProfiles = (data || []) as unknown as { id: string; role: string; is_active?: boolean; company_ids?: string[] | null }[];
+      const profiles = allProfiles.filter((p) => {
+        if (!activeCompany) return true;
+        if (!p.company_ids || p.company_ids.length === 0) return true;
+        return p.company_ids.includes(activeCompany.id);
+      });
       const activeStaff = profiles.filter((p) => p.is_active !== false);
       return {
         total: profiles.length,
@@ -140,18 +160,23 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
     staleTime: 1000 * 60 * 5,
   });
 
-  // 4. Logistics (Zones & Drivers)
+  // 4. Logistics (Zones & Drivers filtered by active company)
   const {
     data: logisticsData,
     isLoading: loadingLogistics,
     refetch: refetchLogistics,
   } = useQuery({
-    queryKey: ["admin-kpi-logistics"],
+    queryKey: ["admin-kpi-logistics", activeCompany?.id],
     queryFn: async () => {
-      const [zonesRes, driversRes] = await Promise.all([
-        supabase.from("delivery_zones").select("id, is_active"),
-        supabase.from("delivery_drivers").select("id, is_active"),
-      ]);
+      let zonesQuery = supabase.from("delivery_zones").select("id, is_active, company_id");
+      let driversQuery = supabase.from("delivery_drivers").select("id, is_active, company_id");
+
+      if (activeCompany?.id) {
+        zonesQuery = zonesQuery.eq("company_id", activeCompany.id);
+        driversQuery = driversQuery.eq("company_id", activeCompany.id);
+      }
+
+      const [zonesRes, driversRes] = await Promise.all([zonesQuery, driversQuery]);
       if (zonesRes.error) throw zonesRes.error;
       if (driversRes.error) throw driversRes.error;
       const zones = zonesRes.data || [];
@@ -209,7 +234,7 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
               <span>{todayFormatted}</span>
               <span className="text-slate-600">·</span>
               <span className="text-slate-300 font-semibold">
-                {activeStore?.name || "La 30 Principal"}
+                {activeStore?.name || activeCompany?.name || "Panel Principal"}
               </span>
             </div>
           </div>
@@ -483,7 +508,7 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
             </p>
           </div>
           <span className="text-xs font-bold text-teal-600 hidden sm:inline">
-            La 30 Control Suite
+            {activeCompany?.name || "La 30"} Control Suite
           </span>
         </div>
 

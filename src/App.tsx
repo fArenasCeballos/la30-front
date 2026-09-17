@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/AuthContext";
 import { StoreProvider } from "@/context/StoreContext";
+import { CompanyProvider } from "@/context/CompanyContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import { OrderProvider } from "@/context/OrderContext";
 import { AppLayout } from "@/components/AppLayout";
@@ -22,6 +23,7 @@ const Domicilios = lazy(() => import("./pages/Domicilios"));
 const Administracion = lazy(() => import("./pages/Administracion"));
 const ConsumoInterno = lazy(() => import("./pages/ConsumoInterno"));
 const StoreSelector = lazy(() => import("./pages/StoreSelector"));
+const CompanySelector = lazy(() => import("./pages/CompanySelector"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoading = () => (
@@ -54,6 +56,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster position="top-right" richColors closeButton />
         <AuthProvider>
+         <CompanyProvider>
           <StoreProvider>
             <NotificationProvider>
               <OrderProvider>
@@ -62,6 +65,7 @@ const App = () => (
                   <Suspense fallback={<PageLoading />}>
                     <Routes>
                       <Route path="/login" element={<Login />} />
+                      <Route path="/select-company" element={<CompanySelector />} />
                       <Route path="/select-store" element={<StoreSelector />} />
                       <Route element={<AppLayout />}>
                         <Route path="/" element={<Index />} />
@@ -143,6 +147,7 @@ const App = () => (
             </OrderProvider>
           </NotificationProvider>
         </StoreProvider>
+         </CompanyProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

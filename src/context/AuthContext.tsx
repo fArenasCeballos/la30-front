@@ -135,6 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === "SIGNED_OUT") {
         lastFetchedId.current = null;
         localStorage.removeItem("la30_active_store");
+        localStorage.removeItem("la30_active_company");
         setUser(null);
         setLoading(false);
       }
@@ -158,6 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Siempre limpiamos aunque falle signOut
     } finally {
       localStorage.removeItem("la30_active_store");
+      localStorage.removeItem("la30_active_company");
       setUser(null);
     }
   }, []);
@@ -185,6 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Siempre limpiamos aunque falle signOut
     } finally {
       localStorage.removeItem("la30_active_store");
+      localStorage.removeItem("la30_active_company");
       setUser(null);
     }
   }, [user]);

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
@@ -98,10 +98,20 @@ export default function Reporteria() {
 
   const [activeTab, setActiveTab] = useState<string>("resumen");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
-  const [typeFilter, setTypeFilter] = useState<"all" | "caja" | "delivery">("all");
-  const [selectedStoreId, setSelectedStoreId] = useState<string>(
-    activeStore?.id ?? "all"
+  const [typeFilter, setTypeFilter] = useState<"all" | "caja" | "delivery">(
+    "all",
   );
+  const [selectedStoreId, setSelectedStoreId] = useState<string>(
+    activeStore?.id ?? (stores[0]?.id || "all"),
+  );
+
+  useEffect(() => {
+    if (activeStore?.id) {
+      setSelectedStoreId(activeStore.id);
+    } else if (stores.length > 0) {
+      setSelectedStoreId(stores[0].id);
+    }
+  }, [activeStore?.id, stores]);
   const [activeQuick, setActiveQuick] = useState<string>("Hoy");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     const shift = getCurrentShiftDate();
@@ -147,10 +157,17 @@ export default function Reporteria() {
       const from = shiftRange.from.toISOString();
       const to = shiftRange.to.toISOString();
 
+      const targetStoreId =
+        selectedStoreId !== "all"
+          ? selectedStoreId
+          : stores.length === 1
+            ? stores[0].id
+            : null;
+
       const { data, error } = await supabase.rpc("get_reporteria_stats", {
         p_start: from,
         p_end: to,
-        p_store_id: selectedStoreId === "all" ? null : selectedStoreId,
+        p_store_id: targetStoreId,
         p_type_filter: typeFilter,
       });
 
@@ -184,7 +201,7 @@ export default function Reporteria() {
         .from("orders")
         .select(
           "*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*)), siigo_invoices(*)",
-          { count: "exact" }
+          { count: "exact" },
         )
         .gte("created_at", from)
         .lte("created_at", to)
@@ -193,6 +210,11 @@ export default function Reporteria() {
 
       if (selectedStoreId !== "all") {
         query = query.eq("store_id", selectedStoreId);
+      } else {
+        const companyStoreIds = stores.map((s) => s.id);
+        if (companyStoreIds.length > 0) {
+          query = query.in("store_id", companyStoreIds);
+        }
       }
 
       if (typeFilter !== "all") {
@@ -305,7 +327,7 @@ export default function Reporteria() {
       let query = supabase
         .from("orders")
         .select(
-          "*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*))"
+          "*, profiles:profiles!orders_created_by_fkey(name), order_items(*, products(*))",
         )
         .gte("created_at", from)
         .lte("created_at", to)
@@ -313,6 +335,11 @@ export default function Reporteria() {
 
       if (selectedStoreId !== "all") {
         query = query.eq("store_id", selectedStoreId);
+      } else {
+        const companyStoreIds = stores.map((s) => s.id);
+        if (companyStoreIds.length > 0) {
+          query = query.in("store_id", companyStoreIds);
+        }
       }
 
       if (typeFilter !== "all") {
@@ -467,7 +494,7 @@ export default function Reporteria() {
       });
       saveAs(
         blob,
-        `Reporte_La30_${format(new Date(), "yyyy-MM-dd_HHmm")}.xlsx`
+        `Reporte_La30_${format(new Date(), "yyyy-MM-dd_HHmm")}.xlsx`,
       );
     } catch (e) {
       console.error("Error exporting to Excel:", e);
@@ -534,9 +561,7 @@ export default function Reporteria() {
               />
             )}
 
-            {activeTab === "meseros" && (
-              <StaffTab waiterData={waiterData} />
-            )}
+            {activeTab === "meseros" && <StaffTab waiterData={waiterData} />}
 
             {activeTab === "detalle" && (
               <AuditTab
@@ -547,7 +572,9 @@ export default function Reporteria() {
                 onPageChange={setPage}
                 expandedDetailId={expandedDetailId}
                 onToggleDetail={(orderId) =>
-                  setExpandedDetailId((prev) => (prev === orderId ? null : orderId))
+                  setExpandedDetailId((prev) =>
+                    prev === orderId ? null : orderId,
+                  )
                 }
                 activeStoreName={selectedStoreName}
               />

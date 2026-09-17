@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useStore } from "@/context/StoreContext";
+import { useCompany } from "@/context/CompanyContext";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/formatPrice";
 import { toast } from "sonner";
@@ -20,54 +22,84 @@ import type { Category, Product, Combo, Coupon } from "@/types";
 
 export default function AppConfigAdmin() {
   const queryClient = useQueryClient();
+  const { stores } = useStore();
+  const { activeCompany } = useCompany();
+  const companyStoreIds = useMemo(() => new Set(stores.map((s) => s.id)), [stores]);
   const [activeTab, setActiveTab] = useState("catalog");
 
   // ─── Fetch Categories & Products ────────────────────────────
   const { data: categories = [] } = useQuery<Category[]>({
-    queryKey: ["admin-app-categories"],
+    queryKey: ["admin-app-categories", Array.from(companyStoreIds)],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categories")
         .select("*")
         .order("sort_order");
       if (error) throw error;
-      return (data || []) as Category[];
+      const all = (data || []) as Category[];
+      return all.filter(
+        (c) =>
+          stores.length === 0 ||
+          !c.store_ids ||
+          c.store_ids.length === 0 ||
+          c.store_ids.some((id) => companyStoreIds.has(id)),
+      );
     },
   });
 
   const { data: products = [] } = useQuery<Product[]>({
-    queryKey: ["admin-app-products"],
+    queryKey: ["admin-app-products", Array.from(companyStoreIds)],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
         .select("*")
         .order("name");
       if (error) throw error;
-      return (data || []) as Product[];
+      const all = (data || []) as Product[];
+      return all.filter(
+        (p) =>
+          stores.length === 0 ||
+          !p.store_ids ||
+          p.store_ids.length === 0 ||
+          p.store_ids.some((id) => companyStoreIds.has(id)),
+      );
     },
   });
 
   // ─── Fetch Combos ───────────────────────────────────────────
   const { data: combos = [] } = useQuery<Combo[]>({
-    queryKey: ["admin-app-combos"],
+    queryKey: ["admin-app-combos", Array.from(companyStoreIds)],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("combos")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []) as Combo[];
+      const all = (data || []) as Combo[];
+      return all.filter(
+        (c) =>
+          stores.length === 0 ||
+          !c.store_ids ||
+          c.store_ids.length === 0 ||
+          c.store_ids.some((id) => companyStoreIds.has(id)),
+      );
     },
   });
 
   // ─── Fetch Coupons ──────────────────────────────────────────
   const { data: coupons = [] } = useQuery<Coupon[]>({
-    queryKey: ["admin-app-coupons"],
+    queryKey: ["admin-app-coupons", activeCompany?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("coupons")
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (activeCompany?.id) {
+        query = query.eq("company_id", activeCompany.id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data || []) as Coupon[];
     },
@@ -134,6 +166,7 @@ export default function AppConfigAdmin() {
           parseInt(comboOriginalPrice, 10) || parseInt(comboPrice, 10) || 0,
         image_url: comboImageUrl || null,
         is_active: true,
+        store_ids: stores.map((s) => s.id),
       });
       if (error) throw error;
     },
@@ -167,6 +200,7 @@ export default function AppConfigAdmin() {
         discount_value: parseInt(couponDiscountValue, 10) || 0,
         min_order_total: parseInt(couponMinTotal, 10) || 0,
         is_active: true,
+        company_id: activeCompany?.id || null,
       });
       if (error) throw error;
     },

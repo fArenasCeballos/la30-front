@@ -38,6 +38,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/formatPrice";
 import { toast } from "sonner";
+import { useCompany } from "@/context/CompanyContext";
 import type { Order } from "@/types";
 import {
   type SiigoCustomer,
@@ -49,7 +50,7 @@ import {
   distributeTotalAmongItems,
 } from "@/lib/siigoService";
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────     
 
 interface SiigoInvoiceModalProps {
   open: boolean;
@@ -94,6 +95,7 @@ export function SiigoInvoiceModal({
   method,
   breakdown,
 }: SiigoInvoiceModalProps) {
+  const { activeCompany } = useCompany();
   const [step, setStep] = useState<Step>("choose");
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<InvoiceResultEntry[]>([]);
@@ -270,6 +272,10 @@ export function SiigoInvoiceModal({
   const hasErrors = results.some((r) => !r.result.success);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
+
+  if (!activeCompany?.siigo_enabled) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !isProcessing && onClose()}>
@@ -651,7 +657,12 @@ export function SiigoInvoiceModal({
                             variant="default"
                             size="sm"
                             className="h-auto p-2 text-[10px] font-black uppercase"
-                            onClick={() => window.open(r.result.fullResponse?.public_url, '_blank')}
+                            onClick={() => {
+                              const url = r.result.fullResponse?.public_url;
+                              if (typeof url === "string") {
+                                window.open(url, "_blank");
+                              }
+                            }}
                           >
                             Imprimir PDF
                           </Button>

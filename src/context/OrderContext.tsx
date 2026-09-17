@@ -280,6 +280,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         { event: "*", schema: "public", table: "orders" },
         (payload) => {
           try {
+            // Ignorar eventos de órdenes pertenecientes a otra sede / empresa
+            const payloadStoreId =
+              (payload.new as { store_id?: string })?.store_id ||
+              (payload.old as { store_id?: string })?.store_id;
+            if (storeId && payloadStoreId && payloadStoreId !== storeId) {
+              return;
+            }
+
             if (payload.eventType === "UPDATE") {
               const updateFn = (old: Order[] | undefined) => {
                 if (!old) return old;
@@ -1099,6 +1107,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                       message: `El insumo ${materialName} se está quedando sin stock en ${activeStore?.name || "la tienda"} tras un pedido reciente.`,
                       type: "warning",
                       user_id: user?.id,
+                      company_id: activeStore?.company_id || null,
                     });
                   if (error) {
                     console.error(

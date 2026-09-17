@@ -227,8 +227,13 @@ export default function Consultas() {
       }
 
       // 2. Store Filter
+      const companyStoreIds = stores.map((s) => s.id);
       if (storeId !== "all") {
         query = query.eq("store_id", storeId);
+      } else if (companyStoreIds.length > 0) {
+        query = query.in("store_id", companyStoreIds);
+      } else {
+        query = query.eq("store_id", "00000000-0000-0000-0000-000000000000");
       }
 
       // 3. Status Filter
@@ -392,8 +397,13 @@ export default function Consultas() {
       }
 
       // Store filter
+      const cCompanyStoreIds = stores.map((s) => s.id);
       if (storeId !== "all") {
         query = query.eq("store_id" as never, storeId as never);
+      } else if (cCompanyStoreIds.length > 0) {
+        query = query.in("store_id" as never, cCompanyStoreIds as never);
+      } else {
+        query = query.eq("store_id" as never, "00000000-0000-0000-0000-000000000000" as never);
       }
 
       // Payment status filter

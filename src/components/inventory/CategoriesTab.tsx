@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useStore } from "@/context/StoreContext";
 import { supabase } from "@/lib/supabase";
 import type { Category } from "@/types";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,8 @@ const generateSlug = (text: string) =>
 
 export function CategoriesTab() {
   const { user } = useAuth();
+  const { stores } = useStore();
+  const companyStoreIds = useMemo(() => new Set(stores.map((s) => s.id)), [stores]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [editCategory, setEditCategory] = useState<Category | null>(null);
@@ -94,7 +97,7 @@ export function CategoriesTab() {
       label: "",
       icon: "📦",
       sort_order: String(nextSortOrder()),
-      store_ids: [],
+      store_ids: stores.map((s) => s.id),
     });
     setIsDialogOpen(true);
   };
@@ -209,11 +212,18 @@ export function CategoriesTab() {
     setCategoryToDelete(null);
   };
 
-  const filteredCategories = categories.filter(
-    (c) =>
-      c.label.toLowerCase().includes(search.toLowerCase()) ||
-      c.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filteredCategories = categories
+    .filter((c) => {
+      if (stores.length > 0) {
+        return Boolean(c.store_ids && c.store_ids.some((id) => companyStoreIds.has(id)));
+      }
+      return true;
+    })
+    .filter(
+      (c) =>
+        c.label.toLowerCase().includes(search.toLowerCase()) ||
+        c.name.toLowerCase().includes(search.toLowerCase()),
+    );
 
   if (loading) {
     return (
@@ -239,8 +249,8 @@ export function CategoriesTab() {
               Estructura de Categorías
             </h2>
             <p className="text-xs text-slate-500">
-              {categories.length}{" "}
-              {categories.length === 1
+              {filteredCategories.length}{" "}
+              {filteredCategories.length === 1
                 ? "categoría configurada"
                 : "categorías configuradas"}
             </p>

@@ -9,6 +9,8 @@ export type PaymentMethod = Enums<"payment_method">;
 // Row types from DB
 export type Store = Tables<"stores">;
 export type Profile = Tables<"profiles">;
+
+export type Company = Tables<"companies">;
 export type Category = Tables<"categories">;
 export type Product = Tables<"products">;
 export type OrderRow = Tables<"orders">;
@@ -159,21 +161,14 @@ export interface Combo {
   created_at: string;
 }
 
-export interface Coupon {
-  id: string;
-  code: string;
+export interface Coupon extends Tables<"coupons"> {
   description?: string | null;
-  discount_type: "percentage" | "fixed";
-  discount_value: number;
-  min_order_total?: number;
   max_uses?: number | null;
-  uses_count: number;
+  uses_count?: number;
   max_uses_per_customer?: number;
-  valid_from: string;
+  valid_from?: string;
   valid_until?: string | null;
-  is_active: boolean;
   store_ids?: string[];
-  created_at: string;
 }
 
 export interface AppPayment {

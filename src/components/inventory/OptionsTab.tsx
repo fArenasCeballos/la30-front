@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { useStore } from "@/context/StoreContext";
 import { supabase } from "@/lib/supabase";
 import type {
   Category,
@@ -63,6 +64,8 @@ const generateSlug = (text: string) =>
     .replace(/\s+/g, "_");
 
 export function OptionsTab() {
+  const { stores } = useStore();
+  const companyStoreIds = useMemo(() => new Set(stores.map((s) => s.id)), [stores]);
   const [options, setOptions] = useState<ProductCustomOption[]>([]);
   const [choices, setChoices] = useState<Record<string, ProductCustomChoice[]>>(
     {},
@@ -110,8 +113,26 @@ export function OptionsTab() {
         supabase.from("categories").select("*").order("sort_order"),
       ]);
 
-      if (optRes.data) setOptions(optRes.data as ProductCustomOption[]);
-      if (catRes.data) setCategories(catRes.data as Category[]);
+      if (optRes.data) {
+        const allOpts = optRes.data as ProductCustomOption[];
+        setOptions(
+          allOpts.filter(
+            (o) =>
+              stores.length === 0 ||
+              Boolean(o.store_ids && o.store_ids.some((id) => companyStoreIds.has(id))),
+          ),
+        );
+      }
+      if (catRes.data) {
+        const allCats = catRes.data as Category[];
+        setCategories(
+          allCats.filter(
+            (c) =>
+              stores.length === 0 ||
+              Boolean(c.store_ids && c.store_ids.some((id) => companyStoreIds.has(id))),
+          ),
+        );
+      }
 
       if (choRes.data) {
         const groupedChoices: Record<string, ProductCustomChoice[]> = {};
@@ -129,7 +150,7 @@ export function OptionsTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [stores, companyStoreIds]);
 
   useEffect(() => {
     fetchData();
@@ -169,7 +190,7 @@ export function OptionsTab() {
       label: "",
       icon: "🛠️",
       sort_order: String(nextOptionSortOrder()),
-      store_ids: [],
+      store_ids: stores.map((s) => s.id),
     });
     setIsOptionDialogOpen(true);
   };

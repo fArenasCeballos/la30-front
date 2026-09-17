@@ -16,10 +16,12 @@ import {
   Store as StoreIcon,
   Settings,
   MoreHorizontal,
+  Building2,
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { NavLink } from "@/components/NavLink";
 import type { UserRole, Store as StoreType } from "@/types";
+import { useCompany } from "@/context/CompanyContext";
 import { NotificationBell } from "./NotificationBell";
 import {
   AlertDialog,
@@ -159,6 +161,7 @@ export function AppLayout() {
     canSwitchStore,
     loading: storeLoading,
   } = useStore();
+  const { activeCompany, canSwitchCompany } = useCompany();
   const navigate = useNavigate();
   const location = useLocation();
   const isAdministracion = location.pathname.startsWith("/administracion");
@@ -360,19 +363,23 @@ export function AppLayout() {
             }}
           >
             <div className="w-9 h-9 lg:w-10 2xl:w-12 lg:h-10 2xl:h-12 rounded-xl lg:rounded-2xl 2xl:rounded-3xl bg-white border-2 shadow-soft flex items-center justify-center overflow-hidden group-hover:scale-105 group-hover:rotate-3 transition-all duration-200">
-              <Logo className="h-5 w-5 lg:h-6 2xl:h-8" />
+              {activeCompany?.icon ? (
+                <span className="text-base lg:text-lg 2xl:text-xl">{activeCompany.icon}</span>
+              ) : (
+                <Logo className="h-5 w-5 lg:h-6 2xl:h-8" />
+              )}
             </div>
             <div className="hidden 2xl:block">
               <span className="font-black text-xl 2xl:text-2xl tracking-tighter block leading-none">
-                La 30
+                {activeCompany?.name || "La 30"}
               </span>
               <span className="text-[9px] text-primary uppercase font-black tracking-[0.2em] mt-1 block">
-                {isAdministracion ? "Administración" : "Plataforma POS"}
+                {isAdministracion ? "Administración" : `${activeCompany?.name || 'La 30'} POS`}
               </span>
             </div>
             <div className="hidden xl:block 2xl:hidden">
               <span className="font-black text-lg tracking-tighter block leading-none">
-                La 30
+                {activeCompany?.name || "La 30"}
               </span>
             </div>
           </div>
@@ -606,6 +613,17 @@ export function AppLayout() {
                 title="Cerrar sesión"
               >
                 <LogOut className="h-4 w-4" />
+              </Button>
+            )}
+            {canSwitchCompany && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-xl h-9 w-9 lg:h-10 lg:w-10 hover:bg-white hover:shadow-soft transition-all text-muted-foreground hover:text-teal-600"
+                onClick={() => navigate("/select-company")}
+                title="Cambiar empresa"
+              >
+                <Building2 className="h-4 w-4" />
               </Button>
             )}
           </div>

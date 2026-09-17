@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useStore } from "@/context/StoreContext";
+import { useCompany } from "@/context/CompanyContext";
 import { formatPrice } from "@/lib/formatPrice";
 import {
   fetchConsumptions,
@@ -65,7 +66,7 @@ function navigateMonth(monthStr: string, delta: number): string {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function EmployeeAccountsView() {
-  const { activeStore } = useStore();
+  const { activeStore, stores } = useStore();
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
@@ -82,10 +83,16 @@ export function EmployeeAccountsView() {
 
   const { start, end } = getMonthRange(selectedMonth);
 
+  const { activeCompany } = useCompany();
+  const companyStoreIds = useMemo(
+    () => new Set(stores.map((s) => s.id)),
+    [stores],
+  );
+
   // ── Data Queries ───────────────────────────────────────────────────────────
 
-  const { data: employees = [] } = useQuery<Profile[]>({
-    queryKey: ["employee-accounts-profiles"],
+  const { data: allEmployees = [] } = useQuery<Profile[]>({
+    queryKey: ["employee-accounts-profiles", activeCompany?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -97,19 +104,51 @@ export function EmployeeAccountsView() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const employees = useMemo(() => {
+    if (!activeCompany?.id) return allEmployees;
+    return allEmployees.filter((e) => {
+      if (e.company_ids && e.company_ids.length > 0) {
+        return e.company_ids.includes(activeCompany.id);
+      }
+      if (e.store_id && companyStoreIds.has(e.store_id)) return true;
+      if (
+        e.allowed_store_ids &&
+        e.allowed_store_ids.some((id) => companyStoreIds.has(id))
+      )
+        return true;
+      if (
+        e.role === "admin" &&
+        !e.store_id &&
+        (!e.allowed_store_ids || e.allowed_store_ids.length === 0)
+      ) {
+        return true;
+      }
+      return false;
+    });
+  }, [allEmployees, activeCompany, companyStoreIds]);
+
   const {
     data: consumptions = [],
     isLoading: loadingConsumptions,
     refetch: refetchConsumptions,
   } = useQuery<InternalConsumptionWithItems[]>({
-    queryKey: ["employee-consumptions", selectedMonth, activeStore?.id],
-    queryFn: () =>
-      fetchConsumptions({
+    queryKey: [
+      "employee-consumptions",
+      selectedMonth,
+      activeStore?.id,
+      stores.map((s) => s.id).join(","),
+    ],
+    queryFn: () => {
+      const storeIds = stores.map((s) => s.id);
+      if (storeIds.length === 0) return [];
+      return fetchConsumptions({
         storeId: activeStore?.id,
+        storeIds: activeStore?.id ? undefined : storeIds,
         monthStart: start,
         monthEnd: end,
         consumerType: "employee",
-      }),
+      });
+    },
     staleTime: 60 * 1000,
   });
 
@@ -117,13 +156,21 @@ export function EmployeeAccountsView() {
     data: payments = [],
     refetch: refetchPayments,
   } = useQuery<InternalConsumptionPayment[]>({
-    queryKey: ["employee-payments", selectedMonth],
-    queryFn: () =>
-      fetchPayments({
+    queryKey: [
+      "employee-payments",
+      selectedMonth,
+      employees.map((e) => e.id).join(","),
+    ],
+    queryFn: () => {
+      const empIds = employees.map((e) => e.id);
+      if (empIds.length === 0) return [];
+      return fetchPayments({
         monthStart: start,
         monthEnd: end,
         consumerType: "employee",
-      }),
+        employeeIds: empIds,
+      });
+    },
     staleTime: 60 * 1000,
   });
 
@@ -139,32 +186,37 @@ export function EmployeeAccountsView() {
       }
     >();
 
-    // Group consumptions by employee
+    // Group consumptions by employee (only for this company's employees and stores)
     for (const c of consumptions) {
       if (!c.employee_id) continue;
+      if (c.store_id && !companyStoreIds.has(c.store_id)) continue;
+      const emp = employees.find((e) => e.id === c.employee_id);
+      if (!emp) continue;
+
       const existing = employeesWithConsumptions.get(c.employee_id);
       if (existing) {
         existing.consumptions.push(c);
       } else {
         employeesWithConsumptions.set(c.employee_id, {
-          name: c.consumer_name,
+          name: emp.name || c.consumer_name,
           consumptions: [c],
           payments: [],
         });
       }
     }
 
-    // Group payments by employee
+    // Group payments by employee (only for this company's employees)
     for (const p of payments) {
       if (!p.employee_id) continue;
+      const emp = employees.find((e) => e.id === p.employee_id);
+      if (!emp) continue;
+
       const existing = employeesWithConsumptions.get(p.employee_id);
       if (existing) {
         existing.payments.push(p);
       } else {
-        // Find employee name from profiles
-        const emp = employees.find((e) => e.id === p.employee_id);
         employeesWithConsumptions.set(p.employee_id, {
-          name: emp?.name ?? "Desconocido",
+          name: emp.name,
           consumptions: [],
           payments: [p],
         });
@@ -183,7 +235,7 @@ export function EmployeeAccountsView() {
         ),
       )
       .sort((a, b) => b.balance - a.balance || a.consumerName.localeCompare(b.consumerName));
-  }, [consumptions, payments, employees, selectedMonth]);
+  }, [consumptions, payments, employees, companyStoreIds, selectedMonth]);
 
   // ── Aggregated Metrics ─────────────────────────────────────────────────────
 

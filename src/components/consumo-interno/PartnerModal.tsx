@@ -16,6 +16,7 @@ import {
   createPartner,
   updatePartner,
 } from "@/lib/internalConsumptionService";
+import { useCompany } from "@/context/CompanyContext";
 import type { InternalPartner } from "@/types";
 
 interface PartnerModalProps {
@@ -31,6 +32,7 @@ export function PartnerModal({
   editingPartner,
   onSaved,
 }: PartnerModalProps) {
+  const { activeCompany } = useCompany();
   const [name, setName] = useState("");
   const [documentId, setDocumentId] = useState("");
   const [phone, setPhone] = useState("");
@@ -73,6 +75,7 @@ export function PartnerModal({
           document_id: documentId.trim() || null,
           phone: phone.trim() || null,
           email: email.trim() || null,
+          company_id: activeCompany?.id || null,
         });
         toast.success("Socio creado exitosamente");
       }

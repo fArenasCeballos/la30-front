@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useCompany } from "@/context/CompanyContext";
 import { supabase } from "@/lib/supabase";
 import type { Store, Profile } from "@/types";
 
@@ -19,6 +20,7 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { activeCompany } = useCompany();
   const [stores, setStores] = useState<Store[]>([]);
   const [activeStore, setActiveStoreState] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,12 +39,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Wait for company to be resolved before loading stores
+      if (!activeCompany) {
+        setStores([]);
+        setActiveStoreState(null);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        const query = supabase
           .from("stores")
           .select("*")
           .order("created_at", { ascending: true });
+
+        // Filter by company_id if the column exists (post-migration)
+        // Using a type-safe approach: always filter when activeCompany is available
+        const { data, error } = await query;
 
         if (isCancelled) return;
 
@@ -56,6 +70,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           ...s,
           name: s.name === "Carrito Móvil" ? "Tráiler" : s.name,
         }));
+
+        // Filter stores by active company
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        loadedStores = loadedStores.filter((s: any) => s.company_id === activeCompany.id);
 
         // Filter accessible stores for non-admin users
         if (user.role !== "admin") {
@@ -84,11 +102,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
 
         // If no valid saved store is found among accessible stores:
-        // - If the user only has 1 store assigned, auto-select it.
-        // - If the user has multiple stores (or is admin), leave null so they choose in StoreSelector.
+        // - If there is only 1 store in this company, auto-select it.
+        // - If there are multiple stores, leave null so they choose in StoreSelector.
         if (!storeToSet && loadedStores.length > 0) {
-          const hasMultiple = user.role === "admin" || loadedStores.length > 1;
-          if (!hasMultiple) {
+          if (loadedStores.length === 1) {
             storeToSet = loadedStores[0];
           }
         }
@@ -115,7 +132,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isCancelled = true;
     };
-  }, [user]); // Depend only on user to initialize stores once per session
+  }, [user, activeCompany]); // Depend on user and activeCompany to reload stores when either changes
 
   const setActiveStore = useCallback(
     (store: Store) => {

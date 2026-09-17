@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/context/StoreContext";
+import { useCompany } from "@/context/CompanyContext";
 import { formatPrice } from "@/lib/formatPrice";
 import {
   isBeverageProduct,
@@ -87,7 +88,7 @@ type ConsumerSelection =
 
 export function InternalPosView() {
   const { user } = useAuth();
-  const { activeStore } = useStore();
+  const { activeStore, stores } = useStore();
   const storeId = activeStore?.id;
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -110,12 +111,18 @@ export function InternalPosView() {
     useState<ProductWithCategory | null>(null);
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
 
+  const { activeCompany } = useCompany();
+  const companyStoreIds = useMemo(
+    () => new Set(stores.map((s) => s.id)),
+    [stores],
+  );
+
   // ── Data Queries ───────────────────────────────────────────────────────────
 
-  const { data: employees = [], isLoading: loadingEmployees } = useQuery<
+  const { data: allEmployees = [], isLoading: loadingEmployees } = useQuery<
     Profile[]
   >({
-    queryKey: ["internal-employees"],
+    queryKey: ["internal-employees", activeCompany?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -128,13 +135,36 @@ export function InternalPosView() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const employees = useMemo(() => {
+    if (!activeCompany?.id) return allEmployees;
+    return allEmployees.filter((e) => {
+      if (e.company_ids && e.company_ids.length > 0) {
+        return e.company_ids.includes(activeCompany.id);
+      }
+      if (e.store_id && companyStoreIds.has(e.store_id)) return true;
+      if (
+        e.allowed_store_ids &&
+        e.allowed_store_ids.some((id) => companyStoreIds.has(id))
+      )
+        return true;
+      if (
+        e.role === "admin" &&
+        !e.store_id &&
+        (!e.allowed_store_ids || e.allowed_store_ids.length === 0)
+      ) {
+        return true;
+      }
+      return false;
+    });
+  }, [allEmployees, activeCompany, companyStoreIds]);
+
   const {
     data: partners = [],
     isLoading: loadingPartners,
     refetch: refetchPartners,
   } = useQuery<InternalPartner[]>({
-    queryKey: ["internal-partners"],
-    queryFn: fetchPartners,
+    queryKey: ["internal-partners", activeCompany?.id],
+    queryFn: () => fetchPartners(activeCompany?.id),
     staleTime: 5 * 60 * 1000,
   });
 

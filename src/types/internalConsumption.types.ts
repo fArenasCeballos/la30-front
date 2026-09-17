@@ -23,6 +23,7 @@ export interface InternalPartner {
   phone: string | null;
   email: string | null;
   is_active: boolean;
+  company_id?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCompany } from "@/context/CompanyContext";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/formatPrice";
 import { cn } from "@/lib/utils";
@@ -46,18 +47,25 @@ const INITIAL_FORM: ZoneFormState = {
 
 export default function ZonasDomicilio() {
   const queryClient = useQueryClient();
+  const { activeCompany } = useCompany();
   const [editingZone, setEditingZone] = useState<DeliveryZone | null>(null);
   const [form, setForm] = useState<ZoneFormState>(INITIAL_FORM);
   const [isCreating, setIsCreating] = useState(false);
 
   // ─── Fetch zones ────────────────────────────────────────────
   const { data: zones = [], isLoading } = useQuery<DeliveryZone[]>({
-    queryKey: ["delivery-zones"],
+    queryKey: ["delivery-zones", activeCompany?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("delivery_zones")
         .select("*")
         .order("name");
+
+      if (activeCompany?.id) {
+        query = query.eq("company_id", activeCompany.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -102,6 +110,7 @@ export default function ZonasDomicilio() {
           price: payload.price,
           polygon: payload.polygon as unknown as Json,
           color: payload.color,
+          company_id: activeCompany?.id || null,
         });
         if (error) throw error;
       }

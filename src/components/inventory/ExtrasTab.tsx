@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { useStore } from "@/context/StoreContext";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/formatPrice";
 import type { Category, ProductExtra } from "@/types";
@@ -60,6 +61,8 @@ const generateSlug = (text: string) =>
     .replace(/\s+/g, "_");
 
 export function ExtrasTab() {
+  const { stores } = useStore();
+  const companyStoreIds = useMemo(() => new Set(stores.map((s) => s.id)), [stores]);
   const [extras, setExtras] = useState<ProductExtra[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,10 +88,28 @@ export function ExtrasTab() {
       supabase.from("product_extras").select("*").order("sort_order"),
       supabase.from("categories").select("*").order("sort_order"),
     ]);
-    if (extData) setExtras(extData as ProductExtra[]);
-    if (catData) setCategories(catData as Category[]);
+    if (extData) {
+      const allExtras = extData as ProductExtra[];
+      setExtras(
+        allExtras.filter(
+          (e) =>
+            stores.length === 0 ||
+            Boolean(e.store_ids && e.store_ids.some((id) => companyStoreIds.has(id))),
+        ),
+      );
+    }
+    if (catData) {
+      const allCats = catData as Category[];
+      setCategories(
+        allCats.filter(
+          (c) =>
+            stores.length === 0 ||
+            Boolean(c.store_ids && c.store_ids.some((id) => companyStoreIds.has(id))),
+        ),
+      );
+    }
     setLoading(false);
-  }, []);
+  }, [stores, companyStoreIds]);
 
   useEffect(() => {
     fetchData();
@@ -130,7 +151,7 @@ export function ExtrasTab() {
       price_per_unit: "",
       max_qty: "1",
       sort_order: String(nextSortOrder()),
-      store_ids: [],
+      store_ids: stores.map((s) => s.id),
     });
     setIsDialogOpen(true);
   };
