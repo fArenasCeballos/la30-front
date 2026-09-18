@@ -252,7 +252,11 @@ export default function Domicilios() {
         .eq("is_active", true)
         .order("first_name", { ascending: true });
       if (activeCompany?.id) {
-        query = query.eq("company_id", activeCompany.id);
+        if (activeCompany.slug === "la30" || !activeCompany.slug) {
+          query = query.or(`company_id.eq.${activeCompany.id},company_id.is.null`);
+        } else {
+          query = query.eq("company_id", activeCompany.id);
+        }
       }
       const { data } = await query;
       return (

@@ -75,13 +75,34 @@ export default function DomiciliariosAdmin() {
         .order("created_at", { ascending: false });
 
       if (activeCompany?.id) {
-        query = query.eq("company_id", activeCompany.id);
+        // Para La 30 (o slug por defecto), incluir domiciliarios con company_id de La 30 O nulos (legados)
+        if (activeCompany.slug === "la30" || !activeCompany.slug) {
+          query = query.or(`company_id.eq.${activeCompany.id},company_id.is.null`);
+        } else {
+          query = query.eq("company_id", activeCompany.id);
+        }
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
       setDrivers(data || []);
+
+      // Auto-asociar en segundo plano los domiciliarios legados (company_id nulo) a la empresa activa La 30
+      if (data && activeCompany?.id && (activeCompany.slug === "la30" || !activeCompany.slug)) {
+        const unassigned = data.filter((d) => !d.company_id);
+        if (unassigned.length > 0) {
+          supabase
+            .from("delivery_drivers")
+            .update({ company_id: activeCompany.id })
+            .in("id", unassigned.map((d) => d.id))
+            .then(({ error: updateErr }) => {
+              if (updateErr) {
+                console.warn("Advertencia al vincular domiciliarios a empresa:", updateErr);
+              }
+            });
+        }
+      }
     } catch (err) {
       toast.error(`Error al cargar domiciliarios: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -146,6 +167,7 @@ export default function DomiciliariosAdmin() {
             last_name: lastName,
             phone: phone,
             motorcycle_plate: plate,
+            company_id: editingDriver.company_id || activeCompany?.id || null,
           })
           .eq("id", editingDriver.id);
 

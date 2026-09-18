@@ -189,8 +189,13 @@ export default function PanelDeControl({ onSelectTab }: PanelDeControlProps) {
         .select("id, is_active, company_id");
 
       if (activeCompany?.id) {
-        zonesQuery = zonesQuery.eq("company_id", activeCompany.id);
-        driversQuery = driversQuery.eq("company_id", activeCompany.id);
+        if (activeCompany.slug === "la30" || !activeCompany.slug) {
+          zonesQuery = zonesQuery.or(`company_id.eq.${activeCompany.id},company_id.is.null`);
+          driversQuery = driversQuery.or(`company_id.eq.${activeCompany.id},company_id.is.null`);
+        } else {
+          zonesQuery = zonesQuery.eq("company_id", activeCompany.id);
+          driversQuery = driversQuery.eq("company_id", activeCompany.id);
+        }
       }
 
       const [zonesRes, driversRes] = await Promise.all([
