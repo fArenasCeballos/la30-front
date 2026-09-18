@@ -181,6 +181,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const { activeStore } = useStore();
   const queryClient = useQueryClient();
   const storeId = activeStore?.id;
+  const storeName = activeStore?.name;
+  const storeCompanyId = activeStore?.company_id;
+  const userId = user?.id;
 
   useEffect(() => {
     if (!user || user.role !== "admin") return;
@@ -1127,15 +1130,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
                 // Insert notifications for each low stock item
                 result.low_stock_alerts.forEach(async (materialName) => {
-                  const storeTag = activeStore?.name ? ` [${activeStore.name}]` : "";
+                  const storeTag = storeName ? ` [${storeName}]` : "";
                   const { error } = await supabase
                     .from("notifications")
                     .insert({
                       title: `Stock Mínimo Alcanzado${storeTag}`,
-                      message: `El insumo ${materialName} se está quedando sin stock en ${activeStore?.name || "la tienda"} tras un pedido reciente.`,
+                      message: `El insumo ${materialName} se está quedando sin stock en ${storeName || "la tienda"} tras un pedido reciente.`,
                       type: "warning",
-                      user_id: user?.id,
-                      company_id: activeStore?.company_id || null,
+                      user_id: userId,
+                      company_id: storeCompanyId || null,
                     });
                   if (error) {
                     console.error(
@@ -1153,11 +1156,18 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       }
       toast.success("Pago procesado");
       queryClient.invalidateQueries({
-        queryKey: ["active-orders", user?.id, storeId],
+        queryKey: ["active-orders", userId, storeId],
       });
       return true;
     },
-    [queryClient, user?.id, storeId, activeStore],
+    [
+      queryClient,
+      userId,
+      storeId,
+      updateOrderStatus,
+      storeName,
+      storeCompanyId,
+    ],
   );
 
   const getOrdersByStatus = useCallback(

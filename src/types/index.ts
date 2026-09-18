@@ -35,6 +35,7 @@ export interface DeliveryZone {
   polygon: LatLngPoint[][];
   color: string;
   is_active: boolean;
+  company_id?: string | null;
   created_at: string;
 }
 

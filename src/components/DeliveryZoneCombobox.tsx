@@ -32,6 +32,7 @@ interface DeliveryZoneRow {
   polygon: LatLngPoint[][];
   color: string;
   is_active: boolean;
+  company_id?: string | null;
   created_at: string;
 }
 
@@ -52,12 +53,34 @@ export function DeliveryZoneCombobox({
         .order("name");
 
       if (activeCompany?.id) {
-        query = query.eq("company_id", activeCompany.id);
+        if (activeCompany.slug === "la30" || !activeCompany.slug) {
+          query = query.or(`company_id.eq.${activeCompany.id},company_id.is.null`);
+        } else {
+          query = query.eq("company_id", activeCompany.id);
+        }
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
+
+      // Auto-asociar en segundo plano las zonas legadas (company_id nulo) a la empresa activa La 30
+      if (data && activeCompany?.id && (activeCompany.slug === "la30" || !activeCompany.slug)) {
+        const unassigned = (data as unknown as DeliveryZoneRow[]).filter(
+          (z) => !z.company_id,
+        );
+        if (unassigned.length > 0) {
+          supabase
+            .from("delivery_zones")
+            .update({ company_id: activeCompany.id })
+            .in("id", unassigned.map((z) => z.id))
+            .then(({ error: updateErr }) => {
+              if (updateErr) {
+                console.warn("Advertencia al vincular zonas a empresa:", updateErr);
+              }
+            });
+        }
+      }
 
       return (data as unknown as DeliveryZoneRow[]).map(
         (row): DeliveryZone => ({
@@ -67,6 +90,7 @@ export function DeliveryZoneCombobox({
           polygon: row.polygon,
           color: row.color,
           is_active: row.is_active,
+          company_id: row.company_id,
           created_at: row.created_at,
         }),
       );
