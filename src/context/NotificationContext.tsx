@@ -111,8 +111,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const activeStoreRef = React.useRef(activeStore);
   const activeCompanyRef = React.useRef(activeCompany);
-  activeStoreRef.current = activeStore;
-  activeCompanyRef.current = activeCompany;
 
   useEffect(() => {
     activeStoreRef.current = activeStore;
@@ -227,7 +225,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (!old) return old;
       return old.map(n => ({ ...n, read: true, is_read: true }));
     });
-  }, [queryClient, user?.id, activeCompany?.id]);
+  }, [queryClient, user, activeCompany]);
 
   const markAsRead = useCallback(async (id: string) => {
     if (!user?.id) return;
@@ -240,7 +238,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     } catch (err) {
       console.error("Error marking notification as read:", err);
     }
-  }, [queryClient, user?.id, activeCompany?.id]);
+  }, [queryClient, user, activeCompany]);
 
   const clearNotifications = useCallback(async () => {
     if (!user?.id) return;
@@ -254,7 +252,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       await supabase.rpc("clear_my_notifications");
     }
     queryClient.setQueryData(['notifications', user?.id, activeCompany?.id], []);
-  }, [queryClient, user?.id, activeCompany?.id]);
+  }, [queryClient, user, activeCompany]);
 
   const handleRefresh = useCallback(async () => {
     await refreshNotifications();

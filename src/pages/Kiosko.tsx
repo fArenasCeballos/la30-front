@@ -77,6 +77,7 @@ interface CartDraft {
     quantity: number;
     notes?: string;
     unitPrice: number;
+    customizationValues?: CustomizationValues;
   }[];
   isDeliveryOrder?: boolean;
   deliveryName?: string;
@@ -289,12 +290,21 @@ export default function Kiosko() {
           continue;
         }
         const cartKey = `${product.id}-${saved.notes || ""}`;
+        const rawUnitPrice = Number(saved.unitPrice);
+        const basePrice = Number(product.price) || 0;
+        // Preservar el precio con adicionales si es válido; salvaguarda mínima: nunca menor al precio base
+        const unitPrice =
+          !isNaN(rawUnitPrice) && rawUnitPrice >= basePrice
+            ? rawUnitPrice
+            : basePrice;
+
         rehydrated.push({
           id: cartKey,
           product,
           quantity: saved.quantity,
           notes: saved.notes,
-          unit_price: Number(product.price) || 0, // always use current price
+          unit_price: unitPrice,
+          customizationValues: saved.customizationValues,
         });
       }
       if (rehydrated.length > 0) {
@@ -337,6 +347,7 @@ export default function Kiosko() {
         quantity: item.quantity,
         notes: item.notes,
         unitPrice: item.unit_price,
+        customizationValues: item.customizationValues,
       })),
     });
   }, [
@@ -1426,7 +1437,11 @@ export default function Kiosko() {
 
       <ProductCustomizer
         product={customizingProduct}
-        categoryName={customizingProduct?.categories?.name}
+        categoryName={
+          customizingProduct?.categories?.name ||
+          categories.find((c) => c.id === customizingProduct?.category_id)?.name ||
+          ""
+        }
         open={!!customizingProduct}
         onClose={() => {
           setCustomizingProduct(null);
@@ -1434,6 +1449,7 @@ export default function Kiosko() {
         }}
         onConfirm={handleCustomizationConfirm}
         initialValues={editingCartItem?.customizationValues || null}
+        initialNotes={editingCartItem?.notes}
       />
     </ErrorBoundary>
   );

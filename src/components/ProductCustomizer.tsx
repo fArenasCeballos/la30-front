@@ -15,29 +15,15 @@ import {
 import { CheckCircle, Plus, Minus, Loader2, MessageSquare } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  type CustomOption,
+  type ExtraOption,
+  type CustomizationValues,
+  calculateExtraCost,
+  parseNotesToCustomization,
+} from "@/lib/customizationUtils";
 
-interface CustomOption {
-  id: string;
-  option_key: string;
-  label: string;
-  icon: string;
-  choices: { id: string; value: string; label: string; icon: string }[];
-}
-
-interface ExtraOption {
-  id: string;
-  extra_key: string;
-  label: string;
-  icon: string;
-  price_per_unit: number;
-  max_qty: number;
-}
-
-export interface CustomizationValues {
-  selections: Record<string, string[]>;
-  extraQtys: Record<string, number>;
-  observation: string;
-}
+export type { CustomOption, ExtraOption, CustomizationValues };
 
 interface ProductCustomizerProps {
   product: ProductWithCategory | null;
@@ -51,6 +37,7 @@ interface ProductCustomizerProps {
     customizationValues: CustomizationValues,
   ) => void;
   initialValues?: CustomizationValues | null;
+  initialNotes?: string;
 }
 
 export function ProductCustomizer({
@@ -60,6 +47,7 @@ export function ProductCustomizer({
   onClose,
   onConfirm,
   initialValues,
+  initialNotes,
 }: ProductCustomizerProps) {
   const [selections, setSelections] = useState<Record<string, string[]>>({});
   const [extraQtys, setExtraQtys] = useState<Record<string, number>>({});
@@ -70,7 +58,13 @@ export function ProductCustomizer({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!open || !categoryName) {
+    const resolvedCategory = (
+      categoryName ||
+      product?.categories?.name ||
+      ""
+    ).trim();
+
+    if (!open || !resolvedCategory) {
       if (!open) {
         setOptions([]);
         setExtras([]);
@@ -83,9 +77,9 @@ export function ProductCustomizer({
 
     // Pre-fill from initialValues if editing
     if (initialValues) {
-      setSelections(initialValues.selections);
-      setExtraQtys(initialValues.extraQtys);
-      setObservation(initialValues.observation);
+      setSelections(initialValues.selections || {});
+      setExtraQtys(initialValues.extraQtys || {});
+      setObservation(initialValues.observation || "");
     } else {
       setSelections({});
       setExtraQtys({});
@@ -103,13 +97,43 @@ export function ProductCustomizer({
         const { data, error } = await supabase.rpc(
           "get_customization_for_category",
           {
-            p_category_name: categoryName,
+            p_category_name: resolvedCategory,
           },
         );
 
         if (!error && data && isMounted) {
-          setOptions(data.options || []);
-          setExtras(data.extras || []);
+          const loadedOptions = (data.options || []) as CustomOption[];
+          const loadedExtras = (data.extras || []) as ExtraOption[];
+          setOptions(loadedOptions);
+          setExtras(loadedExtras);
+
+          // Si hay notas de un ítem previo y no teníamos selecciones previas,
+          // reconstruir inteligentemente las selecciones y adicionales
+          const hasExistingExtras =
+            initialValues?.extraQtys &&
+            Object.values(initialValues.extraQtys).some((q) => q > 0);
+          const hasExistingSelections =
+            initialValues?.selections &&
+            Object.values(initialValues.selections).some(
+              (arr) => arr.length > 0,
+            );
+
+          if (initialNotes && !hasExistingExtras && !hasExistingSelections) {
+            const parsed = parseNotesToCustomization(
+              initialNotes,
+              loadedOptions,
+              loadedExtras,
+            );
+            if (Object.keys(parsed.selections).length > 0) {
+              setSelections(parsed.selections);
+            }
+            if (Object.keys(parsed.extraQtys).length > 0) {
+              setExtraQtys(parsed.extraQtys);
+            }
+            if (parsed.observation) {
+              setObservation(parsed.observation);
+            }
+          }
         }
       } catch (err) {
         console.error("Error fetching customization:", err);
@@ -123,14 +147,11 @@ export function ProductCustomizer({
     return () => {
       isMounted = false;
     };
-  }, [open, categoryName, initialValues]);
+  }, [open, categoryName, product, initialValues, initialNotes]);
 
   if (!product) return null;
 
-  const totalExtraCost = (extras || []).reduce(
-    (sum, ext) => sum + (extraQtys[ext?.id] || 0) * (ext?.price_per_unit || 0),
-    0,
-  );
+  const totalExtraCost = calculateExtraCost(extras, extraQtys);
 
   const handleSelect = (
     optionId: string,
