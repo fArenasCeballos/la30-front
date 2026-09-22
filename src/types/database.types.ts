@@ -562,7 +562,7 @@ export type Database = {
             | "listo"
             | "entregado"
             | "cancelado";
-          total_amount: number;
+          total_amount?: number;
           notes: string | null;
           locator: string | null;
           delivery_name: string | null;
@@ -589,7 +589,6 @@ export type Database = {
             | "entregado"
             | "cancelado";
           total?: number;
-          total_amount: number;
           notes?: string | null;
           locator?: string | null;
           delivery_name?: string | null;
@@ -616,7 +615,6 @@ export type Database = {
             | "entregado"
             | "cancelado";
           total?: number;
-          total_amount?: number;
           notes?: string | null;
           locator?: string | null;
           delivery_name?: string | null;

@@ -788,7 +788,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             driver_id: deliveryInfo.driver_id || null,
             is_delivery: true,
             total: grandTotal,
-            total_amount: grandTotal,
           })
           .eq("id", createdOrder.order_id);
 
@@ -885,7 +884,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       const updatePayload: UpdateDto<"orders"> = {
         total: grandTotal,
-        total_amount: grandTotal,
       };
 
       if (deliveryInfo) {

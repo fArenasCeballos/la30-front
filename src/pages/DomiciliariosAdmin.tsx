@@ -678,7 +678,7 @@ export default function DomiciliariosAdmin() {
                           <td className="px-6 py-4 text-right">
                             <span className="font-black text-base text-foreground flex items-center justify-end gap-1">
                               <DollarSign className="h-4 w-4 text-green-500" />
-                              {formatPrice(order.total_amount)}
+                              {formatPrice(order.total ?? order.total_amount ?? 0)}
                             </span>
                           </td>
                         </tr>

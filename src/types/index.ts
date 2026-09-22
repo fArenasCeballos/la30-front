@@ -70,6 +70,7 @@ export interface Order extends OrderRow {
   ticket_number: string;
   order_items: OrderItem[];
   total: number;
+  total_amount?: number;
   payments?: Payment[];
   siigo_invoices?: SiigoInvoiceRecord[];
   isOptimistic?: boolean;
