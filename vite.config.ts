@@ -26,12 +26,12 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern:
-              /^https:\/\/.*\.supabase\.co\/storage\/v1\/render\/image\/.*/i,
+              /^https:\/\/.*\.supabase\.co\/storage\/v1\/(render\/image|object\/public)\/.*/i,
             handler: "CacheFirst",
             options: {
               cacheName: "supabase-images",
               expiration: {
-                maxEntries: 100,
+                maxEntries: 200,
                 maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
               },
               cacheableResponse: {

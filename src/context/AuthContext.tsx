@@ -27,10 +27,19 @@ export interface AuthContextType {
   loading: boolean;
 }
 
+const STORAGE_USER_KEY = "la30_cached_user";
+
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_USER_KEY);
+      return raw ? (JSON.parse(raw) as User) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
 
   // Fetch profile from DB given auth user id
@@ -44,12 +53,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error("Profile fetch error:", error);
+        // Resiliencia offline: Si la consulta falla por caída de red, conservar perfil en caché
+        const isNetworkErr =
+          !navigator.onLine ||
+          error.message?.includes("Failed to fetch") ||
+          error.message?.includes("NetworkError");
+
+        if (isNetworkErr) {
+          const raw = localStorage.getItem(STORAGE_USER_KEY);
+          if (raw) {
+            try {
+              const cached = JSON.parse(raw) as User;
+              if (cached && cached.id === userId) {
+                console.warn("[Auth] Red inaccesible. Conservando perfil offline en caché.");
+                setUser(cached);
+                return;
+              }
+            } catch {
+              // ignore parse error
+            }
+          }
+        }
         setUser(null);
         return;
       }
 
       if (!data) {
         setUser(null);
+        localStorage.removeItem(STORAGE_USER_KEY);
         return;
       }
 
@@ -57,12 +88,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         toast.error("Cuenta inactiva. Comunícate con administración.");
         await supabase.auth.signOut();
         setUser(null);
+        localStorage.removeItem(STORAGE_USER_KEY);
         return;
       }
 
       setUser(data);
-    } catch (err) {
+      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(data));
+    } catch (err: unknown) {
       console.error("Profile fetch exception:", err);
+      // Fallback a perfil en caché si ocurrió una excepción de red
+      const raw = localStorage.getItem(STORAGE_USER_KEY);
+      if (raw) {
+        try {
+          const cached = JSON.parse(raw) as User;
+          if (cached && cached.id === userId) {
+            console.warn("[Auth] Excepción de conexión. Conservando perfil offline en caché.");
+            setUser(cached);
+            return;
+          }
+        } catch {
+          // ignore
+        }
+      }
       setUser(null);
     }
   }, []);
@@ -82,21 +129,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return;
       lastFetchedId.current = userId;
       try {
-        await fetchProfile(userId);
+        // Timeout de seguridad de 5s para no bloquear en conexiones congeladas
+        const profileTimeout = new Promise((resolve) =>
+          setTimeout(() => resolve({ isTimeout: true }), 5000),
+        );
+        await Promise.race([fetchProfile(userId), profileTimeout]);
       } finally {
         if (mounted) setLoading(false);
       }
     };
 
-    // 1. Restaurar sesión del storage
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
+    // 1. Restaurar sesión del storage con timeout de seguridad (5s)
+    const sessionTimeout = new Promise<{ data: { session: null }; isTimeout: boolean }>((resolve) =>
+      setTimeout(() => resolve({ data: { session: null }, isTimeout: true }), 5000),
+    );
+
+    Promise.race([
+      supabase.auth.getSession().catch((err) => {
+        console.error("Session restore error:", err);
+        return { data: { session: null }, error: err };
+      }),
+      sessionTimeout,
+    ])
+      .then((res) => {
         if (!mounted) return;
+        const session = (res as { data?: { session?: { user?: { id?: string } } | null } })?.data?.session;
         if (session?.user?.id) {
           initialSessionHandled.current = true;
           loadProfile(session.user.id);
         } else {
+          // Si no hay sesión o hubo timeout, pero ya hay un usuario guardado en caché offline, mantenerlo
           setLoading(false);
         }
       })
@@ -136,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastFetchedId.current = null;
         localStorage.removeItem("la30_active_store");
         localStorage.removeItem("la30_active_company");
+        localStorage.removeItem(STORAGE_USER_KEY);
         setUser(null);
         setLoading(false);
       }
@@ -160,6 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       localStorage.removeItem("la30_active_store");
       localStorage.removeItem("la30_active_company");
+      localStorage.removeItem(STORAGE_USER_KEY);
       setUser(null);
     }
   }, []);
@@ -188,6 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       localStorage.removeItem("la30_active_store");
       localStorage.removeItem("la30_active_company");
+      localStorage.removeItem(STORAGE_USER_KEY);
       setUser(null);
     }
   }, [user]);

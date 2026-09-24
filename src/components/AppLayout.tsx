@@ -116,7 +116,8 @@ function getStoreTheme(store: StoreType | null) {
       bg: "bg-gradient-to-r from-purple-500/20 via-purple-500/10 to-purple-500/5 hover:from-purple-500/25 hover:to-purple-500/15",
       border: "border-purple-500/50 hover:border-purple-600",
       text: "text-purple-900",
-      badge: "bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/30",
+      badge:
+        "bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/30",
       accent: "#9333ea",
       glow: "shadow-lg shadow-purple-500/15",
       defaultIcon: "🛵",
@@ -136,7 +137,8 @@ function getStoreTheme(store: StoreType | null) {
       bg: "bg-gradient-to-r from-emerald-500/20 via-emerald-500/10 to-emerald-500/5 hover:from-emerald-500/25 hover:to-emerald-500/15",
       border: "border-emerald-500/50 hover:border-emerald-600",
       text: "text-emerald-900",
-      badge: "bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/30",
+      badge:
+        "bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/30",
       accent: "#059669",
       glow: "shadow-lg shadow-emerald-500/15",
       defaultIcon: "🚚",
@@ -150,7 +152,8 @@ function getStoreTheme(store: StoreType | null) {
     bg: "bg-gradient-to-r from-orange-500/20 via-orange-500/10 to-orange-500/5 hover:from-orange-500/25 hover:to-orange-500/15",
     border: "border-orange-500/50 hover:border-orange-600",
     text: "text-orange-950",
-    badge: "bg-gradient-to-br from-orange-600 to-amber-600 text-white shadow-md shadow-orange-500/30",
+    badge:
+      "bg-gradient-to-br from-orange-600 to-amber-600 text-white shadow-md shadow-orange-500/30",
     accent: store.color || "#ea580c",
     glow: "shadow-lg shadow-orange-500/15",
     defaultIcon: store.icon || "🍽️",
@@ -163,12 +166,12 @@ function getStoreTheme(store: StoreType | null) {
 export function AppLayout() {
   const { user, logout, logoutAll, forceReset, isAuthenticated, loading } =
     useAuth();
+  const { activeStore, canSwitchStore, loading: storeLoading } = useStore();
   const {
-    activeStore,
-    canSwitchStore,
-    loading: storeLoading,
-  } = useStore();
-  const { activeCompany, canSwitchCompany, loading: companyLoading } = useCompany();
+    activeCompany,
+    canSwitchCompany,
+    loading: companyLoading,
+  } = useCompany();
   const navigate = useNavigate();
   const location = useLocation();
   const isAdministracion = location.pathname.startsWith("/administracion");
@@ -179,12 +182,26 @@ export function AppLayout() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [showRestored, setShowRestored] = useState(false);
   const [hasOtherSessions, setHasOtherSessions] = useState(false);
+  const [takingLonger, setTakingLonger] = useState(false);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (loading || companyLoading || storeLoading) {
+      timer = setTimeout(() => {
+        setTakingLonger(true);
+      }, 4000);
+    } else {
+      setTakingLonger(false);
+    }
+    return () => clearTimeout(timer);
+  }, [loading, companyLoading, storeLoading]);
 
   const adminTheme = {
     bg: "bg-gradient-to-r from-teal-500/20 via-teal-500/10 to-teal-500/5 hover:from-teal-500/25 hover:to-teal-500/15",
     border: "border-teal-500/50 hover:border-teal-600",
     text: "text-teal-900",
-    badge: "bg-gradient-to-br from-teal-600 to-emerald-600 text-white shadow-md shadow-teal-500/30",
+    badge:
+      "bg-gradient-to-br from-teal-600 to-emerald-600 text-white shadow-md shadow-teal-500/30",
     accent: "#0d9488",
     glow: "shadow-lg shadow-teal-500/15",
     defaultIcon: "⚙️",
@@ -193,7 +210,9 @@ export function AppLayout() {
     accentBg: "bg-teal-600",
   };
 
-  const currentTheme = isAdministracion ? adminTheme : getStoreTheme(activeStore);
+  const currentTheme = isAdministracion
+    ? adminTheme
+    : getStoreTheme(activeStore);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -245,14 +264,46 @@ export function AppLayout() {
 
   if (loading || companyLoading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-accent/20">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-white border-2 shadow-strong flex items-center justify-center animate-bounce">
-            <Logo className="h-6 w-6" />
+      <div className="h-screen w-screen flex items-center justify-center bg-accent/20 px-4">
+        <div className="flex flex-col items-center gap-4 text-center max-w-xs">
+          <div className="w-14 h-14 rounded-2xl bg-white border-2 shadow-strong flex items-center justify-center animate-bounce">
+            <Logo className="h-7 w-7" />
           </div>
-          <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">
-            Iniciando plataforma...
-          </p>
+          <div className="space-y-1">
+            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">
+              Iniciando plataforma...
+            </p>
+            {takingLonger && (
+              <p className="text-[11px] text-amber-800 font-medium">
+                Conexión lenta o inestable. Verificando datos guardados...
+              </p>
+            )}
+          </div>
+
+          {takingLonger && (
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs font-bold rounded-xl bg-white shadow-sm"
+                onClick={() => window.location.reload()}
+              >
+                Reintentar
+              </Button>
+              {isAuthenticated && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-8 text-xs font-bold rounded-xl shadow-sm"
+                  onClick={() => {
+                    navigate(user?.role === "admin" ? "/dashboard" : "/caja");
+                  }}
+                >
+                  Continuar
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -268,14 +319,31 @@ export function AppLayout() {
 
   if (storeLoading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-accent/20">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-white border-2 shadow-strong flex items-center justify-center animate-bounce">
-            <Logo className="h-6 w-6" />
+      <div className="h-screen w-screen flex items-center justify-center bg-accent/20 px-4">
+        <div className="flex flex-col items-center gap-4 text-center max-w-xs">
+          <div className="w-14 h-14 rounded-2xl bg-white border-2 shadow-strong flex items-center justify-center animate-bounce">
+            <Logo className="h-7 w-7" />
           </div>
-          <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">
-            Cargando sede...
-          </p>
+          <div className="space-y-1">
+            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">
+              Cargando sede...
+            </p>
+            {takingLonger && (
+              <p className="text-[11px] text-amber-800 font-medium">
+                Conexión lenta al consultar sedes...
+              </p>
+            )}
+          </div>
+          {takingLonger && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs font-bold rounded-xl bg-white shadow-sm"
+              onClick={() => window.location.reload()}
+            >
+              Reintentar
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -312,10 +380,9 @@ export function AppLayout() {
   // Mobile / Tablet WhatsApp & Instagram style bottom bar navigation
   const primaryMobileNav =
     visibleNav.length > 5 ? visibleNav.slice(0, 4) : visibleNav;
-  const secondaryMobileNav =
-    visibleNav.length > 5 ? visibleNav.slice(4) : [];
+  const secondaryMobileNav = visibleNav.length > 5 ? visibleNav.slice(4) : [];
   const isMoreActive = secondaryMobileNav.some(
-    (item) => location.pathname === item.to
+    (item) => location.pathname === item.to,
   );
   const hasMoreItems = secondaryMobileNav.length > 0;
 
@@ -352,10 +419,9 @@ export function AppLayout() {
         )}
       </AnimatePresence>
 
-
       {/* Premium Glass Header with Subtle Ambient Store Aura */}
       <header
-        className="relative h-14 lg:h-16 2xl:h-20 border-b bg-white/95 backdrop-blur-md flex items-center px-4 lg:px-6 2xl:px-10 gap-2 lg:gap-4 2xl:gap-8 sticky top-0 z-50 transition-all duration-300"
+        className="relative h-14 lg:h-16 2xl:h-20 border-b bg-white/95 backdrop-blur-md flex items-center px-4 lg:px-6 2xl:px-10 gap-2 lg:gap-4 2xl:gap-8 top-0 z-50 transition-all duration-300"
         style={{
           backgroundImage: `radial-gradient(450px circle at 180px 0px, ${currentTheme.accent}15, transparent 80%)`,
         }}
@@ -375,7 +441,9 @@ export function AppLayout() {
           >
             <div className="w-9 h-9 lg:w-10 2xl:w-12 lg:h-10 2xl:h-12 rounded-xl lg:rounded-2xl 2xl:rounded-3xl bg-white border-2 shadow-soft flex items-center justify-center overflow-hidden group-hover:scale-105 group-hover:rotate-3 transition-all duration-200">
               {activeCompany?.icon ? (
-                <span className="text-base lg:text-lg 2xl:text-xl">{activeCompany.icon}</span>
+                <span className="text-base lg:text-lg 2xl:text-xl">
+                  {activeCompany.icon}
+                </span>
               ) : (
                 <Logo className="h-5 w-5 lg:h-6 2xl:h-8" />
               )}
@@ -385,7 +453,9 @@ export function AppLayout() {
                 {activeCompany?.name || "La 30"}
               </span>
               <span className="text-[9px] text-primary uppercase font-black tracking-[0.2em] mt-1 block">
-                {isAdministracion ? "Administración" : `${activeCompany?.name || 'La 30'} POS`}
+                {isAdministracion
+                  ? "Administración"
+                  : `${activeCompany?.name || "La 30"} POS`}
               </span>
             </div>
             <div className="hidden xl:block 2xl:hidden">
@@ -400,7 +470,7 @@ export function AppLayout() {
           {isAdministracion ? (
             <div
               onClick={() => navigate("/select-store")}
-              className="group relative flex items-center gap-3 rounded-2xl border px-3.5 py-1.5 transition-all duration-200 shadow-2xs min-w-0 border-teal-500/40 bg-gradient-to-r from-teal-50/90 via-teal-50/50 to-white hover:border-teal-500 hover:shadow-xs cursor-pointer select-none"
+              className="group relative flex items-center gap-3 rounded-2xl border px-3.5 py-1.5 transition-all duration-200 shadow-2xs min-w-0 border-teal-500/40 bg-linear-to-r from-teal-50/90 via-teal-50/50 to-white hover:border-teal-500 hover:shadow-xs cursor-pointer select-none"
               title="Clic para cambiar a un punto de venta"
             >
               <div className="size-8 rounded-xl bg-teal-500/15 border border-teal-500/30 text-teal-800 flex items-center justify-center text-sm shrink-0 font-bold group-hover:scale-105 transition-transform shadow-xs">
@@ -422,70 +492,79 @@ export function AppLayout() {
                 <ArrowLeftRight className="size-2.5" />
               </div>
             </div>
-          ) : activeStore && (
-            <div
-              onClick={() => canSwitchStore && navigate("/select-store")}
-              className={cn(
-                "group relative flex items-center gap-3 rounded-2xl border px-3.5 py-1.5 transition-all duration-200 shadow-xs min-w-0 select-none",
-                canSwitchStore ? "cursor-pointer hover:shadow-sm" : ""
-              )}
-              style={{
-                background: `linear-gradient(135deg, ${currentTheme.accent}14 0%, ${currentTheme.accent}06 50%, #ffffff 100%)`,
-                borderColor: `${currentTheme.accent}45`,
-              }}
-              title={canSwitchStore ? "Clic para cambiar de sede / punto de venta" : undefined}
-            >
-              {/* Left: Store Icon in dedicated themed badge */}
+          ) : (
+            activeStore && (
               <div
-                className="size-8 rounded-xl border flex items-center justify-center text-base shrink-0 font-bold group-hover:scale-105 transition-transform shadow-xs"
-                style={{
-                  background: `linear-gradient(135deg, ${currentTheme.accent}18, ${currentTheme.accent}30)`,
-                  borderColor: `${currentTheme.accent}40`,
-                }}
-              >
-                {activeStore.icon ? (
-                  <span>{activeStore.icon}</span>
-                ) : (
-                  <StoreIcon className="size-4" style={{ color: currentTheme.accent }} />
+                onClick={() => canSwitchStore && navigate("/select-store")}
+                className={cn(
+                  "group relative flex items-center gap-3 rounded-2xl border px-3.5 py-1.5 transition-all duration-200 shadow-xs min-w-0 select-none",
+                  canSwitchStore ? "cursor-pointer hover:shadow-sm" : "",
                 )}
-              </div>
-
-              {/* Center: Store Name & Tag with Live Beacon */}
-              <div className="min-w-0 pr-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="relative flex size-2">
-                    <span
-                      className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                      style={{ backgroundColor: currentTheme.accent }}
-                    />
-                    <span
-                      className="relative inline-flex rounded-full size-2"
-                      style={{ backgroundColor: currentTheme.accent }}
-                    />
-                  </span>
-                  <p className="truncate text-xs font-black text-slate-900 leading-tight tracking-tight uppercase">
-                    {activeStore.name}
-                  </p>
-                </div>
-                <p className="truncate text-[10px] text-slate-500 font-semibold leading-none mt-0.5">
-                  {currentTheme.tag || "Punto de Venta"}
-                </p>
-              </div>
-
-              {/* Right: Pill Switcher */}
-              {canSwitchStore && (
+                style={{
+                  background: `linear-gradient(135deg, ${currentTheme.accent}14 0%, ${currentTheme.accent}06 50%, #ffffff 100%)`,
+                  borderColor: `${currentTheme.accent}45`,
+                }}
+                title={
+                  canSwitchStore
+                    ? "Clic para cambiar de sede / punto de venta"
+                    : undefined
+                }
+              >
+                {/* Left: Store Icon in dedicated themed badge */}
                 <div
-                  className="hidden sm:flex items-center gap-1.5 pl-2.5 border-l text-[10px] font-bold group-hover:translate-x-0.5 transition-all shrink-0"
+                  className="size-8 rounded-xl border flex items-center justify-center text-base shrink-0 font-bold group-hover:scale-105 transition-transform shadow-xs"
                   style={{
-                    borderColor: `${currentTheme.accent}25`,
-                    color: currentTheme.accent,
+                    background: `linear-gradient(135deg, ${currentTheme.accent}18, ${currentTheme.accent}30)`,
+                    borderColor: `${currentTheme.accent}40`,
                   }}
                 >
-                  <span>Cambiar</span>
-                  <ArrowLeftRight className="size-2.5" />
+                  {activeStore.icon ? (
+                    <span>{activeStore.icon}</span>
+                  ) : (
+                    <StoreIcon
+                      className="size-4"
+                      style={{ color: currentTheme.accent }}
+                    />
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Center: Store Name & Tag with Live Beacon */}
+                <div className="min-w-0 pr-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="relative flex size-2">
+                      <span
+                        className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                        style={{ backgroundColor: currentTheme.accent }}
+                      />
+                      <span
+                        className="relative inline-flex rounded-full size-2"
+                        style={{ backgroundColor: currentTheme.accent }}
+                      />
+                    </span>
+                    <p className="truncate text-xs font-black text-slate-900 leading-tight tracking-tight uppercase">
+                      {activeStore.name}
+                    </p>
+                  </div>
+                  <p className="truncate text-[10px] text-slate-500 font-semibold leading-none mt-0.5">
+                    {currentTheme.tag || "Punto de Venta"}
+                  </p>
+                </div>
+
+                {/* Right: Pill Switcher */}
+                {canSwitchStore && (
+                  <div
+                    className="hidden sm:flex items-center gap-1.5 pl-2.5 border-l text-[10px] font-bold group-hover:translate-x-0.5 transition-all shrink-0"
+                    style={{
+                      borderColor: `${currentTheme.accent}25`,
+                      color: currentTheme.accent,
+                    }}
+                  >
+                    <span>Cambiar</span>
+                    <ArrowLeftRight className="size-2.5" />
+                  </div>
+                )}
+              </div>
+            )
           )}
         </div>
 
@@ -521,9 +600,7 @@ export function AppLayout() {
                             : "text-slate-400 group-hover:text-slate-600",
                         )}
                       />
-                      <span className="tracking-tight">
-                        {item.label}
-                      </span>
+                      <span className="tracking-tight">{item.label}</span>
                     </>
                   )}
                 </NavLink>
@@ -594,7 +671,8 @@ export function AppLayout() {
                       <span>Múltiples Sesiones</span>
                     </div>
                     <p className="text-[10px] text-slate-500 font-medium mt-0.5 leading-snug">
-                      Tu cuenta está activa en otro dispositivo. Puedes cerrar las otras sesiones por seguridad.
+                      Tu cuenta está activa en otro dispositivo. Puedes cerrar
+                      las otras sesiones por seguridad.
                     </p>
                   </div>
 
@@ -645,7 +723,7 @@ export function AppLayout() {
       {!isAdministracion && (
         <nav
           aria-label="Barra de navegación móvil"
-          className="lg:hidden fixed left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-full max-w-md mx-auto z-40 rounded-full bg-gradient-to-b from-white/65 via-white/40 to-white/20 backdrop-blur-3xl backdrop-saturate-[200%] backdrop-contrast-[105%] border border-white/60 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.14),0_0_0_1px_rgba(255,255,255,0.4),inset_0_2px_4px_rgba(255,255,255,0.9),inset_0_-2px_4px_rgba(0,0,0,0.03)] px-2 py-1.5 transition-all duration-300 before:absolute before:inset-x-8 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white before:to-transparent"
+          className="lg:hidden fixed left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-full max-w-md mx-auto z-40 rounded-full bg-linear-to-b from-white/65 via-white/40 to-white/20 backdrop-blur-3xl backdrop-saturate-200 backdrop-contrast-105 border border-white/60 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.14),0_0_0_1px_rgba(255,255,255,0.4),inset_0_2px_4px_rgba(255,255,255,0.9),inset_0_-2px_4px_rgba(0,0,0,0.03)] px-2 py-1.5 transition-all duration-300 before:absolute before:inset-x-8 before:top-0 before:h-px before:bg-linear-to-r before:from-transparent before:via-white before:to-transparent"
           style={{
             bottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
           }}
@@ -655,7 +733,7 @@ export function AppLayout() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                className="relative flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-full transition-all duration-300 text-slate-500 active:scale-90 select-none min-h-[46px] group"
+                className="relative flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-full transition-all duration-300 text-slate-500 active:scale-90 select-none min-h-11.5 group"
                 activeClassName="text-slate-950 font-black"
               >
                 {({ isActive }) => (
@@ -671,7 +749,7 @@ export function AppLayout() {
                           "size-5 transition-transform duration-200",
                           isActive
                             ? "text-slate-950 scale-110 stroke-[2.25]"
-                            : "text-slate-500 stroke-[1.75] group-hover:text-slate-800"
+                            : "text-slate-500 stroke-[1.75] group-hover:text-slate-800",
                         )}
                       />
                       {isActive && (
@@ -681,7 +759,9 @@ export function AppLayout() {
                     <span
                       className={cn(
                         "relative z-10 text-[10px] tracking-tight mt-1 transition-colors leading-none",
-                        isActive ? "font-black text-slate-950" : "font-semibold text-slate-500 group-hover:text-slate-700"
+                        isActive
+                          ? "font-black text-slate-950"
+                          : "font-semibold text-slate-500 group-hover:text-slate-700",
                       )}
                     >
                       {item.label}
@@ -698,8 +778,8 @@ export function AppLayout() {
                     type="button"
                     aria-label="Más opciones"
                     className={cn(
-                      "relative flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-full transition-all duration-300 text-slate-500 active:scale-90 cursor-pointer select-none min-h-[46px] group",
-                      isMoreActive ? "text-slate-950" : "text-slate-500"
+                      "relative flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-full transition-all duration-300 text-slate-500 active:scale-90 cursor-pointer select-none min-h-11.5 group",
+                      isMoreActive ? "text-slate-950" : "text-slate-500",
                     )}
                   >
                     {/* Liquid droplet lens on active more button */}
@@ -713,7 +793,7 @@ export function AppLayout() {
                           "size-5 transition-transform duration-200",
                           isMoreActive
                             ? "text-slate-950 scale-110 stroke-[2.25]"
-                            : "text-slate-500 stroke-[1.75] group-hover:text-slate-800"
+                            : "text-slate-500 stroke-[1.75] group-hover:text-slate-800",
                         )}
                       />
                       {isMoreActive && (
@@ -723,7 +803,9 @@ export function AppLayout() {
                     <span
                       className={cn(
                         "relative z-10 text-[10px] tracking-tight mt-1 transition-colors leading-none",
-                        isMoreActive ? "font-black text-slate-950" : "font-semibold text-slate-500 group-hover:text-slate-700"
+                        isMoreActive
+                          ? "font-black text-slate-950"
+                          : "font-semibold text-slate-500 group-hover:text-slate-700",
                       )}
                     >
                       Más
@@ -733,7 +815,7 @@ export function AppLayout() {
                 <DropdownMenuContent
                   align="end"
                   side="top"
-                  className="w-56 rounded-3xl p-2.5 border border-white/70 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.18),inset_0_2px_4px_rgba(255,255,255,0.8)] bg-gradient-to-b from-white/85 via-white/70 to-white/50 backdrop-blur-3xl backdrop-saturate-[200%] mb-3.5"
+                  className="w-56 rounded-3xl p-2.5 border border-white/70 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.18),inset_0_2px_4px_rgba(255,255,255,0.8)] bg-linear-to-b from-white/85 via-white/70 to-white/50 backdrop-blur-3xl backdrop-saturate-200 mb-3.5"
                 >
                   {secondaryMobileNav.map((item) => (
                     <DropdownMenuItem
@@ -743,7 +825,7 @@ export function AppLayout() {
                         "flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl font-bold text-xs cursor-pointer transition-colors",
                         location.pathname === item.to
                           ? "bg-teal-500/20 text-teal-950 font-black shadow-2xs"
-                          : "text-slate-800 hover:bg-white/60"
+                          : "text-slate-800 hover:bg-white/60",
                       )}
                     >
                       <item.icon className="size-4 shrink-0 text-slate-600" />

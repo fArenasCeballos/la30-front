@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
 } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -31,15 +32,22 @@ const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 export function CompanyProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [activeCompany, setActiveCompanyState] = useState<Company | null>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_DATA_KEY);
-      return raw ? (JSON.parse(raw) as Company) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [activeCompany, setActiveCompanyState] = useState<Company | null>(
+    () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_DATA_KEY);
+        return raw ? (JSON.parse(raw) as Company) : null;
+      } catch {
+        return null;
+      }
+    },
+  );
   const [loading, setLoading] = useState(true);
+  const activeCompanyRef = useRef(activeCompany);
+
+  useEffect(() => {
+    activeCompanyRef.current = activeCompany;
+  }, [activeCompany]);
 
   // Fetch accessible companies and resolve the active one
   useEffect(() => {
@@ -57,26 +65,66 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
 
       setLoading(true);
       try {
-        const { data, error } = await supabase.rpc("get_user_companies");
+        // Timeout de seguridad de 5s para no bloquear si hay corte o congelamiento de red
+        const timeoutPromise = new Promise<{ isTimeout: true }>((resolve) =>
+          setTimeout(() => resolve({ isTimeout: true }), 5000),
+        );
+
+        const fetchPromise = supabase.rpc("get_user_companies");
+        const result = await Promise.race([fetchPromise, timeoutPromise]);
 
         if (isCancelled) return;
 
+        if ("isTimeout" in result) {
+          console.warn(
+            "[Company] Timeout esperando get_user_companies. Usando empresa en caché.",
+          );
+          if (activeCompanyRef.current) {
+            setCompanies([activeCompanyRef.current]);
+          }
+          setLoading(false);
+          return;
+        }
+
+        const { data, error } = result;
+
         if (error) {
           console.error("Error fetching companies:", error);
+          const isNetworkErr =
+            !navigator.onLine ||
+            error.message?.includes("Failed to fetch") ||
+            error.message?.includes("NetworkError");
+
+          if (isNetworkErr && activeCompanyRef.current) {
+            console.warn(
+              "[Company] Sin red. Conservando empresa activa en caché:",
+              activeCompanyRef.current.name,
+            );
+            setCompanies([activeCompanyRef.current]);
+            setLoading(false);
+            return;
+          }
+
           // Fallback: If RPC doesn't exist yet (pre-migration), auto-resolve
           // by loading all companies directly
-          const { data: fallbackData } = await supabase
-            .from("companies")
-            .select("*")
-            .eq("is_active", true)
-            .order("created_at", { ascending: true });
+          try {
+            const { data: fallbackData } = await supabase
+              .from("companies")
+              .select("*")
+              .eq("is_active", true)
+              .order("created_at", { ascending: true });
 
-          if (isCancelled) return;
+            if (isCancelled) return;
 
-          if (fallbackData && fallbackData.length > 0) {
-            setCompanies(fallbackData as Company[]);
-            resolveActiveCompany(fallbackData as Company[]);
-          } else {
+            if (fallbackData && fallbackData.length > 0) {
+              setCompanies(fallbackData as Company[]);
+              resolveActiveCompany(fallbackData as Company[]);
+            } else {
+              if (activeCompanyRef.current) setCompanies([activeCompanyRef.current]);
+              setLoading(false);
+            }
+          } catch {
+            if (activeCompanyRef.current) setCompanies([activeCompanyRef.current]);
             setLoading(false);
           }
           return;
@@ -89,7 +137,10 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
         resolveActiveCompany(loadedCompanies);
       } catch (err) {
         console.error("Error initializing companies:", err);
-        if (!isCancelled) setLoading(false);
+        if (!isCancelled) {
+          if (activeCompanyRef.current) setCompanies([activeCompanyRef.current]);
+          setLoading(false);
+        }
       }
     }
 
@@ -199,15 +250,12 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <CompanyContext.Provider value={value}>
-      {children}
-    </CompanyContext.Provider>
+    <CompanyContext.Provider value={value}>{children}</CompanyContext.Provider>
   );
 }
 
 export function useCompany() {
   const ctx = useContext(CompanyContext);
-  if (!ctx)
-    throw new Error("useCompany must be used within CompanyProvider");
+  if (!ctx) throw new Error("useCompany must be used within CompanyProvider");
   return ctx;
 }

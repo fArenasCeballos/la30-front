@@ -66,11 +66,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           .select("*")
           .order("created_at", { ascending: true });
 
-        // Filter by company_id if the column exists (post-migration)
-        // Using a type-safe approach: always filter when activeCompany is available
-        const { data, error } = await query;
+        // Timeout de seguridad de 5s para no bloquear en red lenta
+        const timeoutPromise = new Promise<{ isTimeout: true }>((resolve) =>
+          setTimeout(() => resolve({ isTimeout: true }), 5000),
+        );
+
+        const result = await Promise.race([query, timeoutPromise]);
 
         if (isCancelled) return;
+
+        if ("isTimeout" in result) {
+          console.warn("[Store] Timeout al consultar sedes. Manteniendo sede activa en caché.");
+          setLoading(false);
+          return;
+        }
+
+        const { data, error } = result;
 
         if (error) {
           console.error("Error fetching stores:", error);
