@@ -31,6 +31,7 @@ import {
   Search,
   ImagePlus,
   Images,
+  Smartphone,
   X,
   Loader2,
   GripHorizontal,
@@ -104,6 +105,7 @@ export function ProductsTab() {
     sort_order: string;
     store_ids: string[];
     siigo_code: string;
+    is_available_app: boolean;
   }>({
     name: "",
     category_id: "",
@@ -111,6 +113,7 @@ export function ProductsTab() {
     sort_order: "0",
     store_ids: [],
     siigo_code: "",
+    is_available_app: true,
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -198,6 +201,7 @@ export function ProductsTab() {
       sort_order: "0",
       store_ids: stores.map((s) => s.id),
       siigo_code: "",
+      is_available_app: true,
     });
     if (imagePreview && imagePreview.startsWith("blob:"))
       URL.revokeObjectURL(imagePreview);
@@ -217,6 +221,7 @@ export function ProductsTab() {
       sort_order: String(product.sort_order || 0),
       store_ids: product.store_ids || [],
       siigo_code: product.siigo_code || "",
+      is_available_app: product.is_available_app ?? true,
     });
     if (imagePreview && imagePreview.startsWith("blob:"))
       URL.revokeObjectURL(imagePreview);
@@ -312,6 +317,7 @@ export function ProductsTab() {
         price: Number(form.price),
         sort_order: Number(form.sort_order),
         image_url: finalImageUrl,
+        is_available_app: form.is_available_app,
         store_ids: form.store_ids,
         siigo_code: form.siigo_code.trim() || null,
       };
@@ -380,6 +386,37 @@ export function ProductsTab() {
       !currentStatus
         ? "Producto activado (Disponible)"
         : "Producto marcado como Agotado",
+    );
+  };
+
+  const toggleAppVisibility = async (id: string, currentStatus: boolean) => {
+    // Optimistic update
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, is_available_app: !currentStatus } : p,
+      ),
+    );
+
+    const { error } = await supabase
+      .from("products")
+      .update({ is_available_app: !currentStatus })
+      .eq("id", id);
+
+    if (error) {
+      // Revert optimistic update
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, is_available_app: currentStatus } : p,
+        ),
+      );
+      toast.error(`Error al actualizar visibilidad en la app: ${error.message}`);
+      return;
+    }
+
+    toast.success(
+      !currentStatus
+        ? "Producto visible en la App Móvil 📱"
+        : "Producto ocultado de la App Móvil",
     );
   };
 
@@ -599,6 +636,7 @@ export function ProductsTab() {
                 openEdit={openEdit}
                 setProductToDelete={setProductToDelete}
                 toggleAvailability={toggleAvailability}
+                toggleAppVisibility={toggleAppVisibility}
               />
             ))}
           </SortableContext>
@@ -891,6 +929,30 @@ export function ProductsTab() {
                 onChange={(ids) => setForm((f) => ({ ...f, store_ids: ids }))}
               />
             </div>
+
+            {/* Check/Switch para Visualizar en la App Móvil */}
+            <div className="flex items-center justify-between p-3.5 rounded-xl border border-purple-200/80 bg-purple-50/50 hover:bg-purple-50 transition-colors">
+              <div className="space-y-0.5 pr-2">
+                <Label
+                  htmlFor="app-visibility-switch"
+                  className="text-xs font-bold text-slate-800 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Smartphone className="h-4 w-4 text-purple-600" />
+                  <span>Visualizar en la App Móvil (la30-app)</span>
+                </Label>
+                <p className="text-[11px] text-slate-500">
+                  Si este check está marcado, el producto aparecerá en la aplicación móvil de los clientes. Si no, estará oculto de la app.
+                </p>
+              </div>
+              <Switch
+                id="app-visibility-switch"
+                checked={form.is_available_app}
+                onCheckedChange={(checked) =>
+                  setForm((f) => ({ ...f, is_available_app: checked }))
+                }
+                className="data-[state=checked]:bg-purple-600"
+              />
+            </div>
           </div>
 
           <DialogFooter className="mt-8 gap-2.5 sm:gap-0">
@@ -1000,11 +1062,13 @@ function SortableProductCard({
   openEdit,
   setProductToDelete,
   toggleAvailability,
+  toggleAppVisibility,
 }: {
   product: ProductWithCategory;
   openEdit: (p: ProductWithCategory) => void;
   setProductToDelete: (p: ProductWithCategory) => void;
   toggleAvailability: (id: string, current: boolean) => void;
+  toggleAppVisibility: (id: string, current: boolean) => void;
 }) {
   const {
     attributes,
@@ -1052,6 +1116,29 @@ function SortableProductCard({
 
         {/* Top-Right Status Badge */}
         <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1.5">
+          {/* Quick App Visibility Badge */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleAppVisibility(product.id, product.is_available_app ?? true);
+            }}
+            title={
+              (product.is_available_app ?? true)
+                ? "Visible en App Móvil (clic para ocultar)"
+                : "Oculto en App Móvil (clic para mostrar)"
+            }
+            className={cn(
+              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold backdrop-blur-md shadow-xs transition-transform active:scale-95 cursor-pointer border border-white/30",
+              (product.is_available_app ?? true)
+                ? "bg-purple-600/90 text-white hover:bg-purple-700"
+                : "bg-slate-700/80 text-slate-300 hover:bg-slate-800 line-through opacity-85",
+            )}
+          >
+            <Smartphone className="h-2.5 w-2.5" />
+            <span>{(product.is_available_app ?? true) ? "App" : "No App"}</span>
+          </button>
+
           {product.available ? (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/90 backdrop-blur-xs text-white shadow-xs">
               <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
@@ -1097,25 +1184,49 @@ function SortableProductCard({
           </div>
         </div>
 
-        {/* Action Footer: Availability Switch + Edit/Delete */}
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-          {/* Direct Switch for Quick Availability Toggle */}
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={product.available}
-              onCheckedChange={() =>
-                toggleAvailability(product.id, product.available)
-              }
-              className="scale-85 data-[state=checked]:bg-teal-600"
-            />
-            <span
-              className={cn(
-                "text-[11px] font-semibold select-none",
-                product.available ? "text-emerald-700" : "text-slate-400",
-              )}
-            >
-              {product.available ? "Disponible" : "Agotado"}
-            </span>
+        {/* Action Footer: Availability Switch + App Visibility Switch + Edit/Delete */}
+        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-1 flex-wrap">
+          <div className="flex items-center gap-3">
+            {/* Direct Switch for Quick Availability Toggle */}
+            <div className="flex items-center gap-1.5" title="Disponibilidad en el POS">
+              <Switch
+                checked={product.available}
+                onCheckedChange={() =>
+                  toggleAvailability(product.id, product.available)
+                }
+                className="scale-80 data-[state=checked]:bg-teal-600"
+              />
+              <span
+                className={cn(
+                  "text-[10px] font-semibold select-none",
+                  product.available ? "text-emerald-700" : "text-slate-400",
+                )}
+              >
+                {product.available ? "POS" : "Agotado"}
+              </span>
+            </div>
+
+            {/* Direct Switch for App Visibility */}
+            <div className="flex items-center gap-1.5" title="Visibilidad en la App Móvil (la30-app)">
+              <Switch
+                checked={product.is_available_app ?? true}
+                onCheckedChange={() =>
+                  toggleAppVisibility(product.id, product.is_available_app ?? true)
+                }
+                className="scale-80 data-[state=checked]:bg-purple-600"
+              />
+              <span
+                className={cn(
+                  "text-[10px] font-semibold select-none flex items-center gap-0.5",
+                  (product.is_available_app ?? true)
+                    ? "text-purple-700 font-bold"
+                    : "text-slate-400",
+                )}
+              >
+                <Smartphone className="h-2.5 w-2.5" />
+                <span>App</span>
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-1">
@@ -1139,7 +1250,7 @@ function SortableProductCard({
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44 rounded-xl p-1">
+              <DropdownMenuContent align="end" className="w-48 rounded-xl p-1">
                 <DropdownMenuItem
                   onClick={() => openEdit(product)}
                   className="text-xs font-semibold rounded-lg flex items-center gap-2"
@@ -1161,6 +1272,19 @@ function SortableProductCard({
                   />
                   <span>
                     {product.available ? "Marcar agotado" : "Marcar disponible"}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    toggleAppVisibility(product.id, product.is_available_app ?? true)
+                  }
+                  className="text-xs font-semibold rounded-lg flex items-center gap-2"
+                >
+                  <Smartphone className="h-3.5 w-3.5 text-purple-600" />
+                  <span>
+                    {(product.is_available_app ?? true)
+                      ? "Ocultar de la App"
+                      : "Mostrar en la App"}
                   </span>
                 </DropdownMenuItem>
                 <div className="h-px bg-slate-100 my-1" />

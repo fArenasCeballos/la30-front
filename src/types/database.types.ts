@@ -381,6 +381,7 @@ export type Database = {
           price: number;
           image_url: string | null;
           available: boolean;
+          is_available_app: boolean;
           sort_order: number;
           store_ids: string[];
           created_at: string;
@@ -394,6 +395,7 @@ export type Database = {
           price: number;
           image_url?: string | null;
           available?: boolean;
+          is_available_app?: boolean;
           sort_order?: number;
           store_ids?: string[];
           created_at?: string;
@@ -407,6 +409,7 @@ export type Database = {
           price?: number;
           image_url?: string | null;
           available?: boolean;
+          is_available_app?: boolean;
           sort_order?: number;
           store_ids?: string[];
           created_at?: string;
