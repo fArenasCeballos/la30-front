@@ -30,6 +30,7 @@ import {
   Trash2,
   Search,
   ImagePlus,
+  Images,
   X,
   Loader2,
   GripHorizontal,
@@ -77,11 +78,15 @@ import {
   deleteProductImage,
 } from "@/lib/imageUtils";
 import { StoreMultiSelect } from "./StoreMultiSelect";
+import { ProductImageGalleryModal } from "./ProductImageGalleryModal";
 
 export function ProductsTab() {
   const { user } = useAuth();
   const { stores } = useStore();
-  const companyStoreIds = useMemo(() => new Set(stores.map((s) => s.id)), [stores]);
+  const companyStoreIds = useMemo(
+    () => new Set(stores.map((s) => s.id)),
+    [stores],
+  );
   const [products, setProducts] = useState<ProductWithCategory[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +117,17 @@ export function ProductsTab() {
   const [isDragging, setIsDragging] = useState(false);
   const [saving, setSaving] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSelectFromGallery = (imageUrl: string, imageName: string) => {
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImagePreview(imageUrl);
+    setSelectedFile(null); // No hay archivo local nuevo; se usa la URL de Supabase directamente
+    toast.success(`Imagen seleccionada: ${imageName}`);
+  };
 
   const fetchProducts = useCallback(async () => {
     const { data: prodData } = await supabase
@@ -134,7 +149,9 @@ export function ProductsTab() {
         allCats.filter(
           (c) =>
             stores.length === 0 ||
-            Boolean(c.store_ids && c.store_ids.some((id) => companyStoreIds.has(id))),
+            Boolean(
+              c.store_ids && c.store_ids.some((id) => companyStoreIds.has(id)),
+            ),
         ),
       );
     }
@@ -152,7 +169,9 @@ export function ProductsTab() {
   const companyProducts = useMemo(() => {
     return (products || []).filter((p) => {
       if (stores.length > 0) {
-        return Boolean(p.store_ids && p.store_ids.some((id) => companyStoreIds.has(id)));
+        return Boolean(
+          p.store_ids && p.store_ids.some((id) => companyStoreIds.has(id)),
+        );
       }
       return true;
     });
@@ -185,6 +204,7 @@ export function ProductsTab() {
     setImagePreview(null);
     setSelectedFile(null);
     setIsDragging(false);
+    setIsGalleryOpen(false);
     setIsDialogOpen(true);
   };
 
@@ -527,7 +547,9 @@ export function ProductsTab() {
             Todos ({companyProducts.length})
           </button>
           {categories.map((cat) => {
-            const count = companyProducts.filter((p) => p.category_id === cat.id).length;
+            const count = companyProducts.filter(
+              (p) => p.category_id === cat.id,
+            ).length;
             const isSelected = categoryFilter === cat.id;
             return (
               <button
@@ -594,8 +616,8 @@ export function ProductsTab() {
               No se encontraron productos
             </h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              No hay ítems que coincidan con la búsqueda o el filtro de categoría
-              seleccionado.
+              No hay ítems que coincidan con la búsqueda o el filtro de
+              categoría seleccionado.
             </p>
           </div>
           {(search || categoryFilter !== "all") && (
@@ -638,9 +660,23 @@ export function ProductsTab() {
           <div className="space-y-5">
             {/* Image Upload Area */}
             <div className="space-y-2">
-              <Label className="text-xs font-semibold text-slate-700">
-                Fotografía del Producto
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-slate-700">
+                  Fotografía del Producto{" "}
+                  <span className="text-slate-400 font-normal">(Opcional)</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsGalleryOpen(true)}
+                  className="h-7 text-xs font-semibold gap-1.5 border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800 hover:border-teal-300 rounded-lg shadow-2xs"
+                >
+                  <Images className="h-3.5 w-3.5 text-teal-600" />
+                  <span>Ver imágenes en Supabase</span>
+                </Button>
+              </div>
+
               <div
                 className={cn(
                   "relative aspect-16/10 rounded-2xl border-2 border-dashed transition-all duration-200 flex flex-col items-center justify-center cursor-pointer overflow-hidden group",
@@ -662,18 +698,38 @@ export function ProductsTab() {
                           : getOptimizedImageUrl(imagePreview, 800)
                       }
                       alt="Preview"
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-xs">
-                      <div className="bg-white px-3 py-1.5 rounded-xl shadow-md flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                        <ImagePlus className="h-4 w-4 text-teal-600" />
-                        <span>Cambiar fotografía</span>
-                      </div>
+                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-2xs p-3">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold rounded-xl shadow-md gap-1.5 h-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileInputRef.current?.click();
+                        }}
+                      >
+                        <ImagePlus className="h-3.5 w-3.5 text-teal-600" />
+                        <span>Subir otra</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-xl shadow-md gap-1.5 h-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsGalleryOpen(true);
+                        }}
+                      >
+                        <Images className="h-3.5 w-3.5" />
+                        <span>Elegir de galería</span>
+                      </Button>
                     </div>
                     <Button
                       size="icon"
                       variant="destructive"
-                      className="absolute top-3 right-3 h-8 w-8 rounded-xl shadow-md border border-white/40"
+                      className="absolute top-3 right-3 h-8 w-8 rounded-xl shadow-md border border-white/40 z-10"
                       onClick={(e) => {
                         e.stopPropagation();
                         if (imagePreview.startsWith("blob:"))
@@ -681,12 +737,13 @@ export function ProductsTab() {
                         setImagePreview(null);
                         setSelectedFile(null);
                       }}
+                      title="Quitar fotografía"
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </>
                 ) : (
-                  <div className="text-center space-y-2 p-6">
+                  <div className="text-center space-y-2.5 p-6">
                     <div className="h-12 w-12 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center mx-auto text-slate-400 group-hover:text-teal-600 transition-colors">
                       <ImagePlus className="h-6 w-6" />
                     </div>
@@ -694,11 +751,26 @@ export function ProductsTab() {
                       <p className="font-semibold text-xs text-slate-700">
                         {isDragging
                           ? "Suelta la imagen aquí"
-                          : "Haz clic o arrastra una foto"}
+                          : "Haz clic o arrastra una foto desde tu equipo"}
                       </p>
                       <p className="text-[11px] text-slate-400">
                         JPG o PNG de alta resolución (máx. 15MB)
                       </p>
+                    </div>
+                    <div className="pt-1">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsGalleryOpen(true);
+                        }}
+                        className="h-7 text-xs font-semibold gap-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-teal-700 shadow-2xs"
+                      >
+                        <Images className="h-3.5 w-3.5 text-teal-600" />
+                        <span>O selecciona una de la galería de Supabase</span>
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -850,6 +922,14 @@ export function ProductsTab() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal de Galería de Imágenes en Supabase (assets/products) */}
+      <ProductImageGalleryModal
+        open={isGalleryOpen}
+        onOpenChange={setIsGalleryOpen}
+        onSelectImage={handleSelectFromGallery}
+        currentSelectedUrl={imagePreview}
+      />
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog
         open={!!productToDelete}
@@ -895,7 +975,9 @@ function InventoryProductImage({ product }: { product: ProductWithCategory }) {
   if (!product.image_url || error) {
     return (
       <div className="h-full w-full bg-slate-100 flex flex-col items-center justify-center text-slate-300">
-        <span className="text-4xl mb-1">{product.categories?.icon || "🍔"}</span>
+        <span className="text-4xl mb-1">
+          {product.categories?.icon || "🍔"}
+        </span>
         <span className="text-[10px] font-semibold tracking-wider text-slate-400">
           Sin Foto
         </span>
@@ -961,7 +1043,7 @@ function SortableProductCard({
           <div className="absolute top-2.5 left-2.5 z-20">
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white/90 backdrop-blur-md text-slate-700 shadow-xs border border-white/40">
               <span>{product.categories.icon}</span>
-              <span className="truncate max-w-[110px]">
+              <span className="truncate max-w-27.5">
                 {product.categories.label}
               </span>
             </span>
@@ -998,7 +1080,7 @@ function SortableProductCard({
       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
         <div className="space-y-1">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-bold text-sm text-slate-900 leading-snug line-clamp-2 min-h-[2.5rem]">
+            <h3 className="font-bold text-sm text-slate-900 leading-snug line-clamp-2 min-h-10">
               {product.name}
             </h3>
           </div>
@@ -1078,9 +1160,7 @@ function SortableProductCard({
                     )}
                   />
                   <span>
-                    {product.available
-                      ? "Marcar agotado"
-                      : "Marcar disponible"}
+                    {product.available ? "Marcar agotado" : "Marcar disponible"}
                   </span>
                 </DropdownMenuItem>
                 <div className="h-px bg-slate-100 my-1" />
