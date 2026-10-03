@@ -6,9 +6,18 @@ import { fetchConsumptions } from "@/lib/internalConsumptionService";
 import {
   buildInternalConsumptionReceiptHTML,
 } from "@/lib/internalReceiptUtils";
-import { silentPrint } from "@/lib/receiptUtils";
+import {
+  silentPrint,
+  buildKitchenReceiptHTML,
+  type ReceiptData,
+} from "@/lib/receiptUtils";
 import { getCategoryEmoji } from "@/lib/categoryEmoji";
-import type { InternalConsumptionWithItems, InternalPaymentStatus } from "@/types";
+import type {
+  InternalConsumptionWithItems,
+  InternalPaymentStatus,
+  OrderItem,
+  Order,
+} from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +34,7 @@ import {
   Loader2,
   Search,
   Printer,
+  UtensilsCrossed,
   ClipboardList,
   CheckCircle,
   AlertTriangle,
@@ -142,6 +152,117 @@ export function InternalHistoryView() {
       toast.success("Tirilla reimpresa");
     } catch {
       toast.error("Error al reimprimir");
+    }
+  };
+
+  const handleReprintKitchen = async (
+    consumption: InternalConsumptionWithItems,
+  ) => {
+    try {
+      const internalOrder: Order = {
+        id: consumption.id,
+        locator: consumption.consumer_name,
+        ticket_number: `INT-${consumption.id.slice(-4).toUpperCase()}`,
+        status: "confirmado",
+        total: consumption.total,
+        total_amount: consumption.total,
+        is_delivery: false,
+        is_dispatched: false,
+        delivery_address: null,
+        delivery_name: null,
+        delivery_phone: null,
+        delivery_fee: 0,
+        driver_id: null,
+        siigo_invoice_id: null,
+        siigo_invoice_number: null,
+        user_id: user?.id ?? "",
+        store_id: consumption.store_id,
+        notes: consumption.notes ?? null,
+        created_at: consumption.created_at,
+        updated_at: consumption.created_at,
+        order_items: (consumption.internal_consumption_items ?? []).map(
+          (item, idx) => ({
+            id: item.id || `item-${idx}`,
+            order_id: consumption.id,
+            product_id: item.product_id || "",
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            subtotal: item.subtotal,
+            notes: item.notes,
+            choices: {},
+            customizations: null,
+            extras: null,
+            is_completed: false,
+            created_at: item.created_at,
+            products: {
+              id: item.product_id || "",
+              name: item.product_name,
+              description: null,
+              price: item.original_price,
+              available: true,
+              is_available_app: true,
+              siigo_code: null,
+              category_id: null,
+              store_ids: [consumption.store_id],
+              image_url: null,
+              sort_order: 0,
+              created_at: item.created_at,
+              categories: item.category_name
+                ? ({
+                    id: "cat-placeholder",
+                    name: item.category_name,
+                    label: item.category_name,
+                    icon: null,
+                    description: null,
+                    is_active: true,
+                    store_ids: [consumption.store_id],
+                    sort_order: 0,
+                    created_at: item.created_at,
+                  } as never)
+                : null,
+            },
+          }),
+        ),
+        profiles: null,
+        is_paid: consumption.payment_status === "paid",
+        is_internal_consumption: true,
+        consumer_type: consumption.consumer_type,
+        payment_method: consumption.payment_method as never,
+      };
+
+      const receiptData: ReceiptData = {
+        order: internalOrder,
+        cajeroName: user?.name || "Cajero",
+        storeName: activeStore?.name,
+      };
+
+      const items = (internalOrder.order_items ?? []).filter(
+        (i) => i.products != null,
+      );
+
+      const categoryGroups: Record<string, OrderItem[]> = {};
+      items.forEach((item) => {
+        const catName = item.products?.categories?.name || "General";
+        if (!categoryGroups[catName]) categoryGroups[catName] = [];
+        categoryGroups[catName].push(item);
+      });
+
+      const categoryKeys = Object.keys(categoryGroups);
+      if (categoryKeys.length > 0) {
+        const kitchenHTMLs = categoryKeys.map((catName) =>
+          buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
+        );
+        const combinedKitchenHTML = kitchenHTMLs.join(
+          '<div class="print-page-break"></div>',
+        );
+        await silentPrint(
+          combinedKitchenHTML,
+          `Comanda Cocina - ${consumption.consumer_name}`,
+        );
+        toast.success("Comanda de cocina reimpresa");
+      }
+    } catch {
+      toast.error("Error al reimprimir comanda");
     }
   };
 
@@ -347,8 +468,8 @@ export function InternalHistoryView() {
                       Ahorro: {formatPrice(c.discount_total)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-black">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black mr-1">
                       {formatPrice(c.total)}
                     </span>
                     <Button
@@ -356,9 +477,20 @@ export function InternalHistoryView() {
                       size="sm"
                       className="rounded-xl text-[10px] font-black gap-1 h-8"
                       onClick={() => handleReprint(c)}
+                      title="Reimprimir comprobante"
                     >
                       <Printer className="h-3 w-3" />
-                      Reimprimir
+                      Recibo
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-xl text-[10px] font-black gap-1 h-8 text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                      onClick={() => handleReprintKitchen(c)}
+                      title="Reimprimir comanda a cocina"
+                    >
+                      <UtensilsCrossed className="h-3 w-3" />
+                      Comanda
                     </Button>
                   </div>
                 </div>

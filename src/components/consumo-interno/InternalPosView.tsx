@@ -12,7 +12,11 @@ import {
   fetchPartners,
 } from "@/lib/internalConsumptionService";
 import { buildInternalConsumptionReceiptHTML } from "@/lib/internalReceiptUtils";
-import { silentPrint } from "@/lib/receiptUtils";
+import {
+  silentPrint,
+  buildKitchenReceiptHTML,
+  type ReceiptData,
+} from "@/lib/receiptUtils";
 import { getCategoryEmoji } from "@/lib/categoryEmoji";
 import { PartnerModal } from "@/components/consumo-interno/PartnerModal";
 import {
@@ -25,6 +29,8 @@ import type {
   ProductWithCategory,
   InternalPartner,
   InternalPaymentStatus,
+  OrderItem,
+  Order,
 } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -405,7 +411,7 @@ export function InternalPosView() {
 
       toast.success(`Consumo interno registrado para ${consumer.name}`);
 
-      // Print receipt
+      // 1. Imprimir comprobante de consumo interno (para el beneficiario / control)
       try {
         const { data: fullConsumption } = await supabase
           .from("internal_consumptions" as never)
@@ -421,8 +427,99 @@ export function InternalPosView() {
           });
           await silentPrint(receiptHTML, "Consumo Interno");
         }
-      } catch {
-        console.warn("No se pudo imprimir la tirilla de consumo interno");
+      } catch (receiptErr) {
+        console.warn("No se pudo imprimir la tirilla de consumo interno:", receiptErr);
+      }
+
+      // 2. Imprimir comanda de cocina agrupada por categoría (idéntico al print de Caja)
+      try {
+        const internalOrder: Order = {
+          id: consumptionId,
+          locator: consumer.name,
+          ticket_number: `INT-${consumptionId.slice(-4).toUpperCase()}`,
+          status: "confirmado",
+          total: cart.reduce((sum, i) => sum + i.discountedPrice * i.quantity, 0),
+          total_amount: cart.reduce(
+            (sum, i) => sum + i.discountedPrice * i.quantity,
+            0,
+          ),
+          is_delivery: false,
+          is_dispatched: false,
+          delivery_address: null,
+          delivery_name: null,
+          delivery_phone: null,
+          delivery_fee: 0,
+          driver_id: null,
+          siigo_invoice_id: null,
+          siigo_invoice_number: null,
+          user_id: user?.id ?? "",
+          store_id: storeId,
+          notes: orderNotes.trim() || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          order_items: cart.map((cartItem, idx) => ({
+            id: `int-item-${idx}`,
+            order_id: consumptionId,
+            product_id: cartItem.product.id,
+            quantity: cartItem.quantity,
+            unit_price: cartItem.discountedPrice,
+            subtotal: cartItem.discountedPrice * cartItem.quantity,
+            notes: cartItem.notes || null,
+            choices: {},
+            customizations: null,
+            extras: null,
+            is_completed: false,
+            created_at: new Date().toISOString(),
+            products: cartItem.product,
+          })),
+          profiles: null,
+          is_paid: paymentMode === "paid",
+          is_internal_consumption: true,
+          consumer_type: consumer.type,
+          payment_method:
+            paymentMode === "paid" ? (paymentMethod as never) : undefined,
+        };
+
+        const receiptData: ReceiptData = {
+          order: internalOrder,
+          cajeroName: user?.name || "Cajero",
+          storeName: activeStore?.name,
+          paymentMethod: paymentMode === "paid" ? paymentMethod : undefined,
+        };
+
+        // Agrupar productos por categoría para comandas separadas (como en Caja)
+        const items = (internalOrder.order_items ?? []).filter(
+          (i) => i.products != null,
+        );
+
+        const categoryGroups: Record<string, OrderItem[]> = {};
+
+        items.forEach((item) => {
+          const catName = item.products?.categories?.name || "General";
+          if (!categoryGroups[catName]) categoryGroups[catName] = [];
+          categoryGroups[catName].push(item);
+        });
+
+        const categoryKeys = Object.keys(categoryGroups);
+
+        // Auto-imprimir comanda de cocina agrupada en un único diálogo
+        if (categoryKeys.length > 0) {
+          const kitchenHTMLs = categoryKeys.map((catName) =>
+            buildKitchenReceiptHTML(receiptData, categoryGroups[catName]),
+          );
+
+          // Combinar todos los HTMLs interconectados por un separador de salto de página
+          const combinedKitchenHTML = kitchenHTMLs.join(
+            '<div class="print-page-break"></div>',
+          );
+
+          await silentPrint(
+            combinedKitchenHTML,
+            `Comanda Cocina - ${consumer.name}`,
+          );
+        }
+      } catch (kitchenErr) {
+        console.warn("No se pudo imprimir la comanda de cocina:", kitchenErr);
       }
 
       // Reset state

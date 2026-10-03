@@ -52,7 +52,8 @@ describe("receiptUtils", () => {
       },
       is_dispatched: false,
       siigo_invoice_id: null,
-      siigo_invoice_number: null
+      siigo_invoice_number: null,
+      is_paid: false,
     };
 
     it("should render only the first name of the delivery driver in receipt", () => {
@@ -123,6 +124,7 @@ describe("receiptUtils", () => {
       is_dispatched: false,
       siigo_invoice_id: null,
       siigo_invoice_number: null,
+      is_paid: false,
     };
 
     it("should organize multiple categories in a single kitchen receipt", () => {
@@ -165,6 +167,7 @@ describe("receiptUtils", () => {
                 sort_order: 1,
                 created_at: "2026-08-26T20:00:00.000Z",
               },
+              is_available_app: false,
             },
           },
           {
@@ -203,6 +206,7 @@ describe("receiptUtils", () => {
                 sort_order: 2,
                 created_at: "2026-08-26T20:00:00.000Z",
               },
+              is_available_app: false,
             },
           },
         ],
@@ -217,6 +221,90 @@ describe("receiptUtils", () => {
       expect(html).toContain("Acompañamientos");
       expect(html).toContain("HAMBURGUESA DOBLE");
       expect(html).toContain("PAPAS FRITAS");
+    });
+
+    it("should render kitchen ticket for internal consumption correctly", () => {
+      const internalOrder: Order = {
+        id: "int-123",
+        locator: "Andres Felipe Arenas",
+        ticket_number: "INT-1234",
+        status: "confirmado",
+        total: 15000,
+        total_amount: 15000,
+        is_delivery: false,
+        delivery_name: null,
+        delivery_address: null,
+        delivery_phone: null,
+        delivery_fee: 0,
+        driver_id: null,
+        created_at: "2026-10-02T20:00:00.000Z",
+        updated_at: "2026-10-02T20:00:00.000Z",
+        user_id: "user-1",
+        store_id: "store-1",
+        notes: "Sin cebolla",
+        order_items: [
+          {
+            id: "item-1",
+            order_id: "int-123",
+            product_id: "p-1",
+            quantity: 1,
+            unit_price: 15000,
+            subtotal: 15000,
+            notes: "Obs: Sin cebolla",
+            choices: {},
+            customizations: null,
+            extras: null,
+            is_completed: false,
+            created_at: "2026-10-02T20:00:00.000Z",
+            products: {
+              id: "p-1",
+              name: "Hamburguesa Sencilla",
+              description: null,
+              price: 15000,
+              available: true,
+              is_available_app: true,
+              siigo_code: null,
+              category_id: "cat-1",
+              store_ids: ["store-1"],
+              image_url: null,
+              sort_order: 1,
+              created_at: "2026-10-02T20:00:00.000Z",
+              categories: {
+                id: "cat-1",
+                name: "Hamburguesas",
+                label: "Hamburguesas",
+                icon: "burger",
+                description: null,
+                is_active: true,
+                store_ids: ["store-1"],
+                sort_order: 1,
+                created_at: "2026-10-02T20:00:00.000Z",
+              },
+            },
+          },
+        ],
+        profiles: null,
+        is_paid: true,
+        is_internal_consumption: true,
+        consumer_type: "employee",
+        is_dispatched: false,
+        siigo_invoice_id: null,
+        siigo_invoice_number: null,
+      };
+
+      const html = buildKitchenReceiptHTML({
+        order: internalOrder,
+        cajeroName: "Cajero Test",
+      });
+
+      expect(html).toContain("CONSUMO INTERNO");
+      expect(html).toContain("Beneficiario:");
+      expect(html).toContain("Andres Felipe Arenas");
+      expect(html).toContain("EMPLEADO");
+      expect(html).toContain("kitchen-locator-internal");
+      expect(html).toContain("HAMBURGUESA SENCILLA");
+      expect(html).toContain("OBS:</strong> Sin cebolla");
+      expect(html).toContain("INT-1234");
     });
   });
 });

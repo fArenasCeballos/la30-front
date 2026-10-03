@@ -109,6 +109,14 @@ export const PRINT_STYLES = `
     font-weight: 900;
     line-height: 1;
   }
+  .kitchen-locator-internal {
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1.15;
+    text-align: right;
+    word-break: break-word;
+    max-width: 65%;
+  }
   .kitchen-ticket {
     font-size: 22px;
     font-weight: 900;
@@ -438,8 +446,17 @@ export function buildKitchenReceiptHTML(
     `;
   }
 
-  const kitchenTitle = order.is_delivery ? "DOMICILIO" : "PEDIDO";
-  const locatorLabel = order.is_delivery ? "Domicilio #" : "Mesa #" ;
+  const isInternal = Boolean(order.is_internal_consumption);
+  const kitchenTitle = isInternal
+    ? "CONSUMO INTERNO"
+    : order.is_delivery
+      ? "DOMICILIO"
+      : "PEDIDO";
+  const locatorLabel = isInternal
+    ? "Beneficiario:"
+    : order.is_delivery
+      ? "Domicilio #"
+      : "Mesa #";
 
   let deliveryInfo = "";
   if (order.is_delivery) {
@@ -462,8 +479,18 @@ export function buildKitchenReceiptHTML(
     <div class="center"><p class="kitchen-title">${kitchenTitle}</p></div>
     <div class="row" style="align-items:baseline">
       <span class="bold" style="font-size:16px;">${locatorLabel}</span>
-      <span class="kitchen-locator">${order.locator}</span>
+      <span class="${isInternal ? "kitchen-locator-internal" : "kitchen-locator"}">${order.locator}</span>
     </div>
+    ${
+      isInternal && order.consumer_type
+        ? `
+      <div class="row" style="margin-top:-2px; margin-bottom:4px;">
+        <span class="bold" style="font-size:14px;">Tipo:</span>
+        <span class="bold" style="font-size:15px; text-transform:uppercase;">${order.consumer_type === "employee" ? "EMPLEADO" : "SOCIO"}</span>
+      </div>
+    `
+        : ""
+    }
     ${deliveryInfo}
     <div class="row" style="margin-top:4px;"><span class="bold">Ticket Control</span><span class="bold kitchen-ticket">${ticketNumber}</span></div>
     <div class="center" style="padding:3px 0"><span class="kitchen-cashier">${cajeroName.toUpperCase()}</span></div>

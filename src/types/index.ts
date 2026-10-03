@@ -86,6 +86,8 @@ export interface Order extends OrderRow {
     first_name: string;
     last_name?: string;
   } | null;
+  is_internal_consumption?: boolean;
+  consumer_type?: "employee" | "partner";
 }
 
 // Custom option with its choices (for ProductCustomizer)
