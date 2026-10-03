@@ -111,11 +111,11 @@ export default function ConsumoInterno() {
   const ActiveComponent = currentTab.component;
 
   return (
-    <div className="min-h-screen bg-slate-50/30">
+    <div className="min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)] 2xl:min-h-[calc(100vh-5rem)] flex flex-col bg-slate-50/30">
       {/* Sub-header */}
-      <div className="bg-white/95 backdrop-blur-xl border-b border-slate-200/80 sticky top-14 lg:top-16 2xl:top-20 z-40 px-4 lg:px-6 2xl:px-8 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs no-print">
+      <div className="bg-white/95 backdrop-blur-xl border-b border-slate-200/80 sticky top-14 lg:top-16 2xl:top-20 z-40 px-4 lg:px-6 2xl:px-8 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs no-print shrink-0">
         <div className="flex items-center gap-3">
-          <div className="size-10 rounded-2xl bg-gradient-to-br from-teal-500/15 to-emerald-500/20 border border-teal-500/30 flex items-center justify-center text-teal-700 shadow-2xs shrink-0">
+          <div className="size-10 rounded-2xl bg-linear-to-br from-teal-500/15 to-emerald-500/20 border border-teal-500/30 flex items-center justify-center text-teal-700 shadow-2xs shrink-0">
             <UtensilsCrossed className="size-5 text-teal-700" />
           </div>
           <div>
@@ -162,7 +162,7 @@ export default function ConsumoInterno() {
       </div>
 
       {/* Content */}
-      <div className="animate-in fade-in duration-300">
+      <div className="flex-1 flex flex-col min-h-0 animate-in fade-in duration-300">
         <ErrorBoundary>
           <Suspense fallback={<TabLoading />}>
             <ActiveComponent />

@@ -253,19 +253,13 @@ export function InternalPosView() {
 
   const totalOriginal = useMemo(
     () =>
-      cart.reduce(
-        (sum, item) => sum + item.originalPrice * item.quantity,
-        0,
-      ),
+      cart.reduce((sum, item) => sum + item.originalPrice * item.quantity, 0),
     [cart],
   );
 
   const totalDiscounted = useMemo(
     () =>
-      cart.reduce(
-        (sum, item) => sum + item.discountedPrice * item.quantity,
-        0,
-      ),
+      cart.reduce((sum, item) => sum + item.discountedPrice * item.quantity, 0),
     [cart],
   );
 
@@ -293,10 +287,14 @@ export function InternalPosView() {
     extraCost: number,
     customizationValues: CustomizationValues,
   ) => {
-    const unitOriginalPrice = (Number(product.price) || 0) + (Number(extraCost) || 0);
+    const unitOriginalPrice =
+      (Number(product.price) || 0) + (Number(extraCost) || 0);
     const categoryName = product.categories?.name ?? null;
     const beverage = isBeverageProduct(categoryName, product.name);
-    const unitDiscountedPrice = calculateInternalPrice(unitOriginalPrice, beverage);
+    const unitDiscountedPrice = calculateInternalPrice(
+      unitOriginalPrice,
+      beverage,
+    );
     const cartKey = `${product.id}-${notes || ""}`;
 
     // If editing existing cart item
@@ -339,9 +337,7 @@ export function InternalPosView() {
       const existing = prev.find((item) => item.id === cartKey);
       if (existing) {
         return prev.map((item) =>
-          item.id === cartKey
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
+          item.id === cartKey ? { ...item, quantity: item.quantity + 1 } : item,
         );
       }
       return [
@@ -391,10 +387,8 @@ export function InternalPosView() {
       const consumptionId = await createInternalConsumption({
         storeId,
         consumerType: consumer.type,
-        employeeId:
-          consumer.type === "employee" ? consumer.id : undefined,
-        partnerId:
-          consumer.type === "partner" ? consumer.id : undefined,
+        employeeId: consumer.type === "employee" ? consumer.id : undefined,
+        partnerId: consumer.type === "partner" ? consumer.id : undefined,
         consumerName: consumer.name,
         items: cart.map((item) => ({
           productId: item.product.id,
@@ -438,8 +432,7 @@ export function InternalPosView() {
       setPaymentMode("pending");
       setStep("consumer");
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Error desconocido";
+      const message = err instanceof Error ? err.message : "Error desconocido";
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -452,7 +445,7 @@ export function InternalPosView() {
 
   if (step === "consumer") {
     return (
-      <div className="section-container max-w-4xl mx-auto py-6 sm:py-10 px-4 animate-in fade-in duration-300 space-y-6 sm:space-y-8">
+      <div className="section-container max-w-4xl mx-auto py-8 sm:py-12 px-4 animate-in fade-in duration-300 space-y-6 sm:space-y-8">
         <div className="text-center space-y-2">
           <div className="relative inline-block">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 border-2 border-primary/20 flex items-center justify-center mx-auto text-primary shadow-soft">
@@ -463,7 +456,8 @@ export function InternalPosView() {
             ¿Quién va a consumir?
           </h2>
           <p className="text-xs font-bold text-muted-foreground/70 uppercase tracking-widest">
-            Selecciona el beneficiario para aplicar el 50% de descuento en comidas
+            Selecciona el beneficiario para aplicar el 50% de descuento en
+            comidas
           </p>
         </div>
 
@@ -554,9 +548,9 @@ export function InternalPosView() {
                       });
                       setStep("menu");
                     }}
-                    className="group p-4 sm:p-5 rounded-2xl border border-slate-200/90 text-left bg-white hover:border-teal-500/50 hover:shadow-lg hover:shadow-teal-900/5 transition-all duration-200 flex flex-col items-center text-center cursor-pointer active:scale-95"
+                    className="group p-4 sm:p-5 rounded-2xl border border-slate-200/90 text-left bg-white hover:border-teal-500/50 hover:shadow-lg hover:shadow-teal-900/5 transition-all duration-200 flex flex-col items-center cursor-pointer active:scale-95"
                   >
-                    <div className="size-14 rounded-2xl bg-gradient-to-br from-teal-500/15 to-emerald-500/20 border border-teal-500/20 flex items-center justify-center text-teal-700 font-black text-xl mb-3 group-hover:scale-105 transition-transform shadow-2xs">
+                    <div className="size-14 rounded-2xl bg-linear-to-br from-teal-500/15 to-emerald-500/20 border border-teal-500/20 flex items-center justify-center text-teal-700 font-black text-xl mb-3 group-hover:scale-105 transition-transform shadow-2xs">
                       {emp.name.charAt(0)}
                     </div>
                     <span className="text-xs sm:text-sm font-extrabold text-slate-800 line-clamp-1 group-hover:text-teal-700 transition-colors">
@@ -605,9 +599,9 @@ export function InternalPosView() {
                       });
                       setStep("menu");
                     }}
-                    className="group p-4 sm:p-5 rounded-2xl border border-slate-200/90 text-left bg-white hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-900/5 transition-all duration-200 flex flex-col items-center text-center cursor-pointer active:scale-95"
+                    className="group p-4 sm:p-5 rounded-2xl border border-slate-200/90 text-left bg-white hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-900/5 transition-all duration-200 flex flex-col items-center cursor-pointer active:scale-95"
                   >
-                    <div className="size-14 rounded-2xl bg-gradient-to-br from-blue-500/15 to-indigo-500/20 border border-blue-500/20 flex items-center justify-center text-blue-700 font-black text-xl mb-3 group-hover:scale-105 transition-transform shadow-2xs">
+                    <div className="size-14 rounded-2xl bg-linear-to-br from-blue-500/15 to-indigo-500/20 border border-blue-500/20 flex items-center justify-center text-blue-700 font-black text-xl mb-3 group-hover:scale-105 transition-transform shadow-2xs">
                       {partner.name.charAt(0)}
                     </div>
                     <span className="text-xs sm:text-sm font-extrabold text-slate-800 line-clamp-1 group-hover:text-blue-700 transition-colors">
@@ -642,11 +636,11 @@ export function InternalPosView() {
 
   if (step === "menu") {
     return (
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative min-h-[calc(100vh-8.5rem)] animate-in fade-in duration-300">
+      <div className="flex-1 flex flex-col lg:flex-row relative animate-in fade-in duration-300 min-h-[calc(100vh-8.125rem)]">
         {/* Main Content: Catalog */}
         <div className="flex-1 flex flex-col min-w-0 bg-slate-50/50">
           {/* Header Bar */}
-          <div className="p-3 sm:p-4 lg:p-6 border-b bg-white/80 backdrop-blur-md sticky top-0 z-30 flex flex-col gap-3">
+          <div className="p-3 sm:p-4 lg:p-6 border-b bg-white/95 backdrop-blur-md sticky top-30.25 lg:top-32.25 2xl:top-36.25 z-20 flex flex-col gap-3 shadow-2xs">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <Button
@@ -781,7 +775,7 @@ export function InternalPosView() {
           </div>
 
           {/* Product Grid */}
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 custom-scrollbar">
+          <div className="p-3 sm:p-4 lg:p-6 pb-28 lg:pb-12">
             {loadingProds ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
@@ -904,14 +898,14 @@ export function InternalPosView() {
         </div>
 
         {/* Desktop Cart Sidebar */}
-        <aside className="hidden lg:flex w-96 xl:w-105 bg-accent/15 flex-col overflow-hidden border-l border-accent/30">
-          <div className="p-5 xl:p-6 border-b flex items-center justify-between bg-white/70 backdrop-blur-md">
+        <aside className="hidden lg:flex w-96 xl:w-105 bg-white flex-col lg:sticky lg:top-32.25 2xl:top-36.25 lg:h-[calc(100vh-8.0625rem)] 2xl:h-[calc(100vh-9.0625rem)] border-l border-slate-200/80 shrink-0 z-30 overflow-hidden shadow-xs">
+          <div className="p-3.5 xl:p-4 border-b flex items-center justify-between bg-slate-50/80 backdrop-blur-md shrink-0">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-soft">
-                <ShoppingCart className="h-5 w-5" />
+              <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-soft">
+                <ShoppingCart className="h-4.5 w-4.5" />
               </div>
               <div>
-                <h3 className="font-black text-base xl:text-lg tracking-tight">
+                <h3 className="font-black text-sm xl:text-base tracking-tight">
                   Pedido Interno
                 </h3>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
@@ -921,13 +915,13 @@ export function InternalPosView() {
             </div>
             <Badge
               variant="outline"
-              className="font-black border-primary/20 text-primary px-3 py-1 rounded-full uppercase tracking-widest text-[9px]"
+              className="font-black border-primary/20 text-primary px-2.5 py-0.5 rounded-full uppercase tracking-widest text-[9px]"
             >
               {itemCount} {itemCount === 1 ? "Artículo" : "Artículos"}
             </Badge>
           </div>
 
-          <div className="flex-1 flex flex-col min-h-0 bg-white/40">
+          <div className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden">
             <InternalCartContent
               cart={cart}
               updateQuantity={updateQuantity}
@@ -941,6 +935,32 @@ export function InternalPosView() {
             />
           </div>
         </aside>
+
+        {/* Mobile Floating Bottom Cart Bar */}
+        {cart.length > 0 && (
+          <div className="lg:hidden fixed bottom-4 inset-x-4 z-40 animate-in slide-in-from-bottom duration-200">
+            <Button
+              className="w-full h-14 rounded-2xl bg-primary text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-strong flex items-center justify-between px-5 hover:bg-primary/95"
+              onClick={() => setCartOpen(true)}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center">
+                  <ShoppingCart className="h-4 w-4" />
+                </div>
+                <span>
+                  {itemCount} {itemCount === 1 ? "Ítem" : "Ítems"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>{formatPrice(totalDiscounted)}</span>
+                <span className="font-semibold text-xs opacity-90">
+                  · REVISAR
+                </span>
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </Button>
+          </div>
+        )}
 
         {/* Product Customizer Dialog */}
         <ProductCustomizer
@@ -993,8 +1013,8 @@ export function InternalPosView() {
           <div>
             <p className="font-black text-base">{consumer?.name}</p>
             <p className="text-xs font-bold text-muted-foreground">
-              {consumer?.type === "employee" ? "Empleado" : "Socio"} · 50%
-              Dcto. en Comidas
+              {consumer?.type === "employee" ? "Empleado" : "Socio"} · 50% Dcto.
+              en Comidas
             </p>
           </div>
         </div>
@@ -1271,9 +1291,9 @@ function InternalCartContent({
   onProceed,
 }: InternalCartContentProps) {
   return (
-    <div className="flex flex-col flex-1 h-full min-h-0">
+    <div className="flex flex-col flex-1 h-full min-h-0 max-h-full overflow-hidden">
       {/* Scrollable Items List */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2.5 premium-scrollbar min-h-0">
         {cart.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-16 opacity-40">
             <div className="w-18 h-18 rounded-3xl bg-accent/30 flex items-center justify-center text-muted-foreground border-2 border-dashed border-accent">
@@ -1292,12 +1312,12 @@ function InternalCartContent({
           cart.map((item) => (
             <div
               key={item.id}
-              className="pos-card p-3 sm:p-3.5 space-y-2.5 group border-2 border-accent/20 bg-white rounded-2xl shadow-soft hover:border-primary/30 transition-all animate-in slide-in-from-right duration-200"
+              className="pos-card p-2.5 sm:p-3 space-y-2 group border border-slate-200/90 bg-white rounded-2xl shadow-2xs hover:border-primary/30 transition-all animate-in slide-in-from-right duration-200"
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-2.5">
                 {/* Image */}
                 <div className="relative shrink-0">
-                  <div className="w-11 h-11 rounded-xl bg-accent/20 overflow-hidden flex items-center justify-center border">
+                  <div className="w-10 h-10 rounded-xl bg-accent/20 overflow-hidden flex items-center justify-center border">
                     {item.product.image_url ? (
                       <img
                         src={getOptimizedImageUrl(item.product.image_url, 80)}
@@ -1404,8 +1424,8 @@ function InternalCartContent({
 
       {/* Cart Summary & Footer */}
       {cart.length > 0 && (
-        <div className="p-4 sm:p-5 border-t-2 border-dashed border-accent/40 space-y-4 bg-white/90 backdrop-blur-md">
-          <div className="space-y-1.5">
+        <div className="shrink-0 p-3.5 sm:p-4 border-t-2 border-dashed border-accent/40 space-y-2.5 bg-white/95 backdrop-blur-md mt-auto shadow-md">
+          <div className="space-y-1">
             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-muted-foreground">
               <span>Precio Original</span>
               <span className="line-through tabular-nums">
@@ -1414,9 +1434,11 @@ function InternalCartContent({
             </div>
             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-green-600">
               <span>Descuento (50%)</span>
-              <span className="tabular-nums">-{formatPrice(totalDiscount)}</span>
+              <span className="tabular-nums">
+                -{formatPrice(totalDiscount)}
+              </span>
             </div>
-            <div className="flex justify-between items-end pt-1">
+            <div className="flex justify-between items-end pt-0.5">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-primary leading-none mb-0.5">
                   Total Pedido
@@ -1432,7 +1454,7 @@ function InternalCartContent({
           </div>
 
           <Button
-            className="w-full h-12 sm:h-14 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest shadow-strong bg-primary hover:bg-primary/90 text-white transition-all hover:scale-[1.02] active:scale-95 group"
+            className="w-full h-11 sm:h-12 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest shadow-strong bg-primary hover:bg-primary/90 text-white transition-all hover:scale-[1.01] active:scale-95 group shrink-0"
             onClick={onProceed}
           >
             REVISAR PEDIDO
