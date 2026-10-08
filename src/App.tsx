@@ -1,7 +1,7 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster, toast } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/AuthContext";
 import { StoreProvider } from "@/context/StoreContext";
@@ -51,8 +51,36 @@ const queryClient = new QueryClient({
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-const App = () => (
-  <ErrorBoundary>
+const isSystemEnabled =
+  import.meta.env.VITE_SYSTEM_ENABLED !== "false" &&
+  import.meta.env.VITE_SYSTEM_ENABLED !== false &&
+  import.meta.env.VITE_SYSTEM_ENABLED !== "0";
+
+const SystemDisabledView = () => {
+  useEffect(() => {
+    toast.error("Load Failed");
+  }, []);
+
+  return (
+    <div
+      className="min-h-screen w-full bg-background"
+      onClick={() => toast.error("Load Failed")}
+    />
+  );
+};
+
+const App = () => {
+  if (!isSystemEnabled) {
+    return (
+      <>
+        <Toaster position="top-right" richColors closeButton />
+        <SystemDisabledView />
+      </>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster position="top-right" richColors closeButton />
@@ -148,6 +176,7 @@ const App = () => (
       </TooltipProvider>
     </QueryClientProvider>
   </ErrorBoundary>
-);
+  );
+};
 
 export default App;
