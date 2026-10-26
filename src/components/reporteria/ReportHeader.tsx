@@ -8,6 +8,7 @@ import {
   Filter,
   Store as StoreIcon,
   Loader2,
+  UtensilsCrossed,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -81,6 +82,7 @@ export function ReportHeader({
     { id: "resumen", label: "Resumen", icon: TrendingUp },
     { id: "caja", label: "Caja & Cierre", icon: Banknote },
     { id: "meseros", label: "Personal", icon: Award },
+    { id: "productos-meseros", label: "Productos & Meseros", icon: UtensilsCrossed },
     { id: "detalle", label: "Auditoría", icon: ListChecks, count: totalOrdersCount },
   ];
 

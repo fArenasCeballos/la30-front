@@ -28,6 +28,8 @@ import { SummaryTab } from "@/components/reporteria/SummaryTab";
 import { CashTab } from "@/components/reporteria/CashTab";
 import { StaffTab } from "@/components/reporteria/StaffTab";
 import { AuditTab, type ReportOrder } from "@/components/reporteria/AuditTab";
+import { ProductStaffTab } from "@/components/reporteria/ProductStaffTab";
+import type { DetailedSaleItem } from "@/lib/detailedSalesReportUtils";
 import { Loader2 } from "lucide-react";
 
 const QUICK_RANGES: QuickRange[] = [
@@ -92,6 +94,43 @@ interface ReportStatsData {
   sales_by_hour: { hora: string; ventas: number }[];
   top_products: { product_name: string; quantity: number }[];
   waiter_stats: { name: string; orders: number; total: number }[];
+}
+
+interface DetailedOrderItemProduct {
+  id?: string;
+  name?: string;
+  category_id?: string | null;
+  categories?: {
+    id?: string;
+    name?: string;
+    label?: string | null;
+    icon?: string | null;
+  } | null;
+}
+
+interface DetailedOrderItemRow {
+  id: string;
+  product_id?: string | null;
+  quantity: number;
+  unit_price: number;
+  subtotal?: number | null;
+  notes?: string | null;
+  products?: DetailedOrderItemProduct | null;
+}
+
+interface DetailedOrderRow {
+  id: string;
+  locator?: string | null;
+  created_at: string;
+  status: OrderStatus;
+  store_id: string;
+  is_delivery?: boolean | null;
+  created_by?: string | null;
+  profiles?: {
+    id?: string;
+    name?: string | null;
+  } | null;
+  order_items?: DetailedOrderItemRow[] | null;
 }
 
 export default function Reporteria() {
@@ -370,6 +409,156 @@ export default function Reporteria() {
     };
   }, [isProfitabilityEnabled, periodSoldItems, recipeCostMap, reportStats.total_sales]);
 
+  // ── Categories & Products Metadata for Detailed Reporting ──────────────────
+  const { data: allCategories = [] } = useQuery({
+    queryKey: ["all-categories-reporteria", selectedStoreId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name, label, icon")
+        .order("sort_order");
+      if (error) {
+        console.warn("Error fetching categories:", error);
+        return [];
+      }
+      return data || [];
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ["all-products-reporteria", selectedStoreId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, category_id, price")
+        .order("name");
+      if (error) {
+        console.warn("Error fetching products:", error);
+        return [];
+      }
+      return data || [];
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+
+  // ── Detailed Sales Orders for Product & Waiter Analytics ───────────────────
+  const {
+    data: detailedOrdersData = [],
+    isLoading: isDetailedOrdersLoading,
+  } = useQuery({
+    queryKey: [
+      "detailed-sales-orders",
+      user?.id,
+      shiftRange?.from?.toISOString(),
+      shiftRange?.to?.toISOString(),
+      selectedStoreId,
+      typeFilter,
+      statusFilter,
+    ],
+    queryFn: async () => {
+      if (!shiftRange) return [];
+      const from = shiftRange.from.toISOString();
+      const to = shiftRange.to.toISOString();
+
+      let query = supabase
+        .from("orders")
+        .select(
+          "id, locator, created_at, status, store_id, is_delivery, created_by, profiles:profiles!orders_created_by_fkey(id, name), order_items(*, products(id, name, category_id, categories(id, name, label, icon)))",
+        )
+        .gte("created_at", from)
+        .lte("created_at", to)
+        .order("created_at", { ascending: false })
+        .limit(5000);
+
+      if (selectedStoreId !== "all") {
+        query = query.eq("store_id", selectedStoreId);
+      } else {
+        const companyStoreIds = stores.map((s) => s.id);
+        if (companyStoreIds.length > 0) {
+          query = query.in("store_id", companyStoreIds);
+        }
+      }
+
+      if (typeFilter !== "all") {
+        if (typeFilter === "delivery") query = query.eq("is_delivery", true);
+        if (typeFilter === "caja")
+          query = query.filter("is_delivery", "in", "(false,null)");
+      }
+
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      } else {
+        query = query.neq("status", "cancelado");
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("Error fetching detailed orders for reporteria:", error);
+        throw error;
+      }
+      return data || [];
+    },
+    enabled: !!user && !!shiftRange,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const detailedSoldItems: DetailedSaleItem[] = useMemo(() => {
+    const items: DetailedSaleItem[] = [];
+    const catMap = new Map(allCategories.map((c) => [c.id, c]));
+    const prodMap = new Map(allProducts.map((p) => [p.id, p]));
+
+    (detailedOrdersData as unknown as DetailedOrderRow[]).forEach((order) => {
+      const waiterName = order.profiles?.name?.trim() || "Caja / Mostrador";
+      const waiterId = order.created_by || "sistema";
+
+      order.order_items?.forEach((oi) => {
+        const prodMeta =
+          oi.products ||
+          (oi.product_id ? prodMap.get(oi.product_id) : undefined);
+        const catId = prodMeta?.category_id || "";
+        const catMeta =
+          oi.products?.categories || (catId ? catMap.get(catId) : undefined);
+
+        const categoryName =
+          catMeta?.label || catMeta?.name || "Sin categoría";
+        const categoryIcon = catMeta?.icon || "";
+        const productName = prodMeta?.name || "Producto sin nombre";
+        const qty = Number(oi.quantity) || 1;
+        const unitPrice = Number(oi.unit_price) || 0;
+        const lineSubtotal = Number(oi.subtotal);
+        const totalPrice =
+          !isNaN(lineSubtotal) && lineSubtotal > 0
+            ? lineSubtotal
+            : unitPrice * qty;
+        const extrasTotal = Math.max(0, totalPrice - unitPrice * qty);
+
+        items.push({
+          id: oi.id,
+          orderId: order.id,
+          orderLocator: order.locator || "S/L",
+          orderDate: order.created_at,
+          orderStatus: order.status,
+          isDelivery: Boolean(order.is_delivery),
+          waiterId,
+          waiterName,
+          productId: oi.product_id || prodMeta?.id || oi.id,
+          productName,
+          categoryId: catId || "sin-categoria",
+          categoryName,
+          categoryIcon,
+          quantity: qty,
+          unitPrice,
+          extrasTotal,
+          totalPrice,
+          notes: oi.notes,
+        });
+      });
+    });
+
+    return items;
+  }, [detailedOrdersData, allCategories, allProducts]);
+
   // ── Handlers ─────────────────────────────────────────────────────────────────
   const handleQuickRangeSelect = (label: string) => {
     const range = QUICK_RANGES.find((r) => r.label === label);
@@ -550,8 +739,8 @@ export default function Reporteria() {
                     (item.unit_price - unitRecipeCost) * item.quantity,
                 }
               : {}),
-            extras_total: item.extras_total,
-            total: (item.unit_price + item.extras_total) * item.quantity,
+            extras_total: item.extras_total ?? 0,
+            total: (item.unit_price + (item.extras_total ?? 0)) * item.quantity,
             options: item.selected_options
               ? JSON.stringify(item.selected_options)
               : "",
@@ -571,8 +760,95 @@ export default function Reporteria() {
         });
       });
 
+      // HOJA 3: PRODUCTOS Y MESEROS
+      const wsProdStaff = wb.addWorksheet("Productos y Meseros", {
+        views: [{ state: "frozen", ySplit: 1 }],
+      });
+
+      wsProdStaff.columns = [
+        { header: "PRODUCTO", key: "product", width: 35 },
+        { header: "CATEGORÍA", key: "category", width: 22 },
+        { header: "UNIDADES TOTALES", key: "qty", width: 18 },
+        { header: "TOTAL VENTAS", key: "total", width: 18 },
+        { header: "COLABORADOR LÍDER", key: "top_waiter", width: 28 },
+        { header: "UDS COLABORADOR LÍDER", key: "top_waiter_qty", width: 24 },
+      ];
+
+      wsProdStaff.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      wsProdStaff.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF047857" }, // Emerald 700
+      };
+      wsProdStaff.getRow(1).alignment = {
+        vertical: "middle",
+        horizontal: "center",
+      };
+      wsProdStaff.getRow(1).height = 25;
+
+      const prodMapForExcel = new Map<
+        string,
+        {
+          name: string;
+          category: string;
+          qty: number;
+          total: number;
+          waiters: Map<string, { name: string; qty: number }>;
+        }
+      >();
+
+      ordersToExport.forEach((o) => {
+        const waiterName = o.profiles?.name || "Caja / Sistema";
+        o.order_items?.forEach((item) => {
+          const pName = item.products?.name || "Sin nombre";
+          const pCat = item.products?.categories?.name || "General";
+          const existing = prodMapForExcel.get(pName) || {
+            name: pName,
+            category: pCat,
+            qty: 0,
+            total: 0,
+            waiters: new Map(),
+          };
+          const itemTotal =
+            (item.unit_price + (item.extras_total ?? 0)) * item.quantity;
+          existing.qty += item.quantity;
+          existing.total += itemTotal;
+
+          const wEntry = existing.waiters.get(waiterName) || {
+            name: waiterName,
+            qty: 0,
+          };
+          wEntry.qty += item.quantity;
+          existing.waiters.set(waiterName, wEntry);
+
+          prodMapForExcel.set(pName, existing);
+        });
+      });
+
+      const sortedProdList = Array.from(prodMapForExcel.values()).sort(
+        (a, b) => b.qty - a.qty,
+      );
+
+      sortedProdList.forEach((p) => {
+        const sortedWaiters = Array.from(p.waiters.values()).sort(
+          (a, b) => b.qty - a.qty,
+        );
+        const topWaiter = sortedWaiters[0];
+
+        const row = wsProdStaff.addRow({
+          product: p.name,
+          category: p.category,
+          qty: p.qty,
+          total: p.total,
+          top_waiter: topWaiter ? topWaiter.name : "N/A",
+          top_waiter_qty: topWaiter ? topWaiter.qty : 0,
+        });
+
+        row.getCell("total").numFmt = '"$"#,##0.00';
+      });
+
       // Format cells & borders
-      [wsOrders, wsItems].forEach((ws) => {
+      [wsOrders, wsItems, wsProdStaff].forEach((ws) => {
         ws.eachRow((row, rowNumber) => {
           row.eachCell((cell) => {
             cell.border = {
@@ -670,6 +946,16 @@ export default function Reporteria() {
             )}
 
             {activeTab === "meseros" && <StaffTab waiterData={waiterData} />}
+
+            {activeTab === "productos-meseros" && (
+              <ProductStaffTab
+                soldItems={detailedSoldItems}
+                allCategories={allCategories}
+                allProducts={allProducts}
+                isLoading={isDetailedOrdersLoading}
+                activeStoreName={selectedStoreName}
+              />
+            )}
 
             {activeTab === "detalle" && (
               <AuditTab
