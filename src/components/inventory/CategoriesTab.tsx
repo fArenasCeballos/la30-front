@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Edit, Trash2, LayoutGrid, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, LayoutGrid, Loader2, Smartphone } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,12 +59,14 @@ export function CategoriesTab() {
     icon: string;
     sort_order: string;
     store_ids: string[];
+    is_available_app: boolean;
   }>({
     name: "",
     label: "",
     icon: "",
     sort_order: "0",
     store_ids: [],
+    is_available_app: true,
   });
 
   const fetchCategories = useCallback(async () => {
@@ -98,6 +100,7 @@ export function CategoriesTab() {
       icon: "📦",
       sort_order: String(nextSortOrder()),
       store_ids: stores.map((s) => s.id),
+      is_available_app: true,
     });
     setIsDialogOpen(true);
   };
@@ -110,6 +113,7 @@ export function CategoriesTab() {
       icon: cat.icon || "",
       sort_order: String(cat.sort_order),
       store_ids: cat.store_ids || [],
+      is_available_app: cat.is_available_app ?? true,
     });
     setIsDialogOpen(true);
   };
@@ -129,6 +133,7 @@ export function CategoriesTab() {
         icon: form.icon || null,
         sort_order: Number(form.sort_order) || 0,
         store_ids: form.store_ids,
+        is_available_app: form.is_available_app,
       };
 
       if (editCategory) {
@@ -186,6 +191,36 @@ export function CategoriesTab() {
       !currentStatus
         ? "Categoría visible en menús"
         : "Categoría ocultada de los menús",
+    );
+  };
+
+  const toggleAppVisibility = async (id: string, currentStatus: boolean) => {
+    // Optimistic
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id === id ? { ...c, is_available_app: !currentStatus } : c,
+      ),
+    );
+
+    const { error } = await supabase
+      .from("categories")
+      .update({ is_available_app: !currentStatus })
+      .eq("id", id);
+
+    if (error) {
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.id === id ? { ...c, is_available_app: currentStatus } : c,
+        ),
+      );
+      toast.error(`Error al actualizar visibilidad en la app: ${error.message}`);
+      return;
+    }
+
+    toast.success(
+      !currentStatus
+        ? "Categoría visible en la App Móvil 📱"
+        : "Categoría ocultada de la App Móvil",
     );
   };
 
@@ -289,28 +324,55 @@ export function CategoriesTab() {
                 : "border-slate-200/80 hover:border-slate-300",
             )}
           >
-            {/* Header: Emoji Avatar + Active Switch */}
+            {/* Header: Emoji Avatar + Visibility Controls */}
             <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="h-14 w-14 rounded-2xl bg-amber-500/10 text-3xl flex items-center justify-center border border-amber-500/15 group-hover:scale-105 transition-transform">
+              <div className="h-14 w-14 rounded-2xl bg-amber-500/10 text-3xl flex items-center justify-center border border-amber-500/15 group-hover:scale-105 transition-transform shrink-0">
                 <span>{cat.icon || "📦"}</span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={cat.is_active}
-                  onCheckedChange={() => toggleActive(cat.id, !!cat.is_active)}
-                  className="data-[state=checked]:bg-teal-600 scale-85"
-                />
-                <span
+              <div className="flex flex-col items-end gap-1.5">
+                {/* Switch POS / Menú General */}
+                <div className="flex items-center gap-1.5">
+                  <Switch
+                    checked={cat.is_active}
+                    onCheckedChange={() => toggleActive(cat.id, !!cat.is_active)}
+                    className="data-[state=checked]:bg-teal-600 scale-75"
+                    title={cat.is_active ? "Visible en POS" : "Oculto en POS"}
+                  />
+                  <span
+                    className={cn(
+                      "text-[9px] font-semibold px-1.5 py-0.5 rounded-md",
+                      cat.is_active
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                        : "bg-slate-100 text-slate-500",
+                    )}
+                  >
+                    {cat.is_active ? "POS" : "No POS"}
+                  </span>
+                </div>
+
+                {/* Toggle App Móvil (la30-app) */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleAppVisibility(cat.id, cat.is_available_app ?? true);
+                  }}
+                  title={
+                    (cat.is_available_app ?? true)
+                      ? "Visible en App Móvil (clic para ocultar)"
+                      : "Oculto en App Móvil (clic para mostrar)"
+                  }
                   className={cn(
-                    "text-[10px] font-semibold px-2 py-0.5 rounded-full",
-                    cat.is_active
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                      : "bg-slate-100 text-slate-500",
+                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-2xs transition-transform active:scale-95 cursor-pointer border",
+                    (cat.is_available_app ?? true)
+                      ? "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
+                      : "bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200 line-through opacity-80",
                   )}
                 >
-                  {cat.is_active ? "Visible" : "Oculto"}
-                </span>
+                  <Smartphone className="h-2.5 w-2.5" />
+                  <span>{(cat.is_available_app ?? true) ? "App Móvil" : "No en App"}</span>
+                </button>
               </div>
             </div>
 
@@ -448,6 +510,30 @@ export function CategoriesTab() {
               <StoreMultiSelect
                 selectedStoreIds={form.store_ids}
                 onChange={(ids) => setForm((f) => ({ ...f, store_ids: ids }))}
+              />
+            </div>
+
+            {/* App Móvil Visibility Switch */}
+            <div className="flex items-center justify-between p-3.5 rounded-2xl border border-purple-100 bg-purple-50/50">
+              <div className="space-y-0.5 pr-2">
+                <Label
+                  htmlFor="cat-app-visibility-switch"
+                  className="text-xs font-bold text-slate-800 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Smartphone className="h-4 w-4 text-purple-600" />
+                  <span>Visualizar en la App Móvil (la30-app)</span>
+                </Label>
+                <p className="text-[11px] text-slate-500">
+                  Si este check está marcado, la categoría aparecerá en la aplicación móvil de los clientes. Si no, estará oculta en la app.
+                </p>
+              </div>
+              <Switch
+                id="cat-app-visibility-switch"
+                checked={form.is_available_app}
+                onCheckedChange={(checked) =>
+                  setForm((f) => ({ ...f, is_available_app: checked }))
+                }
+                className="data-[state=checked]:bg-purple-600"
               />
             </div>
           </div>

@@ -345,6 +345,7 @@ export type Database = {
           name: string;
           description: string | null;
           is_active: boolean;
+          is_available_app: boolean;
           store_ids: string[];
           created_at: string;
         };
@@ -356,6 +357,7 @@ export type Database = {
           sort_order?: number;
           description?: string | null;
           is_active?: boolean;
+          is_available_app?: boolean;
           store_ids?: string[];
           created_at?: string;
         };
@@ -367,6 +369,7 @@ export type Database = {
           sort_order?: number;
           description?: string | null;
           is_active?: boolean;
+          is_available_app?: boolean;
           store_ids?: string[];
           created_at?: string;
         };
