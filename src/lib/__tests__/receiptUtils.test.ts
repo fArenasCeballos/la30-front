@@ -93,6 +93,75 @@ describe("receiptUtils", () => {
 
       expect(html).not.toContain("Domiciliario:");
     });
+
+    it("should render impoconsumo 8% breakdown correctly for an order", () => {
+      const singleProductOrder: Order = {
+        ...baseDeliveryOrder,
+        is_delivery: false,
+        delivery_fee: 0,
+        total: 19000,
+        total_amount: 19000,
+        order_items: [
+          {
+            id: "item-perro",
+            order_id: "order-123",
+            product_id: "p-perro",
+            quantity: 1,
+            unit_price: 19000,
+            subtotal: 19000,
+            notes: null,
+            customizations: null,
+            extras: null,
+            is_completed: false,
+            created_at: "2026-08-26T20:00:00.000Z",
+            choices: {},
+            products: {
+              id: "p-perro",
+              name: "Perro Sencillo",
+              price: 19000,
+              available: true,
+              category_id: "cat-perros",
+              description: null,
+              image_url: null,
+              sort_order: 1,
+              store_ids: ["store-1"],
+              created_at: "2026-08-26T20:00:00.000Z",
+              siigo_code: "101",
+              categories: {
+                id: "cat-perros",
+                name: "Perros",
+                label: "Perros",
+                icon: "hotdog",
+                description: null,
+                is_active: true,
+                store_ids: ["store-1"],
+                sort_order: 1,
+                created_at: "2026-08-26T20:00:00.000Z",
+                is_available_app: false,
+              },
+              is_available_app: true,
+            },
+          },
+        ],
+      };
+
+      const html = buildCustomerReceiptHTML({
+        order: singleProductOrder,
+        cajeroName: "Cajero Test",
+      });
+
+      // Validar bloque de Impuestos
+      expect(html).toContain("IMPUESTOS");
+      expect(html).toContain("17.592,59"); // Base gravable
+      expect(html).toContain("1.407,41"); // Impoconsumo 8%
+      expect(html).toContain("A = Impoconsumo 8%");
+
+      // Validar totales
+      expect(html).toContain("Total Bruto");
+      expect(html).toContain("Subtotal");
+      expect(html).toContain("Impoconsumo 8%");
+      expect(html).toContain("Total a Pagar");
+    });
   });
 
   describe("buildKitchenReceiptHTML with delivery order", () => {
@@ -166,6 +235,7 @@ describe("receiptUtils", () => {
                 store_ids: ["store-1"],
                 sort_order: 1,
                 created_at: "2026-08-26T20:00:00.000Z",
+                is_available_app: false,
               },
               is_available_app: false,
             },
@@ -205,6 +275,7 @@ describe("receiptUtils", () => {
                 store_ids: ["store-1"],
                 sort_order: 2,
                 created_at: "2026-08-26T20:00:00.000Z",
+                is_available_app: false,
               },
               is_available_app: false,
             },
@@ -279,6 +350,7 @@ describe("receiptUtils", () => {
                 store_ids: ["store-1"],
                 sort_order: 1,
                 created_at: "2026-10-02T20:00:00.000Z",
+                is_available_app: false,
               },
             },
           },

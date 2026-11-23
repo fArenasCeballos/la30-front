@@ -1,5 +1,9 @@
 import type { Order, OrderItem } from "@/types";
-import { formatPrice } from "@/lib/formatPrice";
+import {
+  formatPrice,
+  formatTaxNumber,
+  formatTaxPrice,
+} from "@/lib/formatPrice";
 
 /* ── Estilos para la ventana de impresión ────────────────────────── */
 export const PRINT_STYLES = `
@@ -232,8 +236,14 @@ export function extractFirstName(fullNameOrFirstName?: string | null): string {
 
 /** Genera el HTML completo de la factura del cliente */
 export function buildCustomerReceiptHTML(data: ReceiptData): string {
-  const { order, cajeroName, storeName = "La 30 Perros y Hamburguesas", paymentMethod, paymentReceived, paymentChange } =
-    data;
+  const {
+    order,
+    cajeroName,
+    storeName = "La 30 Perros y Hamburguesas",
+    paymentMethod,
+    paymentReceived,
+    paymentChange,
+  } = data;
   const { dateOnly, timeOnly, printDate } = getReceiptDates(order);
   const validItems = getValidItems(order);
   const subtotal = validItems.reduce(
@@ -241,6 +251,13 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
     0,
   );
   const ticketNumber = order.ticket_number ?? "—";
+
+  // Impoconsumo (8%) calculations:
+  // En restaurantes en Colombia (actividad 5619), el precio de venta incluye el 8% de Impuesto Nacional al Consumo (INC / tarifa A).
+  // Base gravable = subtotal / 1.08
+  // Impuesto impoconsumo = subtotal - Base gravable
+  const taxBase = subtotal > 0 ? subtotal / 1.08 : 0;
+  const impoconsumo = subtotal > 0 ? subtotal - taxBase : 0;
 
   const itemsRows = validItems
     .map(
@@ -357,10 +374,28 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
       <tbody>${itemsRows}</tbody>
     </table>
     <div class="divider"></div>
-    <div class="row"><span class="bold">Sub Total</span><span class="bold">${formatPrice(subtotal)}</span></div>
+    <div class="center bold" style="font-size:12px; margin: 3px 0 2px;">IMPUESTOS</div>
+    <div class="divider"></div>
+    <div class="row" style="font-size:11px;">
+      <span class="bold" style="width:15%;">ID</span>
+      <span class="bold" style="width:20%; text-align:center;">%</span>
+      <span class="bold" style="width:32%; text-align:right;">Base</span>
+      <span class="bold" style="width:33%; text-align:right;">Impuesto</span>
+    </div>
+    <div class="row" style="font-size:11.5px;">
+      <span class="bold" style="width:15%;">A</span>
+      <span class="bold" style="width:20%; text-align:center;">8,00</span>
+      <span class="bold" style="width:32%; text-align:right;">${formatTaxNumber(taxBase)}</span>
+      <span class="bold" style="width:33%; text-align:right;">${formatTaxNumber(impoconsumo)}</span>
+    </div>
+    <div class="center bold" style="font-size:10.5px; margin: 2px 0;">A = Impoconsumo 8%</div>
+    <div class="divider"></div>
+    <div class="row"><span class="bold">Total Bruto</span><span class="bold">${formatTaxPrice(taxBase)}</span></div>
+    <div class="row"><span class="bold">Subtotal</span><span class="bold">${formatTaxPrice(taxBase)}</span></div>
+    <div class="row"><span class="bold">Impoconsumo 8%</span><span class="bold">${formatTaxPrice(impoconsumo)}</span></div>
     ${(order.delivery_fee ?? 0) > 0 ? `<div class="row"><span class="bold">Costo Envío</span><span class="bold">${formatPrice(order.delivery_fee)}</span></div>` : ""}
     <div class="divider"></div>
-    <div class="row total-row"><span class="bold">Total</span><span class="big-total">${formatPrice(order.total ?? 0)}</span></div>
+    <div class="row total-row"><span class="bold">Total a Pagar</span><span class="big-total">${formatPrice(order.total ?? 0)}</span></div>
     <div class="divider"></div>
     ${paymentSection}
     <div class="center" style="padding:4px 0">
@@ -521,7 +556,13 @@ export interface ShiftClosingData {
 
 /** Genera el HTML completo de la tirilla de cierre de turno */
 export function buildShiftClosingReceiptHTML(data: ShiftClosingData): string {
-  const { orders, cajeroName, shiftStart, shiftEnd, storeName = "La 30 Perros y Hamburguesas" } = data;
+  const {
+    orders,
+    cajeroName,
+    shiftStart,
+    shiftEnd,
+    storeName = "La 30 Perros y Hamburguesas",
+  } = data;
 
   const dateFmt = new Intl.DateTimeFormat("es-CO", {
     day: "2-digit",
@@ -1095,4 +1136,3 @@ export function buildDriverSettlementReceiptHTML({
     </div>
   `;
 }
-

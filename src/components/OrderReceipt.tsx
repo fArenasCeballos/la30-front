@@ -1,6 +1,10 @@
 import { useRef } from "react";
 import type { Order, OrderItem } from "@/types";
-import { formatPrice } from "@/lib/formatPrice";
+import {
+  formatPrice,
+  formatTaxNumber,
+  formatTaxPrice,
+} from "@/lib/formatPrice";
 import {
   silentPrint,
   buildCustomerReceiptHTML,
@@ -29,7 +33,11 @@ interface OrderReceiptProps {
   paymentReceived?: number;
   paymentChange?: number;
   paymentBreakdown?: { efectivo?: number; tarjeta?: number; nequi?: number };
-  sharedPayments?: Array<{ method: string; subMethod?: string; amount: number }>;
+  sharedPayments?: Array<{
+    method: string;
+    subMethod?: string;
+    amount: number;
+  }>;
   driverName?: string;
 }
 
@@ -57,13 +65,17 @@ export function OrderReceipt({
         .order("first_name", { ascending: true });
       return data || [];
     },
-    enabled: !!order?.is_delivery && !!order?.driver_id && !order?.delivery_drivers && !driverName,
+    enabled:
+      !!order?.is_delivery &&
+      !!order?.driver_id &&
+      !order?.delivery_drivers &&
+      !driverName,
   });
 
   if (!order) return null;
 
   const matchedDriver = order.driver_id
-    ? activeDrivers.find((d: { id: string | null; }) => d.id === order.driver_id)
+    ? activeDrivers.find((d: { id: string | null }) => d.id === order.driver_id)
     : null;
   const rawDriverName =
     driverName ||
@@ -103,6 +115,13 @@ export function OrderReceipt({
     (s, i) => s + (i.unit_price ?? 0) * (i.quantity ?? 1),
     0,
   );
+
+  // Impoconsumo (8%) calculations:
+  // En restaurantes en Colombia (actividad 5619), el precio de venta incluye el 8% de Impuesto Nacional al Consumo (INC / tarifa A).
+  // Base gravable = subtotal / 1.08
+  // Impuesto impoconsumo = subtotal - Base gravable
+  const taxBase = subtotal > 0 ? subtotal / 1.08 : 0;
+  const impoconsumo = subtotal > 0 ? subtotal - taxBase : 0;
 
   /* ── Ticket # consecutivo desde la BD ── */
   const ticketNumber = order.ticket_number ?? "—";
@@ -190,7 +209,9 @@ export function OrderReceipt({
       </div>
 
       <div className="row">
-        <span className="bold">{order.is_delivery ? "Domicilio No." : "Mesa No."}:</span>
+        <span className="bold">
+          {order.is_delivery ? "Domicilio No." : "Mesa No."}:
+        </span>
         <span className="bold">{order.locator}</span>
       </div>
 
@@ -198,12 +219,16 @@ export function OrderReceipt({
         <>
           <div className="row">
             <span className="bold">Cliente:</span>
-            <span className="bold">{(order.delivery_name ?? "Cliente").toUpperCase()}</span>
+            <span className="bold">
+              {(order.delivery_name ?? "Cliente").toUpperCase()}
+            </span>
           </div>
           {order.delivery_address && (
             <div className="row">
               <span className="bold">Dirección:</span>
-              <span className="bold">{order.delivery_address.toUpperCase()}</span>
+              <span className="bold">
+                {order.delivery_address.toUpperCase()}
+              </span>
             </div>
           )}
           {order.delivery_phone && (
@@ -241,10 +266,14 @@ export function OrderReceipt({
           {validItems.map((item) => (
             <tr key={item.id}>
               <td>
-                <span className="bold">{(item.products?.name ?? "Producto").toUpperCase()}</span>
+                <span className="bold">
+                  {(item.products?.name ?? "Producto").toUpperCase()}
+                </span>
                 {item.notes && <div className="item-notes">↳ {item.notes}</div>}
               </td>
-              <td style={{ textAlign: "center" }} className="bold">{item.quantity}</td>
+              <td style={{ textAlign: "center" }} className="bold">
+                {item.quantity}
+              </td>
               <td className="bold">
                 {formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}
               </td>
@@ -255,10 +284,63 @@ export function OrderReceipt({
 
       <div className="divider" />
 
+      {/* Impuestos (Impoconsumo 8%) */}
+      <div className="divider" />
+      <div
+        className="center bold"
+        style={{ fontSize: "12px", margin: "3px 0 2px" }}
+      >
+        IMPUESTOS
+      </div>
+      <div className="divider" />
+      <div className="row" style={{ fontSize: "11px" }}>
+        <span className="bold" style={{ width: "15%" }}>
+          ID
+        </span>
+        <span className="bold" style={{ width: "20%", textAlign: "center" }}>
+          %
+        </span>
+        <span className="bold" style={{ width: "32%", textAlign: "right" }}>
+          Base
+        </span>
+        <span className="bold" style={{ width: "33%", textAlign: "right" }}>
+          Impuesto
+        </span>
+      </div>
+      <div className="row" style={{ fontSize: "11.5px" }}>
+        <span className="bold" style={{ width: "15%" }}>
+          A
+        </span>
+        <span className="bold" style={{ width: "20%", textAlign: "center" }}>
+          8,00
+        </span>
+        <span className="bold" style={{ width: "32%", textAlign: "right" }}>
+          {formatTaxNumber(taxBase)}
+        </span>
+        <span className="bold" style={{ width: "33%", textAlign: "right" }}>
+          {formatTaxNumber(impoconsumo)}
+        </span>
+      </div>
+      <div
+        className="center bold"
+        style={{ fontSize: "10.5px", margin: "2px 0" }}
+      >
+        A = Impoconsumo 8%
+      </div>
+      <div className="divider" />
+
       {/* Subtotal y Total */}
       <div className="row">
-        <span className="bold">Sub Total</span>
-        <span className="bold">{formatPrice(subtotal)}</span>
+        <span className="bold">Total Bruto</span>
+        <span className="bold">{formatTaxPrice(taxBase)}</span>
+      </div>
+      <div className="row">
+        <span className="bold">Subtotal</span>
+        <span className="bold">{formatTaxPrice(taxBase)}</span>
+      </div>
+      <div className="row">
+        <span className="bold">Impoconsumo 8%</span>
+        <span className="bold">{formatTaxPrice(impoconsumo)}</span>
       </div>
       {(order.delivery_fee ?? 0) > 0 && (
         <div className="row">
@@ -270,7 +352,7 @@ export function OrderReceipt({
       <div className="divider" />
 
       <div className="row total-row">
-        <span className="bold">Total</span>
+        <span className="bold">Total a Pagar</span>
         <span className="big-total">{formatPrice(order.total ?? 0)}</span>
       </div>
 
@@ -291,9 +373,16 @@ export function OrderReceipt({
           </div>
 
           <div style={{ fontSize: "11.5px", padding: "4px 0 0" }}>
-            {paymentMethod === "mixto" && sharedPayments && sharedPayments.length > 0 ? (
+            {paymentMethod === "mixto" &&
+            sharedPayments &&
+            sharedPayments.length > 0 ? (
               <div className="space-y-0.5">
-                <div className="center bold" style={{ fontSize: "12px", padding: "2px 0" }}>PAGO COMPARTIDO</div>
+                <div
+                  className="center bold"
+                  style={{ fontSize: "12px", padding: "2px 0" }}
+                >
+                  PAGO COMPARTIDO
+                </div>
                 {sharedPayments.map((p, idx) => {
                   const getLabel = (m: string, sub?: string) => {
                     if (sub === "tarjeta_credito") return "T. Crédito";
@@ -306,7 +395,9 @@ export function OrderReceipt({
                   };
                   return (
                     <div key={idx} className="row">
-                      <span className="bold">Pago {idx + 1} ({getLabel(p.method, p.subMethod)}):</span>
+                      <span className="bold">
+                        Pago {idx + 1} ({getLabel(p.method, p.subMethod)}):
+                      </span>
                       <span className="bold">{formatPrice(p.amount)}</span>
                     </div>
                   );
@@ -317,19 +408,25 @@ export function OrderReceipt({
                 {paymentBreakdown.efectivo ? (
                   <div className="row">
                     <span className="bold">Efectivo:</span>
-                    <span className="bold">{formatPrice(paymentBreakdown.efectivo)}</span>
+                    <span className="bold">
+                      {formatPrice(paymentBreakdown.efectivo)}
+                    </span>
                   </div>
                 ) : null}
                 {paymentBreakdown.tarjeta ? (
                   <div className="row">
                     <span className="bold">Tarjeta:</span>
-                    <span className="bold">{formatPrice(paymentBreakdown.tarjeta)}</span>
+                    <span className="bold">
+                      {formatPrice(paymentBreakdown.tarjeta)}
+                    </span>
                   </div>
                 ) : null}
                 {paymentBreakdown.nequi ? (
                   <div className="row">
                     <span className="bold">Nequi:</span>
-                    <span className="bold">{formatPrice(paymentBreakdown.nequi)}</span>
+                    <span className="bold">
+                      {formatPrice(paymentBreakdown.nequi)}
+                    </span>
                   </div>
                 ) : null}
               </div>
@@ -343,7 +440,9 @@ export function OrderReceipt({
                       : "Nequi"}
                   :
                 </span>
-                <span className="bold">{formatPrice(paymentReceived ?? order.total ?? 0)}</span>
+                <span className="bold">
+                  {formatPrice(paymentReceived ?? order.total ?? 0)}
+                </span>
               </div>
             )}
           </div>
@@ -353,7 +452,9 @@ export function OrderReceipt({
 
       {/* Footer */}
       <div className="center" style={{ padding: "4px 0" }}>
-        <p className="bold" style={{ fontSize: "14px" }}>¡Gracias por tu compra!</p>
+        <p className="bold" style={{ fontSize: "14px" }}>
+          ¡Gracias por tu compra!
+        </p>
         <p className="bold" style={{ fontSize: "13px", marginTop: "2px" }}>
           Espera tu número: <span className="bold">{order.locator}</span>
         </p>
@@ -384,8 +485,20 @@ export function OrderReceipt({
       </div>
 
       {order.is_delivery && driverFirstName && (
-        <div style={{ fontSize: "14px", fontWeight: "bold", marginTop: "6px", border: "2px dashed #000000", padding: "6px", background: "#ffffff", color: "#000000" }}>
-          <div><strong>DOMICILIARIO:</strong> {driverFirstName.toUpperCase()}</div>
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: "bold",
+            marginTop: "6px",
+            border: "2px dashed #000000",
+            padding: "6px",
+            background: "#ffffff",
+            color: "#000000",
+          }}
+        >
+          <div>
+            <strong>DOMICILIARIO:</strong> {driverFirstName.toUpperCase()}
+          </div>
         </div>
       )}
 
@@ -417,7 +530,17 @@ export function OrderReceipt({
                 const trimmed = note.trim();
                 if (trimmed.startsWith("Obs:")) {
                   return (
-                    <div key={idx} style={{ marginTop: "4px", color: "#000000", borderTop: "2.5px solid #000000", paddingTop: "3px", fontSize: "19px", fontWeight: 900 }}>
+                    <div
+                      key={idx}
+                      style={{
+                        marginTop: "4px",
+                        color: "#000000",
+                        borderTop: "2.5px solid #000000",
+                        paddingTop: "3px",
+                        fontSize: "19px",
+                        fontWeight: 900,
+                      }}
+                    >
                       <strong>OBS:</strong> {trimmed.replace("Obs:", "").trim()}
                     </div>
                   );
@@ -453,7 +576,10 @@ export function OrderReceipt({
 
       <div className="divider" />
 
-      <div className="center kitchen-footer" style={{ fontSize: "13px", fontWeight: "bold", marginTop: "4px" }}>
+      <div
+        className="center kitchen-footer"
+        style={{ fontSize: "13px", fontWeight: "bold", marginTop: "4px" }}
+      >
         <p>Hora: {timeOnly}</p>
         <p>{dateOnly}</p>
       </div>
