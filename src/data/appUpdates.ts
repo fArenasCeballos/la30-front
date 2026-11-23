@@ -32,29 +32,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "23 de Noviembre, 2026",
     isoDate: "2026-11-23",
     title: "Impuesto al Consumo (Impoconsumo 8%) en Facturas y Tirillas",
-    subtitle: "Desglose tributario detallado en tirillas de venta y reimpresión con base gravable, impoconsumo tarifa A y totales fiscales.",
+    subtitle:
+      "Desglose tributario detallado en tirillas de venta y reimpresión con base gravable, impoconsumo tarifa A y totales fiscales.",
     badgeText: `Facturación & Impuestos v${pkg.version}`,
     badgeType: "emerald",
     gradientTheme: "emerald",
     isMajor: false,
-    summary: "Se integró en todas las facturas y tirillas impresas (Caja, Domicilios y Consultas) y en la vista previa el desglose completo del Impuesto Nacional al Consumo (8% - Tarifa A), mostrando base gravable, valor del impuesto, total bruto, subtotal y total a pagar de acuerdo con la normativa fiscal colombiana para restaurantes.",
+    summary:
+      "Se integró en todas las facturas y tirillas impresas (Caja, Domicilios y Consultas) y en la vista previa el desglose completo del Impuesto Nacional al Consumo (8% - Tarifa A), mostrando base gravable, valor del impuesto, total bruto, subtotal y total a pagar de acuerdo con la normativa fiscal colombiana para restaurantes.",
     author: "Equipo de Desarrollo La 30",
     items: [
       {
         title: "Desglose Fiscal de Impoconsumo 8%",
-        description: "Separación automática de la base gravable y del impuesto del 8% (Tarifa A) en las tirillas térmicas para el cliente.",
+        description:
+          "Separación automática de la base gravable y del impuesto del 8% (Tarifa A) en las tirillas térmicas para el cliente.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Detalle de Totales Fiscales",
-        description: "Adición de Total Bruto, Subtotal e Impoconsumo 8% respetando los costos de envío y medios de pago existentes.",
+        description:
+          "Adición de Total Bruto, Subtotal e Impoconsumo 8% respetando los costos de envío y medios de pago existentes.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Sincronización en Emisión y Reimpresión",
-        description: "Disponibilidad del desglose en emisión inicial en Caja y Domicilios, reimpresiones históricas en Consultas y modal de vista previa.",
+        description:
+          "Disponibilidad del desglose en emisión inicial en Caja y Domicilios, reimpresiones históricas en Consultas y modal de vista previa.",
         category: "system",
       },
     ],
@@ -65,29 +70,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "27 de Octubre, 2026",
     isoDate: "2026-10-27",
     title: "Control de Catálogo Móvil & Analítica de Productos",
-    subtitle: "Visibilidad granular de categorías para la App Móvil (la30-app) y nueva pestaña analítica de Productos y Colaboradores en Reportería.",
+    subtitle:
+      "Visibilidad granular de categorías para la App Móvil (la30-app) y nueva pestaña analítica de Productos y Colaboradores en Reportería.",
     badgeText: "Catálogo & Analítica v3.0.3",
     badgeType: "purple",
     gradientTheme: "purple",
     isMajor: false,
-    summary: "Se implementó el interruptor de visibilidad móvil en las categorías del menú para filtrar el catálogo en la aplicación móvil de los clientes, junto a la nueva pestaña analítica de Reportería con segmentación por meseros y platos.",
+    summary:
+      "Se implementó el interruptor de visibilidad móvil en las categorías del menú para filtrar el catálogo en la aplicación móvil de los clientes, junto a la nueva pestaña analítica de Reportería con segmentación por meseros y platos.",
     author: "Equipo de Desarrollo La 30",
     items: [
       {
         title: "Interruptor de Visibilidad Móvil en Categorías (la30-app)",
-        description: "Ahora es posible activar o desactivar qué categorías de la carta gastronómica se visualizan en la app móvil mediante un botón directo en la tarjeta y en el modal de edición de categorías.",
+        description:
+          "Ahora es posible activar o desactivar qué categorías de la carta gastronómica se visualizan en la app móvil mediante un botón directo en la tarjeta y en el modal de edición de categorías.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Pestaña Analítica 'Productos & Meseros' en Reportería",
-        description: "Permite filtrar qué colaboradores impulsaron cada categoría o producto específico, podium de meseros top, KPIs ejecutivos y exportación avanzada a Excel.",
+        description:
+          "Permite filtrar qué colaboradores impulsaron cada categoría o producto específico, podium de meseros top, KPIs ejecutivos y exportación avanzada a Excel.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Sincronización Inteligente de Catálogo en App Móvil",
-        description: "La app móvil respeta de inmediato las categorías marcadas y excluye automáticamente productos de categorías ocultas para garantizar una navegación consistente.",
+        description:
+          "La app móvil respeta de inmediato las categorías marcadas y excluye automáticamente productos de categorías ocultas para garantizar una navegación consistente.",
         category: "improvement",
       },
     ],
@@ -98,35 +108,41 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "24 de Septiembre, 2026",
     isoDate: "2026-09-24",
     title: "Blindaje Offline & Arranque Seguro",
-    subtitle: "Caché de sesión local, logo offline instantáneo y fail-safe de conexión para evitar bloqueos en cortes de red.",
+    subtitle:
+      "Caché de sesión local, logo offline instantáneo y fail-safe de conexión para evitar bloqueos en cortes de red.",
     badgeText: `Resiliencia v${pkg.version}`,
     badgeType: "emerald",
     gradientTheme: "midnight",
     isMajor: false,
-    summary: "Se reforzó la estabilidad de arranque de la plataforma para proteger las operaciones críticas como cierres de caja y toma de pedidos ante caídas de internet o respuestas lentas de Supabase.",
+    summary:
+      "Se reforzó la estabilidad de arranque de la plataforma para proteger las operaciones críticas como cierres de caja y toma de pedidos ante caídas de internet o respuestas lentas de Supabase.",
     author: "Equipo de Desarrollo La 30",
     items: [
       {
         title: "Sesión Offline & Respaldo Local en AuthContext",
-        description: "El perfil del usuario ahora se preserva de forma segura en almacenamiento local. Si ocurre una caída de red o 'Failed to fetch', el sistema mantiene la sesión activa sin expulsar al usuario ni bloquear el acceso.",
+        description:
+          "El perfil del usuario ahora se preserva de forma segura en almacenamiento local. Si ocurre una caída de red o 'Failed to fetch', el sistema mantiene la sesión activa sin expulsar al usuario ni bloquear el acceso.",
         category: "fix",
         highlight: true,
       },
       {
         title: "Logo Local Instantáneo (Sin Dependencia Externa)",
-        description: "El componente Logo ahora carga directamente el SVG local precacheado por la PWA con fallback a Supabase Storage, eliminando imágenes rotas en cortes de internet.",
+        description:
+          "El componente Logo ahora carga directamente el SVG local precacheado por la PWA con fallback a Supabase Storage, eliminando imágenes rotas en cortes de internet.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Timeouts Fail-Safe contra Congelamiento (5 Segundos)",
-        description: "Se implementaron límites de espera de 5s en la verificación de sesión, empresas y sedes para que la aplicación nunca se quede congelada en 'Iniciando plataforma...'.",
+        description:
+          "Se implementaron límites de espera de 5s en la verificación de sesión, empresas y sedes para que la aplicación nunca se quede congelada en 'Iniciando plataforma...'.",
         category: "system",
         highlight: true,
       },
       {
         title: "Detección de Red Lenta y Acceso Rápido",
-        description: "Si la red experimenta lentitud superior a 4 segundos, la pantalla de carga despliega un aviso claro y botones de 'Reintentar' o 'Continuar' para no detener la operación.",
+        description:
+          "Si la red experimenta lentitud superior a 4 segundos, la pantalla de carga despliega un aviso claro y botones de 'Reintentar' o 'Continuar' para no detener la operación.",
         category: "improvement",
       },
     ],
@@ -137,46 +153,54 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "La 30 POS 3.0",
-    subtitle: "Evolución ergonómica, multi-sede inteligente y máxima agilidad operativa en PC, iPad y celular.",
+    subtitle:
+      "Evolución ergonómica, multi-sede inteligente y máxima agilidad operativa en PC, iPad y celular.",
     badgeText: "Versión Mayor 3.0.1",
     badgeType: "primary",
     gradientTheme: "sunset",
     isMajor: true,
-    summary: "Una renovación integral del punto de venta. Cada vista fue perfeccionada para brindar máxima velocidad y confort en pantallas táctiles de mostrador (iPad/tablets), teléfonos móviles de meseros y monitores de computador.",
+    summary:
+      "Una renovación integral del punto de venta. Cada vista fue perfeccionada para brindar máxima velocidad y confort en pantallas táctiles de mostrador (iPad/tablets), teléfonos móviles de meseros y monitores de computador.",
     author: "Equipo de Desarrollo La 30",
     items: [
       {
         title: "Caja & POS Ergonómico (PC, iPad y Celular)",
-        description: "Barra flotante con conteos en vivo y scroll táctil suave. Tarjetas con localizador #LOC de alto contraste y botones touch de 44px.",
+        description:
+          "Barra flotante con conteos en vivo y scroll táctil suave. Tarjetas con localizador #LOC de alto contraste y botones touch de 44px.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Calculadora de Efectivo Unificada",
-        description: "Cobro ágil en un solo paso con atajos para billetes colombianos ($20k, $50k, $100k y Exacto) y cálculo automático de devuelta.",
+        description:
+          "Cobro ágil en un solo paso con atajos para billetes colombianos ($20k, $50k, $100k y Exacto) y cálculo automático de devuelta.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Control de Saldos & Cocina Limpia",
-        description: "Total real con insignia 'PAGADO' en comandas e historial. Ocultamiento de precios en cocina para priorizar la preparación.",
+        description:
+          "Total real con insignia 'PAGADO' en comandas e historial. Ocultamiento de precios en cocina para priorizar la preparación.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Selector Multi-Store Inteligente",
-        description: "Redirección automática para usuarios con múltiples tiendas asignadas e identificador de sede activo sutil, moderno y no invasivo.",
+        description:
+          "Redirección automática para usuarios con múltiples tiendas asignadas e identificador de sede activo sutil, moderno y no invasivo.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Consumo Interno con Emojis Reales",
-        description: "Distribución 2x2 en pantalla completa sin scroll vertical y emojis automáticos según la categoría real de cada producto.",
+        description:
+          "Distribución 2x2 en pantalla completa sin scroll vertical y emojis automáticos según la categoría real de cada producto.",
         category: "feature",
       },
       {
         title: "Notificaciones & Login Pantalla Completa",
-        description: "Centro de alertas accesible con filtros y pantalla de acceso estilizada ajustada perfectamente al alto de cualquier dispositivo.",
+        description:
+          "Centro de alertas accesible con filtros y pantalla de acceso estilizada ajustada perfectamente al alto de cualquier dispositivo.",
         category: "improvement",
       },
     ],
@@ -187,23 +211,27 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Corrección de Importe en Historial de Caja y Domicilios",
-    subtitle: "Se corrigió la lista de historial para que las órdenes finalizadas exhiban el total pagado y no '$ 0' con etiqueta de abonado.",
+    subtitle:
+      "Se corrigió la lista de historial para que las órdenes finalizadas exhiban el total pagado y no '$ 0' con etiqueta de abonado.",
     badgeText: "✨ v2.1.54",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se ajustó la visualización de valores monetarios en la pestaña de Historial de Caja y en el historial de Domicilios. Las órdenes finalizadas y saldadas ahora muestran de inmediato el importe total de la comanda y omiten la etiqueta de abono parcial.",
+    summary:
+      "Se ajustó la visualización de valores monetarios en la pestaña de Historial de Caja y en el historial de Domicilios. Las órdenes finalizadas y saldadas ahora muestran de inmediato el importe total de la comanda y omiten la etiqueta de abono parcial.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Total Real en Pedidos Históricos",
-        description: "En órdenes entregadas o pagadas, se renderiza el valor total pagado en lugar de saldo restante $0.",
+        description:
+          "En órdenes entregadas o pagadas, se renderiza el valor total pagado en lugar de saldo restante $0.",
         category: "fix",
         highlight: true,
       },
       {
         title: "Abonado Condicional en Historial",
-        description: "El distintivo de abono solo se presentará si de verdad persiste una deuda o saldo pendiente.",
+        description:
+          "El distintivo de abono solo se presentará si de verdad persiste una deuda o saldo pendiente.",
         category: "improvement",
         highlight: true,
       },
@@ -215,29 +243,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Corrección de Visualización de Totales y Precios en Cocina",
-    subtitle: "Se eliminó el texto 'Total Restante $ 0' en comandas pagadas, se incorporó el badge 'PAGADO' y se ocultaron precios individuales en cocina.",
+    subtitle:
+      "Se eliminó el texto 'Total Restante $ 0' en comandas pagadas, se incorporó el badge 'PAGADO' y se ocultaron precios individuales en cocina.",
     badgeText: "✨ v2.1.53",
     badgeType: "emerald",
     gradientTheme: "emerald",
     isMajor: false,
-    summary: "Se corrigió la lógica de saldos en las tarjetas de comanda (OrderCard). Las órdenes en preparación, listas o pagadas en su totalidad ahora exhiben el TOTAL real junto a la insignia PAGADO, eliminando etiquetas de saldo restante 0 y ocultando precios por ítem en la vista de cocina.",
+    summary:
+      "Se corrigió la lógica de saldos en las tarjetas de comanda (OrderCard). Las órdenes en preparación, listas o pagadas en su totalidad ahora exhiben el TOTAL real junto a la insignia PAGADO, eliminando etiquetas de saldo restante 0 y ocultando precios por ítem en la vista de cocina.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Eliminación de 'Total Restante $0'",
-        description: "El rótulo de saldo restante y monto abonado ahora solo se muestra si existe un saldo pendiente real por cobrar.",
+        description:
+          "El rótulo de saldo restante y monto abonado ahora solo se muestra si existe un saldo pendiente real por cobrar.",
         category: "fix",
         highlight: true,
       },
       {
         title: "Insignia de Pago Confirmado",
-        description: "Muestra el TOTAL real de la orden acompañado del distintivo 'PAGADO' en comandas en cocina, listas o saldadas.",
+        description:
+          "Muestra el TOTAL real de la orden acompañado del distintivo 'PAGADO' en comandas en cocina, listas o saldadas.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Limpieza Visual en Comandas de Cocina",
-        description: "Se ocultan los precios individuales por producto en las comandas de preparación, centrando la atención en productos, opciones y notas.",
+        description:
+          "Se ocultan los precios individuales por producto en las comandas de preparación, centrando la atención en productos, opciones y notas.",
         category: "improvement",
       },
     ],
@@ -248,29 +281,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Corrección y Unificación de Calculadora de Cambio en Efectivo",
-    subtitle: "Se eliminó la duplicidad de pantallas de cobro en efectivo y se perfeccionó la calculadora con atajos de billetes colombianos y cálculo preciso.",
+    subtitle:
+      "Se eliminó la duplicidad de pantallas de cobro en efectivo y se perfeccionó la calculadora con atajos de billetes colombianos y cálculo preciso.",
     badgeText: "✨ v2.1.52",
     badgeType: "emerald",
     gradientTheme: "emerald",
     isMajor: false,
-    summary: "Se corrigió una condición en la que al cobrar en efectivo se renderizaban simultáneamente dos calculadoras en el modal. Se unificó en una única pantalla de cambio elegante, con saldo restante real, botones rápidos para $20k, $50k, $100k y botón de acción contextual.",
+    summary:
+      "Se corrigió una condición en la que al cobrar en efectivo se renderizaban simultáneamente dos calculadoras en el modal. Se unificó en una única pantalla de cambio elegante, con saldo restante real, botones rápidos para $20k, $50k, $100k y botón de acción contextual.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Eliminación de Doble Calculadora",
-        description: "Se unificaron las vistas superpuestas dentro del modal de cobro, previniendo scrolls innecesarios y estados conflictivos.",
+        description:
+          "Se unificaron las vistas superpuestas dentro del modal de cobro, previniendo scrolls innecesarios y estados conflictivos.",
         category: "fix",
         highlight: true,
       },
       {
         title: "Atajos de Denominación Colombiana",
-        description: "Acceso rápido en un solo toque a Monto Exacto, $20.000, $50.000 y $100.000 para mayor agilidad en caja.",
+        description:
+          "Acceso rápido en un solo toque a Monto Exacto, $20.000, $50.000 y $100.000 para mayor agilidad en caja.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Botón de Acción Contextual y Seguro",
-        description: "Validación estricta de saldo recibido, aviso claro de faltante si el monto es insuficiente y spinner durante el procesamiento.",
+        description:
+          "Validación estricta de saldo recibido, aviso claro de faltante si el monto es insuficiente y spinner durante el procesamiento.",
         category: "improvement",
       },
     ],
@@ -281,29 +319,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Rediseño Ergonómico y Responsivo de Caja (PC, iPad y Celular)",
-    subtitle: "Módulo de caja modernizado con barra de navegación vidriada, tarjetas táctiles de alta visibilidad y adaptación fluida para computadores, iPads y celulares.",
+    subtitle:
+      "Módulo de caja modernizado con barra de navegación vidriada, tarjetas táctiles de alta visibilidad y adaptación fluida para computadores, iPads y celulares.",
     badgeText: "✨ v2.1.51",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se renovó por completo la interfaz del punto de venta en caja (Caja.tsx y OrderCard.tsx), logrando una experiencia rápida y ergonómica pensada para pantallas táctiles de mostrador (iPad/tablets), teléfonos móviles de meseros/cajeros y monitores de computador de alta resolución.",
+    summary:
+      "Se renovó por completo la interfaz del punto de venta en caja (Caja.tsx y OrderCard.tsx), logrando una experiencia rápida y ergonómica pensada para pantallas táctiles de mostrador (iPad/tablets), teléfonos móviles de meseros/cajeros y monitores de computador de alta resolución.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Barra de Pestañas Adaptativa y Vidriada",
-        description: "Pestañas fijas con efecto glassmorphism, conteos numéricos instantáneos y navegación por deslizamiento en móvil sin desbordes.",
+        description:
+          "Pestañas fijas con efecto glassmorphism, conteos numéricos instantáneos y navegación por deslizamiento en móvil sin desbordes.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Tarjetas de Pedido de Alto Contraste",
-        description: "Caja de localizador #LOC destacada, notas de cocina en avisos ámbar, desglose de opciones y botones táctiles de mínimo 40-44px.",
+        description:
+          "Caja de localizador #LOC destacada, notas de cocina en avisos ámbar, desglose de opciones y botones táctiles de mínimo 40-44px.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Historial y Cierre de Turno Re-diseñados",
-        description: "Banner de cierre diario integrado a la paleta clara y lista de historial con facturación Siigo y reimpresión ágil.",
+        description:
+          "Banner de cierre diario integrado a la paleta clara y lista de historial con facturación Siigo y reimpresión ágil.",
         category: "improvement",
       },
     ],
@@ -314,29 +357,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Acceso Forzado a Selector de Sedes para Usuarios Multi-Tienda",
-    subtitle: "Los usuarios con más de una tienda asignada siempre ingresan directamente al selector de sedes al iniciar sesión o abrir la plataforma.",
+    subtitle:
+      "Los usuarios con más de una tienda asignada siempre ingresan directamente al selector de sedes al iniciar sesión o abrir la plataforma.",
     badgeText: "✨ v2.1.50",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se implementó una regla de enrutamiento estricta para garantizar que todo usuario con acceso a múltiples puntos de venta (o administrador) siempre sea dirigido al selector de tiendas al ingresar al sistema, asegurando que seleccione conscientemente el punto de venta en el que operará durante su sesión.",
+    summary:
+      "Se implementó una regla de enrutamiento estricta para garantizar que todo usuario con acceso a múltiples puntos de venta (o administrador) siempre sea dirigido al selector de tiendas al ingresar al sistema, asegurando que seleccione conscientemente el punto de venta en el que operará durante su sesión.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Ingreso Siempre al Selector de Sedes",
-        description: "Todo usuario con más de una sede asignada es conducido inmediatamente a /select-store al ingresar a la plataforma.",
+        description:
+          "Todo usuario con más de una sede asignada es conducido inmediatamente a /select-store al ingresar a la plataforma.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Selección Limpia por Sesión",
-        description: "Al iniciar sesión se limpia cualquier sede previa guardada para asegurar la confirmación explícita de la tienda de trabajo.",
+        description:
+          "Al iniciar sesión se limpia cualquier sede previa guardada para asegurar la confirmación explícita de la tienda de trabajo.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Paso Directo para Usuarios de Sede Única",
-        description: "Los colaboradores con una sola sede asignada continúan ingresando automáticamente a su módulo correspondiente sin pantallas intermedias.",
+        description:
+          "Los colaboradores con una sola sede asignada continúan ingresando automáticamente a su módulo correspondiente sin pantallas intermedias.",
         category: "improvement",
       },
     ],
@@ -347,29 +395,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Rediseño Elegante del Login y Ajuste a Pantalla Completa",
-    subtitle: "Pantalla de inicio de sesión con fondo blanco luminoso en armonía con el Selector de Sedes y Dashboard, proporciones compactas sin scroll y estética limpia.",
+    subtitle:
+      "Pantalla de inicio de sesión con fondo blanco luminoso en armonía con el Selector de Sedes y Dashboard, proporciones compactas sin scroll y estética limpia.",
     badgeText: "✨ v2.1.49",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se renovó por completo la pantalla de inicio de sesión, integrándola a la paleta luminosa del POS con fondo blanco/slate suave, tarjeta con sombra tenue, campos ergonómicos con iconos intuitivos y un ajuste vertical perfecto que elimina la necesidad de scroll.",
+    summary:
+      "Se renovó por completo la pantalla de inicio de sesión, integrándola a la paleta luminosa del POS con fondo blanco/slate suave, tarjeta con sombra tenue, campos ergonómicos con iconos intuitivos y un ajuste vertical perfecto que elimina la necesidad de scroll.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Fondo Blanco y Cohesión de Diseño",
-        description: "Unificación del diseño visual con el selector de tiendas y dashboards, eliminando el tema oscuro abrupto.",
+        description:
+          "Unificación del diseño visual con el selector de tiendas y dashboards, eliminando el tema oscuro abrupto.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Ajuste Pantalla Completa (Zero Scroll)",
-        description: "Estructura vertical equilibrada con encabezado, tarjeta de credenciales y pie de página visibles simultáneamente sin deslizar.",
+        description:
+          "Estructura vertical equilibrada con encabezado, tarjeta de credenciales y pie de página visibles simultáneamente sin deslizar.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Campos Ergonómicos y Accesibilidad",
-        description: "Inputs refinados con iconos de correo y candado, botón de alternar visibilidad de contraseña y botón de acceso de alta interacción.",
+        description:
+          "Inputs refinados con iconos de correo y candado, botón de alternar visibilidad de contraseña y botón de acceso de alta interacción.",
         category: "improvement",
       },
     ],
@@ -380,29 +433,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Selector de Puntos de Venta: Pantalla Completa y Fondo Blanco",
-    subtitle: "Diseño luminoso con fondo blanco integrado al Dashboard y escala compacta para mostrar todas las opciones en una sola pantalla sin scroll.",
+    subtitle:
+      "Diseño luminoso con fondo blanco integrado al Dashboard y escala compacta para mostrar todas las opciones en una sola pantalla sin scroll.",
     badgeText: "✨ v2.1.48",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se renovó visualmente el selector de puntos de venta adoptando un fondo claro armonioso idéntico al del Dashboard y redimensionando proporcionalmente encabezados, tarjetas y pie de página para que quepan completamente en el alto de la pantalla sin requerir desplazamiento vertical, manteniendo la cuadrícula simétrica 2x2 y la identidad cromática de cada sede.",
+    summary:
+      "Se renovó visualmente el selector de puntos de venta adoptando un fondo claro armonioso idéntico al del Dashboard y redimensionando proporcionalmente encabezados, tarjetas y pie de página para que quepan completamente en el alto de la pantalla sin requerir desplazamiento vertical, manteniendo la cuadrícula simétrica 2x2 y la identidad cromática de cada sede.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Fondo Blanco y Continuidad Visual",
-        description: "Transición del tema oscuro a un lienzo blanco/slate suave que elimina el contraste brusco con los dashboards de tiendas.",
+        description:
+          "Transición del tema oscuro a un lienzo blanco/slate suave que elimina el contraste brusco con los dashboards de tiendas.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Ajuste Pantalla Completa sin Scroll",
-        description: "Dimensiones calculadas (tarjetas p-5, iconos 56-64px y espaciados optimizados) para visualizar todo el contenido sin scrollear.",
+        description:
+          "Dimensiones calculadas (tarjetas p-5, iconos 56-64px y espaciados optimizados) para visualizar todo el contenido sin scrollear.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Identidad Cromática por Punto de Venta",
-        description: "Acentos de color específicos para cada sede: Naranja (Restaurante), Esmeralda (Tráiler), Púrpura (Domicilios) y Verde Azulado (Administración).",
+        description:
+          "Acentos de color específicos para cada sede: Naranja (Restaurante), Esmeralda (Tráiler), Púrpura (Domicilios) y Verde Azulado (Administración).",
         category: "improvement",
       },
     ],
@@ -413,17 +471,20 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Distribución Simétrica 2x2 en Selector de Puntos de Venta",
-    subtitle: "El selector de puntos de venta ahora organiza las 4 tarjetas en una cuadrícula equilibrada de 2 arriba y 2 abajo, eliminando la tarjeta huérfana en la segunda fila.",
+    subtitle:
+      "El selector de puntos de venta ahora organiza las 4 tarjetas en una cuadrícula equilibrada de 2 arriba y 2 abajo, eliminando la tarjeta huérfana en la segunda fila.",
     badgeText: "✨ v2.1.47",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se optimizó la cuadrícula en la pantalla de bienvenida y selección de tiendas para que, al existir 4 opciones (Restaurante, Tráiler, Domicilios y Administración), se distribuyan armónicamente en formato 2x2 (dos en la fila superior y dos en la fila inferior) con un ancho máximo centrado, brindando equilibrio visual y mayor comodidad táctil.",
+    summary:
+      "Se optimizó la cuadrícula en la pantalla de bienvenida y selección de tiendas para que, al existir 4 opciones (Restaurante, Tráiler, Domicilios y Administración), se distribuyan armónicamente en formato 2x2 (dos en la fila superior y dos en la fila inferior) con un ancho máximo centrado, brindando equilibrio visual y mayor comodidad táctil.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Cuadrícula Equilibrada 2x2",
-        description: "Organización de 2 tarjetas arriba (Restaurante y Tráiler) y 2 abajo (Domicilios y Administración) con espaciado amplio y simétrico.",
+        description:
+          "Organización de 2 tarjetas arriba (Restaurante y Tráiler) y 2 abajo (Domicilios y Administración) con espaciado amplio y simétrico.",
         category: "improvement",
         highlight: true,
       },
@@ -435,29 +496,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Rediseño Elegante de Consumo Interno y Emojis por Categoría",
-    subtitle: "Consumo Interno ahora muestra emojis dinámicos según la categoría de cada producto (como en Kiosko), navegación vidriada, selección de beneficiarios estilizada y catálogo de productos refinado.",
+    subtitle:
+      "Consumo Interno ahora muestra emojis dinámicos según la categoría de cada producto (como en Kiosko), navegación vidriada, selección de beneficiarios estilizada y catálogo de productos refinado.",
     badgeText: "✨ v2.1.46",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se rediseñó el módulo de Consumo Interno con una estética limpia, cómoda y moderna: se solucionó la asignación genérica de emojis reemplazándola por iconos dinámicos según la categoría de cada producto (🥤 para bebidas, 🍟 para papas, 🌭 para perros, 🍔 para hamburguesas, etc.) tal como en Kiosko; se incorporó una cabecera con navegación vidriada por pestañas, tarjetas ergonómicas para selección de beneficiarios (empleados y socios) y un catálogo de productos con tarjetas visuales suaves.",
+    summary:
+      "Se rediseñó el módulo de Consumo Interno con una estética limpia, cómoda y moderna: se solucionó la asignación genérica de emojis reemplazándola por iconos dinámicos según la categoría de cada producto (🥤 para bebidas, 🍟 para papas, 🌭 para perros, 🍔 para hamburguesas, etc.) tal como en Kiosko; se incorporó una cabecera con navegación vidriada por pestañas, tarjetas ergonómicas para selección de beneficiarios (empleados y socios) y un catálogo de productos con tarjetas visuales suaves.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Emojis Dinámicos por Categoría",
-        description: "Los productos sin foto en catálogo, carrito, modal de confirmación, personalizador e historial muestran el emoji de su categoría respectiva en vez del emoji genérico de hamburguesa.",
+        description:
+          "Los productos sin foto en catálogo, carrito, modal de confirmación, personalizador e historial muestran el emoji de su categoría respectiva en vez del emoji genérico de hamburguesa.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Cabecera y Selector de Pestañas Rediseñado",
-        description: "Nueva barra superior vidriada con distintivo de descuento del 50% y navegación por pestañas suaves.",
+        description:
+          "Nueva barra superior vidriada con distintivo de descuento del 50% y navegación por pestañas suaves.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Tarjetas de Beneficiarios y Catálogo Ergonómico",
-        description: "Tarjetas con avatares en gradiente suave, insignias de rol claras y botones de categoría con iconos intuitivos.",
+        description:
+          "Tarjetas con avatares en gradiente suave, insignias de rol claras y botones de categoría con iconos intuitivos.",
         category: "improvement",
       },
     ],
@@ -468,29 +534,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Rediseño Elegante y Cómodo del Sistema de Notificaciones",
-    subtitle: "Nuevo panel de notificaciones con estética liquid glass, pestañas de filtro (Todas / No leídas), tarjetas cómodas con marcas de tiempo relativas y toasts modernos en la esquina superior.",
+    subtitle:
+      "Nuevo panel de notificaciones con estética liquid glass, pestañas de filtro (Todas / No leídas), tarjetas cómodas con marcas de tiempo relativas y toasts modernos en la esquina superior.",
     badgeText: "✨ v2.1.45",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se renovó por completo el centro de notificaciones con un diseño limpio, cómodo y elegante: botón con baliza inteligente de avisos pendientes, panel en vidrio translúcido con pestañas para alternar entre todas o solo las no leídas, tarjetas individuales con iconos suaves por categoría (alertas de stock, éxitos, avisos), micro-acción de marcado por ítem y toasts globales flotantes reubicados en la esquina superior para no interferir con la barra de navegación móvil.",
+    summary:
+      "Se renovó por completo el centro de notificaciones con un diseño limpio, cómodo y elegante: botón con baliza inteligente de avisos pendientes, panel en vidrio translúcido con pestañas para alternar entre todas o solo las no leídas, tarjetas individuales con iconos suaves por categoría (alertas de stock, éxitos, avisos), micro-acción de marcado por ítem y toasts globales flotantes reubicados en la esquina superior para no interferir con la barra de navegación móvil.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Nuevo Panel Liquid Glass de Notificaciones",
-        description: "Bandeja emergente espaciosa, con esquinas redondeadas, fondo translúcido y tarjetas suaves con tipografía de alta legibilidad.",
+        description:
+          "Bandeja emergente espaciosa, con esquinas redondeadas, fondo translúcido y tarjetas suaves con tipografía de alta legibilidad.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Pestañas de Filtro y Marcado Individual",
-        description: "Permite alternar entre 'Todas' y 'No leídas' con un clic, y marcar notificaciones individuales con solo tocarlas.",
+        description:
+          "Permite alternar entre 'Todas' y 'No leídas' con un clic, y marcar notificaciones individuales con solo tocarlas.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Toasts Globales Reubicados y Estilizados",
-        description: "Las notificaciones emergentes ahora aparecen en la parte superior con diseño de tarjeta vidriada y botón de cierre, sin tapar el menú flotante en móviles.",
+        description:
+          "Las notificaciones emergentes ahora aparecen en la parte superior con diseño de tarjeta vidriada y botón de cierre, sin tapar el menú flotante en móviles.",
         category: "improvement",
       },
     ],
@@ -501,23 +572,27 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Optimización de Sintaxis JSX y Compatibilidad Tipada en Dashboard",
-    subtitle: "Se refinaron las etiquetas tipadas del Dashboard y la cabecera mediante componentes Badge de la librería UI, garantizando 0 advertencias de resolución en el editor.",
+    subtitle:
+      "Se refinaron las etiquetas tipadas del Dashboard y la cabecera mediante componentes Badge de la librería UI, garantizando 0 advertencias de resolución en el editor.",
     badgeText: "✨ v2.1.44",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se corrigió la resolución de elementos intrínsecos en Dashboard.tsx asegurando la importación explícita de React y reemplazando anidamientos de etiquetas nativas con componentes Badge del sistema de diseño, manteniendo el diseño de tienda activo y el menú flotante en estado óptimo.",
+    summary:
+      "Se corrigió la resolución de elementos intrínsecos en Dashboard.tsx asegurando la importación explícita de React y reemplazando anidamientos de etiquetas nativas con componentes Badge del sistema de diseño, manteniendo el diseño de tienda activo y el menú flotante en estado óptimo.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Compatibilidad JSX Tipada en Dashboard",
-        description: "Se resolvieron ambigüedades en el analizador de tipos de TSX integrando los componentes Badge estandarizados en la cabecera y tarjetas de métricas.",
+        description:
+          "Se resolvieron ambigüedades en el analizador de tipos de TSX integrando los componentes Badge estandarizados en la cabecera y tarjetas de métricas.",
         category: "fix",
         highlight: true,
       },
       {
         title: "Estabilidad de Tipos y Construcción Limpia",
-        description: "Validación de tipos de TypeScript y construcción de producción con 0 errores.",
+        description:
+          "Validación de tipos de TypeScript y construcción de producción con 0 errores.",
         category: "improvement",
       },
     ],
@@ -527,30 +602,36 @@ export const APP_UPDATES: AppUpdate[] = [
     version: "v2.1.43",
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
-    title: "Identidad Visual de Sede en Cápsula y Eliminación de Línea Superior",
-    subtitle: "Se eliminó la línea de borde naranja superior y se rediseñó la cápsula de Punto de Venta con aura ambiental, icono vítreo y baliza viva para identificar la sede de forma elegante.",
+    title:
+      "Identidad Visual de Sede en Cápsula y Eliminación de Línea Superior",
+    subtitle:
+      "Se eliminó la línea de borde naranja superior y se rediseñó la cápsula de Punto de Venta con aura ambiental, icono vítreo y baliza viva para identificar la sede de forma elegante.",
     badgeText: "✨ v2.1.43",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se retiró la línea rígida de color naranja del borde superior de la ventana. Para que el usuario identifique al instante y de forma atractiva en qué punto de venta está trabajando, se rediseñó la cápsula de sede en la cabecera con un fondo de gradiente sutil a juego, un marco temático, baliza luminosa activa (ping), icono personalizado y micro-interacción para alternar entre puntos de venta sin invadir la pantalla.",
+    summary:
+      "Se retiró la línea rígida de color naranja del borde superior de la ventana. Para que el usuario identifique al instante y de forma atractiva en qué punto de venta está trabajando, se rediseñó la cápsula de sede en la cabecera con un fondo de gradiente sutil a juego, un marco temático, baliza luminosa activa (ping), icono personalizado y micro-interacción para alternar entre puntos de venta sin invadir la pantalla.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Eliminación de la Línea Superior Invasiva",
-        description: "Se retiró la franja de color en el borde superior del navegador, dejando la cabecera completamente limpia y despejada.",
+        description:
+          "Se retiró la franja de color en el borde superior del navegador, dejando la cabecera completamente limpia y despejada.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Cápsula de Sede con Baliza y Aura Ambiental",
-        description: "El botón de sede activa ahora resalta con gradiente temático, punto luminoso palpitante (ping) e icono en caja suave del color de la sede.",
+        description:
+          "El botón de sede activa ahora resalta con gradiente temático, punto luminoso palpitante (ping) e icono en caja suave del color de la sede.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Distintivo de Sede en Dashboard",
-        description: "En el encabezado del Dashboard, la sede activa se presenta como una pastilla clara con icono en lugar de texto secundario apagado.",
+        description:
+          "En el encabezado del Dashboard, la sede activa se presenta como una pastilla clara con icono en lugar de texto secundario apagado.",
         category: "improvement",
       },
     ],
@@ -561,29 +642,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Notificación Discreta de Múltiples Sesiones en Cabecera",
-    subtitle: "Se eliminó el banner superior morado invasivo y se integró un indicador sutil y elegante con micro-pulso y menú contextual seguro junto al botón de cerrar sesión.",
+    subtitle:
+      "Se eliminó el banner superior morado invasivo y se integró un indicador sutil y elegante con micro-pulso y menú contextual seguro junto al botón de cerrar sesión.",
     badgeText: "✨ v2.1.42",
     badgeType: "amber",
     gradientTheme: "sunset",
     isMajor: false,
-    summary: "Se retiró el banner morado que ocupaba la parte superior de la pantalla. En su lugar, el aviso de múltiples sesiones activas se integró armónicamente en el área de usuario con una micro-etiqueta sutil ('2+ sesiones') y un punto indicador interactivo sobre el botón de cerrar sesión, desplegando opciones claras para cerrar solo el equipo actual o todos los dispositivos.",
+    summary:
+      "Se retiró el banner morado que ocupaba la parte superior de la pantalla. En su lugar, el aviso de múltiples sesiones activas se integró armónicamente en el área de usuario con una micro-etiqueta sutil ('2+ sesiones') y un punto indicador interactivo sobre el botón de cerrar sesión, desplegando opciones claras para cerrar solo el equipo actual o todos los dispositivos.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Eliminación del Banner Invasivo",
-        description: "Se liberó el encabezado superior eliminando el banner morado fijo, devolviendo una visual limpia y 100% despejada a la cabecera.",
+        description:
+          "Se liberó el encabezado superior eliminando el banner morado fijo, devolviendo una visual limpia y 100% despejada a la cabecera.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Micro-indicador Ámbar en Botón de Sesión",
-        description: "Un punto parpadeante sutil avisa de sesiones abiertas en otros navegadores sin interrumpir la operativa.",
+        description:
+          "Un punto parpadeante sutil avisa de sesiones abiertas en otros navegadores sin interrumpir la operativa.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Menú Contextual de Sesión Mejorado",
-        description: "Panel desplegable elegante con explicación clara y botón destacado para cerrar todas las demás sesiones de forma segura.",
+        description:
+          "Panel desplegable elegante con explicación clara y botón destacado para cerrar todas las demás sesiones de forma segura.",
         category: "improvement",
       },
     ],
@@ -594,29 +680,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Efecto Liquid Glass (Vidrio Líquido de Alta Refracción)",
-    subtitle: "Acabado de vidrio líquido óptico con doble reflejo especular, lente de gota líquida sobre la pestaña activa y saturación cromática de fondo del 200%.",
+    subtitle:
+      "Acabado de vidrio líquido óptico con doble reflejo especular, lente de gota líquida sobre la pestaña activa y saturación cromática de fondo del 200%.",
     badgeText: "✨ v2.1.41",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se perfeccionó el menú flotante inferior para dotarlo de una auténtica textura de 'Liquid Glass' (vidrio líquido con refracción óptica profunda). Con gradiente descendente de transparencia, doble iluminación de borde interno (specular highlights), saturación óptica del 200% y una lente de gota de agua física que resalta suavemente la pestaña activa al tocarla.",
+    summary:
+      "Se perfeccionó el menú flotante inferior para dotarlo de una auténtica textura de 'Liquid Glass' (vidrio líquido con refracción óptica profunda). Con gradiente descendente de transparencia, doble iluminación de borde interno (specular highlights), saturación óptica del 200% y una lente de gota de agua física que resalta suavemente la pestaña activa al tocarla.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Textura 'Liquid Glass' de Alta Refracción",
-        description: "Fondo degradado multi-tono (de blanco/65 a blanco/20) con saturación cromática del 200% y contraste óptico que refracta los colores del fondo como agua cristalina.",
+        description:
+          "Fondo degradado multi-tono (de blanco/65 a blanco/20) con saturación cromática del 200% y contraste óptico que refracta los colores del fondo como agua cristalina.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Lente de Gota Líquida Activa",
-        description: "Al seleccionar una pestaña, una gota/lente líquida con borde vítreo y relieve sutil envuelve el icono y el texto de forma orgánica.",
+        description:
+          "Al seleccionar una pestaña, una gota/lente líquida con borde vítreo y relieve sutil envuelve el icono y el texto de forma orgánica.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Iluminación Especular Superior",
-        description: "Reflejo curvo horizontal en el borde superior que simula el destello de luz sobre una superficie de vidrio templado pulido.",
+        description:
+          "Reflejo curvo horizontal en el borde superior que simula el destello de luz sobre una superficie de vidrio templado pulido.",
         category: "improvement",
       },
     ],
@@ -627,29 +718,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Menú Flotante Translúcido Estilo Instagram (iPhone)",
-    subtitle: "Transformación del menú de navegación inferior en una isla flotante de cristal esmerilado translúcido con desenfoque de fondo y acabados curvos idénticos a iOS.",
+    subtitle:
+      "Transformación del menú de navegación inferior en una isla flotante de cristal esmerilado translúcido con desenfoque de fondo y acabados curvos idénticos a iOS.",
     badgeText: "✨ v2.1.40",
     badgeType: "primary",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se rediseñó la barra de navegación móvil y en tabletas para convertirla en un 'dock' o isla flotante translúcida de estilo Instagram en iPhone. Con bordes redondeados tipo cápsula, fondo de cristal esmerilado con saturación de fondo (backdrop-blur), sombra etérea y microindicadores activos, el contenido fluye elegantemente por detrás del menú mientras se navega.",
+    summary:
+      "Se rediseñó la barra de navegación móvil y en tabletas para convertirla en un 'dock' o isla flotante translúcida de estilo Instagram en iPhone. Con bordes redondeados tipo cápsula, fondo de cristal esmerilado con saturación de fondo (backdrop-blur), sombra etérea y microindicadores activos, el contenido fluye elegantemente por detrás del menú mientras se navega.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Isla Flotante Tipo Cápsula",
-        description: "El menú ya no está pegado de pared a pared al borde inferior, sino suspendido sobre la pantalla con márgenes laterales y bordes 100% redondeados.",
+        description:
+          "El menú ya no está pegado de pared a pared al borde inferior, sino suspendido sobre la pantalla con márgenes laterales y bordes 100% redondeados.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Cristal Esmerilado Translúcido (Glassmorphism)",
-        description: "Fondo blanco al 70% con desenfoque ultra-suave (backdrop-blur-2xl) que deja traslucir el color y la información que pasa por debajo.",
+        description:
+          "Fondo blanco al 70% con desenfoque ultra-suave (backdrop-blur-2xl) que deja traslucir el color y la información que pasa por debajo.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Micro-interacciones y Desplegable 'Más'",
-        description: "Menú desplegable y estados activos con estética pura de iOS, puntos de luz y transiciones de pulsación táctil optimizadas.",
+        description:
+          "Menú desplegable y estados activos con estética pura de iOS, puntos de luz y transiciones de pulsación táctil optimizadas.",
         category: "improvement",
       },
     ],
@@ -660,29 +756,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Depuración de Menú: Exclusión de Administración y Cambio de Sede",
-    subtitle: "Se eliminaron las opciones redundantes de Administración y Cambio de Sede del menú de navegación, unificando su gestión exclusivamente en el selector superior de la cabecera.",
+    subtitle:
+      "Se eliminaron las opciones redundantes de Administración y Cambio de Sede del menú de navegación, unificando su gestión exclusivamente en el selector superior de la cabecera.",
     badgeText: "✨ v2.1.39",
     badgeType: "primary",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Para optimizar la ergonomía y evitar redundancias visuales, se retiraron las opciones de 'Administración' y 'Cambiar de Sede' de la barra de navegación principal y del menú 'Más'. Ambas funciones están centralizadas de forma intuitiva en el botón interactivo de Punto de Venta / Sede ubicado en la cabecera superior.",
+    summary:
+      "Para optimizar la ergonomía y evitar redundancias visuales, se retiraron las opciones de 'Administración' y 'Cambiar de Sede' de la barra de navegación principal y del menú 'Más'. Ambas funciones están centralizadas de forma intuitiva en el botón interactivo de Punto de Venta / Sede ubicado en la cabecera superior.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Menú de Navegación Más Limpio y Focalizado",
-        description: "Se retiró el enlace directo a Administración de la barra de navegación, dedicando el menú a los flujos operativos activos (Kiosko, Caja, Domicilios, Cocina, etc.).",
+        description:
+          "Se retiró el enlace directo a Administración de la barra de navegación, dedicando el menú a los flujos operativos activos (Kiosko, Caja, Domicilios, Cocina, etc.).",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Centralización en el Selector Superior",
-        description: "El cambio de sede y el acceso al Modo Administración Global se realizan de manera unificada a través del botón de Sede Activa en la parte superior.",
+        description:
+          "El cambio de sede y el acceso al Modo Administración Global se realizan de manera unificada a través del botón de Sede Activa en la parte superior.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Menú 'Más' en Móviles Optimizado",
-        description: "Se eliminó el ítem duplicado 'Cambiar de Sede' dentro de la hoja desplegable 'Más' en dispositivos móviles.",
+        description:
+          "Se eliminó el ítem duplicado 'Cambiar de Sede' dentro de la hoja desplegable 'Más' en dispositivos móviles.",
         category: "improvement",
       },
     ],
@@ -693,29 +794,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Notificación Pulsante de Novedades y Maximización de Espacio",
-    subtitle: "Se eliminó el banner vertical de novedades para ganar espacio en pantalla y el acceso de Novedades ahora titila dinámicamente cuando hay una versión pendiente por leer.",
+    subtitle:
+      "Se eliminó el banner vertical de novedades para ganar espacio en pantalla y el acceso de Novedades ahora titila dinámicamente cuando hay una versión pendiente por leer.",
     badgeText: "✨ v2.1.38",
     badgeType: "rose",
     gradientTheme: "purple",
     isMajor: false,
-    summary: "Se optimizó el espacio vertical del Dashboard removiendo el banner voluminoso de novedades. Ahora, el botón/tarjeta de Novedades ubicado en los accesos operativos titila (pulsa) con una animación viva cuando existe una versión nueva por consultar, y deja de titilar en el instante en que el usuario la abre.",
+    summary:
+      "Se optimizó el espacio vertical del Dashboard removiendo el banner voluminoso de novedades. Ahora, el botón/tarjeta de Novedades ubicado en los accesos operativos titila (pulsa) con una animación viva cuando existe una versión nueva por consultar, y deja de titilar en el instante en que el usuario la abre.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Botón de Novedades con Titileo / Pulso Vivo",
-        description: "El acceso rápido de Novedades palpita con anillo degradado fucsia/rosa, indicador de ping y etiqueta 'NEW' mientras haya novedades no leídas.",
+        description:
+          "El acceso rápido de Novedades palpita con anillo degradado fucsia/rosa, indicador de ping y etiqueta 'NEW' mientras haya novedades no leídas.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Eliminación del Banner Voluminoso",
-        description: "Se retiró el banner estático que ocupaba espacio vertical valioso, dejando una vista limpia, compacta y directa hacia las métricas operativas.",
+        description:
+          "Se retiró el banner estático que ocupaba espacio vertical valioso, dejando una vista limpia, compacta y directa hacia las métricas operativas.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Reconocimiento Instantáneo al Abrir",
-        description: "Al hacer clic en el botón de Novedades, la actualización se marca automáticamente como vista y el titileo cesa inmediatamente.",
+        description:
+          "Al hacer clic en el botón de Novedades, la actualización se marca automáticamente como vista y el titileo cesa inmediatamente.",
         category: "improvement",
       },
     ],
@@ -726,28 +832,33 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Distribución Responsiva Integral: Computador, iPad y Celular",
-    subtitle: "Reequilibrio simétrico en pantallas de escritorio con rejilla ejecutiva de 6 columnas, monitor de comandas a todo lo ancho y experiencia Instagram/WhatsApp nativa en móviles.",
+    subtitle:
+      "Reequilibrio simétrico en pantallas de escritorio con rejilla ejecutiva de 6 columnas, monitor de comandas a todo lo ancho y experiencia Instagram/WhatsApp nativa en móviles.",
     badgeText: "✨ v2.1.37",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se rediseñó la distribución visual del Dashboard para garantizar una presentación majestuosa tanto en pantallas de computador (1080p, 1440p, 4K) como en iPad y celulares. En escritorio, los accesos rápidos se expanden en una rejilla ejecutiva simétrica de 6 columnas y las comandas recientes se distribuyen en cuadrícula multi-columna eliminando espacios vacíos. En celulares e iPads, se preserva el carrusel de historias con desplazamiento táctil y la barra inferior fija.",
+    summary:
+      "Se rediseñó la distribución visual del Dashboard para garantizar una presentación majestuosa tanto en pantallas de computador (1080p, 1440p, 4K) como en iPad y celulares. En escritorio, los accesos rápidos se expanden en una rejilla ejecutiva simétrica de 6 columnas y las comandas recientes se distribuyen en cuadrícula multi-columna eliminando espacios vacíos. En celulares e iPads, se preserva el carrusel de historias con desplazamiento táctil y la barra inferior fija.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Rejilla Ejecutiva Simétrica en Computador",
-        description: "En pantallas medianas y grandes (≥640px), los accesos operativos se despliegan en 6 tarjetas ejecutivas completas con métricas en vivo.",
+        description:
+          "En pantallas medianas y grandes (≥640px), los accesos operativos se despliegan en 6 tarjetas ejecutivas completas con métricas en vivo.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Carrusel Táctil Nativo en Celular",
-        description: "En móviles (<640px), se conserva el carrusel horizontal de historias con aros degradados estilo Instagram/WhatsApp.",
+        description:
+          "En móviles (<640px), se conserva el carrusel horizontal de historias con aros degradados estilo Instagram/WhatsApp.",
         category: "improvement",
       },
       {
         title: "Comandas en Vivo a Todo lo Ancho",
-        description: "La sección de actividad reciente se reorganizó en una cuadrícula responsiva de hasta 5 columnas en escritorio, eliminando desequilibrios de altura.",
+        description:
+          "La sección de actividad reciente se reorganizó en una cuadrícula responsiva de hasta 5 columnas en escritorio, eliminando desequilibrios de altura.",
         category: "improvement",
         highlight: true,
       },
@@ -759,35 +870,41 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Navegación Móvil Tipo WhatsApp & Historias Operativas en Dashboard",
-    subtitle: "Barra de navegación inferior fija estilo WhatsApp e Instagram, menú 'Más' integrado y carrusel de estados rápidos con aros degradados interactivos en el Dashboard.",
+    subtitle:
+      "Barra de navegación inferior fija estilo WhatsApp e Instagram, menú 'Más' integrado y carrusel de estados rápidos con aros degradados interactivos en el Dashboard.",
     badgeText: "✨ v2.1.36",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se llevó la experiencia móvil y de iPad del Store Restaurante al estándar de aplicaciones como WhatsApp e Instagram: barra de navegación inferior fija al alcance del pulgar con micro-etiquetas e indicador activo, menú flotante 'Más' para herramientas adicionales, y carrusel de historias operativas en el Dashboard con aros de degradado interactivos para acceder a turnos, comandas, caja, cocina y reportería.",
+    summary:
+      "Se llevó la experiencia móvil y de iPad del Store Restaurante al estándar de aplicaciones como WhatsApp e Instagram: barra de navegación inferior fija al alcance del pulgar con micro-etiquetas e indicador activo, menú flotante 'Más' para herramientas adicionales, y carrusel de historias operativas en el Dashboard con aros de degradado interactivos para acceder a turnos, comandas, caja, cocina y reportería.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Barra Inferior Estilo WhatsApp / Instagram",
-        description: "Barra de navegación fija en la parte inferior para celulares y iPads, con acceso táctil con una sola mano, etiquetas de 10px e indicador de punto activo.",
+        description:
+          "Barra de navegación fija en la parte inferior para celulares y iPads, con acceso táctil con una sola mano, etiquetas de 10px e indicador de punto activo.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Menú Flotante 'Más' con Sub-módulos",
-        description: "Menú emergente limpio para acceder a Mis Pedidos, Consumo Interno, Administración y Cambio de Sede sin saturar la pantalla principal.",
+        description:
+          "Menú emergente limpio para acceder a Mis Pedidos, Consumo Interno, Administración y Cambio de Sede sin saturar la pantalla principal.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Historias Operativas & Aros de Degradado",
-        description: "Carrusel superior con aros de color degradado estilo Instagram para consultar el estado del turno, crear comandas, revisar caja y ver cocina en 1 toque.",
+        description:
+          "Carrusel superior con aros de color degradado estilo Instagram para consultar el estado del turno, crear comandas, revisar caja y ver cocina en 1 toque.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Ergonomía Táctil en Celulares y iPad",
-        description: "Targets táctiles confortables de al menos 44px, safe area padding para iPhone y fluidez total sin colisiones de scroll.",
+        description:
+          "Targets táctiles confortables de al menos 44px, safe area padding para iPhone y fluidez total sin colisiones de scroll.",
         category: "improvement",
       },
     ],
@@ -798,34 +915,40 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Store Restaurante: Rediseño de Centro de Operaciones & Menú Táctil",
-    subtitle: "Modernización del Dashboard y la barra de navegación del restaurante: KPIs en vivo del turno, lanzador de acciones táctiles y dock de navegación ergonómico.",
+    subtitle:
+      "Modernización del Dashboard y la barra de navegación del restaurante: KPIs en vivo del turno, lanzador de acciones táctiles y dock de navegación ergonómico.",
     badgeText: "✨ v2.1.35",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se renovó por completo el entorno del Store Restaurante físico. El Dashboard ahora opera como un Centro de Operaciones de turno (4:00 PM a 4:00 AM) con KPIs ejecutivos en tiempo real (Ventas netas, Comandas activas, Completadas y Ticket promedio), métricas de métodos de pago, ranking de platos más vendidos, balance de comandas en donut y feed de actividad en vivo. Además, la barra de navegación (desktop y móvil) fue estilizada con diseño segmentado tipo cápsula y targets táctiles de mínimo 44px.",
+    summary:
+      "Se renovó por completo el entorno del Store Restaurante físico. El Dashboard ahora opera como un Centro de Operaciones de turno (4:00 PM a 4:00 AM) con KPIs ejecutivos en tiempo real (Ventas netas, Comandas activas, Completadas y Ticket promedio), métricas de métodos de pago, ranking de platos más vendidos, balance de comandas en donut y feed de actividad en vivo. Además, la barra de navegación (desktop y móvil) fue estilizada con diseño segmentado tipo cápsula y targets táctiles de mínimo 44px.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Centro de Operaciones & Turno en Tiempo Real",
-        description: "Cabecera ejecutiva con indicador dinámico de turno (4:00 PM - 4:00 AM), selector de sede refinado y accesos directos táctiles a Kiosko, Terminal Caja, Cocina y Reportería.",
+        description:
+          "Cabecera ejecutiva con indicador dinámico de turno (4:00 PM - 4:00 AM), selector de sede refinado y accesos directos táctiles a Kiosko, Terminal Caja, Cocina y Reportería.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Tarjetas de KPIs & Recaudación por Medios de Pago",
-        description: "Métricas directivas sin fuentes microscópicas, con medidores de distribución de Efectivo, Datáfonos y Transferencias (Nequi).",
+        description:
+          "Métricas directivas sin fuentes microscópicas, con medidores de distribución de Efectivo, Datáfonos y Transferencias (Nequi).",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Analítica de Platos & Comandas en Vivo",
-        description: "Gráfico horizontal de platos más vendidos hoy y monitor de actividad reciente con distintivos oficiales de estado y localizador destacado.",
+        description:
+          "Gráfico horizontal de platos más vendidos hoy y monitor de actividad reciente con distintivos oficiales de estado y localizador destacado.",
         category: "improvement",
       },
       {
         title: "Barra de Navegación Segmentada & Docking Móvil",
-        description: "Cápsula de navegación desktop moderna y barra docking táctil móvil con altura mínima de 44px para una experiencia cómoda en iPad y celulares.",
+        description:
+          "Cápsula de navegación desktop moderna y barra docking táctil móvil con altura mínima de 44px para una experiencia cómoda en iPad y celulares.",
         category: "improvement",
         highlight: true,
       },
@@ -837,46 +960,54 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
     title: "Rediseño Ejecutivo de Reportería & KPIs: Elegante, Cómodo y Táctil",
-    subtitle: "Modernización integral del centro de inteligencia de ventas: barra docking segmentada, KPIs directivos, arqueo de caja refinado, métricas de equipo y auditoría con facturación electrónica Siigo.",
+    subtitle:
+      "Modernización integral del centro de inteligencia de ventas: barra docking segmentada, KPIs directivos, arqueo de caja refinado, métricas de equipo y auditoría con facturación electrónica Siigo.",
     badgeText: "✨ v2.1.34",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se modularizó y transformó la pantalla de Reportería eliminando textos microscópicos y estilos toscos en favor de una experiencia ejecutiva, fluida y ergonómica en celulares, iPads y computadores. Incluye selector de fechas instantáneo, filtros de canal y sede, exportación enriquecida a Excel en dos hojas, gráficos de ventas con tooltips glassmorphism y visor directo de facturas electrónicas Siigo.",
+    summary:
+      "Se modularizó y transformó la pantalla de Reportería eliminando textos microscópicos y estilos toscos en favor de una experiencia ejecutiva, fluida y ergonómica en celulares, iPads y computadores. Incluye selector de fechas instantáneo, filtros de canal y sede, exportación enriquecida a Excel en dos hojas, gráficos de ventas con tooltips glassmorphism y visor directo de facturas electrónicas Siigo.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Barra Superior Docking & Filtros Dinámicos",
-        description: "Navegación segmentada entre Resumen, Caja, Personal y Auditoría, con botones de rango rápido (Hoy, Ayer, 7 Días, Este Mes, Mes Pasado) y selector de calendario flotante.",
+        description:
+          "Navegación segmentada entre Resumen, Caja, Personal y Auditoría, con botones de rango rápido (Hoy, Ayer, 7 Días, Este Mes, Mes Pasado) y selector de calendario flotante.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Tarjetas Directivas & Mix de Pagos",
-        description: "Métricas ejecutivas de Ventas Netas, Órdenes, Ticket Promedio e Ítems Vendidos con desglose claro entre Efectivo, Tarjetas y Transferencias (Nequi).",
+        description:
+          "Métricas ejecutivas de Ventas Netas, Órdenes, Ticket Promedio e Ítems Vendidos con desglose claro entre Efectivo, Tarjetas y Transferencias (Nequi).",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Cuadre & Arqueo de Caja Refinado",
-        description: "Visualización limpia del total recaudado, dinero físico en gaveta, vouchers de datáfono y balance operativo de pedidos entregados vs en proceso.",
+        description:
+          "Visualización limpia del total recaudado, dinero físico en gaveta, vouchers de datáfono y balance operativo de pedidos entregados vs en proceso.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Rendimiento de Personal & Podio",
-        description: "Tarjetas de colaboradores con insignias de podio (#1, #2, #3), ticket promedio por mesero/cajero y gráfica de barras comparativa.",
+        description:
+          "Tarjetas de colaboradores con insignias de podio (#1, #2, #3), ticket promedio por mesero/cajero y gráfica de barras comparativa.",
         category: "improvement",
       },
       {
         title: "Auditoría de Comandas con Factura Siigo y Acordeón Fluido",
-        description: "Búsqueda rápida en vivo, acceso con 1 toque al PDF oficial de Siigo y desglose animado de artículos, opciones, notas y trazabilidad de entrega.",
+        description:
+          "Búsqueda rápida en vivo, acceso con 1 toque al PDF oficial de Siigo y desglose animado de artículos, opciones, notas y trazabilidad de entrega.",
         category: "feature",
         highlight: true,
       },
       {
         title: "100% Ergonómico en iPad y Celulares",
-        description: "Targets táctiles de al menos 44px de altura, scroll horizontal sin barras invasivas y sin desbordes de pantalla en dispositivos móviles.",
+        description:
+          "Targets táctiles de al menos 44px de altura, scroll horizontal sin barras invasivas y sin desbordes de pantalla en dispositivos móviles.",
         category: "improvement",
       },
     ],
@@ -886,36 +1017,43 @@ export const APP_UPDATES: AppUpdate[] = [
     version: "v2.1.33",
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
-    title: "Panel de Control Ejecutivo: Entrada Predeterminada y Centro de Mando Global",
-    subtitle: "El store de Administración ahora abre de forma predeterminada en un Panel de Control elegante, simple y cómodo, con métricas clave y accesos directos táctiles.",
+    title:
+      "Panel de Control Ejecutivo: Entrada Predeterminada y Centro de Mando Global",
+    subtitle:
+      "El store de Administración ahora abre de forma predeterminada en un Panel de Control elegante, simple y cómodo, con métricas clave y accesos directos táctiles.",
     badgeText: "✨ v2.1.33",
     badgeType: "emerald",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se restauró y elevó el Panel de Control como la vista principal al ingresar al módulo de Administración. Ofrece una cabecera ejecutiva con saludo dinámico, 4 tarjetas de KPIs administrativos (Catálogo, Bodega con alertas de stock bajo, Personal activo y Canales de despacho), accesos directos tipo píldora a flujos frecuentes y una rejilla refinada de módulos de gestión.",
+    summary:
+      "Se restauró y elevó el Panel de Control como la vista principal al ingresar al módulo de Administración. Ofrece una cabecera ejecutiva con saludo dinámico, 4 tarjetas de KPIs administrativos (Catálogo, Bodega con alertas de stock bajo, Personal activo y Canales de despacho), accesos directos tipo píldora a flujos frecuentes y una rejilla refinada de módulos de gestión.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Apertura Predeterminada en Panel de Control",
-        description: "Al ingresar a Administración desde el selector de tiendas o la URL base, se despliega automáticamente el Centro de Control ejecutivo sin colisiones de navegación.",
+        description:
+          "Al ingresar a Administración desde el selector de tiendas o la URL base, se despliega automáticamente el Centro de Control ejecutivo sin colisiones de navegación.",
         category: "feature",
         highlight: true,
       },
       {
         title: "KPIs Ejecutivos en Tiempo Real",
-        description: "Contadores de platos activos, insumos en stock con detección de stock crítico, número de usuarios y cobertura de reparto.",
+        description:
+          "Contadores de platos activos, insumos en stock con detección de stock crítico, número de usuarios y cobertura de reparto.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Lanzador Rápido de Módulos & Acciones",
-        description: "Tarjetas de diseño ergonómico para acceder con 1 toque a Inventario, Bodega, App Móvil, Domicilios, Reportes y Usuarios.",
+        description:
+          "Tarjetas de diseño ergonómico para acceder con 1 toque a Inventario, Bodega, App Móvil, Domicilios, Reportes y Usuarios.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Adaptabilidad Total en iPad y Celulares",
-        description: "Targets táctiles confortables (mínimo 44px), tipografía limpia y diseño responsive impecable en pantallas pequeñas y tablets.",
+        description:
+          "Targets táctiles confortables (mínimo 44px), tipografía limpia y diseño responsive impecable en pantallas pequeñas y tablets.",
         category: "improvement",
       },
     ],
@@ -925,36 +1063,43 @@ export const APP_UPDATES: AppUpdate[] = [
     version: "v2.1.32",
     date: "15 de Septiembre, 2026",
     isoDate: "2026-09-15",
-    title: "Rediseño Integral de Bodega & Insumos: Navegación Fluida, Kardex y Recetas",
-    subtitle: "Modernización de la gestión de materia prima, compras, recetas técnicas, auditoría de stock y directorio de proveedores con diseño ergonómico y docking limpio.",
+    title:
+      "Rediseño Integral de Bodega & Insumos: Navegación Fluida, Kardex y Recetas",
+    subtitle:
+      "Modernización de la gestión de materia prima, compras, recetas técnicas, auditoría de stock y directorio de proveedores con diseño ergonómico y docking limpio.",
     badgeText: "✨ v2.1.32",
     badgeType: "emerald",
     gradientTheme: "emerald",
     isMajor: false,
-    summary: "Se rediseñó por completo el módulo de Bodega & Insumos, eliminando barras fijas redundantes y adoptando navegación segmentada táctil. Incluye tarjetas de insumos con barras de nivel de stock, filtros rápidos de Stock Bajo, registro de compras con conversión automática a unidad base, fichas técnicas de recetas limpias y trazabilidad Kardex con badges cromáticos.",
+    summary:
+      "Se rediseñó por completo el módulo de Bodega & Insumos, eliminando barras fijas redundantes y adoptando navegación segmentada táctil. Incluye tarjetas de insumos con barras de nivel de stock, filtros rápidos de Stock Bajo, registro de compras con conversión automática a unidad base, fichas técnicas de recetas limpias y trazabilidad Kardex con badges cromáticos.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Navegación Segmentada Docking en Bodega",
-        description: "Pestañas limpias para Materia Prima, Compras, Recetas, Kardex y Proveedores acopladas perfectamente a la cabecera administrativa.",
+        description:
+          "Pestañas limpias para Materia Prima, Compras, Recetas, Kardex y Proveedores acopladas perfectamente a la cabecera administrativa.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Control de Insumos con Alertas y Medidor de Stock",
-        description: "Chips de categorías deslizables, tarjetas visuales para tablets y móviles, y tabla limpia con alerta de stock bajo.",
+        description:
+          "Chips de categorías deslizables, tarjetas visuales para tablets y móviles, y tabla limpia con alerta de stock bajo.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Registro de Compras con Conversión de Unidades",
-        description: "Selector ágil de insumos, cálculo automático de costo total y conversión transparente a la unidad base de inventario.",
+        description:
+          "Selector ágil de insumos, cálculo automático de costo total y conversión transparente a la unidad base de inventario.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Trazabilidad Kardex y Directorio de Proveedores",
-        description: "Línea de tiempo cromática para entradas, ventas y ajustes, junto a vista de compras por proveedor con métricas clave.",
+        description:
+          "Línea de tiempo cromática para entradas, ventas y ajustes, junto a vista de compras por proveedor con métricas clave.",
         category: "improvement",
       },
     ],
@@ -964,36 +1109,44 @@ export const APP_UPDATES: AppUpdate[] = [
     version: "v2.1.31",
     date: "14 de Septiembre, 2026",
     isoDate: "2026-09-14",
-    title: "Rediseño de Inventario y Menú: Estética Minimalista, Switch Directo y Grilla Fluida",
-    subtitle: "Modernización integral de las pantallas de catálogo, productos, categorías, extras y variaciones con navegación segmentada y ergonomía táctil optimizada.",
+    title:
+      "Rediseño de Inventario y Menú: Estética Minimalista, Switch Directo y Grilla Fluida",
+    subtitle:
+      "Modernización integral de las pantallas de catálogo, productos, categorías, extras y variaciones con navegación segmentada y ergonomía táctil optimizada.",
     badgeText: "✨ v2.1.31",
     badgeType: "emerald",
     gradientTheme: "emerald",
     isMajor: false,
-    summary: "Se renovó por completo la interfaz de gestión de Inventario y Menú eliminando barras flotantes en cascada que colisionaban en tablets y teléfonos móviles. Las tarjetas de producto ahora cuentan con switch directo para marcar disponibilidad (Disponible/Agotado) en un solo toque, imágenes con proporción 16:10, toolbar unificado con búsqueda y filtros rápidos, y controles ergonómicos adaptados a iPads y pantallas táctiles.",
+    summary:
+      "Se renovó por completo la interfaz de gestión de Inventario y Menú eliminando barras flotantes en cascada que colisionaban en tablets y teléfonos móviles. Las tarjetas de producto ahora cuentan con switch directo para marcar disponibilidad (Disponible/Agotado) en un solo toque, imágenes con proporción 16:10, toolbar unificado con búsqueda y filtros rápidos, y controles ergonómicos adaptados a iPads y pantallas táctiles.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Switch de Disponibilidad Directo en Tarjetas",
-        description: "Permite activar o marcar productos como agotados con un solo toque desde la tarjeta, sin ingresar a menús contextuales ni modales.",
+        description:
+          "Permite activar o marcar productos como agotados con un solo toque desde la tarjeta, sin ingresar a menús contextuales ni modales.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Fin de Barras Flotantes Colisionadas (Scroll Fluido)",
-        description: "Se consolidaron los buscadores, conteos y filtros en una sola barra limpia acoplada al workspace administrativo sin alturas fijas desalineadas.",
+        description:
+          "Se consolidaron los buscadores, conteos y filtros en una sola barra limpia acoplada al workspace administrativo sin alturas fijas desalineadas.",
         category: "improvement",
         highlight: true,
       },
       {
-        title: "Navegación Segmentada Moderna (Productos, Categorías, Extras, Variaciones)",
-        description: "Píldoras táctiles con iconos limpios, scroll horizontal suave y etiquetas adaptativas para teléfonos y tablets.",
+        title:
+          "Navegación Segmentada Moderna (Productos, Categorías, Extras, Variaciones)",
+        description:
+          "Píldoras táctiles con iconos limpios, scroll horizontal suave y etiquetas adaptativas para teléfonos y tablets.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Grilla Responsiva y Rediseño de Categorías y Extras",
-        description: "Tarjetas con formato 16:10, avatares suaves, tipografía nítida y botones de acción con área de contacto táctil de 44px mínimo.",
+        description:
+          "Tarjetas con formato 16:10, avatares suaves, tipografía nítida y botones de acción con área de contacto táctil de 44px mínimo.",
         category: "improvement",
       },
     ],
@@ -1003,36 +1156,43 @@ export const APP_UPDATES: AppUpdate[] = [
     version: "v2.1.30",
     date: "14 de Septiembre, 2026",
     isoDate: "2026-09-14",
-    title: "Nuevo Workspace de Administración: Barra Lateral Agrupada & Diseño Limpio",
-    subtitle: "Rediseño completo de la experiencia administrativa eliminando tarjetas y menús redundantes, con barra lateral moderna y acceso directo a cada módulo.",
+    title:
+      "Nuevo Workspace de Administración: Barra Lateral Agrupada & Diseño Limpio",
+    subtitle:
+      "Rediseño completo de la experiencia administrativa eliminando tarjetas y menús redundantes, con barra lateral moderna y acceso directo a cada módulo.",
     badgeText: "✨ v2.1.30",
     badgeType: "emerald",
     gradientTheme: "emerald",
     isMajor: true,
-    summary: "Se rediseñó por completo el entorno de Administración Global adoptando un formato de Workspace con barra lateral (Sidebar) agrupada por categorías (Catálogo & Suministros, Canales & Despacho, Auditoría & Análisis, Control de Acceso). Se eliminó el menú superior redundante y el lanzador de tarjetas repetitivas, permitiendo ingresar y alternar entre módulos en 1 solo clic con máxima comodidad y elegancia visual.",
+    summary:
+      "Se rediseñó por completo el entorno de Administración Global adoptando un formato de Workspace con barra lateral (Sidebar) agrupada por categorías (Catálogo & Suministros, Canales & Despacho, Auditoría & Análisis, Control de Acceso). Se eliminó el menú superior redundante y el lanzador de tarjetas repetitivas, permitiendo ingresar y alternar entre módulos en 1 solo clic con máxima comodidad y elegancia visual.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Barra Lateral de Navegación Agrupada (Sidebar)",
-        description: "Menú ergonómico y elegante organizado en 4 bloques temáticos con descripción, iconos y estado activo para una navegación fluida e instantánea.",
+        description:
+          "Menú ergonómico y elegante organizado en 4 bloques temáticos con descripción, iconos y estado activo para una navegación fluida e instantánea.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Eliminación de Menús y Tarjetas Redundantes",
-        description: "Se suprimieron las tarjetas repetitivas del Centro de Control y las barras horizontales saturadas, ofreciendo un lienzo limpio y espacioso.",
+        description:
+          "Se suprimieron las tarjetas repetitivas del Centro de Control y las barras horizontales saturadas, ofreciendo un lienzo limpio y espacioso.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Cabecera Limpia con Badge Central de Administración",
-        description: "La barra superior ahora muestra un identificador discreto y elegante del Centro de Control sin saturación horizontal, con selector rápido de Puntos de Venta.",
+        description:
+          "La barra superior ahora muestra un identificador discreto y elegante del Centro de Control sin saturación horizontal, con selector rápido de Puntos de Venta.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Adaptabilidad Móvil Optimizada",
-        description: "Selector horizontal táctil optimizado en tablets y smartphones para cambiar de módulo administrativo sin fricción.",
+        description:
+          "Selector horizontal táctil optimizado en tablets y smartphones para cambiar de módulo administrativo sin fricción.",
         category: "improvement",
       },
     ],
@@ -1043,35 +1203,41 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "31 de Agosto, 2026",
     isoDate: "2026-08-31",
     title: "Corrección Integral en Edición de Pedidos y Recálculo de Totales",
-    subtitle: "Resolución del error de localizador obligatorio, recálculo exacto del total en caja/domicilios y carga directa sin parpadeos.",
+    subtitle:
+      "Resolución del error de localizador obligatorio, recálculo exacto del total en caja/domicilios y carga directa sin parpadeos.",
     badgeText: "🛠️ v2.1.29",
     badgeType: "amber",
     gradientTheme: "sunset",
     isMajor: false,
-    summary: "Se corrigió el error que impedía guardar cambios en pedidos pendientes de Caja y Domicilios y se aseguró el recálculo automático y persistencia del valor total (total y total_amount) en la base de datos al agregar o eliminar productos. Además, se garantizó la presencia de precios de productos en todas las consultas de órdenes.",
+    summary:
+      "Se corrigió el error que impedía guardar cambios en pedidos pendientes de Caja y Domicilios y se aseguró el recálculo automático y persistencia del valor total (total y total_amount) en la base de datos al agregar o eliminar productos. Además, se garantizó la presencia de precios de productos en todas las consultas de órdenes.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Recálculo y Persistencia Exacta de Totales",
-        description: "Al editar y modificar ítems en pedidos de caja y domicilios, el sistema recalcula y actualiza explícitamente el total y total_amount, evitando que el valor retorne en $0.",
+        description:
+          "Al editar y modificar ítems en pedidos de caja y domicilios, el sistema recalcula y actualiza explícitamente el total y total_amount, evitando que el valor retorne en $0.",
         category: "fix",
         highlight: true,
       },
       {
         title: "Preservación Automática del Localizador",
-        description: "Se garantiza que los pedidos en edición conserven su número o identificador de localizador asignado, previniendo la excepción de campo obligatorio al actualizar.",
+        description:
+          "Se garantiza que los pedidos en edición conserven su número o identificador de localizador asignado, previniendo la excepción de campo obligatorio al actualizar.",
         category: "fix",
         highlight: true,
       },
       {
         title: "Carga Directa y Prevención de Parpadeos",
-        description: "Implementación de consulta dedicada para el pedido en edición con estado de carga, evitando que se muestre transitoriamente el formulario inicial de mesas/domicilio.",
+        description:
+          "Implementación de consulta dedicada para el pedido en edición con estado de carga, evitando que se muestre transitoriamente el formulario inicial de mesas/domicilio.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Redirección Inteligente Post-Edición",
-        description: "Al confirmar los cambios, el sistema redirige fluidamente a Caja o Domicilios según la naturaleza de la orden.",
+        description:
+          "Al confirmar los cambios, el sistema redirige fluidamente a Caja o Domicilios según la naturaleza de la orden.",
         category: "improvement",
       },
     ],
@@ -1081,42 +1247,50 @@ export const APP_UPDATES: AppUpdate[] = [
     version: "v2.1.27",
     date: "27 de Agosto, 2026",
     isoDate: "2026-08-27",
-    title: "Edición Completa de Domicilios, Selector de Sede y Comandas de Cocina",
-    subtitle: "Soporte integral para edición de domicilios con datos de entrega, selector de punto de venta interactivo y comandas de cocina optimizadas.",
+    title:
+      "Edición Completa de Domicilios, Selector de Sede y Comandas de Cocina",
+    subtitle:
+      "Soporte integral para edición de domicilios con datos de entrega, selector de punto de venta interactivo y comandas de cocina optimizadas.",
     badgeText: "🛵 v2.1.27",
     badgeType: "purple",
     gradientTheme: "purple",
     isMajor: true,
-    summary: "Se implementó el flujo completo de edición de pedidos de domicilio permitiendo actualizar datos del cliente, dirección, celular, zona y repartidor sin mezclar direcciones en las notas de cocina. Además, se rediseñó el selector de sede con barra ambiental brillante y menú desplegable rápido, y se añadió la barra de pestañas superior en móviles.",
+    summary:
+      "Se implementó el flujo completo de edición de pedidos de domicilio permitiendo actualizar datos del cliente, dirección, celular, zona y repartidor sin mezclar direcciones en las notas de cocina. Además, se rediseñó el selector de sede con barra ambiental brillante y menú desplegable rápido, y se añadió la barra de pestañas superior en móviles.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Edición Completa de Pedidos de Domicilio",
-        description: "Al editar un pedido de domicilio se activa la vista correspondiente con todos los campos de entrega editables (nombre, dirección, zona, celular y repartidor), recalculando correctamente el total.",
+        description:
+          "Al editar un pedido de domicilio se activa la vista correspondiente con todos los campos de entrega editables (nombre, dirección, zona, celular y repartidor), recalculando correctamente el total.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Selector de Sede Dinámico con Menú Rápido",
-        description: "Nueva insignia destacada de Sede Activa con resplandor ambiental en la parte superior y menú desplegable para cambiar de tienda en 1 clic sin salir de la página.",
+        description:
+          "Nueva insignia destacada de Sede Activa con resplandor ambiental en la parte superior y menú desplegable para cambiar de tienda en 1 clic sin salir de la página.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Aislamiento de Módulos por Sede",
-        description: "El módulo de Domicilios ahora se oculta de forma estricta y automática en tiendas Restaurante o Tráiler, con protección de navegación.",
+        description:
+          "El módulo de Domicilios ahora se oculta de forma estricta y automática en tiendas Restaurante o Tráiler, con protección de navegación.",
         category: "system",
         highlight: true,
       },
       {
         title: "Comandas de Cocina Limpias",
-        description: "Las comandas de cocina omiten direcciones y datos de clientes, mostrando exclusivamente notas de preparación y el nombre del domiciliario asignado.",
+        description:
+          "Las comandas de cocina omiten direcciones y datos de clientes, mostrando exclusivamente notas de preparación y el nombre del domiciliario asignado.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Navegación Móvil Sticky Superior",
-        description: "Barra deslizable de pestañas fija debajo del encabezado en dispositivos móviles para acceso directo a todos los módulos.",
+        description:
+          "Barra deslizable de pestañas fija debajo del encabezado en dispositivos móviles para acceso directo a todos los módulos.",
         category: "improvement",
       },
     ],
@@ -1127,29 +1301,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "27 de Agosto, 2026",
     isoDate: "2026-08-27",
     title: "Gestión de Consumo Interno en Consultas y Optimización Siigo",
-    subtitle: "Búsqueda, filtrado, eliminación y cambio de estado de consumos internos en Consultas, más optimización de Edge Function de facturación Siigo.",
+    subtitle:
+      "Búsqueda, filtrado, eliminación y cambio de estado de consumos internos en Consultas, más optimización de Edge Function de facturación Siigo.",
     badgeText: "🍽️ v2.1.26",
     badgeType: "amber",
     gradientTheme: "sunset",
     isMajor: true,
-    summary: "Se integró completamente el módulo de Consumo Interno dentro de Consultas de Control con pestañas dedicadas, búsqueda por consumidor o ID, filtros avanzados, vista detallada con descuentos, reimpresión de tirillas, eliminación segura y cambio manual de estado de pago. Además, se optimizó la Edge Function de Siigo con validaciones tempranas, prevención de duplicados, timeouts y reintentos controlados.",
+    summary:
+      "Se integró completamente el módulo de Consumo Interno dentro de Consultas de Control con pestañas dedicadas, búsqueda por consumidor o ID, filtros avanzados, vista detallada con descuentos, reimpresión de tirillas, eliminación segura y cambio manual de estado de pago. Además, se optimizó la Edge Function de Siigo con validaciones tempranas, prevención de duplicados, timeouts y reintentos controlados.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Pestaña de Consumo Interno en Consultas",
-        description: "Nueva pestaña dedicada para consultar consumos de empleados y socios con filtros por tienda, estado de pago, tipo de consumidor y rango de fechas.",
+        description:
+          "Nueva pestaña dedicada para consultar consumos de empleados y socios con filtros por tienda, estado de pago, tipo de consumidor y rango de fechas.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Gestión de Estados y Eliminación de Consumos",
-        description: "Permite cambiar el estado de pago (pendiente, parcial, pagado) y eliminar consumos erróneos de forma permanente con confirmación de seguridad.",
+        description:
+          "Permite cambiar el estado de pago (pendiente, parcial, pagado) y eliminar consumos erróneos de forma permanente con confirmación de seguridad.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Optimización y Blindaje de siigo-invoice",
-        description: "Validación temprana de datos para evitar errores 422 innecesarios, prevención de duplicados, timeouts con AbortController y reintentos controlados para reducir costos de cómputo.",
+        description:
+          "Validación temprana de datos para evitar errores 422 innecesarios, prevención de duplicados, timeouts con AbortController y reintentos controlados para reducir costos de cómputo.",
         category: "improvement",
         highlight: true,
       },
@@ -1161,29 +1340,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "27 de Agosto, 2026",
     isoDate: "2026-08-27",
     title: "Continuidad y Blindaje de Turno Operativo (12:00 PM a 12:00 PM)",
-    subtitle: "Persistencia ininterrumpida de pedidos y liquidaciones durante la madrugada sin reseteos automáticos a medianoche.",
+    subtitle:
+      "Persistencia ininterrumpida de pedidos y liquidaciones durante la madrugada sin reseteos automáticos a medianoche.",
     badgeText: "🕒 v2.1.25",
     badgeType: "emerald",
     gradientTheme: "emerald",
     isMajor: false,
-    summary: "Se blindó la lógica de turnos en Liquidación de Domiciliarios, Reportería y Cierres de Caja para que la jornada diaria mantenga su ciclo continuo de 24 horas (de 12:00 PM del mediodía a 12:00 PM del día siguiente), garantizando que las órdenes de la noche y madrugada no desaparezcan al llegar la medianoche.",
+    summary:
+      "Se blindó la lógica de turnos en Liquidación de Domiciliarios, Reportería y Cierres de Caja para que la jornada diaria mantenga su ciclo continuo de 24 horas (de 12:00 PM del mediodía a 12:00 PM del día siguiente), garantizando que las órdenes de la noche y madrugada no desaparezcan al llegar la medianoche.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Ventana de Turno Activo en Liquidación",
-        description: "La vista de liquidación de domiciliarios y el botón rápido 'Hoy' cargan automáticamente el turno activo de 12PM a 12PM sin cortes a las 00:00.",
+        description:
+          "La vista de liquidación de domiciliarios y el botón rápido 'Hoy' cargan automáticamente el turno activo de 12PM a 12PM sin cortes a las 00:00.",
         category: "fix",
         highlight: true,
       },
       {
         title: "Cálculo Inteligente de Fecha de Turno",
-        description: "Se integró getCurrentShiftDate para sincronizar filtros de calendario y consultas de base de datos a la jornada en curso.",
+        description:
+          "Se integró getCurrentShiftDate para sincronizar filtros de calendario y consultas de base de datos a la jornada en curso.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Sincronización en Reportería y Cierres",
-        description: "Reportes y cierres de turno de domicilios ahora calculan el rango exacto desde el inicio de la jornada a las 12:00 PM.",
+        description:
+          "Reportes y cierres de turno de domicilios ahora calculan el rango exacto desde el inicio de la jornada a las 12:00 PM.",
         category: "improvement",
         highlight: false,
       },
@@ -1194,30 +1378,36 @@ export const APP_UPDATES: AppUpdate[] = [
     version: "v2.1.24",
     date: "26 de Agosto, 2026",
     isoDate: "2026-08-26",
-    title: "Nombre del Domiciliario en Facturas y Comandas Optimizadas en Domicilios",
-    subtitle: "Inclusión del primer nombre del repartidor en facturas de clientes y unificación de comanda única de cocina organizada por categorías.",
+    title:
+      "Nombre del Domiciliario en Facturas y Comandas Optimizadas en Domicilios",
+    subtitle:
+      "Inclusión del primer nombre del repartidor en facturas de clientes y unificación de comanda única de cocina organizada por categorías.",
     badgeText: "🛵 v2.1.24",
     badgeType: "purple",
     gradientTheme: "purple",
     isMajor: false,
-    summary: "Se integró la visualización del primer nombre del domiciliario asignado en todas las facturas y comprobantes del módulo de domicilios. Además, se optimizó la tirilla de cocina para domicilios imprimiendo una sola comanda continua organizada por categorías y sin la dirección de entrega para mayor agilidad operativa.",
+    summary:
+      "Se integró la visualización del primer nombre del domiciliario asignado en todas las facturas y comprobantes del módulo de domicilios. Además, se optimizó la tirilla de cocina para domicilios imprimiendo una sola comanda continua organizada por categorías y sin la dirección de entrega para mayor agilidad operativa.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Primer Nombre del Domiciliario en Facturas",
-        description: "Las facturas impresas y reimpresas para clientes en el store de domicilios ahora muestran el primer nombre del domiciliario asignado.",
+        description:
+          "Las facturas impresas y reimpresas para clientes en el store de domicilios ahora muestran el primer nombre del domiciliario asignado.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Comanda Única de Cocina para Domicilios",
-        description: "En el store de domicilios se genera una sola comanda continua por pedido con los productos organizados por categoría.",
+        description:
+          "En el store de domicilios se genera una sola comanda continua por pedido con los productos organizados por categoría.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Depuración de Datos en Comandas",
-        description: "Se retiró la dirección de entrega de las comandas de cocina para enfocar la lectura exclusivamente en preparación, cliente y notas.",
+        description:
+          "Se retiró la dirección de entrega de las comandas de cocina para enfocar la lectura exclusivamente en preparación, cliente y notas.",
         category: "improvement",
         highlight: false,
       },
@@ -1229,29 +1419,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "26 de Agosto, 2026",
     isoDate: "2026-08-26",
     title: "Aislamiento y Enrutamiento Estricto de Notificaciones por Tienda",
-    subtitle: "Filtrado granular de alertas sonoras, campana y notificaciones para Kiosko, Caja y Domicilios en Restaurante, Domicilios y Tráiler.",
+    subtitle:
+      "Filtrado granular de alertas sonoras, campana y notificaciones para Kiosko, Caja y Domicilios en Restaurante, Domicilios y Tráiler.",
     badgeText: "🔔 v2.1.23",
     badgeType: "primary",
     gradientTheme: "ocean",
     isMajor: false,
-    summary: "Se reforzó el sistema de notificaciones en tiempo real para garantizar un aislamiento estricto por tienda activa. Las alertas y avisos generados en la tienda Domicilios aparecen exclusivamente en Domicilios, las de Restaurante en Restaurante, y las de Tráiler en Tráiler, evitando contaminación cruzada de notificaciones entre puntos de venta.",
+    summary:
+      "Se reforzó el sistema de notificaciones en tiempo real para garantizar un aislamiento estricto por tienda activa. Las alertas y avisos generados en la tienda Domicilios aparecen exclusivamente en Domicilios, las de Restaurante en Restaurante, y las de Tráiler en Tráiler, evitando contaminación cruzada de notificaciones entre puntos de venta.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Aislamiento Estricto de Notificaciones por Tienda",
-        description: "Enrutamiento inteligente que discrimina pedidos de Kiosko, Caja y Domicilios según la sede activa (Restaurante, Domicilios o Tráiler).",
+        description:
+          "Enrutamiento inteligente que discrimina pedidos de Kiosko, Caja y Domicilios según la sede activa (Restaurante, Domicilios o Tráiler).",
         category: "fix",
         highlight: true,
       },
       {
         title: "Filtrado de Sonido y Campana en Tiempo Real",
-        description: "Las alertas sonoras y el contador de notificaciones no leídas solo se disparan para eventos correspondientes al punto de venta activo del usuario.",
+        description:
+          "Las alertas sonoras y el contador de notificaciones no leídas solo se disparan para eventos correspondientes al punto de venta activo del usuario.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Etiquetado de Alertas de Stock por Sede",
-        description: "Las advertencias de insumos bajos o críticos ahora incluyen la sede emisora para una auditoría clara y sin confusiones.",
+        description:
+          "Las advertencias de insumos bajos o críticos ahora incluyen la sede emisora para una auditoría clara y sin confusiones.",
         category: "improvement",
         highlight: false,
       },
@@ -1263,35 +1458,41 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "26 de Agosto, 2026",
     isoDate: "2026-08-26",
     title: "Máxima Nitidez y Alto Contraste en Impresión Térmica",
-    subtitle: "Corrección integral de textos tenues, refuerzo tipográfico en negrita pura y bordes definidos para facturas y comandas.",
+    subtitle:
+      "Corrección integral de textos tenues, refuerzo tipográfico en negrita pura y bordes definidos para facturas y comandas.",
     badgeText: "🖨️ v2.1.22",
     badgeType: "emerald",
     gradientTheme: "emerald",
     isMajor: false,
-    summary: "Se corrigió el problema de impresión tenue en tickets térmicos de venta a la mesa, domicilios, comandas de cocina, facturas finales y consumo interno. Se estandarizó el uso de tipografía con alto grosor de trazo (negrita pura), cantidades y precios destacados, líneas divisorias reforzadas y desactivación de suavizado antialias difuminado para impresoras POS de 80mm.",
+    summary:
+      "Se corrigió el problema de impresión tenue en tickets térmicos de venta a la mesa, domicilios, comandas de cocina, facturas finales y consumo interno. Se estandarizó el uso de tipografía con alto grosor de trazo (negrita pura), cantidades y precios destacados, líneas divisorias reforzadas y desactivación de suavizado antialias difuminado para impresoras POS de 80mm.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Nitidez Total en Facturas y Comandas",
-        description: "Todos los campos de cliente, dirección, teléfono, cajero, fechas y números de mesa/domicilio ahora imprimen en negro sólido sin escala de grises.",
+        description:
+          "Todos los campos de cliente, dirección, teléfono, cajero, fechas y números de mesa/domicilio ahora imprimen en negro sólido sin escala de grises.",
         category: "fix",
         highlight: true,
       },
       {
         title: "Precios y Cantidades en Negrita Pura",
-        description: "Las cantidades y valores unitarios en la tabla de ítems cuentan con peso tipográfico reforzado para evitar impresiones tenues en cabezales térmicos.",
+        description:
+          "Las cantidades y valores unitarios en la tabla de ítems cuentan con peso tipográfico reforzado para evitar impresiones tenues en cabezales térmicos.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Líneas Divisorias y Recuadros Definidos",
-        description: "Aumento de grosor en separadores punteados y bordes de notas/domicilio para una delimitación limpia en papel térmico.",
+        description:
+          "Aumento de grosor en separadores punteados y bordes de notas/domicilio para una delimitación limpia en papel térmico.",
         category: "improvement",
         highlight: false,
       },
       {
         title: "Plantillas de Consumo Interno y Cierre",
-        description: "Homologación de contraste y legibilidad para comprobantes de colaboradores, cuentas de cobro y liquidaciones.",
+        description:
+          "Homologación de contraste y legibilidad para comprobantes de colaboradores, cuentas de cobro y liquidaciones.",
         category: "improvement",
         highlight: false,
       },
@@ -1302,36 +1503,43 @@ export const APP_UPDATES: AppUpdate[] = [
     version: "v2.1.21",
     date: "26 de Agosto, 2026",
     isoDate: "2026-08-26",
-    title: "Optimización Térmica en Domicilios, Liquidaciones & Rediseño de Pago Mixto",
-    subtitle: "Impresión térmica calibrada a 72mm sin cortes de márgenes, tirilla de liquidación nítida y flujo de pago mixto con totalizador en vivo.",
+    title:
+      "Optimización Térmica en Domicilios, Liquidaciones & Rediseño de Pago Mixto",
+    subtitle:
+      "Impresión térmica calibrada a 72mm sin cortes de márgenes, tirilla de liquidación nítida y flujo de pago mixto con totalizador en vivo.",
     badgeText: "🚀 v2.1.21",
     badgeType: "purple",
     gradientTheme: "purple",
     isMajor: false,
-    summary: "Se calibraron las plantillas de impresión térmica a 72mm efectivo con forzado de contraste negro puro al 100% para evitar cortes laterales y letras tenues en facturas, comandas y cierres. Se renovó la tirilla de liquidación de domiciliarios con balance financiero claro. Además, se separó el flujo de Pago Mixto para abonar directamente al total con cálculo en tiempo real de saldo restante, y se eliminaron líneas de descuento innecesarias.",
+    summary:
+      "Se calibraron las plantillas de impresión térmica a 72mm efectivo con forzado de contraste negro puro al 100% para evitar cortes laterales y letras tenues en facturas, comandas y cierres. Se renovó la tirilla de liquidación de domiciliarios con balance financiero claro. Además, se separó el flujo de Pago Mixto para abonar directamente al total con cálculo en tiempo real de saldo restante, y se eliminaron líneas de descuento innecesarias.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Flujo Independiente de Pago Mixto",
-        description: "Permite combinar Efectivo, Tarjeta y Transferencia sobre el total del pedido con totalizador en vivo de saldo restante sin requerir selección de productos.",
+        description:
+          "Permite combinar Efectivo, Tarjeta y Transferencia sobre el total del pedido con totalizador en vivo de saldo restante sin requerir selección de productos.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Calibración Térmica de 72mm & Negro Puro",
-        description: "Ajuste de ancho efectivo y eliminación de dithering gris en facturas, comandas de cocina y cierres de turno para impresoras estándar de 80mm.",
+        description:
+          "Ajuste de ancho efectivo y eliminación de dithering gris en facturas, comandas de cocina y cierres de turno para impresoras estándar de 80mm.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Tirilla de Liquidación de Domiciliarios",
-        description: "Estructura térmica limpia con detalle de pedidos, fletes, método de cobro, balance neto con caja y líneas de firma.",
+        description:
+          "Estructura térmica limpia con detalle de pedidos, fletes, método de cobro, balance neto con caja y líneas de firma.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Limpieza de Facturas & Accesibilidad",
-        description: "Eliminación de la fila de descuento innecesaria ($0) y resolución de títulos accesibles en modales de cobro.",
+        description:
+          "Eliminación de la fila de descuento innecesaria ($0) y resolución de títulos accesibles en modales de cobro.",
         category: "fix",
         highlight: false,
       },
@@ -1343,29 +1551,34 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "25 de Agosto, 2026",
     isoDate: "2026-08-25",
     title: "Acceso Multi-Sede por Colaborador & Rediseño de Consumo Interno",
-    subtitle: "Navegación fluida entre tiendas asignadas para colaboradores y optimización total del carrito de Consumo Interno.",
+    subtitle:
+      "Navegación fluida entre tiendas asignadas para colaboradores y optimización total del carrito de Consumo Interno.",
     badgeText: "🚀 v2.1.20",
     badgeType: "primary",
     gradientTheme: "sunset",
     isMajor: false,
-    summary: "Se implementó la navegación multi-tienda para usuarios con acceso global o múltiples sedes asignadas (ej. Tráiler y Domicilios). Además, se optimizó el módulo de Consumo Interno con panel de carrito responsive (escritorio y móvil), integración con personalizador de productos y desglose de descuentos.",
+    summary:
+      "Se implementó la navegación multi-tienda para usuarios con acceso global o múltiples sedes asignadas (ej. Tráiler y Domicilios). Además, se optimizó el módulo de Consumo Interno con panel de carrito responsive (escritorio y móvil), integración con personalizador de productos y desglose de descuentos.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Navegación y Switcher Multi-Tienda para Colaboradores",
-        description: "Los usuarios con acceso a 2 o más tiendas ahora pueden alternar fácilmente entre sus sedes asignadas desde el botón de tienda en la barra superior.",
+        description:
+          "Los usuarios con acceso a 2 o más tiendas ahora pueden alternar fácilmente entre sus sedes asignadas desde el botón de tienda en la barra superior.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Gestión Granular de Tiendas en Usuarios",
-        description: "Opción de Acceso Global o selección múltiple de sedes por colaborador con persistencia directa en base de datos.",
+        description:
+          "Opción de Acceso Global o selección múltiple de sedes por colaborador con persistencia directa en base de datos.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "POS de Consumo Interno Estilo Kiosko y Caja",
-        description: "Rediseño del flujo de toma de pedidos con panel de carrito lateral en escritorio, cajón deslizable en móviles, personalizador de ítems y desglose claro de ahorros.",
+        description:
+          "Rediseño del flujo de toma de pedidos con panel de carrito lateral en escritorio, cajón deslizable en móviles, personalizador de ítems y desglose claro de ahorros.",
         category: "feature",
         highlight: true,
       },
@@ -1377,34 +1590,40 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "21 de Agosto, 2026",
     isoDate: "2026-08-21",
     title: "Seguridad de Base de Datos & Blindaje de Roles",
-    subtitle: "Restricción de permisos RPC por roles, protección antiabuso y rate limiting en endpoints públicos.",
+    subtitle:
+      "Restricción de permisos RPC por roles, protección antiabuso y rate limiting en endpoints públicos.",
     badgeText: `🛡️ v${pkg.version}`,
     badgeType: "primary",
     gradientTheme: "midnight",
     isMajor: false,
-    summary: "Se reforzó la capa de seguridad en PostgreSQL revocando accesos generales a PUBLIC y asignando permisos explícitos para roles de la plataforma (admin, caja, mesero, cocina, bodega). Las funciones públicas cuentan con rate-limiting y validación anti-tampering.",
+    summary:
+      "Se reforzó la capa de seguridad en PostgreSQL revocando accesos generales a PUBLIC y asignando permisos explícitos para roles de la plataforma (admin, caja, mesero, cocina, bodega). Las funciones públicas cuentan con rate-limiting y validación anti-tampering.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Blindaje de RPCs por Rol y Privilegios Explícitos",
-        description: "Restricción de ejecución a roles autorizados (admin, caja, mesero, cocina, bodega) con validación estricta de identidad.",
+        description:
+          "Restricción de ejecución a roles autorizados (admin, caja, mesero, cocina, bodega) con validación estricta de identidad.",
         category: "system",
         highlight: true,
       },
       {
         title: "Protección Antiabuso & Rate Limiting en Funciones Públicas",
-        description: "Control de frecuencia de solicitudes y mitigación de fuerza bruta en cupones y pedidos de la app de clientes.",
+        description:
+          "Control de frecuencia de solicitudes y mitigación de fuerza bruta en cupones y pedidos de la app de clientes.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Recálculo Seguro de Precios (Anti-Tampering)",
-        description: "Verificación obligatoria de precios en base de datos al generar pedidos para evitar alteraciones en el cliente.",
+        description:
+          "Verificación obligatoria de precios en base de datos al generar pedidos para evitar alteraciones en el cliente.",
         category: "improvement",
       },
       {
         title: "Search Path Fijo y Sanitización Estricta",
-        description: "Configuración SET search_path = public, pg_temp y sanitización de entradas en todas las funciones SECURITY DEFINER.",
+        description:
+          "Configuración SET search_path = public, pg_temp y sanitización de entradas en todas las funciones SECURITY DEFINER.",
         category: "system",
       },
     ],
@@ -1415,41 +1634,48 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "20 de Agosto, 2026",
     isoDate: "2026-08-20",
     title: "Liquidación de Domiciliarios & Filtro de Sedes",
-    subtitle: "Módulo oficial de liquidación por turnos de 12 a 12, tirilla térmica de fletes y filtro por sedes en Reportería.",
+    subtitle:
+      "Módulo oficial de liquidación por turnos de 12 a 12, tirilla térmica de fletes y filtro por sedes en Reportería.",
     badgeText: "🚀 v2.1.18",
     badgeType: "purple",
     gradientTheme: "purple",
     isMajor: true,
-    summary: "Se implementó el módulo completo de liquidación de domiciliarios por turnos oficiales de 12 PM a 12 PM, cálculo exacto de fletes (zonas de mapa o manual), cobro de efectivo, balance neto y tirilla térmica individual. Además, se integró el selector de sedes en Reportería con distinción Caja vs Domicilio.",
+    summary:
+      "Se implementó el módulo completo de liquidación de domiciliarios por turnos oficiales de 12 PM a 12 PM, cálculo exacto de fletes (zonas de mapa o manual), cobro de efectivo, balance neto y tirilla térmica individual. Además, se integró el selector de sedes en Reportería con distinción Caja vs Domicilio.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Módulo de Liquidación de Domiciliarios (12 PM - 12 PM)",
-        description: "Accesible para Cajero y Administrador con desglose de pedidos entregados, cobro de efectivo, cálculo de fletes y balance final.",
+        description:
+          "Accesible para Cajero y Administrador con desglose de pedidos entregados, cobro de efectivo, cálculo de fletes y balance final.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Tirilla Térmica de Liquidación (80mm)",
-        description: "Impresión de comprobante individual por repartidor con resumen de fletes a pagar, efectivo en mano y espacio para firmas de constancia.",
+        description:
+          "Impresión de comprobante individual por repartidor con resumen de fletes a pagar, efectivo en mano y espacio para firmas de constancia.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Flujo Directo de Cierre en Domicilios",
-        description: "Al ejecutar el cierre de turno se imprime la tirilla general y se abre automáticamente el módulo de liquidación de repartidores.",
+        description:
+          "Al ejecutar el cierre de turno se imprime la tirilla general y se abre automáticamente el módulo de liquidación de repartidores.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Filtro de Sedes en Reportería",
-        description: "Alterna fácilmente entre consolidado General (Todas las sedes), Restaurante, Tráiler y Domicilios en reportes y exportación XLSX.",
+        description:
+          "Alterna fácilmente entre consolidado General (Todas las sedes), Restaurante, Tráiler y Domicilios en reportes y exportación XLSX.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Asignación Ágil de Repartidores",
-        description: "Selector de domiciliario en tarjetas de pedidos y sección de asignación en vivo para pedidos completados sin repartidor.",
+        description:
+          "Selector de domiciliario en tarjetas de pedidos y sección de asignación en vivo para pedidos completados sin repartidor.",
         category: "improvement",
       },
     ],
@@ -1460,34 +1686,40 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "18 de Agosto, 2026",
     isoDate: "2026-08-18",
     title: "Panel de Novedades & Optimización General",
-    subtitle: "Mantente al tanto de todos los cambios, mejoras de rendimiento y nuevas características en tiempo real.",
+    subtitle:
+      "Mantente al tanto de todos los cambios, mejoras de rendimiento y nuevas características en tiempo real.",
     badgeText: "✨ Novedad",
     badgeType: "primary",
     gradientTheme: "sunset",
     isMajor: false,
-    summary: "Se incorpora el sistema de visualización de cambios y posters de actualización para que el equipo administrativo siempre esté enterado de las últimas implementaciones del sistema.",
+    summary:
+      "Se incorpora el sistema de visualización de cambios y posters de actualización para que el equipo administrativo siempre esté enterado de las últimas implementaciones del sistema.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Nuevo Módulo de Novedades & Posters",
-        description: "Visualización estética de las últimas actualizaciones, detalles de cambios y registro histórico de versiones directamente en el panel de control.",
+        description:
+          "Visualización estética de las últimas actualizaciones, detalles de cambios y registro histórico de versiones directamente en el panel de control.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Indicador de Actualizaciones No Leídas",
-        description: "Notificación inteligente con pulso visual en la cabecera del panel que te avisa cuando se publica una nueva actualización.",
+        description:
+          "Notificación inteligente con pulso visual en la cabecera del panel que te avisa cuando se publica una nueva actualización.",
         category: "improvement",
         highlight: true,
       },
       {
         title: "Optimización de Sincronización en Vivo",
-        description: "Mejoras en el refresco de órdenes y métricas financieras para mayor velocidad y menor consumo de datos.",
+        description:
+          "Mejoras en el refresco de órdenes y métricas financieras para mayor velocidad y menor consumo de datos.",
         category: "system",
       },
       {
         title: "Ajustes en Tarjetas de Métricas",
-        description: "Mejor legibilidad y contraste en las cifras de ingresos por método de pago y tickets promedio.",
+        description:
+          "Mejor legibilidad y contraste en las cifras de ingresos por método de pago y tickets promedio.",
         category: "improvement",
       },
     ],
@@ -1498,27 +1730,32 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "10 de Agosto, 2026",
     isoDate: "2026-08-10",
     title: "Gestión Avanzada de Domicilios & Zonas",
-    subtitle: "Herramientas de polígonos en mapa y cálculo dinámico de tarifas de entrega.",
+    subtitle:
+      "Herramientas de polígonos en mapa y cálculo dinámico de tarifas de entrega.",
     badgeText: "🚀 Actualización",
     badgeType: "purple",
     gradientTheme: "ocean",
-    summary: "Mayor precisión en la asignación de domiciliarios y cobertura geográfica de pedidos por sede.",
+    summary:
+      "Mayor precisión en la asignación de domiciliarios y cobertura geográfica de pedidos por sede.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Editor de Zonas con Leaflet",
-        description: "Trazado interactivo de áreas de cobertura para domicilios con tarifas personalizadas por polígono.",
+        description:
+          "Trazado interactivo de áreas de cobertura para domicilios con tarifas personalizadas por polígono.",
         category: "feature",
         highlight: true,
       },
       {
         title: "Control de Despachos",
-        description: "Seguimiento en tiempo real de pedidos en ruta con confirmación directa para domiciliarios.",
+        description:
+          "Seguimiento en tiempo real de pedidos en ruta con confirmación directa para domiciliarios.",
         category: "improvement",
       },
       {
         title: "Corrección en Filtros de Reportes",
-        description: "Solucionado desfase en el corte de turnos nocturnos para reportes consolidados.",
+        description:
+          "Solucionado desfase en el corte de turnos nocturnos para reportes consolidados.",
         category: "fix",
       },
     ],
@@ -1529,33 +1766,37 @@ export const APP_UPDATES: AppUpdate[] = [
     date: "1 de Agosto, 2026",
     isoDate: "2026-08-01",
     title: "Lanzamiento La 30 Sistema Integral v2",
-    subtitle: "Rediseño completo de la interfaz, arquitectura reactiva y soporte multisucursal.",
+    subtitle:
+      "Rediseño completo de la interfaz, arquitectura reactiva y soporte multisucursal.",
     badgeText: "🎉 Gran Lanzamiento",
     badgeType: "emerald",
     gradientTheme: "emerald",
     isMajor: true,
-    summary: "Nueva generación de la plataforma con punto de venta Kiosko, KDS en cocina, administración centralizada e integración con Siigo.",
+    summary:
+      "Nueva generación de la plataforma con punto de venta Kiosko, KDS en cocina, administración centralizada e integración con Siigo.",
     author: "Equipo de Desarrollo",
     items: [
       {
         title: "Sistema Multi-Sede Completo",
-        description: "Cambio y aislamiento fluido entre sedes con control de inventario y caja independiente.",
+        description:
+          "Cambio y aislamiento fluido entre sedes con control de inventario y caja independiente.",
         category: "feature",
         highlight: true,
       },
       {
         title: "KDS Pantalla de Cocina",
-        description: "Organización de comandas con tiempos de preparación y alertas sonoras.",
+        description:
+          "Organización de comandas con tiempos de preparación y alertas sonoras.",
         category: "feature",
       },
       {
         title: "Facturación Electrónica Siigo",
-        description: "Generación automática y manual de facturas electrónicas desde el módulo de caja.",
+        description:
+          "Generación automática y manual de facturas electrónicas desde el módulo de caja.",
         category: "feature",
       },
     ],
   },
 ];
 
-export const LATEST_UPDATE_ID =
-  APP_UPDATES[0]?.id || `update-v${pkg.version}`;
+export const LATEST_UPDATE_ID = APP_UPDATES[0]?.id || `update-v${pkg.version}`;
