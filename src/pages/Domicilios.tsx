@@ -56,6 +56,7 @@ import {
   XCircle,
   DollarSign,
   Bike,
+  Smartphone,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { OrderReceipt } from "@/components/OrderReceipt";
@@ -73,6 +74,7 @@ import { shouldGenerateInvoice } from "@/lib/siigoService";
 import { SiigoInvoiceModal } from "@/components/SiigoInvoiceModal";
 import { LiquidacionDomiciliariosView } from "@/components/LiquidacionDomiciliariosView";
 import { useQueryClient } from "@tanstack/react-query";
+import { isAppOrder, isPrepaidOrder } from "@/lib/orderUtils";
 
 function timeAgo(dateStr: string | undefined | null): string {
   if (!dateStr) return "--";
@@ -155,7 +157,8 @@ export default function Domicilios() {
             nequi: lastPayment.amount_nequi,
           }
         : undefined,
-      driverName: assignedDriver?.first_name || order.delivery_drivers?.first_name,
+      driverName:
+        assignedDriver?.first_name || order.delivery_drivers?.first_name,
     });
   };
 
@@ -253,7 +256,9 @@ export default function Domicilios() {
         .order("first_name", { ascending: true });
       if (activeCompany?.id) {
         if (activeCompany.slug === "la30" || !activeCompany.slug) {
-          query = query.or(`company_id.eq.${activeCompany.id},company_id.is.null`);
+          query = query.or(
+            `company_id.eq.${activeCompany.id},company_id.is.null`,
+          );
         } else {
           query = query.eq("company_id", activeCompany.id);
         }
@@ -391,8 +396,7 @@ export default function Domicilios() {
   );
 
   const enCamino = useMemo(
-    () =>
-      deliveryOrders.filter((o) => o.status === "listo" && o.is_dispatched),
+    () => deliveryOrders.filter((o) => o.status === "listo" && o.is_dispatched),
     [deliveryOrders],
   );
 
@@ -504,7 +508,8 @@ export default function Domicilios() {
             order,
             cajeroName,
             storeName: activeStore?.name || "La 30 Perros y Hamburguesas",
-            driverName: assignedDriver?.first_name || order.delivery_drivers?.first_name,
+            driverName:
+              assignedDriver?.first_name || order.delivery_drivers?.first_name,
             // Sin paymentMethod → la factura no muestra info de pago
           };
 
@@ -556,17 +561,19 @@ export default function Domicilios() {
   ): Promise<boolean> => {
     if (!payingOrder) return false;
 
-    const previouslyPaid =
-      payingOrder.payments?.reduce(
-        (sum, p) =>
-          sum +
-          (Number(p.amount_total) ||
-            (Number(p.amount_efectivo) || 0) +
-              (Number(p.amount_tarjeta) || 0) +
-              (Number(p.amount_nequi) || 0) ||
-            0),
-        0,
-      ) || 0;
+    const isPrepaid = isPrepaidOrder(payingOrder);
+    const previouslyPaid = isPrepaid
+      ? Number(payingOrder.total) || Number(payingOrder.total_amount) || 0
+      : payingOrder.payments?.reduce(
+          (sum, p) =>
+            sum +
+            (Number(p.amount_total) ||
+              (Number(p.amount_efectivo) || 0) +
+                (Number(p.amount_tarjeta) || 0) +
+                (Number(p.amount_nequi) || 0) ||
+              0),
+          0,
+        ) || 0;
     const baseRemaining = Math.max(0, payingOrder.total - previouslyPaid);
     const change = Math.max(0, received - baseRemaining);
     const isFullyPaid = received >= baseRemaining;
@@ -589,25 +596,39 @@ export default function Domicilios() {
           // Abrir modal de facturación electrónica Siigo si aplica
           const isFacturacionAllowed =
             user?.role === "admin" || user?.role === "caja";
-          if (activeCompany?.siigo_enabled && isFullyPaid && isFacturacionAllowed && shouldGenerateInvoice(method, breakdown)) {
+          if (
+            activeCompany?.siigo_enabled &&
+            isFullyPaid &&
+            isFacturacionAllowed &&
+            shouldGenerateInvoice(method, breakdown)
+          ) {
             setSiigoOrder({ order: activeOrder, method, breakdown });
           }
 
-          const assignedDriver = drivers.find((d) => d.id === activeOrder.driver_id);
+          const assignedDriver = drivers.find(
+            (d) => d.id === activeOrder.driver_id,
+          );
           const receiptData: ReceiptData = {
             order: activeOrder,
             cajeroName,
-            storeName: activeStore?.name || activeCompany?.name || "Restaurante",
+            storeName:
+              activeStore?.name || activeCompany?.name || "Restaurante",
             paymentMethod: method,
             paymentReceived: received,
             paymentChange: change,
             paymentBreakdown: breakdown,
             sharedPayments,
-            driverName: assignedDriver?.first_name || activeOrder.delivery_drivers?.first_name,
+            driverName:
+              assignedDriver?.first_name ||
+              activeOrder.delivery_drivers?.first_name,
           };
 
           // Si es pago mixto/compartido, imprimir cada comprobante individual
-          if (method === "mixto" && sharedPayments && sharedPayments.length > 0) {
+          if (
+            method === "mixto" &&
+            sharedPayments &&
+            sharedPayments.length > 0
+          ) {
             for (let i = 0; i < sharedPayments.length; i++) {
               const p = sharedPayments[i];
               await silentPrint(
@@ -630,7 +651,10 @@ export default function Domicilios() {
             );
           }
         } catch (err) {
-          console.error("Error in delivery post-payment printing pipeline:", err);
+          console.error(
+            "Error in delivery post-payment printing pipeline:",
+            err,
+          );
         }
       })();
 
@@ -673,21 +697,39 @@ export default function Domicilios() {
                 <Clock className="h-2.5 w-2.5" />
                 <span>{timeAgo(order.created_at)}</span>
               </div>
-              <p className="text-[8px] font-black text-purple-600/70 uppercase tracking-widest truncate">
-                {order.profiles?.name
-                  ? `Mesero: ${order.profiles.name}`
-                  : "Kiosko"}
-              </p>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {isAppOrder(order) ? (
+                  <span className="inline-flex items-center gap-1 text-[8px] font-black bg-purple-500/15 text-purple-700 border border-purple-500/25 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                    <Smartphone className="h-2.5 w-2.5" /> APP MÓVIL
+                  </span>
+                ) : order.profiles?.name ? (
+                  <p className="text-[8px] font-black text-purple-600/70 uppercase tracking-widest truncate">
+                    Mesero: {order.profiles.name}
+                  </p>
+                ) : (
+                  <p className="text-[8px] font-black text-purple-600/70 uppercase tracking-widest truncate">
+                    Kiosko
+                  </p>
+                )}
+                {isPrepaidOrder(order) && (
+                  <span className="inline-flex items-center gap-1 text-[8px] font-black bg-emerald-500/15 text-emerald-700 border border-emerald-500/25 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                    <CheckCircle className="h-2.5 w-2.5" /> PAGADO WOMPI
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <StatusBadge status={order.status} className="scale-90 origin-right shrink-0" />
+          <StatusBadge
+            status={order.status}
+            className="scale-90 origin-right shrink-0"
+          />
         </div>
 
         {/* Customer Address & Phone */}
         <div className="p-2 bg-purple-500/5 rounded-xl border border-purple-500/10 space-y-1 mb-2">
           <div className="flex items-start gap-1.5 text-xs">
             <MapPin className="h-3.5 w-3.5 text-purple-500 mt-0.5 shrink-0" />
-            <span className="text-foreground/80 font-semibold leading-tight text-xs break-words">
+            <span className="text-foreground/80 font-semibold leading-tight text-xs wrap-break-word">
               {order.delivery_address || "Sin dirección"}
             </span>
           </div>
@@ -741,9 +783,7 @@ export default function Domicilios() {
                   )}
                 </div>
                 <span className="font-black text-[11px] text-muted-foreground/40 tracking-tighter shrink-0 pt-0.5">
-                  {formatPrice(
-                    (item.unit_price ?? 0) * (item.quantity ?? 1),
-                  )}
+                  {formatPrice((item.unit_price ?? 0) * (item.quantity ?? 1))}
                 </span>
               </div>
             ))}
@@ -753,13 +793,18 @@ export default function Domicilios() {
         {/* Items Count & Total */}
         <div className="flex items-center justify-between pt-1">
           <div className="flex flex-col -space-y-1">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[7px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
                 TOTAL
               </span>
               {(order.delivery_fee ?? 0) > 0 && (
                 <span className="text-[8px] font-bold text-purple-600 bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.2 rounded-md">
                   Envío: {formatPrice(order.delivery_fee ?? 0)}
+                </span>
+              )}
+              {isPrepaidOrder(order) && (
+                <span className="text-[7.5px] font-black text-emerald-700 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.2 rounded-md uppercase tracking-wider">
+                  ✓ Pagado en línea
                 </span>
               )}
             </div>
@@ -898,16 +943,31 @@ export default function Domicilios() {
             </button>
           )}
 
-          {order.status === "listo" && order.is_dispatched && (
-            <button
-              className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50"
-              onClick={() => setPayingOrder(order)}
-              disabled={isUpdating}
-            >
-              <CheckCircle className="h-3.5 w-3.5" strokeWidth={3} />
-              COBRAR Y ENTREGAR
-            </button>
-          )}
+          {order.status === "listo" &&
+            order.is_dispatched &&
+            (isPrepaidOrder(order) ? (
+              <button
+                className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                onClick={() => handleStatusChange(order.id, "entregado")}
+                disabled={isUpdating}
+              >
+                {isUpdating ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-3.5 w-3.5" strokeWidth={3} />
+                )}
+                ENTREGAR (PAGADO EN LÍNEA)
+              </button>
+            ) : (
+              <button
+                className="flex-1 rounded-xl h-9 font-black uppercase tracking-widest text-[9px] bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                onClick={() => setPayingOrder(order)}
+                disabled={isUpdating}
+              >
+                <CheckCircle className="h-3.5 w-3.5" strokeWidth={3} />
+                COBRAR Y ENTREGAR
+              </button>
+            ))}
 
           <button
             title="Cancelar pedido"
@@ -1128,7 +1188,9 @@ export default function Domicilios() {
                     Cierre de Domicilios Diario
                   </h3>
                   <p className="text-muted-foreground font-medium text-sm lg:text-base leading-relaxed max-w-xl">
-                    Consolida todas las transacciones de domicilios del turno actual y genera el reporte oficial de ventas para administración.
+                    Consolida todas las transacciones de domicilios del turno
+                    actual y genera el reporte oficial de ventas para
+                    administración.
                   </p>
                 </div>
 
@@ -1171,457 +1233,485 @@ export default function Domicilios() {
                     Sin historial de domicilios
                   </p>
                 </div>
-            ) : (
-              <div className="grid gap-6">
-                {completedDeliveries.map((order, idx) => {
-                  const isEntregado = order.status === "entregado";
-                  const hora = new Intl.DateTimeFormat("es-CO", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true,
-                  }).format(
-                    order.created_at ? new Date(order.created_at) : new Date(),
-                  );
-
-                  // Invoice status check
-                  const successInvoice = order.siigo_invoices?.find(
-                    (inv) => inv.status === "success",
-                  );
-                  const hasInvoice =
-                    !!successInvoice || !!order.siigo_invoice_id;
-                  const invoiceNumber =
-                    successInvoice?.siigo_invoice_number ||
-                    order.siigo_invoice_number ||
-                    "Facturado";
-
-                  // Reconstruct breakdown from payment for eligibility check
-                  const lastPayment = order.payments?.[0];
-                  const paymentMethod =
-                    lastPayment?.method ?? order.payment_method;
-                  const reconstructedBreakdown = lastPayment
-                    ? {
-                        efectivo: lastPayment.amount_efectivo ?? 0,
-                        tarjeta: lastPayment.amount_tarjeta ?? 0,
-                        nequi: lastPayment.amount_nequi ?? 0,
-                      }
-                    : undefined;
-                  const isFacturacionAllowed =
-                    user?.role === "admin" || user?.role === "caja";
-                  const canGenerateInvoice =
-                    (activeCompany?.siigo_enabled ?? false) &&
-                    order.status !== "cancelado" &&
-                    isFacturacionAllowed &&
-                    !hasInvoice &&
-                    shouldGenerateInvoice(
-                      paymentMethod ?? "efectivo",
-                      reconstructedBreakdown,
+              ) : (
+                <div className="grid gap-6">
+                  {completedDeliveries.map((order, idx) => {
+                    const isEntregado = order.status === "entregado";
+                    const hora = new Intl.DateTimeFormat("es-CO", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    }).format(
+                      order.created_at
+                        ? new Date(order.created_at)
+                        : new Date(),
                     );
 
-                  const previouslyPaid =
-                    order.payments?.reduce(
-                      (sum, p) =>
-                        sum +
-                        (Number(p.amount_total) ||
-                          (Number(p.amount_efectivo) || 0) +
-                            (Number(p.amount_tarjeta) || 0) +
-                            (Number(p.amount_nequi) || 0) ||
-                          0),
+                    // Invoice status check
+                    const successInvoice = order.siigo_invoices?.find(
+                      (inv) => inv.status === "success",
+                    );
+                    const hasInvoice =
+                      !!successInvoice || !!order.siigo_invoice_id;
+                    const invoiceNumber =
+                      successInvoice?.siigo_invoice_number ||
+                      order.siigo_invoice_number ||
+                      "Facturado";
+
+                    // Reconstruct breakdown from payment for eligibility check
+                    const lastPayment = order.payments?.[0];
+                    const paymentMethod =
+                      lastPayment?.method ?? order.payment_method;
+                    const reconstructedBreakdown = lastPayment
+                      ? {
+                          efectivo: lastPayment.amount_efectivo ?? 0,
+                          tarjeta: lastPayment.amount_tarjeta ?? 0,
+                          nequi: lastPayment.amount_nequi ?? 0,
+                        }
+                      : undefined;
+                    const isFacturacionAllowed =
+                      user?.role === "admin" || user?.role === "caja";
+                    const canGenerateInvoice =
+                      (activeCompany?.siigo_enabled ?? false) &&
+                      order.status !== "cancelado" &&
+                      isFacturacionAllowed &&
+                      !hasInvoice &&
+                      shouldGenerateInvoice(
+                        paymentMethod ?? "efectivo",
+                        reconstructedBreakdown,
+                      );
+
+                    const isPrepaid = isPrepaidOrder(order);
+                    const previouslyPaid = isPrepaid
+                      ? Number(order.total) || Number(order.total_amount) || 0
+                      : order.payments?.reduce(
+                          (sum, p) =>
+                            sum +
+                            (Number(p.amount_total) ||
+                              (Number(p.amount_efectivo) || 0) +
+                                (Number(p.amount_tarjeta) || 0) +
+                                (Number(p.amount_nequi) || 0) ||
+                              0),
+                          0,
+                        ) || 0;
+                    const orderTotal =
+                      Number(order.total) || Number(order.total_amount) || 0;
+                    const baseRemaining = Math.max(
                       0,
-                    ) || 0;
-                  const orderTotal = Number(order.total) || Number(order.total_amount) || 0;
-                  const baseRemaining = Math.max(0, orderTotal - previouslyPaid);
-                  const isPartiallyPaid = previouslyPaid > 0 && baseRemaining > 0;
+                      orderTotal - previouslyPaid,
+                    );
+                    const isPartiallyPaid =
+                      !isPrepaid && previouslyPaid > 0 && baseRemaining > 0;
 
-                  return (
-                    <div
-                      key={order.id}
-                      className="bg-white/40 backdrop-blur-md border-2 border-accent/10 hover:border-purple-500/20 p-4 lg:p-6 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 lg:gap-6 group transition-all duration-200 shadow-sm hover:shadow-xl"
-                      style={{ animationDelay: `${idx * 50}ms` }}
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-6 lg:gap-8 flex-1">
-                        <div
-                          className={cn(
-                            "w-14 h-14 lg:w-16 lg:h-16 rounded-2xl flex flex-col items-center justify-center border-2 shadow-inner transition-all duration-200 group-hover:scale-110 shrink-0",
-                            isEntregado
-                              ? "bg-purple-500/5 text-purple-600 border-purple-500/10"
-                              : "bg-destructive/5 text-destructive border-destructive/10",
-                          )}
-                        >
-                          <span className="text-[9px] font-black leading-none opacity-40 uppercase tracking-widest mb-1">
-                            #DOM
-                          </span>
-                          <span className="text-2xl font-black tracking-tighter">
-                            {order.locator}
-                          </span>
-                        </div>
-
-                        <div className="space-y-2 flex-1">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <StatusBadge status={order.status} />
-                            <div className="flex items-center gap-1.5 text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest bg-accent/10 px-3 py-1.5 rounded-full">
-                              <Clock className="h-3 w-3" />
-                              {hora}
-                            </div>
-                            <div className="text-[10px] font-black text-purple-600 uppercase tracking-widest bg-purple-500/5 px-3 py-1.5 rounded-full">
-                              {order.profiles?.name
-                                ? `Mesero: ${order.profiles.name}`
-                                : "Kiosko"}
-                            </div>
-                            {order.delivery_name && (
-                              <div className="flex items-center gap-1 text-[10px] font-black text-purple-600 uppercase tracking-widest bg-purple-500/5 px-3 py-1.5 rounded-full">
-                                <User className="h-3 w-3" />
-                                {order.delivery_name}
-                              </div>
+                    return (
+                      <div
+                        key={order.id}
+                        className="bg-white/40 backdrop-blur-md border-2 border-accent/10 hover:border-purple-500/20 p-4 lg:p-6 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 lg:gap-6 group transition-all duration-200 shadow-sm hover:shadow-xl"
+                        style={{ animationDelay: `${idx * 50}ms` }}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-6 lg:gap-8 flex-1">
+                          <div
+                            className={cn(
+                              "w-14 h-14 lg:w-16 lg:h-16 rounded-2xl flex flex-col items-center justify-center border-2 shadow-inner transition-all duration-200 group-hover:scale-110 shrink-0",
+                              isEntregado
+                                ? "bg-purple-500/5 text-purple-600 border-purple-500/10"
+                                : "bg-destructive/5 text-destructive border-destructive/10",
                             )}
-                            {order.delivery_phone && (
-                              <div className="text-[10px] font-bold text-muted-foreground/60">
-                                Tel: {order.delivery_phone}
-                              </div>
-                            )}
-                            {/* Invoice status badge */}
-                            {hasInvoice && (
-                              <div className="flex items-center gap-1.5 text-[10px] font-black text-emerald-700 uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
-                                <FileText className="h-3 w-3" />
-                                {invoiceNumber}
-                              </div>
-                            )}
+                          >
+                            <span className="text-[9px] font-black leading-none opacity-40 uppercase tracking-widest mb-1">
+                              #DOM
+                            </span>
+                            <span className="text-2xl font-black tracking-tighter">
+                              {order.locator}
+                            </span>
                           </div>
-                          <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
-                            <div className="flex items-baseline gap-2 flex-wrap">
-                              <p className="text-xl lg:text-2xl font-black tracking-tighter text-foreground">
-                                {formatPrice(
-                                  isPartiallyPaid
-                                    ? baseRemaining
-                                    : orderTotal > 0
-                                      ? orderTotal
-                                      : previouslyPaid,
+
+                          <div className="space-y-2 flex-1">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <StatusBadge status={order.status} />
+                              <div className="flex items-center gap-1.5 text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest bg-accent/10 px-3 py-1.5 rounded-full">
+                                <Clock className="h-3 w-3" />
+                                {hora}
+                              </div>
+                              {isAppOrder(order) ? (
+                                <div className="inline-flex items-center gap-1 text-[10px] font-black text-purple-700 bg-purple-500/10 border border-purple-500/20 px-3 py-1.5 rounded-full uppercase tracking-wider">
+                                  <Smartphone className="h-3 w-3" />
+                                  APP MÓVIL
+                                </div>
+                              ) : (
+                                <div className="text-[10px] font-black text-purple-600 uppercase tracking-widest bg-purple-500/5 px-3 py-1.5 rounded-full">
+                                  {order.profiles?.name
+                                    ? `Mesero: ${order.profiles.name}`
+                                    : "Kiosko"}
+                                </div>
+                              )}
+                              {isPrepaid && (
+                                <div className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full uppercase tracking-wider">
+                                  <CheckCircle className="h-3 w-3" />
+                                  PAGADO WOMPI
+                                </div>
+                              )}
+                              {order.delivery_name && (
+                                <div className="flex items-center gap-1 text-[10px] font-black text-purple-600 uppercase tracking-widest bg-purple-500/5 px-3 py-1.5 rounded-full">
+                                  <User className="h-3 w-3" />
+                                  {order.delivery_name}
+                                </div>
+                              )}
+                              {order.delivery_phone && (
+                                <div className="text-[10px] font-bold text-muted-foreground/60">
+                                  Tel: {order.delivery_phone}
+                                </div>
+                              )}
+                              {/* Invoice status badge */}
+                              {hasInvoice && (
+                                <div className="flex items-center gap-1.5 text-[10px] font-black text-emerald-700 uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
+                                  <FileText className="h-3 w-3" />
+                                  {invoiceNumber}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
+                              <div className="flex items-baseline gap-2 flex-wrap">
+                                <p className="text-xl lg:text-2xl font-black tracking-tighter text-foreground">
+                                  {formatPrice(
+                                    isPartiallyPaid
+                                      ? baseRemaining
+                                      : orderTotal > 0
+                                        ? orderTotal
+                                        : previouslyPaid,
+                                  )}
+                                </p>
+                                {isPartiallyPaid && (
+                                  <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                    RESTANTE (Pagado:{" "}
+                                    {formatPrice(previouslyPaid)})
+                                  </span>
                                 )}
-                              </p>
-                              {isPartiallyPaid && (
-                                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                  RESTANTE (Pagado:{" "}
-                                  {formatPrice(previouslyPaid)})
+                                {isPrepaid && (
+                                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                    PAGADO EN LÍNEA (WOMPI)
+                                  </span>
+                                )}
+                                <span className="text-xs font-bold text-muted-foreground/40 uppercase tracking-widest">
+                                  • {(order.order_items ?? []).length} ITEMS
+                                </span>
+                              </div>
+                              {order.delivery_address && (
+                                <span className="text-xs font-semibold text-muted-foreground/70 flex items-center gap-1">
+                                  <MapPin className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+                                  {order.delivery_address}
                                 </span>
                               )}
-                              <span className="text-xs font-bold text-muted-foreground/40 uppercase tracking-widest">
-                                • {(order.order_items ?? []).length} ITEMS
-                              </span>
                             </div>
-                            {order.delivery_address && (
-                              <span className="text-xs font-semibold text-muted-foreground/70 flex items-center gap-1">
-                                <MapPin className="h-3.5 w-3.5 text-purple-500 shrink-0" />
-                                {order.delivery_address}
-                              </span>
-                            )}
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        {/* Generate Invoice button */}
-                        {canGenerateInvoice && (
-                          <Button
-                            className="rounded-2xl h-10 border-2 font-black text-[10px] uppercase tracking-widest px-6 bg-linear-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white transition-all active:scale-95 shadow-lg shadow-emerald-500/20 border-emerald-400/20"
-                            onClick={() =>
-                              setSiigoOrder({
-                                order,
-                                method: paymentMethod ?? "efectivo",
-                                breakdown: reconstructedBreakdown,
-                              })
-                            }
-                          >
-                            <Zap className="h-4 w-4 mr-2" strokeWidth={3} />
-                            Generar Factura
-                          </Button>
-                        )}
-
-                        {activeCompany?.siigo_enabled &&
-                          successInvoice &&
-                          !!(successInvoice.response_payload
-                            ?.public_url as string) && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Generate Invoice button */}
+                          {canGenerateInvoice && (
                             <Button
-                              variant="outline"
-                              className="rounded-2xl h-10 border-2 border-emerald-500/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-emerald-50 text-emerald-600 transition-all active:scale-95 shadow-sm shrink-0"
+                              className="rounded-2xl h-10 border-2 font-black text-[10px] uppercase tracking-widest px-6 bg-linear-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white transition-all active:scale-95 shadow-lg shadow-emerald-500/20 border-emerald-400/20"
                               onClick={() =>
-                                window.open(
-                                  successInvoice.response_payload
-                                    ?.public_url as string,
-                                  "_blank",
-                                )
+                                setSiigoOrder({
+                                  order,
+                                  method: paymentMethod ?? "efectivo",
+                                  breakdown: reconstructedBreakdown,
+                                })
                               }
                             >
-                              <FileText
-                                className="h-4 w-4 mr-2"
-                                strokeWidth={3}
-                              />
-                              PDF Siigo
+                              <Zap className="h-4 w-4 mr-2" strokeWidth={3} />
+                              Generar Factura
                             </Button>
                           )}
 
-                        {isEntregado &&
-                          (user?.role === "admin" || user?.role === "caja") && (
-                            <Button
-                              variant="outline"
-                              className="rounded-2xl h-10 border-2 border-accent/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-accent/5 transition-all active:scale-95 shadow-sm shrink-0"
-                              onClick={() => handleReprintCustomer(order)}
+                          {activeCompany?.siigo_enabled &&
+                            successInvoice &&
+                            !!(successInvoice.response_payload
+                              ?.public_url as string) && (
+                              <Button
+                                variant="outline"
+                                className="rounded-2xl h-10 border-2 border-emerald-500/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-emerald-50 text-emerald-600 transition-all active:scale-95 shadow-sm shrink-0"
+                                onClick={() =>
+                                  window.open(
+                                    successInvoice.response_payload
+                                      ?.public_url as string,
+                                    "_blank",
+                                  )
+                                }
+                              >
+                                <FileText
+                                  className="h-4 w-4 mr-2"
+                                  strokeWidth={3}
+                                />
+                                PDF Siigo
+                              </Button>
+                            )}
+
+                          {isEntregado &&
+                            (user?.role === "admin" ||
+                              user?.role === "caja") && (
+                              <Button
+                                variant="outline"
+                                className="rounded-2xl h-10 border-2 border-accent/20 font-black text-[10px] uppercase tracking-widest px-8 bg-white hover:bg-accent/5 transition-all active:scale-95 shadow-sm shrink-0"
+                                onClick={() => handleReprintCustomer(order)}
+                              >
+                                <RotateCcw
+                                  className="h-4 w-4 mr-3"
+                                  strokeWidth={3}
+                                />{" "}
+                                REIMPRIMIR FACTURA
+                              </Button>
+                            )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Tab: Liquidación de Domiciliarios */}
+          <TabsContent
+            value="liquidacion"
+            className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
+          >
+            <LiquidacionDomiciliariosView />
+          </TabsContent>
+        </Tabs>
+
+        {/* ===== NEW ORDER SHEET ===== */}
+        <Sheet open={showNewOrder} onOpenChange={setShowNewOrder}>
+          <SheetContent
+            side="right"
+            className="w-full sm:max-w-lg p-0 flex flex-col"
+            aria-describedby={undefined}
+          >
+            <SheetHeader className="p-4 lg:p-6 bg-purple-600 text-white shrink-0">
+              <SheetTitle className="text-white font-black text-lg flex items-center gap-2">
+                <Truck className="h-5 w-5" /> Nuevo Domicilio
+              </SheetTitle>
+            </SheetHeader>
+
+            <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-5">
+              {/* Customer Info */}
+              <div className="space-y-3">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-purple-600 flex items-center gap-2">
+                  <User className="h-3.5 w-3.5" /> Datos del Cliente
+                </h3>
+                <Input
+                  placeholder="Nombre del cliente"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="rounded-xl border-2 font-bold h-11 focus-visible:ring-purple-500"
+                />
+                <Input
+                  placeholder="Dirección de entrega"
+                  value={customerAddress}
+                  onChange={(e) => setCustomerAddress(e.target.value)}
+                  className="rounded-xl border-2 font-bold h-11 focus-visible:ring-purple-500"
+                />
+                <DeliveryZoneCombobox
+                  selectedZoneId={selectedZoneId}
+                  onSelect={(zone: DeliveryZone | null) => {
+                    if (zone) {
+                      setSelectedZoneId(zone.id);
+                      setDeliveryFee(zone.price);
+                    } else {
+                      setSelectedZoneId(undefined);
+                      setDeliveryFee(0);
+                    }
+                  }}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    placeholder="Celular"
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    className="rounded-xl border-2 font-bold h-11 focus-visible:ring-purple-500"
+                  />
+                  <Input
+                    placeholder="Costo envío (manual)"
+                    type="number"
+                    value={deliveryFee || ""}
+                    onChange={(e) => {
+                      setDeliveryFee(Number(e.target.value) || 0);
+                      setSelectedZoneId(undefined);
+                    }}
+                    className="rounded-xl border-2 font-bold h-11 focus-visible:ring-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* Category Tabs */}
+              <div className="space-y-3">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-purple-600 flex items-center gap-2">
+                  <ShoppingBag className="h-3.5 w-3.5" /> Productos
+                </h3>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setActiveCategory(cat.id)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-2",
+                        activeCategory === cat.id
+                          ? "bg-purple-600 text-white border-purple-600"
+                          : "bg-white text-muted-foreground border-accent/20 hover:border-purple-300",
+                      )}
+                    >
+                      {cat.icon} {cat.label || cat.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Product Grid */}
+              <div className="grid grid-cols-2 gap-2">
+                {filteredProducts.map((product) => {
+                  const inCart = cart.get(product.id);
+                  return (
+                    <div
+                      key={product.id}
+                      className={cn(
+                        "rounded-xl border-2 p-3 transition-all",
+                        inCart
+                          ? "border-purple-500 bg-purple-50 shadow-md"
+                          : "border-accent/10 bg-white hover:border-purple-200",
+                      )}
+                    >
+                      <p className="font-bold text-xs leading-tight mb-1 line-clamp-2">
+                        {product.name}
+                      </p>
+                      <p className="text-[10px] font-black text-purple-600 mb-2">
+                        {formatPrice(product.price)}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        {inCart ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => removeFromCart(product.id)}
+                              className="h-7 w-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center hover:bg-purple-200 transition-colors"
                             >
-                              <RotateCcw
-                                className="h-4 w-4 mr-3"
-                                strokeWidth={3}
-                              />{" "}
-                              REIMPRIMIR FACTURA
-                            </Button>
-                          )}
+                              <Minus className="h-3 w-3" strokeWidth={3} />
+                            </button>
+                            <span className="font-black text-sm text-purple-700 w-5 text-center">
+                              {inCart.quantity}
+                            </span>
+                            <button
+                              onClick={() => addToCart(product)}
+                              className="h-7 w-7 rounded-lg bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition-colors"
+                            >
+                              <Plus className="h-3 w-3" strokeWidth={3} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => addToCart(product)}
+                            className="h-7 px-3 rounded-lg bg-accent/10 text-muted-foreground text-[9px] font-black uppercase hover:bg-purple-100 hover:text-purple-600 transition-colors"
+                          >
+                            Agregar
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
                 })}
               </div>
-            )}
-          </div>
-        </TabsContent>
 
-        {/* Tab: Liquidación de Domiciliarios */}
-        <TabsContent
-          value="liquidacion"
-          className="animate-in fade-in slide-in-from-bottom-6 duration-300 outline-none"
-        >
-          <LiquidacionDomiciliariosView />
-        </TabsContent>
-      </Tabs>
-
-      {/* ===== NEW ORDER SHEET ===== */}
-      <Sheet open={showNewOrder} onOpenChange={setShowNewOrder}>
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-lg p-0 flex flex-col"
-          aria-describedby={undefined}
-        >
-          <SheetHeader className="p-4 lg:p-6 bg-purple-600 text-white shrink-0">
-            <SheetTitle className="text-white font-black text-lg flex items-center gap-2">
-              <Truck className="h-5 w-5" /> Nuevo Domicilio
-            </SheetTitle>
-          </SheetHeader>
-
-          <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-5">
-            {/* Customer Info */}
-            <div className="space-y-3">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-purple-600 flex items-center gap-2">
-                <User className="h-3.5 w-3.5" /> Datos del Cliente
-              </h3>
-              <Input
-                placeholder="Nombre del cliente"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="rounded-xl border-2 font-bold h-11 focus-visible:ring-purple-500"
-              />
-              <Input
-                placeholder="Dirección de entrega"
-                value={customerAddress}
-                onChange={(e) => setCustomerAddress(e.target.value)}
-                className="rounded-xl border-2 font-bold h-11 focus-visible:ring-purple-500"
-              />
-              <DeliveryZoneCombobox
-                selectedZoneId={selectedZoneId}
-                onSelect={(zone: DeliveryZone | null) => {
-                  if (zone) {
-                    setSelectedZoneId(zone.id);
-                    setDeliveryFee(zone.price);
-                  } else {
-                    setSelectedZoneId(undefined);
-                    setDeliveryFee(0);
-                  }
-                }}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  placeholder="Celular"
-                  type="tel"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="rounded-xl border-2 font-bold h-11 focus-visible:ring-purple-500"
-                />
-                <Input
-                  placeholder="Costo envío (manual)"
-                  type="number"
-                  value={deliveryFee || ""}
-                  onChange={(e) => {
-                    setDeliveryFee(Number(e.target.value) || 0);
-                    setSelectedZoneId(undefined);
-                  }}
-                  className="rounded-xl border-2 font-bold h-11 focus-visible:ring-purple-500"
-                />
-              </div>
-            </div>
-
-            {/* Category Tabs */}
-            <div className="space-y-3">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-purple-600 flex items-center gap-2">
-                <ShoppingBag className="h-3.5 w-3.5" /> Productos
-              </h3>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                {categories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-2",
-                      activeCategory === cat.id
-                        ? "bg-purple-600 text-white border-purple-600"
-                        : "bg-white text-muted-foreground border-accent/20 hover:border-purple-300",
-                    )}
-                  >
-                    {cat.icon} {cat.label || cat.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Product Grid */}
-            <div className="grid grid-cols-2 gap-2">
-              {filteredProducts.map((product) => {
-                const inCart = cart.get(product.id);
-                return (
-                  <div
-                    key={product.id}
-                    className={cn(
-                      "rounded-xl border-2 p-3 transition-all",
-                      inCart
-                        ? "border-purple-500 bg-purple-50 shadow-md"
-                        : "border-accent/10 bg-white hover:border-purple-200",
-                    )}
-                  >
-                    <p className="font-bold text-xs leading-tight mb-1 line-clamp-2">
-                      {product.name}
-                    </p>
-                    <p className="text-[10px] font-black text-purple-600 mb-2">
-                      {formatPrice(product.price)}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      {inCart ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => removeFromCart(product.id)}
-                            className="h-7 w-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center hover:bg-purple-200 transition-colors"
-                          >
-                            <Minus className="h-3 w-3" strokeWidth={3} />
-                          </button>
-                          <span className="font-black text-sm text-purple-700 w-5 text-center">
-                            {inCart.quantity}
-                          </span>
-                          <button
-                            onClick={() => addToCart(product)}
-                            className="h-7 w-7 rounded-lg bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition-colors"
-                          >
-                            <Plus className="h-3 w-3" strokeWidth={3} />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => addToCart(product)}
-                          className="h-7 px-3 rounded-lg bg-accent/10 text-muted-foreground text-[9px] font-black uppercase hover:bg-purple-100 hover:text-purple-600 transition-colors"
-                        >
-                          Agregar
-                        </button>
-                      )}
+              {/* Cart Summary */}
+              {cart.size > 0 && (
+                <div className="space-y-2 bg-purple-50 rounded-2xl p-4 border-2 border-purple-200">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-purple-600">
+                    Resumen del Pedido
+                  </h3>
+                  {Array.from(cart.values()).map((item) => (
+                    <div
+                      key={item.product.id}
+                      className="flex items-center justify-between text-xs"
+                    >
+                      <span className="font-medium">
+                        {item.quantity}x {item.product.name}
+                      </span>
+                      <span className="font-bold">
+                        {formatPrice(item.product.price * item.quantity)}
+                      </span>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Cart Summary */}
-            {cart.size > 0 && (
-              <div className="space-y-2 bg-purple-50 rounded-2xl p-4 border-2 border-purple-200">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-purple-600">
-                  Resumen del Pedido
-                </h3>
-                {Array.from(cart.values()).map((item) => (
-                  <div
-                    key={item.product.id}
-                    className="flex items-center justify-between text-xs"
-                  >
-                    <span className="font-medium">
-                      {item.quantity}x {item.product.name}
-                    </span>
-                    <span className="font-bold">
-                      {formatPrice(item.product.price * item.quantity)}
-                    </span>
-                  </div>
-                ))}
-                <div className="border-t border-purple-200 pt-2 space-y-1">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Subtotal</span>
-                    <span>{formatPrice(cartTotal)}</span>
-                  </div>
-                  {deliveryFee > 0 && (
-                    <div className="flex justify-between text-xs text-purple-500">
-                      <span>Envío</span>
-                      <span>{formatPrice(deliveryFee)}</span>
+                  ))}
+                  <div className="border-t border-purple-200 pt-2 space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Subtotal</span>
+                      <span>{formatPrice(cartTotal)}</span>
                     </div>
-                  )}
-                  <div className="flex justify-between text-base font-black text-purple-700">
-                    <span>Total</span>
-                    <span>{formatPrice(grandTotal)}</span>
+                    {deliveryFee > 0 && (
+                      <div className="flex justify-between text-xs text-purple-500">
+                        <span>Envío</span>
+                        <span>{formatPrice(deliveryFee)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-base font-black text-purple-700">
+                      <span>Total</span>
+                      <span>{formatPrice(grandTotal)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Submit */}
-          <div className="p-4 lg:p-6 border-t bg-white shrink-0">
-            <Button
-              onClick={handleCreateOrder}
-              disabled={isSubmitting || cart.size === 0}
-              className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-black text-sm shadow-xl shadow-purple-500/20 transition-all active:scale-[0.98]"
-            >
-              {isSubmitting ? (
-                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
               )}
-              Crear Domicilio • {formatPrice(grandTotal)}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+            </div>
 
-      {/* Payment Calculator */}
-      {payingOrder && (
-        <PaymentCalculator
-          order={payingOrder}
-          open={!!payingOrder}
-          onClose={() => setPayingOrder(null)}
-          onPaymentComplete={handlePaymentComplete}
-        />
-      )}
+            {/* Submit */}
+            <div className="p-4 lg:p-6 border-t bg-white shrink-0">
+              <Button
+                onClick={handleCreateOrder}
+                disabled={isSubmitting || cart.size === 0}
+                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-black text-sm shadow-xl shadow-purple-500/20 transition-all active:scale-[0.98]"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Crear Domicilio • {formatPrice(grandTotal)}
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
 
-      {receipt && (
-        <OrderReceipt
-          order={receipt.order}
-          open={!!receipt}
-          onClose={() => setReceipt(null)}
-          type={receipt.type}
-          paymentMethod={receipt.paymentMethod}
-          paymentReceived={receipt.paymentReceived}
-          paymentChange={receipt.paymentChange}
-          paymentBreakdown={receipt.paymentBreakdown}
-          sharedPayments={receipt.sharedPayments}
-          driverName={receipt.driverName}
-        />
-      )}
+        {/* Payment Calculator */}
+        {payingOrder && (
+          <PaymentCalculator
+            order={payingOrder}
+            open={!!payingOrder}
+            onClose={() => setPayingOrder(null)}
+            onPaymentComplete={handlePaymentComplete}
+          />
+        )}
 
-      {siigoOrder && (
-        <SiigoInvoiceModal
-          open={!!siigoOrder}
-          onClose={() => setSiigoOrder(null)}
-          order={siigoOrder.order}
-          method={siigoOrder.method}
-          breakdown={siigoOrder.breakdown}
-        />
-      )}
-    </div>
+        {receipt && (
+          <OrderReceipt
+            order={receipt.order}
+            open={!!receipt}
+            onClose={() => setReceipt(null)}
+            type={receipt.type}
+            paymentMethod={receipt.paymentMethod}
+            paymentReceived={receipt.paymentReceived}
+            paymentChange={receipt.paymentChange}
+            paymentBreakdown={receipt.paymentBreakdown}
+            sharedPayments={receipt.sharedPayments}
+            driverName={receipt.driverName}
+          />
+        )}
+
+        {siigoOrder && (
+          <SiigoInvoiceModal
+            open={!!siigoOrder}
+            onClose={() => setSiigoOrder(null)}
+            order={siigoOrder.order}
+            method={siigoOrder.method}
+            breakdown={siigoOrder.breakdown}
+          />
+        )}
+      </div>
     </ErrorBoundary>
   );
 }

@@ -162,6 +162,18 @@ describe("receiptUtils", () => {
       expect(html).toContain("Impoconsumo 8%");
       expect(html).toContain("Total a Pagar");
     });
+
+    it("should render logo, company name, NIT and corporate name on customer receipt", () => {
+      const html = buildCustomerReceiptHTML({
+        order: baseDeliveryOrder,
+        cajeroName: "Cajero Test",
+      });
+
+      expect(html).toContain("data:image/jpeg;base64,");
+      expect(html).toContain("LA 30 PERROS Y HAMBURGUESAS");
+      expect(html).toContain("NIT: 901857721-9");
+      expect(html).toContain("CARMONA MADRID COMPANY S.A.S.");
+    });
   });
 
   describe("buildKitchenReceiptHTML with delivery order", () => {

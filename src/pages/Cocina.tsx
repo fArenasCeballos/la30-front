@@ -14,10 +14,12 @@ import {
   AlertCircle,
   Truck,
   MapPin,
+  Smartphone,
 } from "lucide-react";
 import type { OrderStatus, Order } from "@/types";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { cn } from "@/lib/utils";
+import { isAppOrder } from "@/lib/orderUtils";
 
 const OrderTimer = ({ createdAt }: { createdAt: string }) => {
   const [elapsed, setElapsed] = useState(0);
@@ -159,9 +161,16 @@ export default function Cocina() {
             <div className="flex flex-col min-w-0 flex-1">
               <div className="flex items-center gap-1.5 text-[8px] font-black text-muted-foreground/40 tracking-widest uppercase mb-0.5">
                 {order.is_delivery ? (
-                  <span className="inline-flex items-center gap-1 text-[7px] font-black bg-purple-600 text-white px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">
-                    <Truck className="h-2.5 w-2.5" strokeWidth={2.5} /> DOMICILIO
-                  </span>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="inline-flex items-center gap-1 text-[7px] font-black bg-purple-600 text-white px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">
+                      <Truck className="h-2.5 w-2.5" strokeWidth={2.5} /> DOMICILIO
+                    </span>
+                    {isAppOrder(order) && (
+                      <span className="inline-flex items-center gap-1 text-[7px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">
+                        <Smartphone className="h-2.5 w-2.5" strokeWidth={2.5} /> APP
+                      </span>
+                    )}
+                  </div>
                 ) : isSalida ? (
                   <>
                     <BellRing className="h-2.5 w-2.5 shrink-0" />

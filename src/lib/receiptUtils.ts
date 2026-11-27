@@ -4,6 +4,14 @@ import {
   formatTaxNumber,
   formatTaxPrice,
 } from "@/lib/formatPrice";
+import {
+  COMPANY_NAME,
+  COMPANY_NIT,
+  COMPANY_LEGAL_NAME,
+  RECEIPT_LOGO_DATA_URL,
+} from "@/lib/receiptLogo";
+
+export { COMPANY_NAME, COMPANY_NIT, COMPANY_LEGAL_NAME, RECEIPT_LOGO_DATA_URL };
 
 /* ── Estilos para la ventana de impresión ────────────────────────── */
 export const PRINT_STYLES = `
@@ -30,6 +38,14 @@ export const PRINT_STYLES = `
     line-height: 1.2;
     background: #ffffff !important;
     -webkit-font-smoothing: none;
+  }
+  .receipt-logo {
+    display: block;
+    margin: 0 auto 4px auto;
+    max-width: 140px;
+    width: 50%;
+    height: auto;
+    object-fit: contain;
   }
   .center   { text-align: center; }
   .right    { text-align: right; }
@@ -239,7 +255,7 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
   const {
     order,
     cajeroName,
-    storeName = "La 30 Perros y Hamburguesas",
+    storeName = COMPANY_NAME,
     paymentMethod,
     paymentReceived,
     paymentChange,
@@ -306,6 +322,12 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
         breakdownDetails += `<div class="row"><span class="bold">Tarjeta:</span><span class="bold">${formatPrice(b.tarjeta)}</span></div>`;
       if (b.nequi)
         breakdownDetails += `<div class="row"><span class="bold">Nequi:</span><span class="bold">${formatPrice(b.nequi)}</span></div>`;
+    } else if (
+      paymentMethod === "wompi" ||
+      order.is_prepaid ||
+      order.order_source === "app"
+    ) {
+      breakdownDetails = `<div class="center bold" style="font-size:12px;margin:3px 0;">*** PAGADO ONLINE (WOMPI) ***</div><div class="center bold" style="font-size:11px;">NO COBRAR AL CLIENTE</div>`;
     } else {
       const label =
         paymentMethod === "efectivo"
@@ -330,6 +352,14 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
       </div>
       <div class="divider"></div>
     `;
+  } else if (order.is_prepaid || order.order_source === "app") {
+    paymentSection = `
+      <div class="center bold" style="font-size:12px;padding:3px 0;margin:3px 0;border-top:1px dashed #000;border-bottom:1px dashed #000;">
+        *** YA PAGADO EN LÍNEA (WOMPI) ***<br/>
+        ¡NO COBRAR AL CLIENTE!
+      </div>
+      <div class="divider"></div>
+    `;
   }
 
   const headerTitle = order.is_delivery
@@ -350,10 +380,18 @@ export function buildCustomerReceiptHTML(data: ReceiptData): string {
       ${order.delivery_address ? `<div class="row"><span class="bold">Dirección:</span><span class="bold">${order.delivery_address.toUpperCase()}</span></div>` : ""}
       ${order.delivery_phone ? `<div class="row"><span class="bold">Teléfono:</span><span class="bold">${order.delivery_phone}</span></div>` : ""}
       ${driverFirstName ? `<div class="row"><span class="bold">Domiciliario:</span><span class="bold">${driverFirstName.toUpperCase()}</span></div>` : ""}
+      ${order.is_prepaid || order.order_source === "app" ? `<div class="row"><span class="bold">Pago:</span><span class="bold" style="color:#000;">PAGADO EN LÍNEA (WOMPI)</span></div>` : ""}
     `;
   }
 
   return `
+    <div class="center" style="margin-bottom: 5px;">
+      <img src="${RECEIPT_LOGO_DATA_URL}" alt="La 30" class="receipt-logo" />
+      <div class="bold" style="font-size:14px; text-transform:uppercase; letter-spacing:0.5px;">${storeName.toUpperCase()}</div>
+      <div class="bold" style="font-size:11.5px; margin-top:2px;">NIT: ${COMPANY_NIT}</div>
+      <div class="bold" style="font-size:11px; margin-top:1px;">${COMPANY_LEGAL_NAME}</div>
+    </div>
+    <div class="divider"></div>
     <div class="center"><p class="header-title">${headerTitle}</p></div>
     <div class="double-divider">
       <div class="row">
@@ -879,7 +917,7 @@ export function buildPartialPaymentReceiptHTML(
   index: number,
   totalPayments: number,
 ): string {
-  const { order, cajeroName, storeName = "La 30 Perros y Hamburguesas" } = data;
+  const { order, cajeroName, storeName = COMPANY_NAME } = data;
   const { printDate } = getReceiptDates(order);
   const ticketNumber = order.ticket_number ?? "—";
 
@@ -896,8 +934,12 @@ export function buildPartialPaymentReceiptHTML(
   const paymentLabel = getLabel(payment.method, payment.subMethod);
 
   return `
-    <div class="center">
-      <p class="header-title">${storeName.toUpperCase()}</p>
+    <div class="center" style="margin-bottom: 5px;">
+      <img src="${RECEIPT_LOGO_DATA_URL}" alt="La 30" class="receipt-logo" style="max-width:120px; width:45%;" />
+      <div class="bold" style="font-size: 13.5px; text-transform: uppercase; letter-spacing: 0.5px;">${storeName.toUpperCase()}</div>
+      <div class="bold" style="font-size: 11px; margin-top: 2px;">NIT: ${COMPANY_NIT}</div>
+      <div class="bold" style="font-size: 10.5px; margin-top: 1px;">${COMPANY_LEGAL_NAME}</div>
+      <div class="divider" style="margin-top: 4px;"></div>
       <p class="bold" style="font-size:13px; margin-top:2px;">COMPROBANTE DE PAGO</p>
       <p class="bold" style="font-size:11.5px;">(PAGO PARCIAL ${index} de ${totalPayments})</p>
     </div>

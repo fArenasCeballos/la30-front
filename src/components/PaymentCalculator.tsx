@@ -22,13 +22,10 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isPrepaidOrder } from "@/lib/orderUtils";
 
 type LocalPaymentMethod =
-  | "efectivo"
-  | "tarjeta"
-  | "nequi"
-  | "mixto"
-  | "compartido";
+  "efectivo" | "tarjeta" | "nequi" | "mixto" | "compartido";
 type SubMethod = "tarjeta_credito" | "tarjeta_debito" | "nequi" | "daviplata";
 type BaseMethod = "efectivo" | "tarjeta" | "nequi";
 
@@ -142,8 +139,13 @@ export function PaymentCalculator({
 
   const receivedNum = useMemo(() => parseInt(received) || 0, [received]);
 
+  const isPrepaid = isPrepaidOrder(order);
+
   // Total previously paid (from DB)
   const previouslyPaid = useMemo(() => {
+    if (isPrepaid) {
+      return Number(order.total) || Number(order.total_amount) || 0;
+    }
     if (!order.payments) return 0;
     return order.payments.reduce(
       (sum, p) =>
@@ -155,7 +157,7 @@ export function PaymentCalculator({
           0),
       0,
     );
-  }, [order.payments]);
+  }, [order.payments, isPrepaid, order.total, order.total_amount]);
 
   const baseRemaining = useMemo(() => {
     return Math.max(
@@ -283,7 +285,14 @@ export function PaymentCalculator({
       return receivedNum > 0 && receivedNum < remainingTotal;
     }
     return false;
-  }, [method, step, receivedNum, remainingTotal, currentPartialMethod, itemsAmount]);
+  }, [
+    method,
+    step,
+    receivedNum,
+    remainingTotal,
+    currentPartialMethod,
+    itemsAmount,
+  ]);
 
   const handleNumpad = useCallback(
     (val: string) => {
@@ -374,7 +383,10 @@ export function PaymentCalculator({
     if (!isMixto) {
       setAlreadyPaidItemIds((prev) => {
         const next = new Set([...prev, ...currentPersonItemIds]);
-        localStorage.setItem(`paid_items_${order.id}`, JSON.stringify([...next]));
+        localStorage.setItem(
+          `paid_items_${order.id}`,
+          JSON.stringify([...next]),
+        );
         return next;
       });
     }
@@ -770,6 +782,26 @@ export function PaymentCalculator({
               </div>
             </div>
 
+            {isPrepaid && (
+              <div className="bg-emerald-500/10 border-2 border-emerald-500/25 rounded-2xl p-4 text-center space-y-2">
+                <p className="text-emerald-800 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5">
+                  <CheckCircle className="h-4 w-4 text-emerald-600" />
+                  Pedido ya pagado en línea (Wompi)
+                </p>
+                <p className="text-[11px] text-emerald-700 font-semibold">
+                  No se debe cobrar al cliente ni al repartidor.
+                </p>
+                {baseRemaining === 0 && (
+                  <Button
+                    onClick={() => handleConfirmPayment(0, "nequi", "nequi")}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs h-10 rounded-xl uppercase tracking-wider shadow-md"
+                  >
+                    Confirmar Entrega (Sin Cobro Adicional)
+                  </Button>
+                )}
+              </div>
+            )}
+
             {/* Methods Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
               {PAYMENT_METHODS.map((m) => (
@@ -915,7 +947,8 @@ export function PaymentCalculator({
                   variant="secondary"
                   className={cn(
                     "h-12 rounded-xl font-black text-lg shadow-xs border transition-all active:scale-95",
-                    key === "C" && "text-rose-600 hover:bg-rose-50 border-rose-200/50",
+                    key === "C" &&
+                      "text-rose-600 hover:bg-rose-50 border-rose-200/50",
                   )}
                   onClick={() => handleNumpad(key)}
                 >
@@ -963,7 +996,8 @@ export function PaymentCalculator({
               ) : canConfirm ? (
                 <div className="flex items-center gap-2 justify-center">
                   <CheckCircle className="h-5 w-5" />
-                  {order.status === "pendiente" || order.status === "en_preparacion"
+                  {order.status === "pendiente" ||
+                  order.status === "en_preparacion"
                     ? `CONFIRMAR PAGO & ENVIAR A COCINA • ${formatPrice(baseRemaining)}`
                     : `CONFIRMAR PAGO & ENTREGAR • ${formatPrice(baseRemaining)}`}
                 </div>
@@ -1142,24 +1176,33 @@ export function PaymentCalculator({
                 <ArrowLeft className="h-6 w-6" strokeWidth={3} />
               </Button>
               <div className="space-y-0.5">
-                <div className={cn("font-black uppercase tracking-[0.3em] text-[10px]", method === "mixto" ? "text-orange-600" : "text-amber-600")}>
+                <div
+                  className={cn(
+                    "font-black uppercase tracking-[0.3em] text-[10px]",
+                    method === "mixto" ? "text-orange-600" : "text-amber-600",
+                  )}
+                >
                   {method === "mixto"
                     ? `PAGO MIXTO • MÉTODO #${partialPayments.length + 1}`
                     : `PAGO COMPARTIDO • PAGO #${partialPayments.length + 1}`}
                 </div>
                 <h3 className="text-2xl lg:text-4xl font-black tracking-tighter">
-                  {method === "mixto" ? "Elige el medio de pago" : "¿Cómo paga esta persona?"}
+                  {method === "mixto"
+                    ? "Elige el medio de pago"
+                    : "¿Cómo paga esta persona?"}
                 </h3>
               </div>
             </div>
 
             {/* Show remaining */}
-            <div className={cn(
-              "rounded-2xl lg:rounded-3xl p-4 lg:p-6 mb-4 lg:mb-6 border-2 border-dashed text-center",
-              method === "mixto"
-                ? "bg-orange-500/5 border-orange-500/20 text-orange-700"
-                : "bg-amber-500/5 border-amber-500/10 text-amber-700"
-            )}>
+            <div
+              className={cn(
+                "rounded-2xl lg:rounded-3xl p-4 lg:p-6 mb-4 lg:mb-6 border-2 border-dashed text-center",
+                method === "mixto"
+                  ? "bg-orange-500/5 border-orange-500/20 text-orange-700"
+                  : "bg-amber-500/5 border-amber-500/10 text-amber-700",
+              )}
+            >
               <p className="text-xs font-black uppercase tracking-widest mb-1 opacity-70">
                 {method === "mixto"
                   ? partialPayments.length === 0
@@ -1173,7 +1216,12 @@ export function PaymentCalculator({
                         ? "TOTAL A PAGAR"
                         : "MONTO RESTANTE"}
               </p>
-              <div className={cn("text-3xl lg:text-5xl font-black tracking-tighter", method === "mixto" ? "text-orange-600" : "text-amber-600")}>
+              <div
+                className={cn(
+                  "text-3xl lg:text-5xl font-black tracking-tighter",
+                  method === "mixto" ? "text-orange-600" : "text-amber-600",
+                )}
+              >
                 {formatPrice(
                   method === "mixto"
                     ? remainingTotal
@@ -1181,15 +1229,23 @@ export function PaymentCalculator({
                       ? itemsAmount
                       : receivedNum > 0
                         ? receivedNum
-                        : remainingTotal
+                        : remainingTotal,
                 )}
               </div>
               {method === "mixto" && partialPayments.length > 0 && (
                 <p className="text-[11px] font-bold mt-2 uppercase tracking-wider text-muted-foreground">
-                  PAGADO HASTA AHORA: <span className="font-black text-foreground">{formatPrice(partialTotal)}</span> · TOTAL ORDEN: <span className="font-black text-foreground">{formatPrice(baseRemaining)}</span>
+                  PAGADO HASTA AHORA:{" "}
+                  <span className="font-black text-foreground">
+                    {formatPrice(partialTotal)}
+                  </span>{" "}
+                  · TOTAL ORDEN:{" "}
+                  <span className="font-black text-foreground">
+                    {formatPrice(baseRemaining)}
+                  </span>
                 </p>
               )}
-              {method !== "mixto" && (itemsAmount > 0 || receivedNum > 0) &&
+              {method !== "mixto" &&
+                (itemsAmount > 0 || receivedNum > 0) &&
                 (itemsAmount > 0 ? itemsAmount : receivedNum) !==
                   remainingTotal && (
                   <p className="text-[10px] font-bold text-amber-600/40 mt-2 uppercase tracking-wider">
@@ -1291,7 +1347,12 @@ export function PaymentCalculator({
                 <ArrowLeft className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={3} />
               </Button>
               <div className="space-y-0.5">
-                <div className={cn("font-black uppercase tracking-[0.3em] text-[8px] lg:text-[10px]", method === "mixto" ? "text-orange-600" : "text-amber-600")}>
+                <div
+                  className={cn(
+                    "font-black uppercase tracking-[0.3em] text-[8px] lg:text-[10px]",
+                    method === "mixto" ? "text-orange-600" : "text-amber-600",
+                  )}
+                >
                   {method === "mixto"
                     ? `PAGO MIXTO • ${getMethodLabel(currentPartialMethod, currentPartialSubMethod ?? undefined).toUpperCase()}`
                     : `PAGO #${partialPayments.length + 1} • ${getMethodLabel(
@@ -1588,11 +1649,19 @@ export function PaymentCalculator({
                       onClick={addPartialPayment}
                     >
                       {method === "mixto" ? (
-                        <Plus className="h-5 w-5 lg:h-6 lg:w-6 mr-2" strokeWidth={3} />
+                        <Plus
+                          className="h-5 w-5 lg:h-6 lg:w-6 mr-2"
+                          strokeWidth={3}
+                        />
                       ) : (
-                        <Users className="h-5 w-5 lg:h-6 lg:w-6 mr-2" strokeWidth={3} />
+                        <Users
+                          className="h-5 w-5 lg:h-6 lg:w-6 mr-2"
+                          strokeWidth={3}
+                        />
                       )}
-                      {method === "mixto" ? "AGREGAR ESTE PAGO (FALTAN " : "AGREGAR PAGO Y CONTINUAR (FALTAN "}
+                      {method === "mixto"
+                        ? "AGREGAR ESTE PAGO (FALTAN "
+                        : "AGREGAR PAGO Y CONTINUAR (FALTAN "}
                       {formatPrice(
                         remainingTotal -
                           (currentPartialMethod === "efectivo" &&
@@ -1755,8 +1824,6 @@ export function PaymentCalculator({
             </div>
           </div>
         )}
-
-
       </DialogContent>
     </Dialog>
   );

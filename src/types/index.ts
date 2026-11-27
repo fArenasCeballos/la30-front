@@ -88,6 +88,12 @@ export interface Order extends OrderRow {
   } | null;
   is_internal_consumption?: boolean;
   consumer_type?: "employee" | "partner";
+  is_prepaid?: boolean;
+  order_source?: string;
+  app_customer_id?: string | null;
+  delivery_distance_km?: number | null;
+  delivery_lat?: number | null;
+  delivery_lng?: number | null;
 }
 
 // Custom option with its choices (for ProductCustomizer)

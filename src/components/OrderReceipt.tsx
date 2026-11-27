@@ -10,6 +10,10 @@ import {
   buildCustomerReceiptHTML,
   buildKitchenReceiptHTML,
   extractFirstName,
+  COMPANY_NAME,
+  COMPANY_NIT,
+  COMPANY_LEGAL_NAME,
+  RECEIPT_LOGO_DATA_URL,
 } from "@/lib/receiptUtils";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -179,7 +183,40 @@ export function OrderReceipt({
      ═══════════════════════════════════════════════════════════ */
   const customerReceipt = (
     <>
-      {/* Encabezado */}
+      {/* Encabezado con Logo y Datos de la Empresa */}
+      <div className="center" style={{ marginBottom: "5px" }}>
+        <img
+          src={RECEIPT_LOGO_DATA_URL}
+          alt="La 30"
+          className="receipt-logo"
+          style={{
+            maxWidth: "140px",
+            width: "50%",
+            height: "auto",
+            margin: "0 auto 4px auto",
+            display: "block",
+          }}
+        />
+        <div
+          className="bold"
+          style={{
+            fontSize: "14px",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+          }}
+        >
+          {COMPANY_NAME}
+        </div>
+        <div className="bold" style={{ fontSize: "11.5px", marginTop: "2px" }}>
+          NIT: {COMPANY_NIT}
+        </div>
+        <div className="bold" style={{ fontSize: "11px", marginTop: "1px" }}>
+          {COMPANY_LEGAL_NAME}
+        </div>
+      </div>
+
+      <div className="divider" />
+
       <div className="center">
         <p className="header-title">
           {order.is_delivery ? "VENTA A DOMICILIO" : "VENTA A LA MESA"}

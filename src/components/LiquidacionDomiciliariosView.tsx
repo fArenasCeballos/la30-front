@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { isPrepaidOrder } from "@/lib/orderUtils";
 import {
   Select,
   SelectContent,
@@ -302,7 +303,7 @@ export function LiquidacionDomiciliariosView() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-20">
       {/* Header & Controls Bar */}
-      <div className="bg-white/80 backdrop-blur-xl p-5 lg:p-7 rounded-3xl lg:rounded-[2rem] border-2 border-purple-500/20 shadow-lg shadow-purple-500/5 space-y-4">
+      <div className="bg-white/80 backdrop-blur-xl p-5 lg:p-7 rounded-3xl lg:rounded-4xl border-2 border-purple-500/20 shadow-lg shadow-purple-500/5 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shadow-md shadow-purple-500/30 shrink-0">
@@ -340,7 +341,10 @@ export function LiquidacionDomiciliariosView() {
               disabled={isLoading}
             >
               <RotateCw
-                className={cn("h-3.5 w-3.5 mr-1.5", isLoading && "animate-spin")}
+                className={cn(
+                  "h-3.5 w-3.5 mr-1.5",
+                  isLoading && "animate-spin",
+                )}
               />
               Actualizar
             </Button>
@@ -593,7 +597,7 @@ export function LiquidacionDomiciliariosView() {
                   {/* Card Header — Summary and Print Action */}
                   <div className="p-5 lg:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex items-center gap-4 min-w-0">
-                      <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0">
+                      <div className="h-14 w-14 rounded-2xl bg-linear-to-br from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0">
                         <Bike className="h-7 w-7" strokeWidth={2.5} />
                       </div>
                       <div className="space-y-1 min-w-0">
@@ -717,10 +721,12 @@ export function LiquidacionDomiciliariosView() {
                                 minute: "2-digit",
                                 hour12: true,
                               });
-                              const payments =
-                                order.payments
-                                  ?.map((p) => p.method.toUpperCase())
-                                  .join(", ") || "PENDIENTE";
+                              const isOnlinePaid = isPrepaidOrder(order);
+                              const payments = isOnlinePaid
+                                ? "ONLINE (WOMPI)"
+                                : order.payments
+                                    ?.map((p) => p.method.toUpperCase())
+                                    .join(", ") || "PENDIENTE";
 
                               return (
                                 <tr
